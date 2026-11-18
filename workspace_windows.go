@@ -34,6 +34,7 @@ const (
 	idSign
 	idVerify
 	idVisible
+	idClosePDF
 )
 
 const panelWidth = 350
@@ -125,6 +126,7 @@ func (a *app) setupWorkspace() bool {
 	a.label("Zobrazení stránek", 16, 18, 290, true)
 	a.label("Rozvržení", 16, 55, 290, false)
 	a.view.flow = a.combo(idReaderFlow, 16, 77, 298, []string{"Souvisle", "Po stránkách"})
+	chooseCombo(a.view.flow, 1)
 	a.label("Rámeček PDF v náhledu", 16, 120, 290, false)
 	a.view.screenBox = a.combo(idReaderScreenBox, 16, 142, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
 	a.view.documentInfo = a.readout(16, 187, 298, 82)
@@ -133,6 +135,7 @@ func (a *app) setupWorkspace() bool {
 	a.button("Načíst znovu s heslem", idReload, 16, 353, 298, 0)
 	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 408, 298, false)
 	a.label("F11  ·  celá obrazovka", 16, 433, 298, false)
+	a.closePDF = a.button("Zavřít PDF   (Ctrl+W)", idClosePDF, 16, 470, 298, 0)
 
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
@@ -485,6 +488,21 @@ func (a *app) mayReplaceDocument() bool {
 	return !a.view.changed() || notice(a.window, "Zahodit neuložené změny stránek?", 0x134) == 6
 }
 
+func (a *app) closeDocument() {
+	if a.busy || a.view.path == "" || !a.mayReplaceDocument() {
+		return
+	}
+	a.view.resetDocument()
+	setText(a.window, appName)
+	setText(a.documentName, "")
+	setText(a.password, "")
+	setText(a.signReport, "")
+	setText(a.exportReport, "")
+	a.reportStatus("")
+	a.activate(idBrowseTab)
+	a.updateActions()
+}
+
 func (a *app) openDocument(path, password string) {
 	if a.busy {
 		return
@@ -538,6 +556,8 @@ func (a *app) command(id, notification int) {
 		a.activate(id)
 	case idOpen:
 		a.openDialog()
+	case idClosePDF:
+		a.closeDocument()
 	case idShowOutput:
 		if a.lastOutput != "" {
 			a.openDocument(a.lastOutput, a.lastPassword)
@@ -656,6 +676,7 @@ func (a *app) updateActions() {
 		setEnabled(button, ready)
 	}
 	setEnabled(a.open, !a.busy)
+	setEnabled(a.closePDF, !a.busy && a.view.path != "")
 	setEnabled(a.outputButton, !a.busy && a.lastOutput != "")
 	a.view.updateActions()
 }
@@ -731,6 +752,7 @@ func (a *app) finish(result response) {
 		setText(a.certPass, "")
 	}
 	a.updateActions()
+	a.view.schedule()
 }
 
 func (a *app) handleInput(msg *winMessage) bool {
@@ -746,9 +768,15 @@ func (a *app) handleInput(msg *winMessage) bool {
 		return false
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)
-	if ctrl&0x8000 != 0 && msg.wParam == 'O' {
-		a.openDialog()
-		return true
+	if ctrl&0x8000 != 0 {
+		switch msg.wParam {
+		case 'O':
+			a.openDialog()
+			return true
+		case 'W':
+			a.closeDocument()
+			return true
+		}
 	}
 	switch msg.wParam {
 	case 0x7a: // F11

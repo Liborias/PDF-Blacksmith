@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -189,17 +190,22 @@ type readerFrame struct {
 	pixels int
 }
 
-type readerJob struct {
+type readerTask struct {
 	generation   int
 	page, pixels int
-	action       string
-	result       response
-	frame        readerFrame
+	background   bool
+}
+
+type readerJob struct {
+	readerTask
+	action string
+	result response
+	frame  readerFrame
 }
 
 type documentView struct {
 	app                                                                        *app
-	engine                                                                     readerEngine
+	engine, prefetchEngine                                                     *readerEngine
 	path, password                                                             string
 	original                                                                   os.FileInfo
 	sizes                                                                      []map[string][2]float64
@@ -218,8 +224,10 @@ type documentView struct {
 	wheelRemainder                                                             float64
 	generation                                                                 int
 	running, describing, invalidSource                                         bool
-	frames                                                                     map[int]readerFrame
-	failed                                                                     map[int]bool
+	reading, printPreview                                                      pageCache
+	cacheLimit                                                                 int64
+	prefetch                                                                   readerTask
+	prefetchFailed                                                             map[int]bool
 	jobs                                                                       chan readerJob
 	profiles                                                                   []string
 	hidden                                                                     map[string]bool
@@ -232,9 +240,7 @@ type documentView struct {
 }
 
 func newDocumentView(a *app) *documentView {
-	return &documentView{app: a, continuous: true, fitMode: 1, proofPage: -1,
-		frames: make(map[int]readerFrame), failed: make(map[int]bool), hidden: make(map[string]bool),
-		jobs: make(chan readerJob, 1)}
+	return &documentView{app: a, fitMode: 1, proofPage: -1, jobs: make(chan readerJob, 2)}
 }
 
 func (v *documentView) buildToolbar() {
@@ -330,24 +336,58 @@ func unchanged(path string, original os.FileInfo) bool {
 
 func (v *documentView) sourceUnchanged() bool { return unchanged(v.path, v.original) }
 
-func (v *documentView) open(path, password string, original os.FileInfo) {
-	v.path, v.password, v.original = path, password, original
+func (v *documentView) resetDocument() {
 	v.generation++
+	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
+	hadFrames := v.reading.bytes+v.printPreview.bytes > 0
+	v.reading.clear()
+	v.printPreview.clear()
+	v.closeReaders()
+	v.path, v.password, v.original = "", "", nil
 	v.sizes, v.order, v.rotations, v.savedOrder, v.savedRotations, v.history = nil, nil, nil, nil, nil, nil
 	v.intent = ""
 	v.page, v.reference, v.fitMode = 0, 0, 1
 	v.scrollX, v.scrollY, v.wheelRemainder = 0, 0, 0
-	v.describing, v.invalidSource = true, false
+	v.continuous, v.describing, v.invalidSource = false, false, false
 	v.hidden = make(map[string]bool)
-	v.clearFrames()
+	v.prefetchFailed = make(map[int]bool)
+	v.clearPlateView()
 	chooseCombo(v.fit, 0)
+	chooseCombo(v.flow, 1)
 	setText(v.documentInfo, "")
 	setText(v.scanReport, "")
 	v.rebuild(false)
 	v.updatePageList()
+	if hadFrames {
+		go debug.FreeOSMemory()
+	}
+}
+
+func (v *documentView) closeReaders() {
+	if v.engine != nil {
+		v.engine.close()
+		v.engine = nil
+	}
+	v.stopPrefetchEngine()
+}
+
+func (v *documentView) stopPrefetchEngine() {
+	if v.prefetchEngine != nil {
+		v.prefetchEngine.close()
+		v.prefetchEngine = nil
+	}
+}
+
+func (v *documentView) open(path, password string, original os.FileInfo) {
+	v.resetDocument()
+	v.path, v.password, v.original = path, password, original
+	v.describing = true
+	v.engine = &readerEngine{}
+	v.updateCacheLimit()
+	user32.NewProc("SetTimer").Call(v.app.window, readerMemoryTimer, 3000, 0)
 	v.app.report("Načítám dokument…")
 	v.app.updateActions()
-	v.schedule()
+	v.changedViewport()
 }
 
 func (v *documentView) proofMode() bool { return v.app.mode == idProofTab }
@@ -378,18 +418,17 @@ func (v *documentView) request(action string) request {
 	return req
 }
 
-func (v *documentView) clearFrames() {
-	v.frames = make(map[int]readerFrame)
-	v.failed = make(map[int]bool)
+func (v *documentView) clearPlateView() {
 	v.proofPage = -1
 	v.plates = nil
 	sendMessage.Call(v.list, 0x0184, 0, 0)
 	setText(v.sample, "")
+	setText(v.outputInfo, "")
 }
 
 func (v *documentView) reframe(geometry bool) {
 	v.generation++
-	v.clearFrames()
+	v.clearPlateView()
 	setText(v.scanReport, "")
 	if geometry {
 		v.reference = v.page
@@ -402,16 +441,20 @@ func (v *documentView) sizesInOrder() []pageSize {
 	box := v.box()
 	result := make([]pageSize, len(v.order))
 	for index, page := range v.order {
-		d := v.sizes[page-1][box]
-		if d[0] <= 0 || d[1] <= 0 {
-			d = [2]float64{595, 842}
-		}
-		if v.rotations[page-1]%180 != 0 {
-			d[0], d[1] = d[1], d[0]
-		}
-		result[index] = pageSize{d[0], d[1]}
+		result[index] = v.pageDimensions(page, box)
 	}
 	return result
+}
+
+func (v *documentView) pageDimensions(number int, box string) pageSize {
+	d := v.sizes[number-1][box]
+	if d[0] <= 0 || d[1] <= 0 {
+		d = [2]float64{595, 842}
+	}
+	if v.rotations[number-1]%180 != 0 {
+		d[0], d[1] = d[1], d[0]
+	}
+	return pageSize{d[0], d[1]}
 }
 
 func (v *documentView) viewportSize() (float64, float64) {
@@ -663,11 +706,7 @@ func (v *documentView) changedViewport() {
 	v.schedule()
 }
 
-func (v *documentView) wantedPixels(page sheet) int {
-	if v.proofMode() {
-		return 1850
-	}
-	size := max(page.width, page.height)
+func previewPixels(size float64) int {
 	switch {
 	case size > 2050:
 		return 3000
@@ -685,49 +724,95 @@ func (v *documentView) schedule() {
 		return
 	}
 	if v.describing {
-		v.launch(v.request("describe"), 0, 0)
+		v.launch(v.request("describe"), 0, 0, false)
 		return
 	}
 	if !v.ready() {
 		return
 	}
 	_, height := v.viewportSize()
-	visible := v.spread.visible(v.scrollY, height)
-	candidates := slices.Clone(visible)
+	candidates := slices.Clone(v.spread.visible(v.scrollY, height))
 	if current, ok := v.spread.position(v.page); ok {
 		candidates = append([]sheet{current}, candidates...)
 	}
-	if v.continuous && !v.proofMode() && len(visible) > 0 {
-		if next, ok := v.spread.position(visible[len(visible)-1].index + 1); ok {
-			candidates = append(candidates, next)
-		}
-	}
+	cache, proof := v.activeCache(), v.proofMode()
 	for _, item := range candidates {
 		number := v.order[item.index]
-		frame := v.frames[number]
-		pixels := v.wantedPixels(item)
-		if v.failed[number] || (frame.image != nil && frame.pixels >= pixels) {
+		frame := cache.frames[number]
+		pixels := previewPixels(max(item.width, item.height))
+		if proof {
+			pixels = 1850
+		}
+		if cache.failed[number] || frame.pixels >= pixels {
 			continue
 		}
-		action := "screen"
-		if v.proofMode() {
-			action = "preview"
+		if !proof && v.prefetch.generation == v.generation && v.prefetch.page == number && v.prefetch.pixels >= pixels {
+			continue
 		}
-		req := v.request(action)
-		req.View.Page, req.View.Rotation, req.View.Pixels = number, v.rotations[number-1], pixels
-		v.launch(req, number, pixels)
+		v.renderPage(number, pixels, false)
 		return
+	}
+	if !proof && !v.app.busy && v.prefetch.page == 0 {
+		v.schedulePrefetch()
 	}
 }
 
-func (v *documentView) launch(req request, number, pixels int) {
-	v.running = true
+func (v *documentView) schedulePrefetch() {
+	v.updateCacheLimit()
+	free := v.cacheLimit - v.reading.bytes - v.printPreview.bytes
+	if free > 0 {
+		box := v.box()
+		width, height := v.viewportSize()
+		margin := float64(2 * v.app.scale(18))
+		for offset := 1; offset < len(v.order); offset++ {
+			number := v.order[(v.page+offset)%len(v.order)]
+			if v.reading.frames[number].image != nil || v.reading.failed[number] || v.prefetchFailed[number] {
+				continue
+			}
+			size := v.pageDimensions(number, box)
+			long, short := max(size.width, size.height), min(size.width, size.height)
+			fit := min((width-margin)/size.width, (height-margin)/size.height)
+			pixels := previewPixels(fit * long)
+			// Leave room for Ghostscript rounding the width and height to pixels.
+			rendered := min(float64(pixels), long*300/72)
+			estimate := int64(math.Ceil(rendered)+2) * int64(math.Ceil(rendered*short/long)+2) * 4
+			if estimate <= free {
+				v.renderPage(number, pixels, true)
+				return
+			}
+		}
+	}
+	v.stopPrefetchEngine()
+}
+
+func (v *documentView) renderPage(number, pixels int, background bool) {
+	action := "screen"
+	if v.proofMode() {
+		action = "preview"
+	}
+	req := v.request(action)
+	req.View.Page, req.View.Rotation, req.View.Pixels = number, v.rotations[number-1], pixels
+	v.launch(req, number, pixels, background)
+}
+
+func (v *documentView) launch(req request, number, pixels int, background bool) {
 	generation, original := v.generation, v.original
+	task := readerTask{generation, number, pixels, background}
+	engine := v.engine
+	if background {
+		v.prefetch = task
+		if v.prefetchEngine == nil {
+			v.prefetchEngine = &readerEngine{background: true}
+		}
+		engine = v.prefetchEngine
+	} else {
+		v.running = true
+	}
 	go func() {
-		job := readerJob{generation: generation, page: number, pixels: pixels, action: req.Action,
+		job := readerJob{readerTask: task, action: req.Action,
 			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
 		if unchanged(req.Input, original) {
-			result := v.engine.run(req)
+			result := engine.run(req)
 			if unchanged(req.Input, original) {
 				job.result = result
 			}
@@ -750,6 +835,10 @@ func (v *documentView) launch(req request, number, pixels int) {
 }
 
 func (v *documentView) finished(job readerJob) {
+	if job.background {
+		v.finishedPrefetch(job)
+		return
+	}
 	v.running = false
 	if job.generation != v.generation {
 		v.schedule()
@@ -759,7 +848,7 @@ func (v *documentView) finished(job readerJob) {
 		v.describing = false
 		v.invalidSource = job.result.Status == "changed"
 		if job.page != 0 {
-			v.failed[job.page] = true
+			v.activeCache().failed[job.page] = true
 		}
 		if job.page == 0 {
 			setText(v.documentInfo, multiline(job.result.Message))
@@ -782,54 +871,58 @@ func (v *documentView) finished(job readerJob) {
 			v.order[i] = i + 1
 		}
 		v.markSaved()
-		intent := v.intent
-		if intent == "" {
-			intent = "Neuveden"
-		}
-		setText(v.documentInfo, multiline(fmt.Sprintf("%d stran\nVýstupní záměr PDF\n%s", len(v.order), intent)))
 		v.app.report("")
 		v.updatePageList()
 		v.rebuild(false)
 	} else if job.frame.image != nil {
-		v.frames[job.page] = job.frame
-		v.trimFrames(job.page)
+		v.activeCache().store(job.page, job.frame)
+		v.trimCaches()
 	}
+	v.updateDocumentInfo()
 	v.app.updateActions()
 	v.changedViewport()
 }
 
-func (v *documentView) trimFrames(latest int) {
-	const budget = 120 << 20
-	bytes := 0
-	for _, frame := range v.frames {
-		bytes += len(frame.image.pixels)
-	}
-	_, height := v.viewportSize()
-	visible := make(map[int]bool)
-	for _, page := range v.spread.visible(v.scrollY, height) {
-		visible[v.order[page.index]] = true
-	}
-	for len(v.frames) > 1 && (len(v.frames) > 24 || bytes > budget) {
-		victim, distance := 0, -1
-		for number := range v.frames {
-			if number == latest || number == v.order[v.page] || visible[number] {
-				continue
-			}
-			position := slices.Index(v.order, number)
-			gap := position - v.page
-			if gap < 0 {
-				gap = -gap
-			}
-			if gap > distance {
-				victim, distance = number, gap
+func (v *documentView) finishedPrefetch(job readerJob) {
+	v.prefetch = readerTask{}
+	if job.generation == v.generation && v.ready() {
+		v.updateCacheLimit()
+		switch {
+		case job.result.Status == "changed":
+			v.invalidSource = true
+			v.app.report(job.result.Message)
+			v.app.updateActions()
+		case job.frame.image == nil:
+			v.prefetchFailed[job.page] = true
+		case v.reading.frames[job.page].image == nil &&
+			v.reading.bytes+v.printPreview.bytes+int64(len(job.frame.image.pixels)) <= v.cacheLimit:
+			v.reading.store(job.page, job.frame)
+			v.updateDocumentInfo()
+			_, height := v.viewportSize()
+			for _, item := range v.spread.visible(v.scrollY, height) {
+				if v.order[item.index] == job.page {
+					invalidate(v.app.window)
+					break
+				}
 			}
 		}
-		if victim == 0 {
-			break
-		}
-		bytes -= len(v.frames[victim].image.pixels)
-		delete(v.frames, victim)
 	}
+	if !v.ready() || v.proofMode() || v.app.busy {
+		v.stopPrefetchEngine()
+	}
+	v.schedule()
+}
+
+func (v *documentView) updateDocumentInfo() {
+	if !v.ready() {
+		return
+	}
+	intent := v.intent
+	if intent == "" {
+		intent = "Neuveden"
+	}
+	setText(v.documentInfo, multiline(fmt.Sprintf("%d stran\nVýstupní záměr PDF\n%s\nV paměti %d z %d stran",
+		len(v.order), intent, len(v.reading.frames), len(v.order))))
 }
 
 func (v *documentView) syncProofPanel() {
@@ -840,7 +933,7 @@ func (v *documentView) syncProofPanel() {
 	if v.proofPage == number {
 		return
 	}
-	frame, exists := v.frames[number]
+	frame, exists := v.printPreview.frames[number]
 	v.plates = nil
 	sendMessage.Call(v.list, 0x0184, 0, 0)
 	setText(v.sample, "")
@@ -920,6 +1013,14 @@ func (v *documentView) rotate(angle int) {
 	number := v.order[v.page] - 1
 	v.history = append(v.history, pageEdit{v.page, v.page, v.rotations[number]})
 	v.rotations[number] = (v.rotations[number] + 360 + angle) % 360
+	v.rotationChanged(number + 1)
+}
+
+func (v *documentView) rotationChanged(number int) {
+	v.reading.remove(number)
+	v.printPreview.remove(number)
+	delete(v.prefetchFailed, number)
+	v.updateDocumentInfo()
 	v.reframe(true)
 }
 
@@ -945,8 +1046,9 @@ func (v *documentView) undo() {
 	edit := v.history[index]
 	v.history = v.history[:index]
 	if edit.from == edit.to {
-		v.rotations[v.order[edit.from]-1] = edit.angle
-		v.reframe(true)
+		number := v.order[edit.from]
+		v.rotations[number-1] = edit.angle
+		v.rotationChanged(number)
 	} else {
 		v.order[edit.from], v.order[edit.to] = v.order[edit.to], v.order[edit.from]
 		v.updatePageList()
@@ -979,7 +1081,13 @@ func (v *documentView) command(id, notification int) bool {
 				v.rebuild(false)
 				v.changedViewport()
 			}
-		case idReaderScreenBox, idReaderProofBox, idReaderProof:
+		case idReaderScreenBox:
+			v.reading.clear()
+			clear(v.prefetchFailed)
+			v.updateDocumentInfo()
+			v.reframe(true)
+		case idReaderProofBox, idReaderProof:
+			v.printPreview.clear()
 			v.reframe(true)
 		case idReaderPageList:
 			number, _, _ := sendMessage.Call(v.pageList, 0x0188, 0, 0)
@@ -989,6 +1097,7 @@ func (v *documentView) command(id, notification int) bool {
 				on, _, _ := sendMessage.Call(v.list, 0x0187, uintptr(index), 0)
 				v.hidden[plate.Name] = on == 0
 			}
+			v.printPreview.clear()
 			v.reframe(false)
 		default:
 			return false
@@ -1021,6 +1130,7 @@ func (v *documentView) command(id, notification int) bool {
 		for _, plate := range v.plates {
 			v.hidden[plate.Name] = id == idReaderNone
 		}
+		v.printPreview.clear()
 		v.reframe(false)
 	case idReaderScan:
 		if !v.app.busy {
@@ -1076,6 +1186,7 @@ func (v *documentView) paint(dc uintptr) {
 	saved, _, _ := gdi32.NewProc("SaveDC").Call(dc)
 	gdi32.NewProc("IntersectClipRect").Call(dc, uintptr(viewport.left), uintptr(viewport.top), uintptr(viewport.right), uintptr(viewport.bottom))
 	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
+	cache := v.activeCache()
 	for _, page := range v.spread.visible(v.scrollY, height) {
 		x := int(viewport.left) + int(math.Round(page.left-v.scrollX))
 		y := int(viewport.top) + int(math.Round(page.top-v.scrollY))
@@ -1084,11 +1195,11 @@ func (v *documentView) paint(dc uintptr) {
 		bounds := rect{int32(x), int32(y), int32(x + width), int32(y + height)}
 		shadow := rect{bounds.left + 3, bounds.top + 4, bounds.right + 5, bounds.bottom + 6}
 		fillColor(dc, shadow, paletteColor{10, 10, 12})
-		bitmap := v.frames[number].image
+		bitmap := cache.frames[number].image
 		if bitmap == nil {
 			fillColor(dc, bounds, paletteColor{235, 234, 232})
 			status := fmt.Sprintf("Načítám stránku %d…", page.index+1)
-			if v.failed[number] {
+			if cache.failed[number] {
 				status = "Stránku nelze vykreslit."
 			}
 			drawText(dc, status, bounds, v.app.normalFont, canvasColor, 1)

@@ -126,6 +126,7 @@ type app struct {
 	readOnlyFields, primaryButtons                                    map[uintptr]bool
 	view                                                              *documentView
 	open, outputButton, panelButton, fullButton, documentName, status uintptr
+	closePDF                                                          uintptr
 	profiles, customICC, customBrowse                                 uintptr
 	outline, decrypt, raster, visible                                 uintptr
 	password, cert, certPass, trust                                   uintptr
@@ -172,7 +173,7 @@ func main() {
 		notice(0, "Okno aplikace PDF Blacksmith se nepodařilo vytvořit.", 0x10)
 		return
 	}
-	defer window.view.engine.close()
+	defer window.view.closeReaders()
 	showWindow.Call(window.window, 5)
 	setFocus.Call(window.open)
 	if len(os.Args) > 1 {
@@ -377,6 +378,11 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmReaderFinished:
 		a.view.finished(<-a.view.jobs)
 		return 0
+	case 0x0113: // WM_TIMER
+		if wParam == readerMemoryTimer && a.view.path != "" {
+			a.view.refreshCache()
+			return 0
+		}
 	case 0x0233: // WM_DROPFILES
 		a.openDrop(wParam)
 		return 0

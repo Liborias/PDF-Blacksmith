@@ -12,9 +12,10 @@ import (
 // The reader serializes requests. The lock coordinates process startup and
 // shutdown with the UI goroutine without holding it during rendering.
 type readerEngine struct {
-	mu      sync.Mutex
-	process *readerProcess
-	closed  bool
+	mu         sync.Mutex
+	process    *readerProcess
+	closed     bool
+	background bool
 }
 
 type readerProcess struct {
@@ -40,6 +41,9 @@ func (e *readerEngine) start() (*readerProcess, error) {
 	cmd, err := engineCommand("--stream")
 	if err != nil {
 		return nil, err
+	}
+	if e.background {
+		cmd.SysProcAttr.CreationFlags |= 0x00004000 // BELOW_NORMAL_PRIORITY_CLASS
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -82,6 +86,9 @@ func (e *readerEngine) run(req request) response {
 	}
 	process.command.Process.Kill()
 	process.command.Wait()
+	if e.background {
+		return operationError("Přednačtení stránky se nezdařilo.")
+	}
 	// A failed exchange can be retried because preview requests only read the PDF.
 	return runOperation(req)
 }

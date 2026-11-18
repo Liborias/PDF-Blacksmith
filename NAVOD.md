@@ -6,7 +6,8 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. Ghostscript a Pyt
 
 PDF otevřete tlačítkem **Otevřít PDF…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Záložky **Zobrazení**, **Stránky**, **Separace**, **Export** a **Podpisy** přepínají nástroje v postranním panelu.
 
-- V panelu **Zobrazení** zvolte rozvržení **Souvisle** nebo **Po stránkách**. Kolečko v souvislém režimu posouvá dokument. Ve stránkovém režimu posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku.
+- PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V panelu **Zobrazení** lze přepnout na **Souvisle** a posouvat dokument plynule.
+- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Panel **Zobrazení** ukazuje počet stránek v paměti. Tlačítkem **Zavřít PDF** nebo zkratkou **Ctrl+W** dokument zavřete a uvolníte jeho náhledy z paměti.
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Přiblížený výřez posunete také tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Tlačítko **Skrýt panel** přenechá dokumentu celou šířku okna. Okno maximalizujete tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v panelu **Zobrazení** a použijte **Načíst znovu s heslem**.
