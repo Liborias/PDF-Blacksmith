@@ -9,7 +9,7 @@ import (
 func parseExportPages(input string, pageCount int) ([]int, error) {
 	input = strings.TrimSpace(input)
 	if input == "" {
-		return nil, fmt.Errorf("Zadejte strany k exportu, například 1, 3–5, 8.")
+		return nil, fmt.Errorf("Zadejte výběr stran, například 1, 3–5, 8.")
 	}
 	input = strings.NewReplacer("–", "-", "—", "-").Replace(input)
 	selected := make([]bool, pageCount)

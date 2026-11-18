@@ -29,6 +29,7 @@ type request struct {
 	Action          string         `json:"action"`
 	Input           string         `json:"input"`
 	Output          string         `json:"output,omitempty"`
+	OutputDir       string         `json:"output_dir,omitempty"`
 	PDFPassword     string         `json:"pdf_password,omitempty"`
 	Preset          string         `json:"preset,omitempty"`
 	Profile         string         `json:"profile,omitempty"`

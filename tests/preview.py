@@ -238,6 +238,23 @@ def check_proofs(exe, folder):
     with Pdf.open(encrypted_subset, password="cteni") as pdf:
         assert pdf.is_encrypted and len(pdf.pages) == 1 and pdf.pages[0].label == "S-2"
 
+    split_folder = folder / "rozdělené strany"
+    split_folder.mkdir()
+    split_view = {"pages": [3, 1, 3], "order": [3, 1, 2], "rotations": [0, 0, 90]}
+    call(exe, sep, "split", output_dir=str(split_folder), view=split_view)
+    first, third = [split_folder / f"{sep.stem}-strana-{number:03}.pdf" for number in (1, 3)]
+    with Pdf.open(first) as pdf:
+        assert len(pdf.pages) == 1 and pdf.pages[0].label == "S-3"
+        assert pdf.pages[0].Rotate == 90 and not pdf.check_pdf_syntax()
+    with Pdf.open(third) as pdf:
+        assert len(pdf.pages) == 1 and pdf.pages[0].label == "S-2"
+    first_bytes = first.read_bytes()
+    call(exe, sep, "split", expected="error", output_dir=str(split_folder))
+    assert set(split_folder.iterdir()) == {first, third} and first.read_bytes() == first_bytes
+    call(exe, encrypted, "split", output_dir=str(split_folder), pdf_password="cteni", view={"pages": [2]})
+    with Pdf.open(split_folder / f"{encrypted.stem}-strana-002.pdf", password="cteni") as pdf:
+        assert pdf.is_encrypted and len(pdf.pages) == 1 and pdf.pages[0].label == "S-2"
+
     src = folder / "obrázek.pdf"
     output = folder / "nastavení.pdf"
     with Pdf.new() as pdf:

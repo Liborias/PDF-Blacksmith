@@ -47,6 +47,9 @@ const (
 	idFileSign
 	idFileRun
 	idFileDetails
+	idSplitTab
+	idSplitScope
+	idSplitRun
 )
 
 const (
@@ -70,7 +73,10 @@ var workspaceTabs = []struct {
 	{idBrowseTab, "Zobrazení", false},
 	{idProofTab, "Separace", true},
 	{idSignTab, "Digitální podpis", true},
+	{idSplitTab, "Rozdělit PDF", true},
 }
+
+var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"}
 
 type panelItem struct {
 	handle              uintptr
@@ -95,27 +101,24 @@ type monitorInfo struct {
 	flags         uint32
 }
 
-type scrollInfo struct {
-	size, mask       uint32
-	minimum, maximum int32
-	page             uint32
-	position, track  int32
-}
-
 func (a *app) setupWorkspace() bool {
 	className := wideString("PDFBlaksmithSidebar")
 	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, 32512)
 	class := windowClass{instance: a.instance, className: uintptr(unsafe.Pointer(className)),
 		windowProc: syscall.NewCallback(sidebarProc), cursor: cursor}
 	class.size = uint32(unsafe.Sizeof(class))
-	if ok, _, _ := registerClass.Call(uintptr(unsafe.Pointer(&class))); ok == 0 {
+	if ok, _, _ := registerClass.Call(uintptr(unsafe.Pointer(&class))); ok == 0 || !a.registerScrollTrack(cursor) {
 		return false
 	}
 	a.sidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
-		wsChild|wsVscroll|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	if a.sidebar == 0 {
 		return false
 	}
+	a.sideScroll = a.addPanelScrollbar(func(offset int) {
+		a.panelScroll[a.detailsTab()] = offset
+		a.layoutPanel()
+	})
 
 	var catalog []profileChoice
 	if json.Unmarshal(printCatalog, &catalog) != nil {
@@ -132,6 +135,7 @@ func (a *app) setupWorkspace() bool {
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
+	a.documentClose = a.button("Zavřít PDF", idClosePDF, 0, 0, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
 	for _, tab := range workspaceTabs {
 		handle := a.button(tab.name, tab.id, 0, 0, toolPanelWidth-20, 0)
@@ -171,6 +175,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildSignPanel()
 	a.beginPanel(idFileDetails)
 	a.buildFilePanel()
+	a.beginPanel(idSplitTab)
+	a.buildSplitPanel()
 	a.addingTab, a.controlParent = 0, 0
 	a.layout()
 	a.updateActions()
@@ -192,7 +198,7 @@ func (a *app) buildExportPanel() {
 	a.exportFormat = a.combo(idExportPreset, 16, 86, 298, formats)
 	a.exportHint = a.add("STATIC", a.exportPresets[0].Description, 0, 16, 121, 298, 42, 0x80, 0, a.normalFont)
 	a.label("Strany k exportu", 16, 169, 298, true)
-	a.exportScope = a.combo(idExportScope, 16, 191, 145, []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"})
+	a.exportScope = a.combo(idExportScope, 16, 191, 145, pageScopeNames)
 	a.exportRange = a.edit(169, 191, 145, false)
 	sendMessage.Call(a.exportRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8")))) // EM_SETCUEBANNER
 	a.exportColorLabel = a.label("Barevný výstup", 16, 229, 298, true)
@@ -312,7 +318,7 @@ func (a *app) activate(id int) {
 			a.mode = idOpen
 		}
 		a.tool = idFileTab
-	case idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument, idClosePDF:
+	case idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		if !a.fileOptionEnabled(id) {
 			return
 		}
@@ -325,7 +331,7 @@ func (a *app) activate(id int) {
 			return
 		}
 		a.tool, a.mode = idBrowseTab, id
-	case idProofTab, idSignTab:
+	case idProofTab, idSignTab, idSplitTab:
 		if !a.documentTools {
 			return
 		}
@@ -371,6 +377,7 @@ func (a *app) layout() {
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}
+	showControl(a.documentClose, !a.full && a.view.path != "")
 	a.view.showToolbar(chrome)
 	a.layoutSidebars()
 	a.view.resize(a.viewport)
@@ -378,6 +385,9 @@ func (a *app) layout() {
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if item.handle == a.splitRange {
+		return item, comboIndex(a.splitScope) == exportPageRanges
+	}
 	if tab == idFileDetails && a.mode == idOpen {
 		if item.handle == a.filePath {
 			return item, false
@@ -441,20 +451,24 @@ func (a *app) layoutPanel() {
 	active := a.detailsTab()
 	offset := min(max(0, a.panelScroll[active]), max(0, height-available))
 	a.panelScroll[active] = offset
-	info := scrollInfo{size: uint32(unsafe.Sizeof(scrollInfo{})), mask: 7, maximum: int32(height - 1), page: uint32(available), position: int32(offset)}
-	user32.NewProc("SetScrollInfo").Call(a.sidebar, 1, uintptr(unsafe.Pointer(&info)), 1)
+	var inner rect
+	getClientRect.Call(a.sidebar, uintptr(unsafe.Pointer(&inner)))
+	place(a.sideScroll.handle, int(inner.right)-a.scale(18), 0, a.scale(14), int(inner.bottom))
+	a.sideScroll.update(height, available, offset, true)
 	for tab, items := range a.panelItems {
 		for index, item := range items {
 			show := tab == active
 			if show {
 				item, show = a.panelItemLayout(tab, index, item)
 			}
+			if pane := a.scrollPanes[item.handle]; pane != nil {
+				a.layoutScrollPane(pane, item, offset, show)
+				continue
+			}
 			if show {
 				place(item.handle, a.scale(item.x), a.scale(item.y-offset), a.scale(item.width), a.scale(item.height))
-				showWindow.Call(item.handle, 5)
-			} else {
-				showWindow.Call(item.handle, 0)
 			}
+			showControl(item.handle, show)
 		}
 	}
 	invalidate(a.sidebar)
@@ -504,33 +518,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 		return 0
 	case 0x020a: // WM_MOUSEWHEEL
-		a.panelScroll[a.detailsTab()] -= int(int16(wParam>>16)) * 62 / 120
-		a.layoutPanel()
-		return 0
-	case 0x0115: // WM_VSCROLL
-		total, height := a.panelMetrics()
-		tab := a.detailsTab()
-		value := a.panelScroll[tab]
-		switch wParam & 0xffff {
-		case 0:
-			value -= 25
-		case 1:
-			value += 25
-		case 2:
-			value -= height
-		case 3:
-			value += height
-		case 4, 5:
-			info := scrollInfo{size: uint32(unsafe.Sizeof(scrollInfo{})), mask: 0x10}
-			user32.NewProc("GetScrollInfo").Call(hwnd, 1, uintptr(unsafe.Pointer(&info)))
-			value = int(info.track)
-		case 6:
-			value = 0
-		case 7:
-			value = total
-		}
-		a.panelScroll[tab] = value
-		a.layoutPanel()
+		a.wheelSettings(lParam, int(int16(wParam>>16)))
 		return 0
 	}
 	result, _, _ := defWindowProc.Call(hwnd, uintptr(msg), wParam, lParam)
@@ -609,6 +597,7 @@ func (a *app) closeDocument() {
 	setText(a.password, "")
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
+	setText(a.splitReport, "")
 	a.reportStatus("")
 	if a.tool == idFileTab {
 		a.mode = idOpen
@@ -651,6 +640,9 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 	setText(a.exportReport, "")
 	chooseCombo(a.exportScope, exportAllPages)
 	setText(a.exportRange, "")
+	chooseCombo(a.splitScope, exportAllPages)
+	setText(a.splitRange, "")
+	setText(a.splitReport, "")
 	a.view.open(path, password, info)
 	a.layout()
 }
@@ -675,6 +667,11 @@ func (a *app) command(id, notification int) {
 			if comboIndex(a.exportScope) == exportPageRanges {
 				setFocus.Call(a.exportRange)
 			}
+		case idSplitScope:
+			a.layoutPanel()
+			if comboIndex(a.splitScope) == exportPageRanges {
+				setFocus.Call(a.splitRange)
+			}
 		case idICCProfile:
 			if a.profileKey() != "" {
 				a.setChecked(a.decrypt, false)
@@ -689,8 +686,8 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab, idBrowseTab, idPagesTab, idProofTab, idSignTab,
-		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument, idClosePDF:
+	case idFileTab, idBrowseTab, idPagesTab, idProofTab, idSignTab, idSplitTab,
+		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.activate(id)
 	case idFileRun:
 		a.runFileOption()
@@ -708,6 +705,10 @@ func (a *app) command(id, notification int) {
 		a.toggleMaximized()
 	case idCloseWindow:
 		postMessage.Call(a.window, wmClose, 0, 0)
+	case idClosePDF:
+		a.closeDocument()
+	case idSplitRun:
+		a.splitDocument()
 	case idReload:
 		if !a.busy && a.view.path != "" {
 			a.openDocument(a.view.path, getText(a.password))
@@ -745,6 +746,22 @@ func (a *app) command(id, notification int) {
 	}
 }
 
+func (a *app) selectPages(req *request, scope, pageRange uintptr) bool {
+	switch comboIndex(scope) {
+	case exportCurrentPage:
+		req.View.Pages = []int{a.view.page + 1}
+	case exportPageRanges:
+		pages, err := parseExportPages(getText(pageRange), len(a.view.order))
+		if err != nil {
+			a.report(err.Error())
+			setFocus.Call(pageRange)
+			return false
+		}
+		req.View.Pages = pages
+	}
+	return true
+}
+
 func (a *app) startAction(id int) {
 	if a.busy || !a.view.ready() {
 		return
@@ -756,17 +773,8 @@ func (a *app) startAction(id int) {
 		req.Action = "transform"
 		preset := a.selectedExportPreset()
 		req.Preset = preset.Key
-		switch comboIndex(a.exportScope) {
-		case exportCurrentPage:
-			req.View.Pages = []int{a.view.page + 1}
-		case exportPageRanges:
-			pages, err := parseExportPages(getText(a.exportRange), len(a.view.order))
-			if err != nil {
-				a.report(err.Error())
-				setFocus.Call(a.exportRange)
-				return
-			}
-			req.View.Pages = pages
+		if !a.selectPages(&req, a.exportScope, a.exportRange) {
+			return
 		}
 		key := a.profileKey()
 		if req.Preset == "" {
@@ -830,7 +838,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab) {
 			if a.tool == idFileTab {
 				a.mode = idOpen
 			} else {
@@ -844,7 +852,8 @@ func (a *app) updateActions() {
 		a.updateFileOptions()
 	}
 	ready := !a.busy && documentReady
-	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton} {
+	setEnabled(a.documentClose, !a.busy && a.view.path != "")
+	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton} {
 		setEnabled(button, ready)
 	}
 	a.view.updateActions()
@@ -862,6 +871,8 @@ func (a *app) report(message string) {
 		target = a.exportReport
 	case idSignTab:
 		target = a.signReport
+	case idSplitTab:
+		target = a.splitReport
 	}
 	if target != 0 {
 		setText(target, multiline(message))
@@ -919,6 +930,9 @@ func (a *app) finish(result response) {
 	if result.Status == "signed_pdf" {
 		message := result.Message
 		question := "Uložit kopii bez původních podpisů?"
+		if req.Action == "split" {
+			question = "Uložit vybrané strany bez původních podpisů?"
+		}
 		if req.ReplaceSource {
 			message = "Původní PDF obsahuje digitální podpis."
 			question = "Přepsat původní soubor a odstranit jeho stávající podpisy?"
@@ -956,6 +970,12 @@ func (a *app) finish(result response) {
 		if req.Action == "transform" {
 			setText(a.exportReport, multiline(message))
 		}
+		if req.Action == "split" {
+			if result.Status == "ok" {
+				message += "\n" + req.OutputDir
+			}
+			setText(a.splitReport, multiline(message))
+		}
 	}
 	if req.Action == "sign" {
 		setText(a.certPass, "")
@@ -976,12 +996,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 			return true
 		}
 		if !a.full && !a.detailsCollapsed && pos.x >= a.viewport.right+int32(a.scale(sidebarRailWidth)) && pos.x < int32(a.width) &&
-			pos.y >= a.viewport.top && pos.y < a.viewport.bottom && msg.window != a.sidebar {
-			child, _, _ := user32.NewProc("IsChild").Call(a.sidebar, msg.window)
-			if child == 0 {
-				sendMessage.Call(a.sidebar, uintptr(msg.message), msg.wParam, msg.lParam)
-				return true
-			}
+			pos.y >= a.viewport.top && pos.y < a.viewport.bottom {
+			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)))
+			return true
 		}
 	}
 	if msg.message != 0x0100 {

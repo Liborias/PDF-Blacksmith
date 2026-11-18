@@ -16,7 +16,6 @@ var fileOptions = []struct {
 	{idExportTab, "Export"},
 	{idFileSign, "Podepsaná kopie"},
 	{idPrintDocument, "Tisk"},
-	{idClosePDF, "Zavřít PDF"},
 }
 
 func (a *app) fileOptionEnabled(option int) bool {
@@ -30,8 +29,6 @@ func (a *app) fileOptionEnabled(option int) bool {
 		return a.lastOutput != ""
 	case idSaveDocument:
 		return a.view.ready() && a.view.changed()
-	case idClosePDF:
-		return a.view.path != ""
 	default:
 		return a.view.ready()
 	}
@@ -66,8 +63,6 @@ func (a *app) updateFilePanel() {
 		hint, command = "Vyberte název a umístění kopie otevřeného PDF.", "Vybrat umístění…"
 	case idPrintDocument:
 		hint, command = "V tiskovém dialogu vyberte tiskárnu, rozsah stran a počet kopií.", "Otevřít tiskový dialog…"
-	case idClosePDF:
-		hint, command = "Aktuálně otevřený soubor", "Zavřít tento dokument"
 	}
 	setText(a.fileHint, hint)
 	setText(a.filePath, path)
@@ -97,8 +92,6 @@ func (a *app) runFileOption() {
 		a.saveDocument(a.mode == idSaveDocumentAs)
 	case idPrintDocument:
 		a.printDocument()
-	case idClosePDF:
-		a.closeDocument()
 	}
 }
 

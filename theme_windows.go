@@ -26,14 +26,15 @@ func (color paletteColor) win() uintptr {
 }
 
 var (
-	titleColor  = paletteColor{22, 22, 24}
-	canvasColor = paletteColor{26, 26, 29}
-	panelColor  = paletteColor{33, 33, 39}
-	inputColor  = paletteColor{19, 19, 23}
-	textColor   = paletteColor{245, 242, 244}
-	mutedColor  = paletteColor{186, 178, 188}
-	accentColor = paletteColor{173, 77, 109}
-	divider     = paletteColor{65, 61, 70}
+	titleColor     = paletteColor{22, 22, 24}
+	canvasColor    = paletteColor{26, 26, 29}
+	panelColor     = paletteColor{33, 33, 39}
+	inputColor     = paletteColor{19, 19, 23}
+	textColor      = paletteColor{245, 242, 244}
+	mutedColor     = paletteColor{186, 178, 188}
+	disabledColor  = paletteColor{119, 114, 122}
+	selectionColor = paletteColor{205, 120, 148}
+	divider        = paletteColor{65, 61, 70}
 
 	gdiDelete     = gdi32.NewProc("DeleteObject")
 	gdiSelect     = gdi32.NewProc("SelectObject")
@@ -93,15 +94,21 @@ func rounded(dc uintptr, bounds rect, radius int, fill, border paletteColor) {
 	gdiDelete.Call(pen)
 }
 
-func drawCheck(dc uintptr, bounds rect) {
+func drawCheck(dc uintptr, bounds rect, color paletteColor) {
 	width, height := bounds.right-bounds.left, bounds.bottom-bounds.top
-	pen, _, _ := gdiPen.Call(0, uintptr(max(1, width/9)), textColor.win())
+	pen, _, _ := gdiPen.Call(0, uintptr(max(1, width/9)), color.win())
 	previous, _, _ := gdiSelect.Call(dc, pen)
 	gdi32.NewProc("MoveToEx").Call(dc, uintptr(bounds.left+width/4), uintptr(bounds.top+height/2), 0)
 	gdi32.NewProc("LineTo").Call(dc, uintptr(bounds.left+width*7/16), uintptr(bounds.top+height*11/16))
 	gdi32.NewProc("LineTo").Call(dc, uintptr(bounds.left+width*3/4), uintptr(bounds.top+height/3))
 	gdiSelect.Call(dc, previous)
 	gdiDelete.Call(pen)
+}
+
+func (a *app) drawFocus(dc uintptr, bounds rect) {
+	inset := int32(a.scale(5))
+	line := bounds.bottom - int32(a.scale(3))
+	fillColor(dc, rect{bounds.left + inset, line, bounds.right - inset, line + 1}, mutedColor)
 }
 
 func drawText(dc uintptr, text string, bounds rect, font uintptr, color paletteColor, align uintptr) {
@@ -141,8 +148,7 @@ func (a *app) paint(hwnd uintptr) {
 		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
 		a.paintSidebars(dc)
 		if a.view.path != "" {
-			nameArea := rect{int32(a.scale(a.headerBrand)), 0, int32(a.windowButtonStart - a.scale(12)), int32(a.scale(headerHeight))}
-			drawText(dc, filepath.Base(a.view.path), nameArea, a.normalFont, mutedColor, 0x8000) // DT_END_ELLIPSIS
+			drawText(dc, filepath.Base(a.view.path), a.documentNameBounds, a.normalFont, mutedColor, 0x8000) // DT_END_ELLIPSIS
 		}
 	}
 	a.view.paint(dc)
@@ -151,7 +157,12 @@ func (a *app) paint(hwnd uintptr) {
 
 func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 	gdiTextColor.Call(dc, textColor.win())
-	if msg != wmCtlColorText || a.readOnlyFields[handle] {
+	if a.scrollPanes[handle] != nil {
+		gdiBkColor.Call(dc, panelColor.win())
+		gdiBkMode.Call(dc, 2)
+		return a.panelBrush
+	}
+	if msg != wmCtlColorText {
 		gdiBkColor.Call(dc, inputColor.win())
 		gdiBkMode.Call(dc, 2)
 		return a.inputBrush
@@ -181,17 +192,18 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	fillColor(item.dc, bounds, background)
 	foreground := textColor
 	if item.state&4 != 0 {
-		foreground = mutedColor
+		foreground = disabledColor
 	}
 	if isOption {
 		offset, edge := int32(a.scale(2)), int32(a.scale(17))
 		top := bounds.top + (bounds.bottom-bounds.top-edge)/2
 		box := rect{bounds.left + offset, top, bounds.left + offset + edge, top + edge}
+		rounded(item.dc, box, a.scale(5), inputColor, disabledColor)
 		if a.checked(item.handle) {
-			rounded(item.dc, box, a.scale(5), paletteColor{113, 42, 70}, accentColor)
-			drawCheck(item.dc, box)
-		} else {
-			rounded(item.dc, box, a.scale(5), inputColor, paletteColor{116, 109, 122})
+			if item.state&4 == 0 {
+				foreground = selectionColor
+			}
+			drawCheck(item.dc, box, foreground)
 		}
 		bounds.left += int32(a.scale(28))
 		drawText(item.dc, getText(item.handle), bounds, a.normalFont, foreground, 0)
@@ -205,31 +217,23 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		body, edge := paletteColor{42, 42, 47}, divider
 		if tool {
 			body, edge = background, background
-			if active {
-				body, edge = paletteColor{54, 44, 51}, divider
-			}
-		} else if active {
-			body, edge = paletteColor{91, 42, 63}, paletteColor{128, 58, 84}
+		}
+		if active && item.state&4 == 0 {
+			foreground = selectionColor
 		}
 		if item.state&1 != 0 {
-			body = paletteColor{69, 52, 62}
+			body = divider
 		}
 		if item.state&4 != 0 {
 			body, edge = background, divider
-			foreground = paletteColor{119, 114, 122}
 		}
 		rounded(item.dc, bounds, a.scale(5), body, edge)
-		if tool && active {
-			fillColor(item.dc, rect{bounds.left + 1, bounds.top + int32(a.scale(5)),
-				bounds.left + int32(a.scale(4)), bounds.bottom - int32(a.scale(5))}, accentColor)
-		}
 		if !a.drawToolIconLabel(item, foreground) {
 			drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, 1)
 		}
 	}
 	if item.state&16 != 0 {
-		focus := rect{bounds.left + 3, bounds.top + 3, bounds.right - 3, bounds.bottom - 3}
-		user32.NewProc("DrawFocusRect").Call(item.dc, uintptr(unsafe.Pointer(&focus)))
+		a.drawFocus(item.dc, item.bounds)
 	}
 	return true
 }

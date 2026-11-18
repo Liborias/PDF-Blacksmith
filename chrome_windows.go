@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"image/png"
+	"path/filepath"
 	"unsafe"
 )
 
@@ -67,6 +68,24 @@ func (a *app) layoutHeader() {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
 		invalidate(handle)
 	}
+	a.documentNameBounds, a.documentCloseBounds = rect{}, rect{}
+	if a.view.path == "" {
+		return
+	}
+	left := d(a.headerBrand)
+	maxWidth := max(0, a.windowButtonStart-d(46)-left)
+	dc, _, _ := user32.NewProc("GetDC").Call(a.window)
+	previous, _, _ := gdiSelect.Call(dc, a.normalFont)
+	var measured rect
+	winDrawText.Call(dc, uintptr(unsafe.Pointer(wideString(filepath.Base(a.view.path)))), ^uintptr(0),
+		uintptr(unsafe.Pointer(&measured)), 0x0c20) // DT_CALCRECT | DT_NOPREFIX | DT_SINGLELINE
+	gdiSelect.Call(dc, previous)
+	user32.NewProc("ReleaseDC").Call(a.window, dc)
+	end := left + min(int(measured.right), maxWidth)
+	a.documentNameBounds = rect{int32(left), 0, int32(end), int32(d(headerHeight))}
+	x, y, edge := end+d(7), (d(headerHeight)-d(26))/2, d(26)
+	a.documentCloseBounds = rect{int32(x), int32(y), int32(x + edge), int32(y + edge)}
+	place(a.documentClose, x, y, edge, edge)
 }
 
 var toolIcons = map[int][][]point{
@@ -98,6 +117,13 @@ var toolIcons = map[int][][]point{
 		{{12, 1}, {17, 1}, {17, 6}},
 		{{17, 12}, {17, 17}, {12, 17}},
 		{{6, 17}, {1, 17}, {1, 12}},
+	},
+	idSplitTab: {
+		{{2, 2}, {12, 2}, {16, 6}, {16, 8}},
+		{{12, 2}, {12, 6}, {16, 6}},
+		{{2, 2}, {2, 8}},
+		{{2, 12}, {2, 16}, {16, 16}, {16, 12}},
+		{{1, 10}, {4, 10}}, {{7, 10}, {10, 10}}, {{13, 10}, {17, 10}},
 	},
 }
 
@@ -152,7 +178,7 @@ func (a *app) toggleMaximized() {
 
 func (a *app) drawWindowButton(item *buttonDraw) bool {
 	id := int(item.controlID)
-	if id < idMinimize || id > idCloseWindow {
+	if (id < idMinimize || id > idCloseWindow) && id != idClosePDF {
 		return false
 	}
 	body := titleColor
@@ -166,7 +192,17 @@ func (a *app) drawWindowButton(item *buttonDraw) bool {
 	bounds := item.bounds
 	x, y := int((bounds.left+bounds.right)/2), int((bounds.top+bounds.bottom)/2)
 	d := a.scale(5)
-	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(1))), textColor.win())
+	color := textColor
+	if id == idClosePDF {
+		d = a.scale(4)
+		color = mutedColor
+		if item.state&4 != 0 {
+			color = disabledColor
+		} else if item.state&(1|16) != 0 {
+			color = selectionColor
+		}
+	}
+	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(1))), color.win())
 	old, _, _ := gdiSelect.Call(item.dc, pen)
 	move := gdi32.NewProc("MoveToEx")
 	line := gdi32.NewProc("LineTo")
@@ -192,18 +228,14 @@ func (a *app) drawWindowButton(item *buttonDraw) bool {
 		} else {
 			square(x-d, y-d, 2*d)
 		}
-	case idCloseWindow:
+	case idCloseWindow, idClosePDF:
 		segment(x-d, y-d, x+d+1, y+d+1)
 		segment(x+d, y-d, x-d-1, y+d+1)
 	}
 	gdiSelect.Call(item.dc, old)
 	gdiDelete.Call(pen)
 	if item.state&16 != 0 {
-		bounds.left += 5
-		bounds.top += 5
-		bounds.right -= 5
-		bounds.bottom -= 5
-		user32.NewProc("DrawFocusRect").Call(item.dc, uintptr(unsafe.Pointer(&bounds)))
+		a.drawFocus(item.dc, bounds)
 	}
 	return true
 }
@@ -259,7 +291,7 @@ func (a *app) hitTest(hwnd, param uintptr) uintptr {
 			return 15
 		}
 	}
-	if y < a.scale(headerHeight) && x < a.windowButtonStart {
+	if y < a.scale(headerHeight) && x < a.windowButtonStart && !contains(a.documentCloseBounds, pos.x, pos.y) {
 		return 2
 	}
 	return 1

@@ -115,33 +115,46 @@ func plateRow(plate plateInfo) string {
 	return fmt.Sprintf("%s    %s  /  max %s %%", plateCaption(plate.Name), coverageText(plate), maximum)
 }
 
-func (v *documentView) drawPlateRow(item *buttonDraw) bool {
-	if item.controlType != 2 || item.handle != v.list { // ODT_LISTBOX
+func (v *documentView) drawListRow(item *buttonDraw) bool {
+	if item.controlType != 2 || (item.handle != v.list && item.handle != v.pageList) { // ODT_LISTBOX
 		return false
 	}
 	bounds := item.bounds
-	fillColor(item.dc, bounds, inputColor)
-	if int(item.itemID) >= len(v.plates) {
-		return true
+	fillColor(item.dc, bounds, panelColor)
+	index := int(item.itemID)
+	selected := item.state&1 != 0
+	foreground := textColor
+	if selected {
+		foreground = selectionColor
 	}
-	plate := v.plates[item.itemID]
-	left, size := int32(v.app.scale(7)), int32(v.app.scale(16))
-	top := bounds.top + (bounds.bottom-bounds.top-size)/2
-	check := rect{bounds.left + left, top, bounds.left + left + size, top + size}
-	foreground := mutedColor
-	if plate.Active {
-		foreground = textColor
-	}
-	if item.state&1 != 0 {
-		rounded(item.dc, check, v.app.scale(5), paletteColor{113, 42, 70}, accentColor)
-		drawCheck(item.dc, check)
+	var label string
+	if item.handle == v.pageList {
+		if index >= len(v.order) {
+			return true
+		}
+		label = pageListLabel(index, v.order[index])
+		bounds.left += int32(v.app.scale(7))
 	} else {
-		rounded(item.dc, check, v.app.scale(5), inputColor, divider)
+		if index >= len(v.plates) {
+			return true
+		}
+		plate := v.plates[index]
+		label = plateRow(plate)
+		left, size := int32(v.app.scale(7)), int32(v.app.scale(16))
+		top := bounds.top + (bounds.bottom-bounds.top-size)/2
+		check := rect{bounds.left + left, top, bounds.left + left + size, top + size}
+		rounded(item.dc, check, v.app.scale(5), panelColor, disabledColor)
+		if selected {
+			drawCheck(item.dc, check, selectionColor)
+		}
+		if !plate.Active {
+			foreground = mutedColor
+		}
+		bounds.left += int32(v.app.scale(30))
 	}
-	bounds.left += int32(v.app.scale(30))
-	drawText(item.dc, plateRow(plate), bounds, v.app.normalFont, foreground, 0x8000)
+	drawText(item.dc, label, bounds, v.app.normalFont, foreground, 0x8000)
 	if item.state&16 != 0 {
-		user32.NewProc("DrawFocusRect").Call(item.dc, uintptr(unsafe.Pointer(&bounds)))
+		v.app.drawFocus(item.dc, item.bounds)
 	}
 	return true
 }
@@ -293,7 +306,10 @@ func (v *documentView) showToolbar(show uintptr) {
 func (v *documentView) buildPagePanel() {
 	a := v.app
 	a.label("Pořadí stránek", 16, 18, 298, true)
-	v.pageList = a.add("LISTBOX", "", idReaderPageList, 16, 52, 298, 269, wsVscroll|wsTabstop|0x0101, 0, a.normalFont)
+	v.pageList = a.add("LISTBOX", "", idReaderPageList, 16, 52, 298, 269, wsTabstop|0x0151, 0, a.normalFont)
+	rowHeight := a.scale(23)
+	sendMessage.Call(v.pageList, 0x01a0, 0, uintptr(rowHeight))
+	a.addScrollPane(v.pageList, rowHeight, true)
 	v.left = a.button("Otočit vlevo", idReaderRotateLeft, 16, 343, 145, 0)
 	v.right = a.button("Otočit vpravo", idReaderRotateRight, 169, 343, 145, 0)
 	v.back = a.button("Posunout před", idReaderMoveBack, 16, 386, 145, 0)
@@ -319,8 +335,10 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	a.label("Tiskové desky na stránce", 16, 240, 298, true)
 	const listStyle = 0x0001 | 0x0008 | 0x0010 | 0x0040 | 0x0100
 	v.list = a.add("LISTBOX", "", idReaderPlateList, 16, 265, 298, 167,
-		wsVscroll|wsTabstop|listStyle, 0, a.normalFont)
-	sendMessage.Call(v.list, 0x01a0, 0, uintptr(a.scale(24)))
+		wsTabstop|listStyle, 0, a.normalFont)
+	rowHeight := a.scale(24)
+	sendMessage.Call(v.list, 0x01a0, 0, uintptr(rowHeight))
+	a.addScrollPane(v.list, rowHeight, true)
 	v.all = a.button("Všechny desky", idReaderAll, 16, 441, 145, 0)
 	v.none = a.button("Vypnout všechny", idReaderNone, 169, 441, 145, 0)
 	v.sample = a.label("", 16, 486, 298, false)
@@ -440,6 +458,7 @@ func (v *documentView) clearPlateView() {
 	v.proofPage = -1
 	v.plates = nil
 	sendMessage.Call(v.list, 0x0184, 0, 0)
+	v.app.scrollPanes[v.list].reflow()
 	setText(v.sample, "")
 	setText(v.outputInfo, "")
 }
@@ -987,6 +1006,7 @@ func (v *documentView) syncProofPanel() {
 	sendMessage.Call(v.list, 0x0184, 0, 0)
 	setText(v.sample, "")
 	if !exists || frame.proof == nil {
+		v.app.scrollPanes[v.list].reflow()
 		v.proofPage = -1
 		return
 	}
@@ -996,6 +1016,7 @@ func (v *documentView) syncProofPanel() {
 	for _, plate := range v.plates {
 		sendMessage.Call(v.list, 0x0180, 0, uintptr(unsafe.Pointer(wideString(plateRow(plate)))))
 	}
+	v.app.scrollPanes[v.list].reflow()
 	v.syncPlateSelection()
 	intent := result.OutputIntent
 	if intent == "" {
@@ -1021,17 +1042,23 @@ func (v *documentView) platesChanged() {
 	v.changedViewport()
 }
 
+func pageListLabel(index, source int) string {
+	label := fmt.Sprintf("Stránka %d", index+1)
+	if index+1 != source {
+		label += fmt.Sprintf("   ·   původní %d", source)
+	}
+	return label
+}
+
 func (v *documentView) updatePageList() {
 	sendMessage.Call(v.pageList, 0x000b, 0, 0)
 	sendMessage.Call(v.pageList, 0x0184, 0, 0)
 	for i, n := range v.order {
-		item := fmt.Sprintf("Stránka %d", i+1)
-		if i+1 != n {
-			item += fmt.Sprintf("   ·   původní %d", n)
-		}
+		item := pageListLabel(i, n)
 		sendMessage.Call(v.pageList, 0x0180, 0, uintptr(unsafe.Pointer(wideString(item))))
 	}
 	sendMessage.Call(v.pageList, 0x000b, 1, 0)
+	v.app.scrollPanes[v.pageList].reflow()
 	invalidate(v.pageList)
 }
 

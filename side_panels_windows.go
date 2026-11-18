@@ -1,7 +1,5 @@
 package main
 
-import "unsafe"
-
 const (
 	toolPanelWidth   = 200
 	sidebarRailWidth = 24
@@ -150,13 +148,12 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	bounds.right -= 2
 	buttonColor := paletteColor{47, 43, 50}
 	if item.state&1 != 0 {
-		buttonColor = paletteColor{86, 48, 64}
+		buttonColor = divider
 	}
 	rounded(item.dc, bounds, a.scale(5), buttonColor, divider)
 	drawText(item.dc, arrow, bounds, a.titleFont, textColor, 1)
 	if item.state&16 != 0 {
-		focus := rect{bounds.left + 2, bounds.top + 3, bounds.right - 2, bounds.bottom - 3}
-		user32.NewProc("DrawFocusRect").Call(item.dc, uintptr(unsafe.Pointer(&focus)))
+		a.drawFocus(item.dc, bounds)
 	}
 	return true
 }

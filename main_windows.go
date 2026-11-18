@@ -46,7 +46,6 @@ const (
 	wsVisible     = 0x10000000
 	wsTabstop     = 0x00010000
 	wsGroup       = 0x00020000
-	wsVscroll     = 0x00200000
 	esPassword    = 0x0020
 	esAutoHscroll = 0x0080
 	esReadonly    = 0x0800
@@ -112,10 +111,14 @@ type app struct {
 	sidebar, controlParent                             uintptr
 	panelItems                                         map[int][]panelItem
 	panelScroll                                        map[int]int
+	sideScroll                                         *panelScrollbar
+	scrollbars                                         map[uintptr]*panelScrollbar
+	scrollPanes                                        map[uintptr]*scrollPane
 	addingTab                                          int
 	toolButtons, detailButtons                         map[int]uintptr
 	documentTools                                      bool
 	headerBrand, windowButtonStart                     int
+	documentNameBounds, documentCloseBounds            rect
 	toolsCollapsed, detailsCollapsed                   bool
 	full                                               bool
 	placement                                          windowPlacement
@@ -124,6 +127,7 @@ type app struct {
 	canvasBrush, panelBrush, inputBrush, logo          uintptr
 	brand                                              *printBitmap
 	windowButtons                                      [3]uintptr
+	documentClose                                      uintptr
 	choices                                            map[uintptr]*choiceControl
 	choiceCommands                                     map[int]*choiceControl
 	popup                                              []popupItem
@@ -134,6 +138,7 @@ type app struct {
 	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
 	fileHint, filePath, fileRun                        uintptr
 	exportScope, exportRange                           uintptr
+	splitScope, splitRange, splitButton, splitReport   uintptr
 	exportFormat, exportHint, exportColorLabel         uintptr
 	profiles, pressProfiles, customICC, customBrowse   uintptr
 	outline, decrypt, raster, visible                  uintptr
@@ -173,6 +178,7 @@ func main() {
 	window = &app{
 		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, detailsCollapsed: true,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
+		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
 		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
 		panelLabels: make(map[uintptr]bool), panelButtons: make(map[uintptr]bool),
@@ -312,9 +318,10 @@ func (a *app) button(caption string, id, x, y, width int, style uintptr) uintptr
 
 func (a *app) readout(x, y, width, height int) uintptr {
 	h := a.add("EDIT", "", 0, x, y, width, height,
-		wsTabstop|wsVscroll|0x0044|esReadonly, 0, a.normalFont)
+		wsTabstop|0x0044|esReadonly, 0, a.normalFont)
 	a.readOnlyFields[h] = true
-	sendMessage.Call(h, 0x00d3, 3, uintptr(a.scale(7))|uintptr(a.scale(7))<<16)
+	sendMessage.Call(h, 0x00d3, 3, uintptr(a.scale(5))<<16)
+	a.addScrollPane(h, a.textLineHeight(h), false)
 	return h
 }
 
@@ -426,10 +433,13 @@ func (a *app) drawControl(param uintptr) bool {
 	}
 	var item buttonDraw
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), param, unsafe.Sizeof(item))
-	return a.drawPopup(&item) || a.drawButton(&item) || (a.view != nil && a.view.drawPlateRow(&item))
+	return a.drawPopup(&item) || a.drawButton(&item) || (a.view != nil && a.view.drawListRow(&item))
 }
 
 func setText(handle uintptr, value string) {
+	if window != nil && window.readOnlyFields[handle] && getText(handle) == value {
+		return
+	}
 	setWindowText.Call(handle, uintptr(unsafe.Pointer(wideString(value))))
 }
 

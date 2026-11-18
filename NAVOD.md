@@ -6,10 +6,10 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
 
-Levý panel slouží k výběru nástroje, v pravém se zobrazí jeho nastavení. Po načtení PDF se vlevo objeví **Separace** a **Digitální podpis**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
+Levý panel slouží k výběru nástroje, v pravém se zobrazí jeho nastavení. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis** a **Rozdělit PDF**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí. Delší výpisy lze posouvat kolečkem nebo šedým jezdcem.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
-- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete pomocí **Soubor → Zavřít PDF → Zavřít tento dokument** nebo zkratkou **Ctrl+W**.
+- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete křížkem vedle jeho názvu v horní liště nebo zkratkou **Ctrl+W**. Pokud máte neuložené změny, aplikace se před zavřením zeptá, zda je zahodit.
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Při listování a zoomu se předchozí obraz vymění najednou, jakmile je nový náhled hotový. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Zobrazení → Náhled → Zobrazit na celou obrazovku** nebo **F11** otevře samotné PDF přes celou obrazovku. **Esc** obnoví předchozí rozložení panelů.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v **Zobrazení → Náhled** a použijte **Načíst znovu s heslem**.
@@ -83,6 +83,12 @@ Správa stran je v **Zobrazení → Stránky**. Nástroj **Separace** přepne n�
 - V seznamu desek jsou Cyan, Magenta, Yellow, Black a rozpoznané přímé barvy. Jakmile se seznam zobrazí, kliknutím na řádek zapnete nebo vypnete příslušnou desku. Náhled se skládá z vybraných desek. Údaje ukazují podíl bodů s nenulovým krytím a nejvyšší tón v každé desce při zobrazeném rozlišení.
 - **Zkontrolovat celý dokument** vypíše desky, na kterých jsou při vykreslení skutečně tiskové body, a čísla jejich stran. Kontrola bere v úvahu vybranou tiskovou oblast a profil simulace. U velkých formátů může snížit vzorkovací rozlišení a v přehledu uvede použitou hodnotu.
 - V editoru lze stránku otočit o 90°, přesunout ji o jednu pozici nebo poslední úpravu vrátit. **Uložit upravenou kopii…** uloží změny v PDF se zachováním obsahu stránek a odkazů na ně. Rozpracované otočení a pořadí se promítnou i do exportu. U podepsaného souboru si aplikace vyžádá potvrzení uložení kopie bez původních podpisů.
+
+## Rozdělení PDF po stránkách
+
+Vlevo zvolte **Rozdělit PDF**. Vpravo vyberte všechny strany, aktuální stranu nebo vlastní rozsah, například `1, 3–5, 8`. Tlačítko **Vybrat složku a rozdělit PDF…** uloží každou vybranou stranu jako samostatné PDF, například `katalog-strana-003.pdf`.
+
+Čísla souborů odpovídají aktuálnímu pořadí stran. Přenesou se i rozpracovaná otočení a existující ochrana heslem. Původní dokument zůstává beze změny. Pokud ve složce názvy už existují, aplikace požádá o jinou složku. U podepsaného dokumentu potvrdíte vytvoření souborů bez původních podpisů.
 
 ## Odstranění omezení heslem
 

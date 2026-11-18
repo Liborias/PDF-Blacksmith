@@ -152,6 +152,13 @@ def run_smoke(base, exe):
     run('transform', signed, output=str(out), ghostscript=exe, gray=True, clear_signatures=True)
     assert 'nebyl nalezen' in run('verify', out)
 
+    split_options = dict(output_dir=str(base), view={'pages': [1]})
+    split_signed = base / f'{signed.stem}-strana-001.pdf'
+    run('split', signed, 'signed_pdf', **split_options)
+    assert not split_signed.exists()
+    run('split', signed, clear_signatures=True, **split_options)
+    assert 'nebyl nalezen' in run('verify', split_signed)
+
     if os.environ.get('PDFBLAKSMITH_TEST_PROFILES') == '1':
         catalog = json.loads((project / 'profiles.json').read_text(encoding='utf-8'))
         from hashlib import sha256

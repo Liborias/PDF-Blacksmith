@@ -67,10 +67,7 @@ func (a *app) drawChoice(item *buttonDraw) bool {
 	bounds.right -= int32(a.scale(24))
 	drawText(item.dc, choice.names[choice.index], bounds, a.normalFont, text, 0x8000)
 	if item.state&16 != 0 {
-		bounds.left -= 1
-		bounds.top += 3
-		bounds.bottom -= 3
-		user32.NewProc("DrawFocusRect").Call(item.dc, uintptr(unsafe.Pointer(&bounds)))
+		a.drawFocus(item.dc, item.bounds)
 	}
 	return true
 }
@@ -156,7 +153,7 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 	bounds := item.bounds
 	color := panelColor
 	if item.state&1 != 0 && !entry.disabled && !entry.separator {
-		color = paletteColor{67, 43, 56}
+		color = divider
 	}
 	fillColor(item.dc, bounds, color)
 	if entry.separator {
@@ -164,16 +161,19 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 		fillColor(item.dc, rect{bounds.left + int32(a.scale(10)), y, bounds.right - int32(a.scale(10)), y + 1}, divider)
 		return true
 	}
+	foreground := textColor
+	if entry.checked {
+		foreground = selectionColor
+	}
+	if entry.disabled {
+		foreground = disabledColor
+	}
 	if entry.checked {
 		box := rect{bounds.left + 5, bounds.top + 5, bounds.left + 23, bounds.bottom - 5}
-		drawCheck(item.dc, box)
+		drawCheck(item.dc, box, foreground)
 	}
 	bounds.left += int32(a.scale(30))
 	bounds.right -= int32(a.scale(7))
-	foreground := textColor
-	if entry.disabled {
-		foreground = paletteColor{119, 114, 122}
-	}
 	if entry.shortcut != "" {
 		shortcutColor := mutedColor
 		if entry.disabled {
