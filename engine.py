@@ -13,6 +13,7 @@ import tempfile
 import pikepdf
 from print_profiles import ProfileError, attach_intent, attach_srgb, clear_pdfx_claim, get_profile, source_cmyk, source_icc
 from export_settings import export_preset, export_settings, pdfwrite_settings
+from pdfx import PDFXError, check_profile, finish_pdfx, pdfx_prefix
 from proof import ProofError, describe, page_box, page_proof, scan_plates, screen_page
 from reader_render import render_screen
 
@@ -392,6 +393,7 @@ def transform(src, request):
     if preset is None:
         raise UserError("Vyberte platnou předvolbu PDF.")
     mode = preset.get("mode")
+    variant = preset.get("pdfx")
     if mode and (gray or outline or decrypt or (profile_key and mode != "cmyk")):
         raise UserError("Pro tyto úpravy vyberte vlastní nastavení exportu.")
     if mode == "cmyk":
@@ -436,6 +438,8 @@ def transform(src, request):
             raise UserError("Vstupní PDF nemá žádné strany.")
         repaired = []
         profile = get_profile(profile_key, request.get("custom_icc", "")) if profile_key else None
+        if variant:
+            check_profile(profile, variant)
         with tempfile.TemporaryDirectory(prefix="pdftisk-") as tmp:
             folder = Path(tmp)
             staged = folder / "vstup.pdf"
@@ -485,9 +489,15 @@ def transform(src, request):
                 args.append("-sColorConversionStrategy=LeaveColorUnchanged")
             if outline:
                 args.append("-dNoOutputFonts=true")
+            inputs = ["vstup.pdf"]
+            if variant:
+                pdfx_prefix(folder, profile, variant)
+                args.extend([f"-dPDFX={variant}", "-dPDFACompatibilityPolicy=2", "-r300",
+                             "-dMaxInlineImageSize=0", "-dPreserveSeparation=false", "-dPreserveDeviceN=false"])
+                inputs.insert(0, "pdfx.ps")
             if mode and not flatten:
                 args.extend(["-c", "<< /NeverEmbed [] >> setdistillerparams"])
-            log = run_ghostscript(exe, folder, [*args, "-f", "vstup.pdf"])
+            log = run_ghostscript(exe, folder, [*args, "-f", *inputs])
 
             with pikepdf.Pdf.open(folder / "hotovo.pdf") as finished:
                 if len(finished.pages) != pages:
@@ -500,6 +510,9 @@ def transform(src, request):
                         revised = True
                     if revised:
                         finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
+                elif variant:
+                    finish_pdfx(pdf, finished, folder / "vystup-upraveny.pdf", variant, profile,
+                                Path(request["input"]).stem)
                 elif profile:
                     attach_intent(finished, *profile)
                     finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
@@ -538,6 +551,8 @@ def transform(src, request):
         lines.append(f"Rastrová oprava {repair_dpi} dpi na stranách " + ", ".join(map(str, repaired)) + ".")
     if profile:
         lines.append(f"Výstupní profil CMYK: {profile[1]}. Profil ICC je vložen v PDF.")
+    if variant:
+        lines.append("Ověřeny rámečky, vložená písma, ICC profil, barvy a pravidla průhlednosti.")
     if outline:
         lines.append("Text zpracován v režimu převodu na křivky.")
     if "substitut" in log.lower() or "couldn't find a font" in log.lower():
@@ -832,7 +847,7 @@ def respond(payload, *, raster=False):
         response = {"status": "ok", "message": result} if isinstance(result, str) else {"status": "ok", "view": result}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
-    except (UserError, ProfileError, ProofError) as exc:
+    except (UserError, ProfileError, ProofError, PDFXError) as exc:
         response = {"status": "error", "message": str(exc)}
     except FileExistsError:
         response = {"status": "error", "message": "Cílový soubor už existuje. Vyberte nový název."}

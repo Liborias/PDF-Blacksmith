@@ -51,5 +51,35 @@
     "suffix": "-zplosteno",
     "mode": "flatten",
     "dpi": 300
+  },
+  {
+    "key": "pdfx-1a",
+    "name": "PDF/X-1a:2003",
+    "description": "Procesní CMYK s výstupním profilem ICC. Průhlednost se zploští při 300 dpi.",
+    "suffix": "-PDFX-1a",
+    "mode": "cmyk",
+    "profile": "fogra39-300",
+    "pdfx": 1,
+    "options": {"compression": "flate"}
+  },
+  {
+    "key": "pdfx-3",
+    "name": "PDF/X-3:2003",
+    "description": "Tisková varianta PDF/X-3 v procesním CMYK. Průhlednost se zploští při 300 dpi.",
+    "suffix": "-PDFX-3",
+    "mode": "cmyk",
+    "profile": "fogra39-300",
+    "pdfx": 3,
+    "options": {"compression": "flate"}
+  },
+  {
+    "key": "pdfx-4",
+    "name": "PDF/X-4",
+    "description": "Výstupní profil CMYK pro tisk. Živá průhlednost a vektory se zachovají.",
+    "suffix": "-PDFX-4",
+    "mode": "cmyk",
+    "profile": "fogra39-300",
+    "pdfx": 4,
+    "options": {"compression": "flate"}
   }
 ]

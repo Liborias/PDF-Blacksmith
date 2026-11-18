@@ -7,7 +7,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 source = Path(__file__).resolve().parent
 runtime = Path(sys.argv[1]).resolve()
-for name in ("engine.py", "export_settings.py", "export_presets.json", "proof.py", "reader_render.py",
+for name in ("engine.py", "export_settings.py", "export_presets.json", "pdfx.py", "proof.py", "reader_render.py",
              "print_profiles.py", "profiles.json", "OSS.txt"):
     shutil.copyfile(source / name, runtime / name)
 (runtime / "python314._pth").write_text("python314.zip\n.\npackages\n", encoding="ascii")

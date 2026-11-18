@@ -41,6 +41,14 @@ Volby nástroje **Soubor** zůstávají nahoře v pravém panelu. Ovládání vy
 | Digitální PDF · vysoká kvalita | Použije sRGB, ponechá rozlišení obrázků a komprimuje je bezeztrátově. |
 | PDF pro další zpracování | Uloží původní obsah vybraných stran včetně textu, křivek a průhlednosti. Celý dokument bez úprav se kopíruje beze změny. |
 | Zploštěné PDF | Složí viditelný obsah každé strany do jednoho obrazu sRGB při 300 dpi. Zachová rozměry a tiskové rámečky stran. Text se stane součástí obrazu. |
+| PDF/X-1a:2003 a PDF/X-3:2003 | Procesní CMYK s vloženým tiskovým ICC profilem. Průhlednost se zploští při 300 dpi. |
+| PDF/X-4 | Procesní CMYK s vloženým tiskovým ICC profilem. Zachovává živou průhlednost. |
+
+### Export PDF/X
+
+V **Soubor → Export → Předvolba PDF** vyberte požadovanou normu, rozsah stran a tiskový profil. Výchozí je FOGRA39. Tyto předvolby převedou i přímé barvy do procesního CMYK. Pokud zdroj nemá čistý formát ani rámeček kresby, použije se ořez, případně celý arch.
+
+Export používá režim PDF/X Ghostscriptu a před uložením kontroluje tiskové rámečky, vložená písma, výstupní ICC profil, procesní barvy, průhlednost a strukturu PDF. Při chybě kontroly se výstup neuloží. Úplné nezávislé ověření podle ISO a kontrolu požadavků konkrétní tiskárny provádí její preflight.
 
 ### Nastavení exportu
 
