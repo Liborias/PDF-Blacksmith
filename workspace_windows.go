@@ -39,6 +39,13 @@ const (
 	idSaveDocument
 	idSaveDocumentAs
 	idPrintDocument
+	idExportScope
+)
+
+const (
+	exportAllPages = iota
+	exportCurrentPage
+	exportPageRanges
 )
 
 const (
@@ -162,20 +169,24 @@ func (a *app) beginPanel(tab int) {
 func (a *app) buildExportPanel() {
 	a.runButton = a.button("Uložit exportované PDF…", idRun, 16, 17, 298, 0)
 	a.primaryButtons[a.runButton] = true
-	a.label("Barevný výstup", 16, 64, 298, true)
+	a.label("Strany k exportu", 16, 64, 298, true)
+	a.exportScope = a.combo(idExportScope, 16, 86, 145, []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"})
+	a.exportRange = a.edit(169, 86, 145, false)
+	sendMessage.Call(a.exportRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8")))) // EM_SETCUEBANNER
+	a.label("Barevný výstup", 16, 124, 298, true)
 	names := make([]string, 0, len(a.profileChoices))
 	for _, p := range a.profileChoices {
 		names = append(names, p.Name)
 	}
-	a.profiles = a.combo(idICCProfile, 16, 86, 298, names)
+	a.profiles = a.combo(idICCProfile, 16, 146, 298, names)
 	chooseCombo(a.profiles, 1)
-	a.customICC = a.edit(16, 120, 187, false)
-	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 117, 102, 0)
-	a.outline = a.button("Převést text na křivky", idOutline, 16, 153, 298, bsAutoCheck)
-	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 183, 298, bsAutoCheck)
-	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 213, 298, bsAutoCheck)
-	a.exportReport = a.readout(16, 253, 298, 105)
-	a.label("Parametry exportu", 16, 379, 298, true)
+	a.customICC = a.edit(16, 180, 187, false)
+	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 177, 102, 0)
+	a.outline = a.button("Převést text na křivky", idOutline, 16, 213, 298, bsAutoCheck)
+	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 243, 298, bsAutoCheck)
+	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 273, 298, bsAutoCheck)
+	a.exportReport = a.readout(16, 313, 298, 105)
+	a.label("Parametry exportu", 16, 439, 298, true)
 	labels := []string{"Záměr reprodukce", "Černý bod", "Obrázky", "Komprese", "Kontrola desek", "Oprava K"}
 	choices := [][]string{
 		{"Podle PDF", "Perceptuální", "Relativní", "Saturace", "Absolutní"},
@@ -187,11 +198,11 @@ func (a *app) buildExportPanel() {
 	}
 	for index, label := range labels {
 		x := 16 + (index%2)*153
-		y := 414 + (index/2)*63
+		y := 474 + (index/2)*63
 		a.label(label, x, y, 145, false)
 		a.presetControls[index] = a.combo(idPreset, x, y+21, 145, choices[index])
 	}
-	a.button("Obnovit výchozí parametry", idResetPreset, 16, 609, 298, 0)
+	a.button("Obnovit výchozí parametry", idResetPreset, 16, 669, 298, 0)
 	a.applyExportOptions(a.export)
 }
 
@@ -332,9 +343,13 @@ func (a *app) layoutPanel() {
 	info := scrollInfo{size: uint32(unsafe.Sizeof(scrollInfo{})), mask: 7, maximum: int32(height - 1), page: uint32(available), position: int32(offset)}
 	user32.NewProc("SetScrollInfo").Call(a.sidebar, 1, uintptr(unsafe.Pointer(&info)), 1)
 	key := a.profileKey()
+	hasPageRange := comboIndex(a.exportScope) == exportPageRanges
 	for tab, items := range a.panelItems {
 		for _, item := range items {
 			show := tab == a.mode
+			if item.handle == a.exportRange {
+				show = show && hasPageRange
+			}
 			if item.handle == a.customICC || item.handle == a.customBrowse {
 				show = show && key == "custom"
 			}
@@ -530,6 +545,8 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 	setText(a.window, filepath.Base(path)+" · "+appName)
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
+	chooseCombo(a.exportScope, exportAllPages)
+	setText(a.exportRange, "")
 	a.view.open(path, password, info)
 	a.layout()
 }
@@ -546,6 +563,11 @@ func (a *app) command(id, notification int) {
 		switch id {
 		case idPreset:
 			a.updatePresets()
+		case idExportScope:
+			a.layoutPanel()
+			if comboIndex(a.exportScope) == exportPageRanges {
+				setFocus.Call(a.exportRange)
+			}
 		case idICCProfile:
 			if a.profileKey() != "" {
 				a.setChecked(a.decrypt, false)
@@ -631,6 +653,18 @@ func (a *app) startAction(id int) {
 	switch id {
 	case idRun:
 		req.Action = "transform"
+		switch comboIndex(a.exportScope) {
+		case exportCurrentPage:
+			req.View.Pages = []int{a.view.page + 1}
+		case exportPageRanges:
+			pages, err := parseExportPages(getText(a.exportRange), len(a.view.order))
+			if err != nil {
+				a.report(err.Error())
+				setFocus.Call(a.exportRange)
+				return
+			}
+			req.View.Pages = pages
+		}
 		key := a.profileKey()
 		req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
 		req.Gray = key == "k"
@@ -645,8 +679,8 @@ func (a *app) startAction(id int) {
 				return
 			}
 		}
-		if key == "" && !req.Outline && !req.Decrypt {
-			a.report("Vyberte úpravu nebo výstupní profil.")
+		if key == "" && !req.Outline && !req.Decrypt && len(req.View.Pages) == 0 {
+			a.report("Vyberte strany k exportu, úpravu nebo výstupní profil.")
 			return
 		}
 		switch {
@@ -659,6 +693,9 @@ func (a *app) startAction(id int) {
 		}
 		if req.Outline {
 			suffix += "-krivky"
+		}
+		if len(req.View.Pages) > 0 {
+			suffix += "-vyber"
 		}
 	case idSign:
 		req.Action, suffix = "sign", "-podepsano"
@@ -781,7 +818,8 @@ func (a *app) finish(result response) {
 	}
 	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource {
 		a.lastOutput, a.lastPassword = req.Output, ""
-		if req.Action == "save_document" {
+		if req.Action == "save_document" ||
+			(req.Action == "transform" && !req.Gray && !req.Outline && req.Profile == "" && !req.Decrypt) {
 			a.lastPassword = req.PDFPassword
 		}
 	}

@@ -214,6 +214,30 @@ def check_proofs(exe, folder):
     with Pdf.open(draft_export) as pdf:
         assert [int(v) for v in pdf.pages[0].mediabox[2:]] == [220, 180]
 
+    subset = folder / "vybrané strany.pdf"
+    call(exe, sep, "transform", expected="error", output=str(subset), view={"pages": [1, 4]})
+    assert not subset.exists()
+    call(exe, sep, "transform", output=str(subset), view={"pages": [3, 1, 3]})
+    with Pdf.open(subset) as pdf:
+        assert [page.label for page in pdf.pages] == ["S-1", "S-3"]
+        assert pdf.Root.Names.Dests.Names[1][0].objgen == pdf.pages[1].objgen
+        assert pdf.pages[1].obj.Contents.read_bytes().startswith(b"0 1 0 0 k")
+
+    subset_draft = folder / "výběr po změnách stran.pdf"
+    call(exe, sep, "transform", gray=True, output=str(subset_draft),
+         view={"pages": [2, 3], "order": [2, 3, 1], "rotations": [0, 0, 90]})
+    with Pdf.open(subset_draft) as pdf:
+        assert len(pdf.pages) == 2
+        assert [list(page.mediabox[2:]) for page in pdf.pages] == [[220, 180], [180, 220]]
+
+    encrypted = folder / "šifrovaný výběr.pdf"
+    encrypted_subset = folder / "vybraná šifrovaná strana.pdf"
+    with Pdf.open(sep) as pdf:
+        pdf.save(encrypted, encryption=Encryption(user="cteni", owner="vlastnik"))
+    call(exe, encrypted, "transform", pdf_password="cteni", output=str(encrypted_subset), view={"pages": [2]})
+    with Pdf.open(encrypted_subset, password="cteni") as pdf:
+        assert pdf.is_encrypted and len(pdf.pages) == 1 and pdf.pages[0].label == "S-2"
+
     src = folder / "obrázek.pdf"
     output = folder / "nastavení.pdf"
     with Pdf.new() as pdf:

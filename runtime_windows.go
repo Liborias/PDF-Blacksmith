@@ -55,6 +55,7 @@ type viewRequest struct {
 	Rotation     int           `json:"rotation,omitempty"`
 	Box          string        `json:"box,omitempty"`
 	Region       *screenRegion `json:"region,omitempty"`
+	Pages        []int         `json:"pages,omitempty"`
 	ProofProfile string        `json:"proof_profile,omitempty"`
 	HidePlates   []string      `json:"hide_plates,omitempty"`
 	Order        []int         `json:"order,omitempty"`

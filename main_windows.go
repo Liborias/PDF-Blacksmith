@@ -129,6 +129,7 @@ type app struct {
 	readOnlyFields, primaryButtons                     map[uintptr]bool
 	view                                               *documentView
 	panelButton, fullButton, status                    uintptr
+	exportScope, exportRange                           uintptr
 	profiles, customICC, customBrowse                  uintptr
 	outline, decrypt, raster, visible                  uintptr
 	password, cert, certPass, trust                    uintptr

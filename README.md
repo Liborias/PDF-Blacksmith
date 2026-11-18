@@ -12,6 +12,6 @@ Stáhněte `PDFBlaksmith.exe` z vydání a spusťte jej. Součástí aplikace je
 
 ## Vývoj
 
-Zdroj rozhraní a backendu je přímo v repozitáři. Návrh kovadliny a ikona jsou v `assets/`. Na Linuxu spusťte `./build.sh` pro sestavení aplikace pro Windows. [Požadavky na sestavení](SESTAVENI.md)
+Zdroj rozhraní a backendu je přímo v repozitáři. Návrh kovadliny a ikona jsou v `assets/`. Na Linuxu spusťte `./build.sh` pro sestavení aplikace pro Windows. [Požadavky na sestavení](SESTAVENI.md) · [Plán vývoje](PLAN.md)
 
-Backend lze otestovat příkazy `python3 tests/smoke.py` a `python3 tests/preview.py`. Potřebuje Ghostscript, `pdftotext` a Python s balíčky z `requirements-win.txt`. Rozložení stránek a zoom ověří `go test reader_layout.go reader_layout_test.go`. Složka `tests/fixtures` obsahuje syntetické vzory barev a registračních značek.
+Backend lze otestovat příkazy `python3 tests/smoke.py` a `python3 tests/preview.py`. Potřebuje Ghostscript, `pdftotext` a Python s balíčky z `requirements-win.txt`. Příkaz `go test ./...` na Linuxu ověří rozložení stránek, limit mezipaměti a zápis rozsahů. Složka `tests/fixtures` obsahuje syntetické vzory barev a registračních značek.

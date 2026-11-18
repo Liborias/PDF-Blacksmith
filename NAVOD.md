@@ -22,9 +22,10 @@ PDF otevřete přes rozbalovací nabídku **Soubor** a volbu **Otevřít soubor�
 ## Příprava pro tisk
 
 1. Otevřete PDF a zvolte **Soubor → Export…**.
-2. V poli **Barevný výstup** zvolte stupně šedi pro desku K, cílový profil CMYK nebo zachování barev.
-3. Potřebujete-li text jako vektorové obrysy, zaškrtněte **Převést text na křivky**. Text v naskenované bitmapě zůstává součástí bitmapy.
-4. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte volbou **Soubor → Otevřít výstup**.
+2. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
+3. V poli **Barevný výstup** zvolte stupně šedi pro desku K, cílový profil CMYK nebo zachování barev. Pro uložení vybraných stran s původním obsahem zvolte **Zachovat barvy** a ponechte volby převodu vypnuté.
+4. Potřebujete-li text jako vektorové obrysy, zaškrtněte **Převést text na křivky**. Text v naskenované bitmapě zůstává součástí bitmapy.
+5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte volbou **Soubor → Otevřít výstup**.
 
 ### Nastavení exportu
 

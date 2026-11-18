@@ -322,25 +322,37 @@ def transform(src, request):
     if gray and profile_key:
         raise UserError("Vyberte buď desku K, nebo výstupní profil CMYK.")
     convert = gray or outline or bool(profile_key)
-    if not (convert or request.get("decrypt")):
+    decrypt = request.get("decrypt", False)
+    view = request.get("view", {})
+    if not (convert or decrypt or "pages" in view):
         raise UserError("Vyberte alespoň jednu úpravu PDF.")
     options = export_settings(request.get("export"))
     proof_dpi, repair_dpi = options["proof_dpi"], options["repair_dpi"]
     exe = ghostscript_path(request) if convert else None
 
     with open_pdf(src, request.get("pdf_password", "")) as pdf:
+        source_pages = len(pdf.pages)
+        selection = view.get("pages")
+        if "pages" in view and (not isinstance(selection, list) or not selection
+                               or any(type(number) is not int or not 1 <= number <= source_pages
+                                      for number in selection)):
+            raise UserError("Výběr stran k exportu obsahuje neplatné číslo stránky.")
         modified = prepare_edit(pdf, request)
+        if selection is not None:
+            modified = apply_page_order(pdf, list(pdf.pages), sorted(set(selection))) or modified
+        pages = len(pdf.pages)
         if not convert:
-            if not pdf.is_encrypted:
+            if decrypt and not pdf.is_encrypted:
                 raise UserError("Vstupní PDF už je bez šifrování a omezení heslem.")
-            restricted_only = pdf.user_password_matched and not request.get("pdf_password")
+            restricted_only = decrypt and pdf.user_password_matched and not request.get("pdf_password")
             with output_file(src, request) as pending:
-                pdf.save(pending, encryption=False, fix_metadata_version=False)
+                pdf.save(pending, encryption=pdf.is_encrypted and not decrypt, fix_metadata_version=False)
+            if not decrypt:
+                return f"Uloženo PDF. Počet stran {pages}."
             if restricted_only:
                 return "Uložena kopie bez omezení tisku a úprav. Heslo vlastníka nebylo potřeba."
             return "Uložena kopie PDF bez hesla."
 
-        pages = len(pdf.pages)
         if not pages:
             raise UserError("Vstupní PDF nemá žádné strany.")
         repaired = []
@@ -612,6 +624,22 @@ def document_order(view, pages):
     return order
 
 
+def apply_page_order(pdf, pages, order):
+    if order == list(range(1, len(pages) + 1)):
+        return False
+    selected = [pages[number - 1] for number in order]
+    labels = [page.label for page in selected] if "/PageLabels" in pdf.Root else None
+    # Reuse the page objects so links can still target retained pages.
+    del pdf.pages[:]
+    pdf.pages.extend(selected)
+    if labels is not None:
+        numbers = []
+        for index, label in enumerate(labels):
+            numbers.extend([index, pikepdf.Dictionary(P=label)])
+        pdf.Root.PageLabels = pikepdf.Dictionary(Nums=pikepdf.Array(numbers))
+    return True
+
+
 def inspect_document(src, request, *, raster=False):
     view = request.get("view", {})
     password = request.get("pdf_password", "")
@@ -649,16 +677,7 @@ def save_page_edits(src, request):
         for page, angle in zip(pages, rotations):
             if angle:
                 page.rotate(angle, relative=True)
-        if order != list(range(1, len(pages) + 1)):
-            labels = [page.label for page in pages] if "/PageLabels" in pdf.Root else None
-            # Remove before adding so QPDF reuses the page objects that bookmarks target.
-            del pdf.pages[:]
-            pdf.pages.extend(pages[number - 1] for number in order)
-            if labels is not None:
-                numbers = pikepdf.Array()
-                for index, number in enumerate(order):
-                    numbers.extend([index, pikepdf.Dictionary(P=labels[number - 1])])
-                pdf.Root.PageLabels = pikepdf.Dictionary(Nums=numbers)
+        apply_page_order(pdf, pages, order)
         pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
     return "Uložena upravená kopie PDF."
 
