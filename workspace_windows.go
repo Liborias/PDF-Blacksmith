@@ -35,19 +35,26 @@ const (
 	idVerify
 	idVisible
 	idClosePDF
+	idFileTab
 )
 
-const panelWidth = 350
+const (
+	panelWidth   = 350
+	headerHeight = 50
+	footerHeight = 48
+)
 
 var workspaceTabs = []struct {
-	id   int
-	name string
+	id, width int
+	name      string
+	needsPDF  bool
 }{
-	{idBrowseTab, "Zobrazení"},
-	{idPagesTab, "Stránky"},
-	{idProofTab, "Separace"},
-	{idExportTab, "Export"},
-	{idSignTab, "Podpisy"},
+	{idFileTab, 61, "Soubor", false},
+	{idBrowseTab, 83, "Zobrazení", false},
+	{idPagesTab, 67, "Stránky", false},
+	{idProofTab, 106, "Separace", true},
+	{idExportTab, 62, "Export", false},
+	{idSignTab, 146, "Digitální podpis", true},
 }
 
 type panelItem struct {
@@ -102,26 +109,28 @@ func (a *app) setupWorkspace() bool {
 	a.profileChoices = append([]profileChoice{{"", "Zachovat barvy"}, {"k", "Stupně šedi · pouze deska K"}}, catalog...)
 	a.profileChoices = append(a.profileChoices, profileChoice{"custom", "Vlastní výstupní profil ICC"})
 
-	a.open = a.button("Otevřít PDF…", idOpen, 0, 0, 130, 0)
-	a.primaryButtons[a.open] = true
-	a.outputButton = a.button("Otevřít výstup", idShowOutput, 0, 0, 124, 0)
 	a.panelButton = a.button("Skrýt panel", idTogglePanel, 0, 0, 118, 0)
 	a.fullButton = a.button("Celá obrazovka", idFullscreen, 0, 0, 134, 0)
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
-	a.documentName = a.add("STATIC", "", 0, 0, 0, 120, 24, 0x4000, 0, a.labelFont)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
 	for index, tab := range workspaceTabs {
 		style := uintptr(0)
 		if index == 0 {
 			style = wsGroup
 		}
-		a.modes[tab.id] = a.button(tab.name, tab.id, 0, 0, 112, style)
+		a.modes[tab.id] = a.button(tab.name, tab.id, 0, 0, tab.width, style)
 	}
 
 	a.view = newDocumentView(a)
 	a.view.buildToolbar()
+	a.beginPanel(idFileTab)
+	a.open = a.button("Otevřít soubor…   (Ctrl+O)", idOpen, 16, 18, 298, 0)
+	a.primaryButtons[a.open] = true
+	a.outputButton = a.button("Otevřít výstup", idShowOutput, 16, 61, 298, 0)
+	a.closePDF = a.button("Zavřít PDF   (Ctrl+W)", idClosePDF, 16, 104, 298, 0)
+
 	a.beginPanel(idBrowseTab)
 	a.label("Zobrazení stránek", 16, 18, 290, true)
 	a.label("Rozvržení", 16, 55, 290, false)
@@ -135,7 +144,6 @@ func (a *app) setupWorkspace() bool {
 	a.button("Načíst znovu s heslem", idReload, 16, 353, 298, 0)
 	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 408, 298, false)
 	a.label("F11  ·  celá obrazovka", 16, 433, 298, false)
-	a.closePDF = a.button("Zavřít PDF   (Ctrl+W)", idClosePDF, 16, 470, 298, 0)
 
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
@@ -146,7 +154,7 @@ func (a *app) setupWorkspace() bool {
 	a.beginPanel(idSignTab)
 	a.buildSignPanel()
 	a.addingTab, a.controlParent = 0, 0
-	a.activate(idBrowseTab)
+	a.activate(idFileTab)
 	a.updateActions()
 	return true
 }
@@ -244,6 +252,9 @@ func (a *app) profileKey() string {
 }
 
 func (a *app) activate(id int) {
+	if (id == idProofTab || id == idSignTab) && !a.documentTools {
+		return
+	}
 	old := a.mode
 	a.mode, a.panelHidden = id, false
 	if (old == idProofTab) != (id == idProofTab) {
@@ -269,32 +280,26 @@ func (a *app) layout() {
 		if !a.panelHidden {
 			right -= d(panelWidth)
 		}
-		a.viewport = rect{0, int32(d(91)), int32(right), int32(max(d(92), a.height-d(48)))}
-		place(a.open, d(178), d(10), d(129), d(32))
-		place(a.documentName, d(637), d(59), max(d(32), a.width-d(654)), d(22))
-		place(a.outputButton, a.width-d(488), d(9), d(116), d(32))
-		place(a.panelButton, a.width-d(364), d(9), d(112), d(32))
-		place(a.fullButton, a.width-d(244), d(9), d(130), d(32))
-		for index, handle := range a.windowButtons {
-			place(handle, a.width-d(108-index*36), 0, d(36), d(47))
-			invalidate(handle)
-		}
+		a.viewport = rect{0, int32(d(headerHeight)), int32(right), int32(max(d(headerHeight+1), a.height-d(footerHeight)))}
+		a.layoutHeader()
 		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
-		for index, tab := range workspaceTabs {
-			place(a.modes[tab.id], d(12+index*122), d(53), d(114), d(32))
-		}
 		a.view.layoutToolbar()
-		place(a.sidebar, a.width-d(panelWidth), d(91), d(panelWidth), max(1, a.height-d(139)))
+		place(a.sidebar, a.width-d(panelWidth), d(headerHeight), d(panelWidth), max(1, a.height-d(headerHeight+footerHeight)))
 	}
 	chrome := uintptr(5)
 	if a.full {
 		chrome = 0
 	}
-	for _, control := range []uintptr{a.open, a.outputButton, a.panelButton, a.fullButton, a.documentName, a.status} {
+	for _, control := range []uintptr{a.panelButton, a.fullButton, a.status} {
 		showWindow.Call(control, chrome)
 	}
-	for _, handle := range a.modes {
-		showWindow.Call(handle, chrome)
+	for _, tab := range workspaceTabs {
+		show := chrome
+		if tab.needsPDF && !a.documentTools {
+			show = 0
+		}
+		handle := a.modes[tab.id]
+		showWindow.Call(handle, show)
 		invalidate(handle)
 	}
 	for _, handle := range a.windowButtons {
@@ -317,7 +322,7 @@ func (a *app) panelMetrics() (int, int) {
 	for _, item := range a.panelItems[a.mode] {
 		height = max(height, item.y+item.height+18)
 	}
-	available := max(1, (a.height-a.scale(139))*96/a.dpi)
+	available := max(1, (a.height-a.scale(headerHeight+footerHeight))*96/a.dpi)
 	return height, available
 }
 
@@ -494,12 +499,11 @@ func (a *app) closeDocument() {
 	}
 	a.view.resetDocument()
 	setText(a.window, appName)
-	setText(a.documentName, "")
 	setText(a.password, "")
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	a.reportStatus("")
-	a.activate(idBrowseTab)
+	a.activate(idFileTab)
 	a.updateActions()
 }
 
@@ -521,11 +525,13 @@ func (a *app) openDocument(path, password string) {
 		return
 	}
 	setText(a.password, password)
-	setText(a.documentName, filepath.Base(path))
 	setText(a.window, filepath.Base(path)+" · "+appName)
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	a.view.open(path, password, info)
+	if a.mode == idFileTab {
+		a.activate(idBrowseTab)
+	}
 }
 
 func (a *app) command(id, notification int) {
@@ -552,7 +558,7 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idBrowseTab, idPagesTab, idProofTab, idExportTab, idSignTab:
+	case idFileTab, idBrowseTab, idPagesTab, idProofTab, idExportTab, idSignTab:
 		a.activate(id)
 	case idOpen:
 		a.openDialog()
@@ -671,7 +677,16 @@ func (a *app) startAction(id int) {
 }
 
 func (a *app) updateActions() {
-	ready := !a.busy && a.view.ready()
+	documentReady := a.view.ready()
+	if a.documentTools != documentReady {
+		a.documentTools = documentReady
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab) {
+			a.activate(idBrowseTab)
+		} else {
+			a.layout()
+		}
+	}
+	ready := !a.busy && documentReady
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton} {
 		setEnabled(button, ready)
 	}

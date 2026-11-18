@@ -4,12 +4,12 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. Ghostscript a Pyt
 
 ## Otevření a čtení PDF
 
-PDF otevřete tlačítkem **Otevřít PDF…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Záložky **Zobrazení**, **Stránky**, **Separace**, **Export** a **Podpisy** přepínají nástroje v postranním panelu.
+PDF otevřete přes záložku **Soubor** a volbu **Otevřít soubor…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Horní záložky přepínají nástroje v postranním panelu. **Separace** a **Digitální podpis** se objeví po načtení PDF.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V panelu **Zobrazení** lze přepnout na **Souvisle** a posouvat dokument plynule.
-- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Panel **Zobrazení** ukazuje počet stránek v paměti. Tlačítkem **Zavřít PDF** nebo zkratkou **Ctrl+W** dokument zavřete a uvolníte jeho náhledy z paměti.
+- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Panel **Zobrazení** ukazuje počet stránek v paměti. Dokument zavřete volbou **Soubor → Zavřít PDF** nebo zkratkou **Ctrl+W**.
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Přiblížený výřez posunete také tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
-- Tlačítko **Skrýt panel** přenechá dokumentu celou šířku okna. Okno maximalizujete tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
+- Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Skrýt panel** přenechá dokumentu celou šířku okna. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v panelu **Zobrazení** a použijte **Načíst znovu s heslem**.
 
 ## Příprava pro tisk
@@ -17,7 +17,7 @@ PDF otevřete tlačítkem **Otevřít PDF…**, zkratkou **Ctrl+O** nebo přeta�
 1. Otevřete PDF a zvolte záložku **Export**.
 2. V poli **Barevný výstup** zvolte stupně šedi pro desku K, cílový profil CMYK nebo zachování barev.
 3. Potřebujete-li text jako vektorové obrysy, zaškrtněte **Převést text na křivky**. Text v naskenované bitmapě zůstává součástí bitmapy.
-4. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte tlačítkem **Otevřít výstup**.
+4. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte volbou **Soubor → Otevřít výstup**.
 
 ### Nastavení exportu
 

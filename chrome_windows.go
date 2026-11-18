@@ -39,16 +39,109 @@ func (a *app) loadBrand() {
 func (a *app) paintBrand(dc uintptr) {
 	if a.logo != 0 {
 		size := uintptr(a.scale(36))
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.scale(8)), uintptr(a.scale(6)), a.logo, size, size, 0, 0, 3)
+		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.scale(8)), uintptr(a.scale((headerHeight-36)/2)), a.logo, size, size, 0, 0, 3)
 	}
 	if a.brand == nil {
-		drawText(dc, "Blacksmith", a.area(47, 4, 172, 46), a.titleFont, textColor, 0)
+		drawText(dc, "Blacksmith", a.area(47, 0, a.headerBrand-5, headerHeight), a.titleFont, textColor, 0)
 		return
 	}
-	width := a.scale(123)
+	width := a.scale(a.headerBrand - 51)
 	height := width * a.brand.height / a.brand.width
 	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
-	drawBitmap(dc, a.brand, a.scale(45), (a.scale(49)-height)/2, width, height)
+	drawBitmap(dc, a.brand, a.scale(45), (a.scale(headerHeight)-height)/2, width, height)
+}
+
+func (a *app) layoutHeader() {
+	const windowButtonsWidth = 108
+	const compactActions = 2 * 36
+	d := a.scale
+	tabWidth := 0
+	for _, tab := range workspaceTabs {
+		if !tab.needsPDF || a.documentTools {
+			tabWidth += tab.width
+		}
+	}
+	a.headerBrand = 174
+	if a.width < d(a.headerBrand+tabWidth+compactActions+windowButtonsWidth+6) {
+		a.headerBrand = 139
+	}
+	x := a.headerBrand
+	for _, tab := range workspaceTabs {
+		if !tab.needsPDF || a.documentTools {
+			place(a.modes[tab.id], d(x), d(8), d(tab.width-2), d(34))
+			x += tab.width
+		}
+	}
+	a.headerTabs = d(x)
+
+	panel, full := 36, 36
+	if a.width-a.headerTabs >= d(windowButtonsWidth+124+144+20) {
+		panel, full = 124, 144
+	}
+	a.headerActions = a.width - d(windowButtonsWidth+panel+full+4)
+	place(a.panelButton, a.headerActions, d(8), d(panel-2), d(34))
+	place(a.fullButton, a.width-d(windowButtonsWidth+full+4), d(8), d(full-2), d(34))
+	for i, handle := range a.windowButtons {
+		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
+		invalidate(handle)
+	}
+}
+
+var headerIcons = map[int][][]point{
+	idProofTab: {
+		{{1, 5}, {9, 1}, {17, 5}, {9, 9}, {1, 5}},
+		{{1, 9}, {9, 13}, {17, 9}},
+		{{1, 13}, {9, 17}, {17, 13}},
+	},
+	idSignTab: {
+		{{3, 12}, {13, 2}, {16, 5}, {6, 15}, {2, 16}, {3, 12}},
+		{{11, 4}, {14, 7}},
+		{{9, 16}, {17, 16}},
+	},
+	idTogglePanel: {
+		{{1, 2}, {17, 2}, {17, 16}, {1, 16}, {1, 2}},
+		{{11, 2}, {11, 16}},
+		{{13, 6}, {15, 6}},
+		{{13, 10}, {15, 10}},
+	},
+	idFullscreen: {
+		{{1, 6}, {1, 1}, {6, 1}},
+		{{12, 1}, {17, 1}, {17, 6}},
+		{{17, 12}, {17, 17}, {12, 17}},
+		{{6, 17}, {1, 17}, {1, 12}},
+	},
+}
+
+func (a *app) drawHeaderIconLabel(item *buttonDraw, color paletteColor) bool {
+	paths := headerIcons[int(item.controlID)]
+	if len(paths) == 0 {
+		return false
+	}
+	bounds := item.bounds
+	size := int32(a.scale(18))
+	iconOnly := bounds.right-bounds.left < int32(a.scale(74))
+	left := bounds.left + int32(a.scale(9))
+	if iconOnly {
+		left = (bounds.left + bounds.right - size) / 2
+	}
+	top := (bounds.top + bounds.bottom - size) / 2
+	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(1))), color.win())
+	old, _, _ := gdiSelect.Call(item.dc, pen)
+	polyline := gdi32.NewProc("Polyline")
+	for _, path := range paths {
+		var shape [6]point
+		for index, vertex := range path {
+			shape[index] = point{left + int32(a.scale(int(vertex.x))), top + int32(a.scale(int(vertex.y)))}
+		}
+		polyline.Call(item.dc, uintptr(unsafe.Pointer(&shape[0])), uintptr(len(path)))
+	}
+	gdiSelect.Call(item.dc, old)
+	gdiDelete.Call(pen)
+	if !iconOnly {
+		bounds.left = left + size + int32(a.scale(7))
+		drawText(item.dc, getText(item.handle), bounds, a.labelFont, color, 0)
+	}
+	return true
 }
 
 func drawBitmap(dc uintptr, bitmap *printBitmap, x, y, width, height int) {
@@ -181,7 +274,7 @@ func (a *app) hitTest(hwnd, param uintptr) uintptr {
 			return 15
 		}
 	}
-	if y < a.scale(49) && (x < a.scale(175) || (x > a.scale(311) && x < a.width-a.scale(494))) {
+	if y < a.scale(headerHeight) && (x < a.scale(a.headerBrand) || (x >= a.headerTabs && x < a.headerActions)) {
 		return 2
 	}
 	return 1

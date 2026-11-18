@@ -103,42 +103,44 @@ type profileChoice struct {
 }
 
 type app struct {
-	window, instance, normalFont, titleFont, labelFont                uintptr
-	dpi, width, height                                                int
-	mode                                                              int
-	sidebar, controlParent                                            uintptr
-	panelItems                                                        map[int][]panelItem
-	panelScroll                                                       map[int]int
-	addingTab                                                         int
-	modes                                                             map[int]uintptr
-	panelHidden                                                       bool
-	full                                                              bool
-	placement                                                         windowPlacement
-	savedStyle                                                        uintptr
-	viewport                                                          rect
-	canvasBrush, panelBrush, inputBrush, logo                         uintptr
-	brand                                                             *printBitmap
-	windowButtons                                                     [3]uintptr
-	choices                                                           map[uintptr]*choiceControl
-	choiceCommands                                                    map[int]*choiceControl
-	popup                                                             *choiceControl
-	options, checkedOptions, panelLabels, panelButtons                map[uintptr]bool
-	readOnlyFields, primaryButtons                                    map[uintptr]bool
-	view                                                              *documentView
-	open, outputButton, panelButton, fullButton, documentName, status uintptr
-	closePDF                                                          uintptr
-	profiles, customICC, customBrowse                                 uintptr
-	outline, decrypt, raster, visible                                 uintptr
-	password, cert, certPass, trust                                   uintptr
-	exportReport, signReport                                          uintptr
-	runButton, scanButton, verifyButton, signButton                   uintptr
-	profileChoices                                                    []profileChoice
-	presetControls                                                    [6]uintptr
-	export                                                            exportOptions
-	lastOutput, lastPassword                                          string
-	busy                                                              bool
-	pending                                                           request
-	results                                                           chan response
+	window, instance, normalFont, titleFont, labelFont  uintptr
+	dpi, width, height                                  int
+	mode                                                int
+	sidebar, controlParent                              uintptr
+	panelItems                                          map[int][]panelItem
+	panelScroll                                         map[int]int
+	addingTab                                           int
+	modes                                               map[int]uintptr
+	documentTools                                       bool
+	headerBrand, headerTabs, headerActions              int
+	panelHidden                                         bool
+	full                                                bool
+	placement                                           windowPlacement
+	savedStyle                                          uintptr
+	viewport                                            rect
+	canvasBrush, panelBrush, inputBrush, logo           uintptr
+	brand                                               *printBitmap
+	windowButtons                                       [3]uintptr
+	choices                                             map[uintptr]*choiceControl
+	choiceCommands                                      map[int]*choiceControl
+	popup                                               *choiceControl
+	options, checkedOptions, panelLabels, panelButtons  map[uintptr]bool
+	readOnlyFields, primaryButtons                      map[uintptr]bool
+	view                                                *documentView
+	open, outputButton, panelButton, fullButton, status uintptr
+	closePDF                                            uintptr
+	profiles, customICC, customBrowse                   uintptr
+	outline, decrypt, raster, visible                   uintptr
+	password, cert, certPass, trust                     uintptr
+	exportReport, signReport                            uintptr
+	runButton, scanButton, verifyButton, signButton     uintptr
+	profileChoices                                      []profileChoice
+	presetControls                                      [6]uintptr
+	export                                              exportOptions
+	lastOutput, lastPassword                            string
+	busy                                                bool
+	pending                                             request
+	results                                             chan response
 }
 
 var window *app
@@ -160,7 +162,7 @@ func main() {
 		dpi = min(dpi, (screenWidth-24)*96/850, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		instance: instance, dpi: int(dpi), mode: idBrowseTab,
+		instance: instance, dpi: int(dpi), mode: idFileTab,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		modes: make(map[int]uintptr), results: make(chan response, 1),
 		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
@@ -174,8 +176,8 @@ func main() {
 		return
 	}
 	defer window.view.closeReaders()
-	showWindow.Call(window.window, 5)
-	setFocus.Call(window.open)
+	showWindow.Call(window.window, 3) // SW_SHOWMAXIMIZED retains the normal window placement.
+	setFocus.Call(window.modes[idFileTab])
 	if len(os.Args) > 1 {
 		window.openDocument(os.Args[1], "")
 	}

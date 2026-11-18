@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"syscall"
 	"unsafe"
 )
@@ -134,11 +135,14 @@ func (a *app) paint(hwnd uintptr) {
 	dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
 	fillColor(dc, rect{0, 0, int32(a.width), int32(a.height)}, canvasColor)
 	if !a.full {
-		fillColor(dc, rect{0, 0, int32(a.width), int32(a.scale(49))}, titleColor)
-		fillColor(dc, rect{0, int32(a.scale(49)), int32(a.width), int32(a.scale(50))}, divider)
-		fillColor(dc, rect{0, int32(a.scale(90)), int32(a.width), int32(a.scale(91))}, divider)
+		fillColor(dc, rect{0, 0, int32(a.width), int32(a.scale(headerHeight))}, titleColor)
+		fillColor(dc, rect{0, int32(a.scale(headerHeight)) - 1, int32(a.width), int32(a.scale(headerHeight))}, divider)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
 		a.paintBrand(dc)
+		if a.view.path != "" && a.headerActions-a.headerTabs >= a.scale(93) {
+			nameArea := rect{int32(a.headerTabs + a.scale(12)), 0, int32(a.headerActions - a.scale(12)), int32(a.scale(headerHeight))}
+			drawText(dc, filepath.Base(a.view.path), nameArea, a.normalFont, mutedColor, 0x8000) // DT_END_ELLIPSIS
+		}
 	}
 	a.view.paint(dc)
 	user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
@@ -152,9 +156,6 @@ func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 		return a.inputBrush
 	}
 	gdiBkMode.Call(dc, 1)
-	if handle == a.documentName {
-		return a.canvasBrush
-	}
 	if a.panelLabels[handle] {
 		return a.panelBrush
 	}
@@ -170,8 +171,11 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	}
 	bounds := item.bounds
 	isOption := a.options[item.handle]
+	_, tab := a.modes[int(item.controlID)]
 	background := canvasColor
-	if a.panelButtons[item.handle] {
+	if tab || item.handle == a.panelButton || item.handle == a.fullButton {
+		background = titleColor
+	} else if a.panelButtons[item.handle] {
 		background = panelColor
 	}
 	fillColor(item.dc, bounds, background)
@@ -192,11 +196,10 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		bounds.left += int32(a.scale(28))
 		drawText(item.dc, getText(item.handle), bounds, a.normalFont, foreground, 0)
 	} else {
-		_, tab := a.modes[int(item.controlID)]
 		active := int(item.controlID) == a.mode || a.primaryButtons[item.handle]
 		body, edge := paletteColor{42, 42, 47}, divider
 		if tab {
-			body, edge = canvasColor, canvasColor
+			body, edge = background, background
 			if active {
 				body, edge = panelColor, panelColor
 			}
@@ -214,7 +217,9 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		if tab && active {
 			fillColor(item.dc, rect{bounds.left + 1, bounds.bottom - int32(a.scale(3)), bounds.right - 1, bounds.bottom - 1}, accentColor)
 		}
-		drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, 1)
+		if !a.drawHeaderIconLabel(item, foreground) {
+			drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, 1)
+		}
 	}
 	if item.state&16 != 0 {
 		focus := rect{bounds.left + 3, bounds.top + 3, bounds.right - 3, bounds.bottom - 3}
