@@ -11,9 +11,9 @@ import sys
 import tempfile
 
 import pikepdf
-from print_profiles import ProfileError, attach_intent, get_profile, source_cmyk
-from export_settings import export_settings, pdfwrite_settings
-from proof import ProofError, describe, page_proof, scan_plates, screen_page
+from print_profiles import ProfileError, attach_intent, attach_srgb, clear_pdfx_claim, get_profile, source_cmyk, source_icc
+from export_settings import export_preset, export_settings, pdfwrite_settings
+from proof import ProofError, describe, page_box, page_proof, scan_plates, screen_page
 from reader_render import render_screen
 
 
@@ -141,6 +141,22 @@ def stage_for_render(pdf, src, destination):
         shutil.copyfile(src, destination)
 
 
+def stage_flatten_source(pdf, destination):
+    # Render the entire sheet, including marks outside the display crop.
+    crops = [(page, page.obj.get("/CropBox")) for page in pdf.pages]
+    try:
+        for page, _ in crops:
+            page.obj.CropBox = page.mediabox
+        pdf.save(destination, encryption=False, fix_metadata_version=False)
+    finally:
+        for page, crop in crops:
+            if crop is None:
+                if "/CropBox" in page.obj:
+                    del page.obj["/CropBox"]
+            else:
+                page.obj.CropBox = crop
+
+
 def run_ghostscript(exe, folder, args):
     env = os.environ.copy()
     # Ghostscript otherwise loads additional options and resources from these variables.
@@ -165,6 +181,56 @@ def run_ghostscript(exe, folder, args):
         detail = result.stdout.decode("utf-8", errors="replace").strip()[-2200:]
         raise UserError(f"Ghostscript skončil s chybou {result.returncode}.\n{detail}")
     return result.stdout.decode("utf-8", errors="replace")
+
+
+def srgb_conversion(pdf, folder):
+    from PIL import ImageCms
+
+    srgb = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    (folder / "srgb.icc").write_bytes(srgb)
+    permitted = ["srgb.icc"]
+    rgb_input = "srgb.icc"
+    args = ["-dUsePDFX3Profile=false", "-sOutputICCProfile=srgb.icc"]
+    if data := source_icc(pdf, b"RGB "):
+        rgb_input = "zdroj-rgb.icc"
+        (folder / rgb_input).write_bytes(data)
+        permitted.append(rgb_input)
+    if data := source_cmyk(pdf):
+        (folder / "zdroj-cmyk.icc").write_bytes(data)
+        permitted.append("zdroj-cmyk.icc")
+        args.append("-sDefaultCMYKProfile=zdroj-cmyk.icc")
+    return srgb, [*args, f"-sDefaultRGBProfile={rgb_input}", "--permit-file-read=" + os.pathsep.join(permitted)]
+
+
+def restore_raster_geometry(source, rendered, dpi):
+    for number, (page, raster) in enumerate(zip(source.pages, rendered.pages), 1):
+        left, bottom, right, top = page_box(page, "mediabox")
+        width, height = right-left, top-bottom
+        _, _, raster_width, raster_height = map(float, raster.mediabox)
+        unit = float(page.obj.get("/UserUnit", 1))
+        angle = int(page.obj.get("/Rotate", 0)) % 360
+        wanted = (height*unit, width*unit) if angle % 180 else (width*unit, height*unit)
+        if (angle % 90 or min(width, height, raster_width, raster_height, unit) <= 0
+                or any(abs(a-b) > 72/dpi + 0.01 for a, b in zip(wanted, (raster_width, raster_height)))):
+            raise UserError(f"Zploštění by změnilo velikost nebo orientaci strany {number}.")
+        # Ghostscript bakes page rotation into the image. Map its coordinates
+        # back to the original sheet before restoring the page dictionaries.
+        a, b, c, d, x, y = (
+            (width, 0, 0, height, left, bottom),
+            (0, height, -width, 0, right, bottom),
+            (-width, 0, 0, -height, right, top),
+            (0, -height, width, 0, left, top),
+        )[angle // 90]
+        matrix = (a/raster_width, b/raster_width, c/raster_height, d/raster_height, x, y)
+        transform = " ".join(f"{value:.10f}" for value in matrix)
+        raster.contents_add(f"q {transform} cm\n".encode("ascii"), prepend=True)
+        raster.contents_add(b"\nQ\n")
+        for key in ("/MediaBox", "/CropBox", "/TrimBox", "/BleedBox", "/ArtBox"):
+            if key in page.obj:
+                raster.obj[key] = pikepdf.Array(page.obj[key])
+        for key in ("/Rotate", "/UserUnit"):
+            if key in page.obj:
+                raster.obj[key] = page.obj[key]
 
 
 def verify_plates(exe, folder, pages, dpi=150):
@@ -321,12 +387,21 @@ def transform(src, request):
     profile_key = request.get("profile", "")
     if gray and profile_key:
         raise UserError("Vyberte buď desku K, nebo výstupní profil CMYK.")
-    convert = gray or outline or bool(profile_key)
     decrypt = request.get("decrypt", False)
+    preset = export_preset(request.get("preset", ""))
+    if preset is None:
+        raise UserError("Vyberte platnou předvolbu PDF.")
+    mode = preset.get("mode")
+    if mode and (gray or outline or decrypt or (profile_key and mode != "cmyk")):
+        raise UserError("Pro tyto úpravy vyberte vlastní nastavení exportu.")
+    if mode == "cmyk":
+        profile_key = profile_key or preset["profile"]
+    flatten = mode == "flatten"
+    convert = gray or outline or bool(profile_key) or mode in ("rewrite", "rgb", "flatten")
     view = request.get("view", {})
-    if not (convert or decrypt or "pages" in view):
+    if not (mode or convert or decrypt or "pages" in view):
         raise UserError("Vyberte alespoň jednu úpravu PDF.")
-    options = export_settings(request.get("export"))
+    options = export_settings(preset.get("options") if mode else request.get("export"))
     proof_dpi, repair_dpi = options["proof_dpi"], options["repair_dpi"]
     exe = ghostscript_path(request) if convert else None
 
@@ -337,6 +412,10 @@ def transform(src, request):
                                or any(type(number) is not int or not 1 <= number <= source_pages
                                       for number in selection)):
             raise UserError("Výběr stran k exportu obsahuje neplatné číslo stránky.")
+        if mode == "copy" and (selection is None or len(set(selection)) == source_pages):
+            with output_file(src, request) as pending:
+                shutil.copyfile(src, pending)
+            return f"Uložena kopie PDF. Počet stran {source_pages}."
         modified = prepare_edit(pdf, request)
         if selection is not None:
             modified = apply_page_order(pdf, list(pdf.pages), sorted(set(selection))) or modified
@@ -360,15 +439,24 @@ def transform(src, request):
         with tempfile.TemporaryDirectory(prefix="pdftisk-") as tmp:
             folder = Path(tmp)
             staged = folder / "vstup.pdf"
-            if pdf.is_encrypted or modified:
+            if flatten:
+                stage_flatten_source(pdf, staged)
+            elif pdf.is_encrypted or modified:
                 pdf.save(staged, encryption=False, fix_metadata_version=False)
             else:
                 shutil.copyfile(src, staged)
 
-            args = [
-                "-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.7", "-dAutoRotatePages=/None",
-                "-dPreserveAnnots=false", "-dPrinted=true", "-sOutputFile=hotovo.pdf", *pdfwrite_settings(options),
-            ]
+            if flatten:
+                args = ["-sDEVICE=pdfimage24", f"-r{preset['dpi']}", "-sCompression=Flate",
+                        "-dPrinted=false", "-dTextAlphaBits=4", "-dGraphicsAlphaBits=4", "-dOverprint=/simulate"]
+            else:
+                printed = "false" if mode == "rgb" else "true"
+                args = ["-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.7", "-dAutoRotatePages=/None",
+                        "-dPreserveAnnots=false", f"-dPrinted={printed}", *pdfwrite_settings(options)]
+                if mode:
+                    args.extend(["-dEmbedAllFonts=true", "-dSubsetFonts=true"])
+            args.append("-sOutputFile=hotovo.pdf")
+            srgb = None
             if gray:
                 args.extend([
                     "-sColorConversionStrategy=Gray", "-dProcessColorModel=/DeviceGray",
@@ -387,8 +475,18 @@ def transform(src, request):
                     f"--permit-file-read=cil.icc{os.pathsep}{source_path}",
                     "-sOutputICCProfile=cil.icc", f"-sDefaultCMYKProfile={source_path}",
                 ])
+            elif mode in ("rgb", "flatten"):
+                srgb, color_args = srgb_conversion(pdf, folder)
+                args.extend(color_args)
+                if not flatten:
+                    args.extend(["-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB",
+                                 "-dPreserveDeviceN=false", "-dPreserveSeparation=false"])
+            elif mode == "rewrite":
+                args.append("-sColorConversionStrategy=LeaveColorUnchanged")
             if outline:
                 args.append("-dNoOutputFonts=true")
+            if mode and not flatten:
+                args.extend(["-c", "<< /NeverEmbed [] >> setdistillerparams"])
             log = run_ghostscript(exe, folder, [*args, "-f", "vstup.pdf"])
 
             with pikepdf.Pdf.open(folder / "hotovo.pdf") as finished:
@@ -404,6 +502,16 @@ def transform(src, request):
                         finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
                 elif profile:
                     attach_intent(finished, *profile)
+                    finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
+                elif srgb is not None:
+                    if flatten:
+                        restore_raster_geometry(pdf, finished, preset["dpi"])
+                    attach_srgb(finished, srgb)
+                    finished.save(folder / "vystup-upraveny.pdf", min_version="1.7", fix_metadata_version=False)
+                elif mode == "rewrite":
+                    if "/OutputIntents" in pdf.Root:
+                        finished.Root.OutputIntents = finished.copy_foreign(pdf.make_indirect(pdf.Root.OutputIntents))
+                    clear_pdfx_claim(finished)
                     finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
             revised_pdf = folder / "vystup-upraveny.pdf"
             if revised_pdf.exists():
@@ -422,6 +530,8 @@ def transform(src, request):
             with output_file(src, request) as pending:
                 shutil.copyfile(folder / "hotovo.pdf", pending)
     lines = [f"Uloženo PDF. Počet stran {pages}."]
+    if mode:
+        lines.append(f"Předvolba {preset['name']}.")
     if gray:
         lines.append(f"Separace při {proof_dpi} dpi ověřeny na všech stranách. C, M, Y i případné přímé desky jsou prázdné.")
     if repaired:

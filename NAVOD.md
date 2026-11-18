@@ -22,14 +22,25 @@ PDF otevřete přes rozbalovací nabídku **Soubor** a volbu **Otevřít soubor�
 ## Příprava pro tisk
 
 1. Otevřete PDF a zvolte **Soubor → Export…**.
-2. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
-3. V poli **Barevný výstup** zvolte stupně šedi pro desku K, cílový profil CMYK nebo zachování barev. Pro uložení vybraných stran s původním obsahem zvolte **Zachovat barvy** a ponechte volby převodu vypnuté.
-4. Potřebujete-li text jako vektorové obrysy, zaškrtněte **Převést text na křivky**. Text v naskenované bitmapě zůstává součástí bitmapy.
+2. V nabídce **Předvolba PDF** vyberte účel výstupu. **Vlastní nastavení** zpřístupní ruční výběr barev, převod na desku K i převod textu na křivky.
+3. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
+4. U předvolby pro tiskárnu vyberte profil ICC. Ve **Vlastním nastavení** zvolte požadovaný barevný výstup a případně převod textu na křivky. Text v naskenované bitmapě zůstává součástí bitmapy.
 5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte volbou **Soubor → Otevřít výstup**.
+
+### Předvolby PDF
+
+| Předvolba | Výstup |
+| --- | --- |
+| PDF pro tisk | Ponechá barvy a průhlednost, obrázky převzorkuje nejvýše na 300 dpi a použije bezeztrátovou kompresi. |
+| PDF připravené pro tiskárnu | Převede procesní barvy do vybraného profilu CMYK a vloží ho jako výstupní záměr. Výchozí profil je FOGRA39 (ISO Coated v2 300 %). Obrázky převzorkuje nejvýše na 300 dpi. |
+| Digitální PDF · malá velikost | Použije sRGB pro obrazovku, obrázky převzorkuje nejvýše na 150 dpi a použije kompresi JPEG. |
+| Digitální PDF · vysoká kvalita | Použije sRGB, ponechá rozlišení obrázků a komprimuje je bezeztrátově. |
+| PDF pro další zpracování | Uloží původní obsah vybraných stran včetně textu, křivek a průhlednosti. Celý dokument bez úprav se kopíruje beze změny. |
+| Zploštěné PDF | Složí viditelný obsah každé strany do jednoho obrazu sRGB při 300 dpi. Zachová rozměry a tiskové rámečky stran. Text se stane součástí obrazu. |
 
 ### Nastavení exportu
 
-V postranním panelu **Export** se volí cílový barevný profil, záměr reprodukce ICC, kompenzace černého bodu, převzorkování a komprese obrázků i rozlišení kontroly a případné rastrové opravy desek K. Nastavené parametry se použijí i při příštím spuštění.
+Ve volbě **Vlastní nastavení** lze nastavit cílový barevný profil, záměr reprodukce ICC, kompenzaci černého bodu, převzorkování a kompresi obrázků i rozlišení kontroly a případné rastrové opravy desek K. Ruční parametry se použijí i při příštím spuštění.
 
 ### Pouze deska K
 

@@ -4,7 +4,7 @@
 
 PDF se otevírá přímo v hlavním okně. Podporuje souvislé a stránkové čtení, přiblížení ke kurzoru pomocí Ctrl a kolečka a celoobrazovkový režim. Horní záložky přepínají nástroje v postranním panelu.
 
-Editor umožňuje otáčet a přesouvat stránky a uložit upravenou kopii. Tiskový náhled zobrazuje výstupní záměr, procesní i přímé desky a jejich pokrytí. Parametry převodu jsou v panelu **Export**.
+Editor umožňuje otáčet a přesouvat stránky a uložit upravenou kopii. Tiskový náhled zobrazuje výstupní záměr, procesní i přímé desky a jejich pokrytí. Panel **Export** nabízí výběr stran, předvolby pro tisk a digitální použití i vlastní parametry převodu.
 
 ## Použití
 

@@ -144,6 +144,10 @@ def run_smoke(base, exe):
     assert report.count('Integrita podpisu  ano') == 2
     assert 'dřívější úplná revize' in report
 
+    export_copy = base / 'kopie podepsaného PDF.pdf'
+    run('transform', signed, output=str(export_copy), preset='export')
+    assert export_copy.read_bytes() == signed.read_bytes()
+
     run('transform', signed, 'signed_pdf', output=str(out), ghostscript=exe, gray=True)
     run('transform', signed, output=str(out), ghostscript=exe, gray=True, clear_signatures=True)
     assert 'nebyl nalezen' in run('verify', out)
@@ -163,6 +167,13 @@ def run_smoke(base, exe):
                 assert sha256(intent.DestOutputProfile.read_bytes()).hexdigest() == profile['sha256']
                 contents.append(pdf.pages[0].obj.Contents.read_bytes())
         assert contents[0] != contents[1]
+        press = base / 'předvolba pro tiskárnu.pdf'
+        run('transform', src, output=str(press), ghostscript=exe, preset='press', view={'pages': [2]})
+        with Pdf.open(press) as pdf:
+            assert len(pdf.pages) == 1
+            intent = pdf.Root.OutputIntents[0]
+            assert str(intent.OutputConditionIdentifier) == 'FOGRA39'
+            assert '/GTS_PDFXVersion' not in pdf.docinfo
     print('All smoke tests passed.', flush=True)
 
 

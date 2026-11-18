@@ -30,6 +30,7 @@ type request struct {
 	Input           string         `json:"input"`
 	Output          string         `json:"output,omitempty"`
 	PDFPassword     string         `json:"pdf_password,omitempty"`
+	Preset          string         `json:"preset,omitempty"`
 	Profile         string         `json:"profile,omitempty"`
 	CustomICC       string         `json:"custom_icc,omitempty"`
 	Certificate     string         `json:"certificate,omitempty"`
@@ -124,7 +125,9 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "export_settings.py", "proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"), filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
+	for _, name := range []string{"ready", "python.exe", "engine.py", "export_settings.py", "export_presets.json",
+		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
+		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))
 		if err != nil || !info.Mode().IsRegular() {
 			return false

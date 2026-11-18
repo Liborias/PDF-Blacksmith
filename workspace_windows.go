@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -27,8 +28,8 @@ const (
 	idDecrypt
 	idRaster
 	idRun
-	idPreset
-	idResetPreset
+	idExportOption
+	idResetExportOptions
 	idCertBrowse
 	idTrustBrowse
 	idSign
@@ -40,6 +41,8 @@ const (
 	idSaveDocumentAs
 	idPrintDocument
 	idExportScope
+	idExportPreset
+	idPressICC
 )
 
 const (
@@ -117,6 +120,9 @@ func (a *app) setupWorkspace() bool {
 	}
 	a.profileChoices = append([]profileChoice{{"", "Zachovat barvy"}, {"k", "Stupně šedi · pouze deska K"}}, catalog...)
 	a.profileChoices = append(a.profileChoices, profileChoice{"custom", "Vlastní výstupní profil ICC"})
+	if json.Unmarshal(exportCatalog, &a.exportPresets) != nil || len(a.exportPresets) == 0 {
+		return false
+	}
 
 	a.panelButton = a.button("Skrýt panel", idTogglePanel, 0, 0, 118, 0)
 	a.fullButton = a.button("Celá obrazovka", idFullscreen, 0, 0, 134, 0)
@@ -169,24 +175,40 @@ func (a *app) beginPanel(tab int) {
 func (a *app) buildExportPanel() {
 	a.runButton = a.button("Uložit exportované PDF…", idRun, 16, 17, 298, 0)
 	a.primaryButtons[a.runButton] = true
-	a.label("Strany k exportu", 16, 64, 298, true)
-	a.exportScope = a.combo(idExportScope, 16, 86, 145, []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"})
-	a.exportRange = a.edit(169, 86, 145, false)
+	a.label("Předvolba PDF", 16, 64, 298, true)
+	formats := make([]string, 0, len(a.exportPresets))
+	for _, preset := range a.exportPresets {
+		formats = append(formats, preset.Name)
+	}
+	a.exportFormat = a.combo(idExportPreset, 16, 86, 298, formats)
+	a.exportHint = a.add("STATIC", a.exportPresets[0].Description, 0, 16, 121, 298, 42, 0x80, 0, a.normalFont)
+	a.label("Strany k exportu", 16, 169, 298, true)
+	a.exportScope = a.combo(idExportScope, 16, 191, 145, []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"})
+	a.exportRange = a.edit(169, 191, 145, false)
 	sendMessage.Call(a.exportRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8")))) // EM_SETCUEBANNER
-	a.label("Barevný výstup", 16, 124, 298, true)
+	a.exportColorLabel = a.label("Barevný výstup", 16, 229, 298, true)
 	names := make([]string, 0, len(a.profileChoices))
 	for _, p := range a.profileChoices {
 		names = append(names, p.Name)
 	}
-	a.profiles = a.combo(idICCProfile, 16, 146, 298, names)
+	a.profiles = a.combo(idICCProfile, 16, 251, 298, names)
 	chooseCombo(a.profiles, 1)
-	a.customICC = a.edit(16, 180, 187, false)
-	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 177, 102, 0)
-	a.outline = a.button("Převést text na křivky", idOutline, 16, 213, 298, bsAutoCheck)
-	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 243, 298, bsAutoCheck)
-	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 273, 298, bsAutoCheck)
-	a.exportReport = a.readout(16, 313, 298, 105)
-	a.label("Parametry exportu", 16, 439, 298, true)
+	a.pressProfiles = a.combo(idPressICC, 16, 251, 298, names[2:])
+	for _, preset := range a.exportPresets {
+		if preset.Profile != "" {
+			index := slices.IndexFunc(a.profileChoices[2:], func(choice profileChoice) bool { return choice.Key == preset.Profile })
+			chooseCombo(a.pressProfiles, index)
+			break
+		}
+	}
+	a.customICC = a.edit(16, 285, 187, false)
+	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 282, 102, 0)
+	a.exportManualStart = len(a.panelItems[idExportTab])
+	a.outline = a.button("Převést text na křivky", idOutline, 16, 318, 298, bsAutoCheck)
+	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 348, 298, bsAutoCheck)
+	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 378, 298, bsAutoCheck)
+	a.exportReport = a.readout(16, 418, 298, 105)
+	a.label("Parametry exportu", 16, 544, 298, true)
 	labels := []string{"Záměr reprodukce", "Černý bod", "Obrázky", "Komprese", "Kontrola desek", "Oprava K"}
 	choices := [][]string{
 		{"Podle PDF", "Perceptuální", "Relativní", "Saturace", "Absolutní"},
@@ -198,11 +220,11 @@ func (a *app) buildExportPanel() {
 	}
 	for index, label := range labels {
 		x := 16 + (index%2)*153
-		y := 474 + (index/2)*63
+		y := 579 + (index/2)*63
 		a.label(label, x, y, 145, false)
-		a.presetControls[index] = a.combo(idPreset, x, y+21, 145, choices[index])
+		a.exportOptionControls[index] = a.combo(idExportOption, x, y+21, 145, choices[index])
 	}
-	a.button("Obnovit výchozí parametry", idResetPreset, 16, 669, 298, 0)
+	a.button("Obnovit výchozí parametry", idResetExportOptions, 16, 774, 298, 0)
 	a.applyExportOptions(a.export)
 }
 
@@ -232,13 +254,13 @@ func (a *app) applyExportOptions(value exportOptions) {
 		defaultIndex(proofDPIs, value.ProofDPI, defaults.ProofDPI),
 		defaultIndex(repairDPIs, value.RepairDPI, defaults.RepairDPI),
 	}
-	for index, handle := range a.presetControls {
+	for index, handle := range a.exportOptionControls {
 		chooseCombo(handle, indexes[index])
 	}
 }
 
-func (a *app) updatePresets() {
-	c := a.presetControls
+func (a *app) updateExportOptions() {
+	c := a.exportOptionControls
 	a.export = exportOptions{
 		intents[max(0, comboIndex(c[0]))], blackPoints[max(0, comboIndex(c[1]))],
 		imageDPIs[max(0, comboIndex(c[2]))], compressions[max(0, comboIndex(c[3]))],
@@ -250,12 +272,27 @@ func (a *app) updatePresets() {
 	setText(a.raster, fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI))
 }
 
+func (a *app) selectedExportPreset() exportPreset {
+	index := comboIndex(a.exportFormat)
+	if index < 0 || index >= len(a.exportPresets) {
+		return exportPreset{}
+	}
+	return a.exportPresets[index]
+}
+
 func (a *app) profileKey() string {
-	index := comboIndex(a.profiles)
-	if index < 0 || index >= len(a.profileChoices) {
+	control, choices := a.profiles, a.profileChoices
+	if preset := a.selectedExportPreset(); preset.Key != "" {
+		if preset.Profile == "" {
+			return ""
+		}
+		control, choices = a.pressProfiles, choices[2:]
+	}
+	index := comboIndex(control)
+	if index < 0 || index >= len(choices) {
 		return ""
 	}
-	return a.profileChoices[index].Key
+	return choices[index].Key
 }
 
 func (a *app) activate(id int) {
@@ -324,10 +361,46 @@ func (a *app) layout() {
 	invalidate(a.window)
 }
 
+func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if tab != idExportTab {
+		return item, true
+	}
+	preset := a.selectedExportPreset()
+	manual, press := preset.Key == "", preset.Profile != ""
+	key := a.profileKey()
+	switch item.handle {
+	case a.exportRange:
+		return item, comboIndex(a.exportScope) == exportPageRanges
+	case a.exportColorLabel:
+		return item, manual || press
+	case a.profiles:
+		return item, manual
+	case a.pressProfiles:
+		return item, press
+	case a.customICC, a.customBrowse:
+		return item, key == "custom"
+	case a.raster:
+		return item, manual && key == "k" && !a.checked(a.outline)
+	case a.exportReport:
+		switch {
+		case press && key == "custom":
+			item.y = 332
+		case press:
+			item.y = 296
+		case !manual:
+			item.y = 239
+		}
+		return item, true
+	}
+	return item, manual || index < a.exportManualStart
+}
+
 func (a *app) panelMetrics() (int, int) {
 	height := 1
-	for _, item := range a.panelItems[a.mode] {
-		height = max(height, item.y+item.height+18)
+	for index, item := range a.panelItems[a.mode] {
+		if placed, show := a.panelItemLayout(a.mode, index, item); show {
+			height = max(height, placed.y+placed.height+18)
+		}
 	}
 	available := max(1, (a.height-a.scale(headerHeight+footerHeight))*96/a.dpi)
 	return height, available
@@ -342,19 +415,11 @@ func (a *app) layoutPanel() {
 	a.panelScroll[a.mode] = offset
 	info := scrollInfo{size: uint32(unsafe.Sizeof(scrollInfo{})), mask: 7, maximum: int32(height - 1), page: uint32(available), position: int32(offset)}
 	user32.NewProc("SetScrollInfo").Call(a.sidebar, 1, uintptr(unsafe.Pointer(&info)), 1)
-	key := a.profileKey()
-	hasPageRange := comboIndex(a.exportScope) == exportPageRanges
 	for tab, items := range a.panelItems {
-		for _, item := range items {
+		for index, item := range items {
 			show := tab == a.mode
-			if item.handle == a.exportRange {
-				show = show && hasPageRange
-			}
-			if item.handle == a.customICC || item.handle == a.customBrowse {
-				show = show && key == "custom"
-			}
-			if item.handle == a.raster {
-				show = show && key == "k" && !a.checked(a.outline)
+			if show {
+				item, show = a.panelItemLayout(tab, index, item)
 			}
 			if show {
 				place(item.handle, a.scale(item.x), a.scale(item.y-offset), a.scale(item.width), a.scale(item.height))
@@ -374,11 +439,12 @@ func (a *app) revealFocusedControl() {
 	focus, _, _ := user32.NewProc("GetFocus").Call()
 	_, height := a.panelMetrics()
 	offset := a.panelScroll[a.mode]
-	for _, item := range a.panelItems[a.mode] {
+	for index, item := range a.panelItems[a.mode] {
 		if item.handle != focus {
 			continue
 		}
-		if item.y < offset || item.y+item.height > offset+height {
+		item, show := a.panelItemLayout(a.mode, index, item)
+		if show && (item.y < offset || item.y+item.height > offset+height) {
 			a.panelScroll[a.mode] = max(0, min(item.y, item.y+item.height-height))
 			a.layoutPanel()
 		}
@@ -561,8 +627,11 @@ func (a *app) command(id, notification int) {
 	}
 	if notification == 1 {
 		switch id {
-		case idPreset:
-			a.updatePresets()
+		case idExportOption:
+			a.updateExportOptions()
+		case idExportPreset:
+			setText(a.exportHint, a.selectedExportPreset().Description)
+			a.layoutPanel()
 		case idExportScope:
 			a.layoutPanel()
 			if comboIndex(a.exportScope) == exportPageRanges {
@@ -572,6 +641,8 @@ func (a *app) command(id, notification int) {
 			if a.profileKey() != "" {
 				a.setChecked(a.decrypt, false)
 			}
+			a.layoutPanel()
+		case idPressICC:
 			a.layoutPanel()
 		}
 		return
@@ -636,9 +707,9 @@ func (a *app) command(id, notification int) {
 			h = a.raster
 		}
 		a.setChecked(h, !a.checked(h))
-	case idResetPreset:
+	case idResetExportOptions:
 		a.applyExportOptions(defaults)
-		a.updatePresets()
+		a.updateExportOptions()
 	case idRun, idSign, idVerify:
 		a.startAction(id)
 	}
@@ -653,6 +724,8 @@ func (a *app) startAction(id int) {
 	switch id {
 	case idRun:
 		req.Action = "transform"
+		preset := a.selectedExportPreset()
+		req.Preset = preset.Key
 		switch comboIndex(a.exportScope) {
 		case exportCurrentPage:
 			req.View.Pages = []int{a.view.page + 1}
@@ -666,9 +739,11 @@ func (a *app) startAction(id int) {
 			req.View.Pages = pages
 		}
 		key := a.profileKey()
-		req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
-		req.Gray = key == "k"
-		req.AllowRaster = req.Gray && !req.Outline && a.checked(a.raster)
+		if req.Preset == "" {
+			req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
+			req.Gray = key == "k"
+			req.AllowRaster = req.Gray && !req.Outline && a.checked(a.raster)
+		}
 		if !req.Gray {
 			req.Profile = key
 		}
@@ -679,11 +754,13 @@ func (a *app) startAction(id int) {
 				return
 			}
 		}
-		if key == "" && !req.Outline && !req.Decrypt && len(req.View.Pages) == 0 {
+		if req.Preset == "" && key == "" && !req.Outline && !req.Decrypt && len(req.View.Pages) == 0 {
 			a.report("Vyberte strany k exportu, úpravu nebo výstupní profil.")
 			return
 		}
 		switch {
+		case req.Preset != "":
+			suffix = preset.Suffix
 		case req.Gray:
 			suffix = "-K"
 		case key != "":
@@ -819,7 +896,8 @@ func (a *app) finish(result response) {
 	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource {
 		a.lastOutput, a.lastPassword = req.Output, ""
 		if req.Action == "save_document" ||
-			(req.Action == "transform" && !req.Gray && !req.Outline && req.Profile == "" && !req.Decrypt) {
+			(req.Action == "transform" && (req.Preset == "export" ||
+				(req.Preset == "" && !req.Gray && !req.Outline && req.Profile == "" && !req.Decrypt))) {
 			a.lastPassword = req.PDFPassword
 		}
 	}

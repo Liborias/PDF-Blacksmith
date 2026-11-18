@@ -21,10 +21,14 @@ class ProfileError(ValueError):
     pass
 
 
-def cmyk_icc(data):
+def icc_matches(data, space):
     return (128 <= len(data) <= MAX_ICC_BYTES
             and int.from_bytes(data[:4], "big") == len(data)
-            and data[16:20] == b"CMYK" and data[36:40] == b"acsp")
+            and data[16:20] == space and data[36:40] == b"acsp")
+
+
+def cmyk_icc(data):
+    return icc_matches(data, b"CMYK")
 
 
 def profile_cache():
@@ -95,14 +99,33 @@ def get_profile(key, custom):
     return data, selected["name"], selected["condition"]
 
 
-def source_cmyk(pdf):
+def source_icc(pdf, space):
     for intent in pdf.Root.get("/OutputIntents", []):
         profile = intent.get("/DestOutputProfile")
         if isinstance(profile, pikepdf.Stream):
             data = profile.read_bytes()
-            if cmyk_icc(data):
+            if icc_matches(data, space):
                 return data
     return None
+
+
+def source_cmyk(pdf):
+    return source_icc(pdf, b"CMYK")
+
+
+def attach_srgb(pdf, data):
+    stream = pdf.make_stream(data, N=3, Alternate=pikepdf.Name.DeviceRGB)
+    default_rgb = pikepdf.Array([pikepdf.Name.ICCBased, stream])
+    for page in pdf.pages:
+        if "/Resources" not in page.obj:
+            page.obj.Resources = pikepdf.Dictionary()
+        resources = page.obj.Resources
+        if "/ColorSpace" not in resources:
+            resources.ColorSpace = pikepdf.Dictionary()
+        resources.ColorSpace.DefaultRGB = default_rgb
+    if "/OutputIntents" in pdf.Root:
+        del pdf.Root["/OutputIntents"]
+    clear_pdfx_claim(pdf)
 
 
 def attach_intent(pdf, data, label, condition):
@@ -115,12 +138,17 @@ def attach_intent(pdf, data, label, condition):
     if condition.startswith("FOGRA") and condition[5:].isdigit():
         intent.RegistryName = "http://www.color.org"
     pdf.Root.OutputIntents = pikepdf.Array([pdf.make_indirect(intent)])
+    clear_pdfx_claim(pdf)
+
+
+def clear_pdfx_claim(pdf):
     # An output intent alone does not certify the document against a PDF/X standard.
     for key in ("/GTS_PDFXVersion", "/GTS_PDFXConformance"):
         if key in pdf.docinfo:
             del pdf.docinfo[key]
     if "/Metadata" in pdf.Root:
         with pdf.open_metadata(set_pikepdf_as_editor=False, update_docinfo=False) as metadata:
-            for key in ("pdfxid:GTS_PDFXVersion", "pdfx:GTS_PDFXConformance"):
+            for key in ("pdfxid:GTS_PDFXVersion", "pdfxid:GTS_PDFXConformance",
+                        "pdfx:GTS_PDFXVersion", "pdfx:GTS_PDFXConformance"):
                 if key in metadata:
                     del metadata[key]

@@ -1,10 +1,20 @@
 """Validated export options shared by the PDF export and its plate check."""
 
+import json
+from pathlib import Path
+
 DEFAULTS = dict(intent=-1, black_point=-1, image_dpi=0, compression="auto",
                 proof_dpi=150, repair_dpi=600)
 VALUES = dict(intent=(-1, 0, 1, 2, 3), black_point=(-1, 0, 1),
-              image_dpi=(0, 150, 300, 600), compression=("auto", "flate"),
+              image_dpi=(0, 150, 300, 600), compression=("auto", "flate", "jpeg"),
               proof_dpi=(75, 150, 300), repair_dpi=(300, 600))
+
+
+def export_preset(key):
+    if key == "":
+        return {}
+    catalog = json.loads(Path(__file__).with_name("export_presets.json").read_text(encoding="utf-8"))
+    return next((item for item in catalog if item["key"] == key), None)
 
 
 def export_settings(raw):
@@ -33,10 +43,11 @@ def pdfwrite_settings(options):
                      f"-d{channel}ImageDownsampleThreshold=1.0",
                      f"-d{channel}ImageResolution={options['image_dpi']}",
                      f"-d{channel}ImageDownsampleType=/{'Subsample' if channel == 'Mono' else 'Bicubic'}"]
-        if options["compression"] == "flate":
+        if options["compression"] == "flate" or (options["compression"] == "jpeg" and channel != "Mono"):
             if channel != "Mono":
                 args.append(f"-dAutoFilter{channel}Images=false")
-            args.append(f"-d{channel}ImageFilter=/FlateEncode")
-    if options["compression"] == "flate" or options["image_dpi"]:
+            image_filter = "DCTEncode" if options["compression"] == "jpeg" else "FlateEncode"
+            args.append(f"-d{channel}ImageFilter=/{image_filter}")
+    if options["compression"] != "auto" or options["image_dpi"]:
         args += ["-dPassThroughJPEGImages=false", "-dPassThroughJPXImages=false"]
     return args

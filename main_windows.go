@@ -97,6 +97,9 @@ type openFileName struct {
 //go:embed profiles.json
 var printCatalog []byte
 
+//go:embed export_presets.json
+var exportCatalog []byte
+
 type profileChoice struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
@@ -130,13 +133,16 @@ type app struct {
 	view                                               *documentView
 	panelButton, fullButton, status                    uintptr
 	exportScope, exportRange                           uintptr
-	profiles, customICC, customBrowse                  uintptr
+	exportFormat, exportHint, exportColorLabel         uintptr
+	profiles, pressProfiles, customICC, customBrowse   uintptr
 	outline, decrypt, raster, visible                  uintptr
 	password, cert, certPass, trust                    uintptr
 	exportReport, signReport                           uintptr
 	runButton, scanButton, verifyButton, signButton    uintptr
 	profileChoices                                     []profileChoice
-	presetControls                                     [6]uintptr
+	exportPresets                                      []exportPreset
+	exportOptionControls                               [6]uintptr
+	exportManualStart                                  int
 	export                                             exportOptions
 	lastOutput, lastPassword                           string
 	busy                                               bool

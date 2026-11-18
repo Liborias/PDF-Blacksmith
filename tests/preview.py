@@ -10,7 +10,7 @@ import sys
 from tempfile import TemporaryDirectory
 
 from PIL import Image, ImageChops
-from pikepdf import Array, Dictionary, Encryption, Name, Pdf, Stream
+from pikepdf import Array, Dictionary, Encryption, Name, Pdf, Stream, parse_content_stream
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -256,6 +256,74 @@ def check_proofs(exe, folder):
         assert images and all(190 <= int(obj.Width) <= 220 and obj.Filter == Name.FlateDecode for obj in images)
 
 
+def check_export_presets(exe, folder):
+    source = folder / "předvolby.pdf"
+    with Pdf.new() as pdf:
+        noise = Image.effect_noise((600, 600), 50)
+        bitmap = Image.merge("RGB", (noise, Image.new("L", noise.size, 150), noise))
+        picture = pdf.make_stream(bitmap.tobytes(), Type=Name.XObject, Subtype=Name.Image,
+                                  Width=600, Height=600, ColorSpace=Name.DeviceRGB, BitsPerComponent=8)
+        font = Dictionary(Type=Name.Font, Subtype=Name.Type1, BaseFont=Name.Helvetica)
+        for index in range(2):
+            page = pdf.add_blank_page(page_size=(180, 270))
+            page.obj.MediaBox = Array([-15, 20, 165, 290])
+            page.obj.CropBox = Array([-10, 27, 135, 270])
+            page.obj.BleedBox = Array([-5, 30, 130, 250])
+            page.obj.TrimBox = Array([0, 35, 120, 240])
+            page.obj.Resources = Dictionary(XObject=Dictionary(Im=picture), Font=Dictionary(F1=font),
+                                            ExtGState=Dictionary(Alpha=Dictionary(ca=0.5)))
+            page.obj.Contents = pdf.make_stream(
+                b"0 1 0 0 k 4 43 100 34 re f "
+                b"q 100 0 0 100 5 65 cm /Im Do Q "
+                b"q /Alpha gs 0 0 1 rg 42 72 72 125 re f Q "
+                b"0 g BT /F1 12 Tf 23 210 Td (Vector text) Tj ET")
+            if index:
+                page.obj.Rotate = 90
+                page.obj.UserUnit = 1.5
+        pdf.save(source, min_version="1.7")
+
+    expected = {"print": (300, Name.FlateDecode),
+                "digital-small": (150, Name.DCTDecode),
+                "digital-high": (432, Name.FlateDecode)}
+    sizes = {}
+    for preset, (dpi, image_filter) in expected.items():
+        dst = folder / (preset + ".pdf")
+        call(exe, source, "transform", preset=preset, output=str(dst), view={"pages": [1]})
+        with Pdf.open(dst) as pdf:
+            assert len(pdf.pages) == 1
+            page = pdf.pages[0]
+            assert "/Font" in page.Resources and "/ExtGState" in page.Resources
+            img = next(iter(page.get_images().values()))
+            assert img.Filter == image_filter
+            assert abs(float(img.Width) * 72 / 100 - dpi) <= 1
+            if preset.startswith("digital"):
+                rgb = page.Resources.ColorSpace.DefaultRGB
+                assert rgb[0] == Name.ICCBased and rgb[1].N == 3
+                assert rgb[1].read_bytes()[16:20] == b"RGB "
+            else:
+                assert any(str(item.operator) == "k" for item in parse_content_stream(page))
+        sizes[preset] = dst.stat().st_size
+    assert sizes["digital-small"] < sizes["digital-high"]
+
+    flat = folder / "zploštěné.pdf"
+    call(exe, source, "transform", preset="flatten", output=str(flat), view={"pages": [2]})
+    with Pdf.open(source) as old, Pdf.open(flat) as new:
+        assert len(new.pages) == 1
+        a, b = old.pages[1], new.pages[0]
+        for key in ("/MediaBox", "/CropBox", "/BleedBox", "/TrimBox", "/Rotate", "/UserUnit"):
+            assert a.obj[key] == b.obj[key]
+        images = b.get_images()
+        assert len(images) == 1
+        assert [str(item.operator) for item in parse_content_stream(b)] == ["q", "cm", "cm", "Do", "Q"]
+        image = next(iter(images.values()))
+        assert abs(image.Width - 270*1.5*300/72) <= 1
+        assert "/Font" not in b.Resources
+
+    copy = folder / "předloha-export.pdf"
+    call(exe, source, "transform", preset="export", output=str(copy))
+    assert copy.read_bytes() == source.read_bytes()
+
+
 if __name__ == "__main__":
     gs = shutil.which(sys.argv[1] if len(sys.argv) > 1 else "gs")
     if not gs:
@@ -264,4 +332,5 @@ if __name__ == "__main__":
         check_proofs(str(Path(gs).resolve()), Path(folder))
         check_screen_detail(str(Path(gs).resolve()), Path(folder))
         check_plate_switching(str(Path(gs).resolve()), Path(folder))
+        check_export_presets(str(Path(gs).resolve()), Path(folder))
     print("Print proof, editor and export settings tests passed.")

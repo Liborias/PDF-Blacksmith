@@ -6,6 +6,14 @@ import (
 	"path/filepath"
 )
 
+type exportPreset struct {
+	Key         string `json:"key"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Suffix      string `json:"suffix"`
+	Profile     string `json:"profile"`
+}
+
 type exportOptions struct {
 	Intent      int    `json:"intent"`
 	BlackPoint  int    `json:"black_point"`

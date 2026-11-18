@@ -1,0 +1,55 @@
+[
+  {
+    "key": "",
+    "name": "Vlastní nastavení",
+    "description": "Ruční volba barev, desky K, převodu textu a komprese."
+  },
+  {
+    "key": "print",
+    "name": "PDF pro tisk",
+    "description": "Původní barvy a průhlednost. Obrázky do 300 dpi, bezeztrátová komprese.",
+    "suffix": "-tisk",
+    "mode": "rewrite",
+    "options": {"image_dpi": 300, "compression": "flate"}
+  },
+  {
+    "key": "press",
+    "name": "PDF připravené pro tiskárnu",
+    "description": "Procesní barvy do CMYK se zvoleným ICC profilem. Obrázky do 300 dpi.",
+    "suffix": "-tiskarna",
+    "mode": "cmyk",
+    "profile": "fogra39-300",
+    "options": {"image_dpi": 300, "compression": "flate"}
+  },
+  {
+    "key": "digital-small",
+    "name": "Digitální PDF · malá velikost",
+    "description": "sRGB pro obrazovku. Obrázky do 150 dpi a komprese JPEG.",
+    "suffix": "-digital-male",
+    "mode": "rgb",
+    "options": {"image_dpi": 150, "compression": "jpeg"}
+  },
+  {
+    "key": "digital-high",
+    "name": "Digitální PDF · vysoká kvalita",
+    "description": "sRGB pro obrazovku. Původní rozlišení obrázků a bezeztrátová komprese.",
+    "suffix": "-digital-kvalita",
+    "mode": "rgb",
+    "options": {"compression": "flate"}
+  },
+  {
+    "key": "export",
+    "name": "PDF pro další zpracování",
+    "description": "Kopie se zachováním původních barev, křivek, textu i průhlednosti.",
+    "suffix": "-export",
+    "mode": "copy"
+  },
+  {
+    "key": "flatten",
+    "name": "Zploštěné PDF",
+    "description": "Každá strana jako jeden obraz v sRGB při 300 dpi. Text už nelze označovat.",
+    "suffix": "-zplosteno",
+    "mode": "flatten",
+    "dpi": 300
+  }
+]
