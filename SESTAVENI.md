@@ -1,11 +1,9 @@
-# Sestavení PDF Tisk
+# Sestavení PDF Blaksmith
 
-Sestavení na Linuxu vyžaduje Go 1.26 nebo novější, Python 3 s pipem, curl,
-unzip a sha256sum. Spusťte `bash build.sh`. Sestavovací skript stáhne a zabalí
-verze knihoven uvedené v `requirements-win.txt` do samostatného programu
-`PDFTisk.exe` pro Windows x64. Výstupní cestu lze předat jako první argument.
+Na Linuxu nainstalujte Go 1.26 nebo novější, Python 3 s pipem, curl, unzip, 7-Zip s podporou NSIS a sha256sum. Spuštěním `./build.sh` vznikne `PDFBlaksmith.exe` pro Windows x64. Výstupní cestu můžete předat jako první argument.
 
-`main_windows.go` obsahuje uživatelské rozhraní Win32, `runtime_windows.go`
-rozbalení součástí a komunikaci s backendem. `engine.py` provádí jednotlivé
-operace nad PDF. Aplikace předává vstupy backendu ve formátu JSON přes
-standardní vstup. Přehled licencí je v `OSS.txt`.
+Skript ověřuje distribuci Ghostscriptu 10.08.0 a Python 3.14.10 kontrolním součtem. Do EXE balí konzolový Ghostscript s potřebnými prostředky, Python a závislosti z `requirements-win.txt`. Podmínky třetích stran a odkaz na odpovídající zdroj Ghostscriptu jsou v `OSS.txt`.
+
+`main_windows.go` implementuje obsluhu okna a `theme_windows.go` vykreslení. `runtime_windows.go` rozbaluje balíček a komunikuje s backendem přes JSON. `engine.py` provádí operace nad PDF a `print_profiles.py` spravuje profily ICC. Přesné verze profilů se kontrolují podle `profiles.json`.
+
+Test backendu spustíte příkazem `python3 tests/smoke.py`. Cestu ke Ghostscriptu lze předat jako první argument. Nastavením `PDFBLAKSMITH_TEST_PROFILES=1` lze otestovat také export do profilů FOGRA39 a FOGRA51.

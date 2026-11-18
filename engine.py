@@ -1,4 +1,4 @@
-"""Local PDF operations for PDF Tisk. The Windows front end uses JSON on stdin/stdout."""
+"""Local PDF operations for PDF Blaksmith. The Windows front end uses JSON on stdin/stdout."""
 
 from contextlib import contextmanager
 import json
@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 import pikepdf
+from print_profiles import ProfileError, attach_intent, get_profile, source_cmyk
 
 
 class UserError(Exception):
@@ -21,10 +22,22 @@ class SignedPDF(UserError):
     pass
 
 
+class PlateError(UserError):
+    def __init__(self, hits):
+        self.pages = sorted(hits)
+        details = "; ".join(f"{page}: {', '.join(sorted(hits[page]))}" for page in self.pages[:12])
+        more = f"; dalších stran {len(self.pages) - 12}" if len(self.pages) > 12 else ""
+        super().__init__("V kontrolních separacích zůstala barva mimo desku K. "
+                         f"Strany a nalezené desky: {details}{more}.")
+
+
 def open_pdf(path, password):
     try:
         return pikepdf.Pdf.open(path, password=password)
     except pikepdf.PasswordError as exc:
+        if not password:
+            raise UserError("Toto PDF vyžaduje heslo k otevření. Bez něj nelze šifrovaný obsah přečíst. "
+                            "Omezení tisku a úprav lze odstranit bez hesla vlastníka, když se PDF otevře bez hesla.") from exc
         raise UserError("Zadejte platné stávající heslo k PDF.") from exc
 
 
@@ -112,30 +125,61 @@ def verify_plates(exe, folder, pages):
     from PIL import Image
 
     plate_names = {"Cyan", "Magenta", "Yellow", "Black"}
+    hits = {}
     # Render in bounded groups so large jobs do not accumulate plate TIFFs.
     for first in range(1, pages + 1, 10):
         last = min(first + 9, pages)
         run_ghostscript(exe, folder, [
-            "-q", "-sDEVICE=tiffsep", "-r150", "-sCompression=lzw",
+            "-q", "-sDEVICE=tiffsep", "-r150", "-sCompression=lzw", "-dDeviceGrayToK=true",
             f"-dFirstPage={first}", f"-dLastPage={last}",
             "-sOutputFile=separace-%d.tif", "-f", "hotovo.pdf",
         ])
         plates = {}
+        painted = {}
         for path in folder.glob("separace-*.tif"):
             number, sep, rest = path.stem.removeprefix("separace-").partition("(")
             if sep:
                 plate = rest.removesuffix(")")
+                number = int(number)
                 plates.setdefault(number, set()).add(plate)
                 if plate != "Black":
                     with Image.open(path) as image:
-                        if image.mode != "L" or image.getextrema() != (255, 255):
-                            raise UserError(f"Kontrola separací našla tiskový bod na desce {plate} "
-                                            f"(strany {first} až {last}).")
+                        if image.mode != "L":
+                            raise UserError(f"Ghostscript vytvořil nečekaný formát desky {plate}.")
+                        if image.getextrema()[0] < 255:
+                            painted.setdefault(number, set()).add(plate)
             path.unlink()
         if len(plates) != last - first + 1 or any(
             not plate_names.issubset(names) for names in plates.values()
         ):
             raise UserError("Ghostscript nevytvořil všechny očekávané tiskové separace.")
+        for page, number in enumerate(sorted(plates), first):
+            if number in painted:
+                hits[page] = painted[number]
+    if hits:
+        raise PlateError(hits)
+
+
+def repair_k_pages(exe, folder, pages):
+    page_list = ",".join(map(str, pages))
+    run_ghostscript(exe, folder, [
+        "-sDEVICE=pdfimage8", "-r600", "-sCompression=Flate", f"-sPageList={page_list}",
+        "-dOverprint=/simulate", "-sOutputFile=oprava.pdf", "-f", "hotovo.pdf",
+    ])
+    with pikepdf.Pdf.open(folder / "hotovo.pdf") as pdf, pikepdf.Pdf.open(folder / "oprava.pdf") as raster:
+        if len(raster.pages) != len(pages):
+            raise UserError("Rastrová oprava vrátila jiný počet stran.")
+        for number, replacement in zip(pages, raster.pages):
+            page = pdf.pages[number - 1]
+            if (any(abs(float(a) - float(b)) > 0.13 for a, b in zip(page.mediabox, replacement.mediabox))
+                    or page.obj.get("/Rotate", 0) != replacement.obj.get("/Rotate", 0)):
+                raise UserError(f"Rastrová oprava by změnila velikost nebo orientaci strany {number}.")
+            page.obj.Contents = pdf.copy_foreign(raster.make_indirect(replacement.obj.Contents))
+            page.obj.Resources = pdf.copy_foreign(raster.make_indirect(replacement.obj.Resources))
+            if "/Group" in page.obj:
+                del page.obj["/Group"]
+        pdf.save(folder / "opravene.pdf", fix_metadata_version=False)
+    os.replace(folder / "opravene.pdf", folder / "hotovo.pdf")
 
 
 def convert_spot_vectors(pdf):
@@ -227,11 +271,16 @@ def convert_spot_vectors(pdf):
 def transform(src, request):
     gray = request.get("gray", False)
     outline = request.get("outline", False)
-    if not (gray or outline or request.get("decrypt")):
+    profile_key = request.get("profile", "")
+    if gray and profile_key:
+        raise UserError("Vyberte buď desku K, nebo výstupní profil CMYK.")
+    convert = gray or outline or bool(profile_key)
+    if not (convert or request.get("decrypt")):
         raise UserError("Vyberte alespoň jednu úpravu PDF.")
-    exe = request.get("ghostscript", "")
-    if (gray or outline) and not (Path(exe).is_absolute() and Path(exe).is_file()):
-        raise UserError("Pro převod nainstalujte Ghostscript nebo vyberte jeho konzolový soubor.")
+    bundled = Path(__file__).resolve().parent / "ghostscript" / "bin" / "gswin64c.exe"
+    exe = request.get("ghostscript") or str(bundled)
+    if convert and not (Path(exe).is_absolute() and Path(exe).is_file()):
+        raise UserError("V aplikaci chybí součást Ghostscript. Použijte úplné sestavení PDF Blaksmith.")
 
     with open_pdf(src, request.get("pdf_password", "")) as pdf:
         signed = list(signature_fields(pdf))
@@ -243,16 +292,21 @@ def transform(src, request):
             raise SignedPDF("PDF obsahuje digitální podpis. Úprava vytvoří kopii bez stávajících podpisů.")
         if signed or has_permissions_signature:
             clear_signatures(pdf, signed)
-        if not (gray or outline):
+        if not convert:
             if not pdf.is_encrypted:
-                raise UserError("Vstupní PDF už je bez hesla.")
+                raise UserError("Vstupní PDF už je bez šifrování a omezení heslem.")
+            restricted_only = pdf.user_password_matched and not request.get("pdf_password")
             with output_file(src, request) as pending:
                 pdf.save(pending, encryption=False, fix_metadata_version=False)
+            if restricted_only:
+                return "Uložena kopie bez omezení tisku a úprav. Heslo vlastníka nebylo potřeba."
             return "Uložena kopie PDF bez hesla."
 
         pages = len(pdf.pages)
         if not pages:
             raise UserError("Vstupní PDF nemá žádné strany.")
+        repaired = []
+        profile = get_profile(profile_key, request.get("custom_icc", "")) if profile_key else None
         with tempfile.TemporaryDirectory(prefix="pdftisk-") as tmp:
             folder = Path(tmp)
             staged = folder / "vstup.pdf"
@@ -268,7 +322,20 @@ def transform(src, request):
             if gray:
                 args.extend([
                     "-sColorConversionStrategy=Gray", "-dProcessColorModel=/DeviceGray",
-                    "-dPreserveSeparation=false", "-dPreserveDeviceN=false",
+                    "-sBlendConversionStrategy=Simple", "-dPreserveSeparation=false", "-dPreserveDeviceN=false",
+                ])
+            elif profile:
+                (folder / "cil.icc").write_bytes(profile[0])
+                source = source_cmyk(pdf)
+                source_path = "cil.icc"
+                if source and source != profile[0]:
+                    (folder / "zdroj.icc").write_bytes(source)
+                    source_path = "zdroj.icc"
+                args.extend([
+                    "-sColorConversionStrategy=CMYK", "-dProcessColorModel=/DeviceCMYK",
+                    "-sBlendConversionStrategy=Simple", "-dUsePDFX3Profile=false",
+                    f"--permit-file-read=cil.icc{os.pathsep}{source_path}",
+                    "-sOutputICCProfile=cil.icc", f"-sDefaultCMYKProfile={source_path}",
                 ])
             if outline:
                 args.append("-dNoOutputFonts=true")
@@ -284,17 +351,33 @@ def transform(src, request):
                         del finished.Root["/OutputIntents"]
                         revised = True
                     if revised:
-                        finished.save(folder / "vystup-sedi.pdf", fix_metadata_version=False)
-            revised_pdf = folder / "vystup-sedi.pdf"
+                        finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
+                elif profile:
+                    attach_intent(finished, *profile)
+                    finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
+            revised_pdf = folder / "vystup-upraveny.pdf"
             if revised_pdf.exists():
                 os.replace(revised_pdf, folder / "hotovo.pdf")
             if gray:
-                verify_plates(exe, folder, pages)
+                try:
+                    verify_plates(exe, folder, pages)
+                except PlateError as exc:
+                    if outline:
+                        raise UserError(f"{exc}\nVýstup se neuložil. Rastrovou opravu K lze použít při převodu bez křivek.") from exc
+                    if not request.get("allow_raster"):
+                        raise UserError(f"{exc}\nVýstup se neuložil. Pro tyto strany lze povolit rastrovou opravu K (600 dpi).") from exc
+                    repaired = exc.pages
+                    repair_k_pages(exe, folder, repaired)
+                    verify_plates(exe, folder, pages)
             with output_file(src, request) as pending:
                 shutil.copyfile(folder / "hotovo.pdf", pending)
     lines = [f"Uloženo PDF. Počet stran {pages}."]
     if gray:
         lines.append("Separace při 150 dpi ověřeny na všech stranách. C, M, Y i případné přímé desky jsou prázdné.")
+    if repaired:
+        lines.append("Rastrová oprava 600 dpi na stranách " + ", ".join(map(str, repaired)) + ".")
+    if profile:
+        lines.append(f"Výstupní profil CMYK: {profile[1]}. Profil ICC je vložen v PDF.")
     if outline:
         lines.append("Text zpracován v režimu převodu na křivky.")
     if "substitut" in log.lower() or "couldn't find a font" in log.lower():
@@ -499,7 +582,7 @@ def main():
         response = {"status": "ok", "message": dispatch(request)}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
-    except UserError as exc:
+    except (UserError, ProfileError) as exc:
         response = {"status": "error", "message": str(exc)}
     except FileExistsError:
         response = {"status": "error", "message": "Cílový soubor už existuje. Vyberte nový název."}

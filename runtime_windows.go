@@ -13,9 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
 	"syscall"
 )
 
@@ -27,11 +24,13 @@ type request struct {
 	Input           string `json:"input"`
 	Output          string `json:"output,omitempty"`
 	PDFPassword     string `json:"pdf_password,omitempty"`
-	Ghostscript     string `json:"ghostscript,omitempty"`
+	Profile         string `json:"profile,omitempty"`
+	CustomICC       string `json:"custom_icc,omitempty"`
 	Certificate     string `json:"certificate,omitempty"`
 	CertPassword    string `json:"cert_password,omitempty"`
 	Trust           string `json:"trust,omitempty"`
 	Gray            bool   `json:"gray,omitempty"`
+	AllowRaster     bool   `json:"allow_raster,omitempty"`
 	Outline         bool   `json:"outline,omitempty"`
 	Decrypt         bool   `json:"decrypt,omitempty"`
 	Visible         bool   `json:"visible,omitempty"`
@@ -50,7 +49,7 @@ func appRuntime() (string, error) {
 		return "", err
 	}
 	hash := sha256.Sum256(runtimeZip)
-	root := filepath.Join(cache, "PDF Tisk")
+	root := filepath.Join(cache, appName)
 	target := filepath.Join(root, "runtime-"+hex.EncodeToString(hash[:12]))
 	if runtimeReady(target) {
 		return target, nil
@@ -76,7 +75,7 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py"} {
+	for _, name := range []string{"ready", "python.exe", "engine.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"), filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))
 		if err != nil || !info.Mode().IsRegular() {
 			return false
@@ -145,47 +144,4 @@ func runOperation(req request) response {
 		return response{"error", "Komunikace se zpracováním PDF se nezdařila."}
 	}
 	return result
-}
-
-func ghostscriptPath() string {
-	for _, name := range []string{"gswin64c.exe", "gswin32c.exe"} {
-		if path, err := exec.LookPath(name); err == nil && filepath.IsAbs(path) {
-			return path
-		}
-	}
-	var matches []string
-	for _, variable := range []string{"ProgramW6432", "ProgramFiles", "ProgramFiles(x86)"} {
-		root := os.Getenv(variable)
-		if !filepath.IsAbs(root) {
-			continue
-		}
-		for _, executable := range []string{"gswin64c.exe", "gswin32c.exe"} {
-			found, _ := filepath.Glob(filepath.Join(root, "gs", "gs*", "bin", executable))
-			matches = append(matches, found...)
-		}
-	}
-	sort.SliceStable(matches, func(i, j int) bool {
-		a, b := versionParts(matches[i]), versionParts(matches[j])
-		for part := range a {
-			if a[part] != b[part] {
-				return a[part] > b[part]
-			}
-		}
-		return false
-	})
-	for _, match := range matches {
-		if info, err := os.Stat(match); err == nil && info.Mode().IsRegular() {
-			return match
-		}
-	}
-	return ""
-}
-
-func versionParts(path string) [3]int {
-	version := strings.TrimPrefix(filepath.Base(filepath.Dir(filepath.Dir(path))), "gs")
-	var values [3]int
-	for i, part := range strings.SplitN(version, ".", len(values)) {
-		values[i], _ = strconv.Atoi(part)
-	}
-	return values
 }

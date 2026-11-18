@@ -1,6 +1,7 @@
 __pycache__/
 .venv/
 /PDFTisk.exe
+/PDFBlaksmith.exe
 /runtime.zip
 /rsrc_windows_amd64.syso
 *.p12

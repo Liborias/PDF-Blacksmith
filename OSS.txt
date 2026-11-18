@@ -1,4 +1,4 @@
-PDF Tisk · použité open-source součásti
+PDF Blaksmith · použité open-source součásti
 
 Licence komponent jsou v rozbaleném běhovém prostředí v souboru LICENSE.txt
 a v jednotlivých složkách packages/*.dist-info/licenses. Verze a další údaje
@@ -18,5 +18,18 @@ pyHanko 0.38.1 (MIT) a pyhanko-certvalidator 0.33.0 (MIT)
 Go 1.26.11 · standardní knihovna a běhové prostředí (BSD)
   https://go.googlesource.com/go/+/refs/tags/go1.26.11/LICENSE
 
-Ghostscript se instaluje samostatně a není součástí PDFTisk.exe.
-  https://www.ghostscript.com/releases/gsdnld.html
+Ghostscript 10.08.0 (AGPL-3.0) · Artifex Software
+  Samostatný program volaný přes příkazovou řádku, přibalený z oficiální distribuce.
+  Licence se rozbaluje do ghostscript/doc/COPYING.
+  Odpovídající zdrojový kód (včetně licencí):
+  https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10080/ghostscript-10.08.0.tar.xz
+  Oficiální binární distribuce:
+  https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10080/gs10080w64.exe
+
+Microsoft Visual C++ Runtime · přibalené redistribuovatelné soubory z distribuce
+  CPython a pikepdf. Platí licenční podmínky Microsoft Visual Studio.
+  https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files
+
+Výstupní profily European Color Initiative (ECI)
+  Aplikace stahuje uživatelem vybraný profil přímo ze zdroje ECI.
+  https://www.eci.org/doku.php?id=en:downloads

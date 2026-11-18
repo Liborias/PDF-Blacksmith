@@ -7,8 +7,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 source = Path(__file__).resolve().parent
 runtime = Path(sys.argv[1]).resolve()
-shutil.copyfile(source / "engine.py", runtime / "engine.py")
-shutil.copyfile(source / "OSS.txt", runtime / "OSS.txt")
+for name in ("engine.py", "print_profiles.py", "profiles.json", "OSS.txt"):
+    shutil.copyfile(source / name, runtime / name)
 (runtime / "python314._pth").write_text("python314.zip\n.\npackages\n", encoding="ascii")
 with ZipFile(source / "runtime.zip", "w", ZIP_DEFLATED, compresslevel=6) as archive:
     for file in sorted(runtime.rglob("*")):

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -18,6 +19,7 @@ def run_smoke(base, exe):
     src = base / 'barevný vzor.pdf'
     out = base / 'šedý výstup.pdf'
     encr = base / 'chráněný.pdf'
+    restricted = base / 'omezení bez hesla k otevření.pdf'
     plain = base / 'bez hesla.pdf'
     signed = base / 'podepsaný.pdf'
     signed2 = base / 'podepsaný dvakrát.pdf'
@@ -57,6 +59,8 @@ def run_smoke(base, exe):
         pdf.save(src, compress_streams=False)
         pdf.save(encr, encryption=Encryption(owner='majitel123', user='heslo123',
                  allow=Permissions(print_highres=False)))
+        pdf.save(restricted, encryption=Encryption(owner='majitel123', user='',
+                 allow=Permissions(print_highres=False, modify_other=False)))
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'Zkušební podpis – Jiří')])
@@ -82,8 +86,14 @@ def run_smoke(base, exe):
         assert result['status'] == status, result
         return result['message']
 
+    message = run('transform', encr, 'error', output=str(plain), decrypt=True)
+    assert 'vyžaduje heslo k otevření' in message and not plain.exists()
     run('transform', encr, 'error', output=str(plain), decrypt=True, pdf_password='bad')
     run('transform', encr, output=str(plain), decrypt=True, pdf_password='heslo123')
+    with Pdf.open(plain) as pdf:
+        assert not pdf.is_encrypted
+    message = run('transform', restricted, output=str(plain), decrypt=True)
+    assert 'Heslo vlastníka nebylo potřeba' in message
     with Pdf.open(plain) as pdf:
         assert not pdf.is_encrypted
 
@@ -96,6 +106,21 @@ def run_smoke(base, exe):
         assert list(result.pages[-1].mediabox) == [0,0,245,220]
     assert subprocess.check_output(['pdftotext', str(out), '-']).strip() == b''
     assert b'Text ke krivkam' in subprocess.check_output(['pdftotext', str(src), '-'])
+
+    mixed = base / 'procesní barvy DeviceN.pdf'
+    repaired = base / 'opravené K.pdf'
+    with Pdf.open(src) as pdf:
+        page = pdf.pages[1]
+        tint = pdf.make_stream(b'{ 0 exch 0 }', FunctionType=4,
+                               Domain=Array([0, 1] * 2), Range=Array([0, 1] * 4))
+        color = Array([Name.DeviceN, Array([Name.Cyan, Name.Yellow]), Name.DeviceCMYK, tint])
+        page.obj.Resources = Dictionary(ColorSpace=Dictionary(Ink=color))
+        page.obj.Contents = pdf.make_stream(b'/Ink cs .9 .1 scn 30 20 80 55 re f')
+        pdf.save(mixed)
+    message = run('transform', mixed, output=str(repaired), ghostscript=exe, gray=True, allow_raster=True)
+    assert 'Separace při 150 dpi ověřeny' in message
+    assert 'stranách 2.' in message or 'Rastrová oprava' not in message
+    assert b'Text ke krivkam' in subprocess.check_output(['pdftotext', '-l', '1', str(repaired), '-'])
 
     only_outline = base/'jen křivky.pdf'
     run('transform', src, output=str(only_outline), ghostscript=exe, outline=True)
@@ -122,6 +147,22 @@ def run_smoke(base, exe):
     run('transform', signed, 'signed_pdf', output=str(out), ghostscript=exe, gray=True)
     run('transform', signed, output=str(out), ghostscript=exe, gray=True, clear_signatures=True)
     assert 'nebyl nalezen' in run('verify', out)
+
+    if os.environ.get('PDFBLAKSMITH_TEST_PROFILES') == '1':
+        catalog = json.loads((project / 'profiles.json').read_text(encoding='utf-8'))
+        from hashlib import sha256
+
+        contents = []
+        for key in ('fogra39-300', 'fogra51'):
+            profile = next(item for item in catalog if item['key'] == key)
+            result = base / (key + '.pdf')
+            run('transform', src, output=str(result), ghostscript=exe, profile=key)
+            with Pdf.open(result) as pdf:
+                intent = pdf.Root.OutputIntents[0]
+                assert str(intent.OutputConditionIdentifier) == profile['condition']
+                assert sha256(intent.DestOutputProfile.read_bytes()).hexdigest() == profile['sha256']
+                contents.append(pdf.pages[0].obj.Contents.read_bytes())
+        assert contents[0] != contents[1]
     print('All smoke tests passed.', flush=True)
 
 

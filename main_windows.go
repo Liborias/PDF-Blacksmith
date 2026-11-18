@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,14 +55,11 @@ const (
 	esReadonly    = 0x0800
 	wsExEdge      = 0x0200
 	bsAutoCheck   = 0x0003
-	bsRadio       = 0x0009
 	wmCommand     = 0x0111
 	wmClose       = 0x0010
 	wmDestroy     = 0x0002
 	wmSetFont     = 0x0030
 	wmJobFinished = 0x8001
-	bmGetCheck    = 0x00f0
-	bmSetCheck    = 0x00f1
 )
 
 const (
@@ -69,14 +68,15 @@ const (
 	idEditMode
 	idSignMode
 	idVerifyMode
-	idGSBrowse
-	idGSDownload
+	idICCProfile
+	idICCBrowse
 	idCertBrowse
 	idTrustBrowse
 	idShowOutput
-	idGray
 	idOutline
 	idDecrypt
+	idRaster
+	idVisible
 )
 
 type rect struct{ left, top, right, bottom int32 }
@@ -114,6 +114,14 @@ type openFileName struct {
 	reservedFlags, flagsEx                 uint32
 }
 
+//go:embed profiles.json
+var printCatalog []byte
+
+type profileChoice struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+}
+
 type app struct {
 	window, instance, normalFont, titleFont, labelFont  uintptr
 	dpi                                                 int
@@ -123,7 +131,11 @@ type app struct {
 	modeControls                                        map[int][]uintptr
 	modes                                               map[int]uintptr
 	input, report, outputButton, runButton              uintptr
-	gray, outline, decrypt, gs, visible                 uintptr
+	outline, decrypt, raster, visible                   uintptr
+	profiles, customICC, customBrowse, modeHint         uintptr
+	profileChoices                                      []profileChoice
+	canvasBrush, panelBrush, inputBrush, logo           uintptr
+	options, checkedOptions, panelLabels, panelButtons  map[uintptr]bool
 	editPassword, verifyPassword, cert, certPass, trust uintptr
 	lastOutput                                          string
 	pending                                             request
@@ -136,17 +148,28 @@ func main() {
 	runtime.LockOSThread()
 	instance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
 	user32.NewProc("SetProcessDPIAware").Call()
-	dpi, _, _ := user32.NewProc("GetDpiForSystem").Call()
+	var dpi uintptr
+	getDPI := user32.NewProc("GetDpiForSystem")
+	if getDPI.Find() == nil {
+		dpi, _, _ = getDPI.Call()
+	}
 	if dpi == 0 {
 		dpi = 96
+	}
+	screenWidth, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
+	screenHeight, _, _ := user32.NewProc("GetSystemMetrics").Call(1)
+	if screenWidth > 100 && screenHeight > 100 {
+		dpi = min(dpi, (screenWidth-30)*96/windowWidth, (screenHeight-95)*96/windowHeight)
 	}
 	window = &app{
 		instance: instance, dpi: int(dpi), mode: idEditMode,
 		modeControls: make(map[int][]uintptr), modes: make(map[int]uintptr),
 		results: make(chan response, 1),
+		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
+		panelLabels: make(map[uintptr]bool), panelButtons: make(map[uintptr]bool),
 	}
 	if !window.create() {
-		notice(0, "Okno aplikace PDF Tisk se nepodařilo vytvořit.", 0x10)
+		notice(0, "Okno aplikace PDF Blaksmith se nepodařilo vytvořit.", 0x10)
 		return
 	}
 	showWindow.Call(window.window, 5)
@@ -182,16 +205,17 @@ func (a *app) font(size, weight int) uintptr {
 }
 
 func (a *app) create() bool {
-	const baseStyle = 0x00ca0000 // Caption, system menu and minimise button.
-	class := syscall.StringToUTF16Ptr("PDFTiskWindow")
+	const baseStyle = 0x02ca0000 // Caption, system menu, minimise button and clipped child windows.
+	const exStyle = 0x00080000   // Layered top-level window for subtle transparency.
+	class := syscall.StringToUTF16Ptr("PDFBlaksmithWindow")
 	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, 32512)
-	icon, _, _ := user32.NewProc("LoadIconW").Call(a.instance, 1)
+	icon, _, _ := user32.NewProc("LoadIconW").Call(a.instance, appIconID)
 	if icon == 0 {
 		icon, _, _ = user32.NewProc("LoadIconW").Call(0, 32512)
 	}
 	wc := windowClass{
 		windowProc: syscall.NewCallback(wndProc),
-		instance:   a.instance, icon: icon, cursor: cursor, background: 16,
+		instance:   a.instance, icon: icon, cursor: cursor, background: 0,
 		className: uintptr(unsafe.Pointer(class)), smallIcon: icon,
 	}
 	wc.size = uint32(unsafe.Sizeof(wc))
@@ -199,17 +223,18 @@ func (a *app) create() bool {
 	if atom == 0 {
 		return false
 	}
-	bounds := rect{right: int32(a.scale(730)), bottom: int32(a.scale(606))}
-	user32.NewProc("AdjustWindowRectEx").Call(uintptr(unsafe.Pointer(&bounds)), baseStyle, 0, 0)
+	bounds := rect{right: int32(a.scale(windowWidth)), bottom: int32(a.scale(windowHeight))}
+	user32.NewProc("AdjustWindowRectEx").Call(uintptr(unsafe.Pointer(&bounds)), baseStyle, 0, exStyle)
 	a.window, _, _ = createWindow.Call(
-		0, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(wideString("PDF Tisk"))),
+		exStyle, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(wideString(appName))),
 		baseStyle, 0x80000000, 0x80000000, uintptr(bounds.right-bounds.left),
 		uintptr(bounds.bottom-bounds.top), 0, 0, a.instance, 0,
 	)
 	if a.window == 0 {
 		return false
 	}
-	a.normalFont, a.titleFont, a.labelFont = a.font(15, 400), a.font(33, 650), a.font(15, 600)
+	a.normalFont, a.titleFont, a.labelFont = a.font(16, 400), a.font(38, 650), a.font(16, 600)
+	a.applyTheme(bounds.right-bounds.left, bounds.bottom-bounds.top)
 	a.setupControls()
 	return true
 }
@@ -229,7 +254,9 @@ func (a *app) label(caption string, x, y, width int, strong bool) uintptr {
 	if strong {
 		font = a.labelFont
 	}
-	return a.add("STATIC", caption, 0, x, y, width, 21, 0, 0, font)
+	h := a.add("STATIC", caption, 0, x, y, width, 22, 0, 0, font)
+	a.panelLabels[h] = y >= 248 && y < 481
+	return h
 }
 
 func (a *app) edit(x, y, width int, password bool) uintptr {
@@ -237,13 +264,22 @@ func (a *app) edit(x, y, width int, password bool) uintptr {
 	if password {
 		style |= esPassword
 	}
-	h := a.add("EDIT", "", 0, x, y, width, 26, style, wsExEdge, a.normalFont)
+	h := a.add("EDIT", "", 0, x, y, width, 31, style, 0, a.normalFont)
+	sendMessage.Call(h, 0x00d3, 3, uintptr(a.scale(8))|uintptr(a.scale(8))<<16)
 	a.controls = append(a.controls, h)
 	return h
 }
 
 func (a *app) button(caption string, id, x, y, width int, style uintptr) uintptr {
-	h := a.add("BUTTON", caption, id, x, y, width, 27, style|wsTabstop, 0, a.normalFont)
+	option := style&0xf == bsAutoCheck
+	height := 35
+	if option {
+		height = 30
+	}
+	h := a.add("BUTTON", caption, id, x, y, width, height,
+		style&^0xf|bsOwnerDraw|wsTabstop, 0, a.labelFont)
+	a.options[h] = option
+	a.panelButtons[h] = y >= 248 && y < 481
 	a.controls = append(a.controls, h)
 	return h
 }
@@ -253,54 +289,65 @@ func (a *app) addMode(mode int, handles ...uintptr) {
 }
 
 func (a *app) setupControls() {
-	a.add("STATIC", "PDF Tisk", 0, 24, 17, 682, 42, 0, 0, a.titleFont)
-	a.label("Tiskové separace, úprava PDF a digitální podpisy", 25, 61, 681, false)
-	a.label("Vstupní PDF", 25, 96, 680, true)
-	a.input = a.edit(24, 118, 563, false)
-	a.button("Vybrat…", idInBrowse, 598, 117, 108, 0)
-	a.modes[idEditMode] = a.button("Upravit pro tisk", idEditMode, 25, 159, 207, bsRadio|wsGroup)
-	a.modes[idSignMode] = a.button("Podepsat", idSignMode, 235, 159, 207, bsRadio)
-	a.modes[idVerifyMode] = a.button("Ověřit podpisy", idVerifyMode, 445, 159, 261, bsRadio)
-	a.add("BUTTON", "", 0, 24, 188, 682, 194, 7|wsGroup, 0, a.normalFont)
+	a.label("Vstupní PDF", 32, 120, 710, true)
+	a.input = a.edit(32, 145, 566, false)
+	a.button("Vybrat PDF…", idInBrowse, 610, 143, 138, 0)
 
-	a.gray = a.button("Převést do šedi a ověřit desku K", idGray, 42, 205, 340, bsAutoCheck|wsGroup)
-	a.outline = a.button("Převést text na křivky", idOutline, 42, 236, 340, bsAutoCheck)
-	a.decrypt = a.button("Pouze uložit kopii bez hesla", idDecrypt, 42, 267, 340, bsAutoCheck)
-	a.editPassword = a.edit(397, 234, 290, true)
-	a.gs = a.edit(42, 334, 438, false)
-	a.addMode(idEditMode, a.gray, a.outline, a.decrypt, a.editPassword, a.gs,
-		a.label("Stávající heslo k PDF (pokud je třeba)", 397, 211, 288, false),
-		a.label("Ghostscript pro převod do šedi a na křivky", 43, 310, 638, true),
-		a.button("Vybrat…", idGSBrowse, 490, 333, 94, 0),
-		a.button("Stáhnout…", idGSDownload, 593, 333, 94, 0),
+	a.modes[idEditMode] = a.button("Upravit pro tisk", idEditMode, 32, 195, 228, wsGroup)
+	a.modes[idSignMode] = a.button("Podepsat", idSignMode, 276, 195, 228, 0)
+	a.modes[idVerifyMode] = a.button("Ověřit podpisy", idVerifyMode, 520, 195, 228, 0)
+
+	var catalog []profileChoice
+	if err := json.Unmarshal(printCatalog, &catalog); err != nil {
+		panic(err)
+	}
+	a.profileChoices = append([]profileChoice{{"", "Zachovat barvy"}, {"k", "Stupně šedi · pouze deska K"}}, catalog...)
+	a.profileChoices = append(a.profileChoices, profileChoice{"custom", "Vlastní výstupní profil ICC"})
+	a.profiles = a.add("COMBOBOX", "", idICCProfile, 43, 291, 693, 295,
+		wsTabstop|wsGroup|wsVscroll|3, 0, a.normalFont)
+	a.controls = append(a.controls, a.profiles)
+	sendMessage.Call(a.profiles, 0x0153, ^uintptr(0), uintptr(a.scale(26)))
+	for _, choice := range a.profileChoices {
+		sendMessage.Call(a.profiles, 0x0143, 0, uintptr(unsafe.Pointer(wideString(choice.Name))))
+	}
+	sendMessage.Call(a.profiles, 0x014e, 1, 0)
+	a.outline = a.button("Převést text na křivky", idOutline, 43, 331, 360, bsAutoCheck)
+	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 43, 365, 360, bsAutoCheck)
+	a.raster = a.button("Povolit rastrovou opravu K (600 dpi)", idRaster, 43, 398, 365, bsAutoCheck)
+	a.editPassword = a.edit(420, 365, 316, true)
+	a.customICC = a.edit(43, 433, 565, false)
+	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 620, 431, 116, 0)
+	a.modeHint = a.label("", 43, 440, 693, false)
+	a.addMode(idEditMode, a.profiles, a.outline, a.decrypt, a.raster, a.editPassword, a.customICC, a.customBrowse, a.modeHint,
+		a.label("Barevný výstup", 43, 266, 693, true),
+		a.label("Heslo k otevření (pokud je známé)", 420, 341, 316, false),
 	)
-	setText(a.gs, ghostscriptPath())
-	sendMessage.Call(a.gray, bmSetCheck, 1, 0)
 
-	a.cert = a.edit(42, 231, 540, false)
-	a.certPass = a.edit(42, 290, 540, true)
-	a.visible = a.button("Viditelný podpis na první straně, pokud PDF nemá vlastní podpisové pole", 0, 42, 332, 644, bsAutoCheck)
+	a.cert = a.edit(43, 303, 568, false)
+	a.certPass = a.edit(43, 373, 568, true)
+	a.visible = a.button("Viditelný podpis na první straně u nového podpisového pole", idVisible, 43, 425, 693, bsAutoCheck)
 	a.addMode(idSignMode, a.cert, a.certPass, a.visible,
-		a.label("Osobní certifikát se soukromým klíčem (.p12 / .pfx)", 43, 207, 638, true),
-		a.button("Vybrat…", idCertBrowse, 593, 230, 94, 0),
-		a.label("Heslo k souboru certifikátu", 43, 266, 638, false),
+		a.label("Osobní certifikát se soukromým klíčem (.p12 / .pfx)", 43, 275, 690, true),
+		a.button("Vybrat…", idCertBrowse, 625, 301, 111, 0),
+		a.label("Heslo k souboru certifikátu", 43, 348, 685, false),
 	)
 
-	a.verifyPassword = a.edit(42, 231, 540, true)
-	a.trust = a.edit(42, 291, 540, false)
+	a.verifyPassword = a.edit(43, 303, 568, true)
+	a.trust = a.edit(43, 373, 568, false)
 	a.addMode(idVerifyMode, a.verifyPassword, a.trust,
-		a.label("Stávající heslo k PDF (pokud je třeba)", 43, 207, 638, false),
-		a.label("Doplňkový důvěryhodný kořenový certifikát (volitelné)", 43, 267, 638, true),
-		a.button("Vybrat…", idTrustBrowse, 593, 290, 94, 0),
-		a.label("Ověření probíhá offline s kořenovými certifikáty Windows.", 43, 337, 638, false),
+		a.label("Stávající heslo k PDF (pokud je třeba)", 43, 275, 693, false),
+		a.label("Doplňkový důvěryhodný kořenový certifikát (volitelné)", 43, 348, 693, true),
+		a.button("Vybrat…", idTrustBrowse, 625, 371, 111, 0),
+		a.label("Ověření probíhá offline s kořenovými certifikáty Windows.", 43, 435, 693, false),
 	)
 
-	a.runButton = a.button("Uložit upravené PDF…", idRun, 24, 399, 225, 1|wsGroup)
-	a.outputButton = a.button("Otevřít výstupní PDF", idShowOutput, 260, 399, 192, 0)
+	a.runButton = a.button("Uložit upravené PDF…", idRun, 32, 505, 268, wsGroup)
+	a.outputButton = a.button("Otevřít výstupní PDF", idShowOutput, 313, 505, 224, 0)
 	enableWindow.Call(a.outputButton, 0)
-	a.label("Výsledek", 25, 447, 680, true)
-	a.report = a.add("EDIT", "", 0, 24, 470, 682, 112,
-		wsTabstop|wsVscroll|esReadonly|0x0004|0x0040, wsExEdge, a.normalFont)
+	a.label("Výsledek", 32, 561, 716, true)
+	a.report = a.add("EDIT", "", 0, 32, 587, 716, 96,
+		wsTabstop|wsVscroll|esReadonly|0x0004|0x0040, 0, a.normalFont)
+	sendMessage.Call(a.report, 0x00d3, 3, uintptr(a.scale(9))|uintptr(a.scale(9))<<16)
 	a.setMode(idEditMode)
 }
 
@@ -312,16 +359,55 @@ func (a *app) setMode(mode int) {
 		idVerifyMode: "Ověřit podpisy",
 	}
 	for candidate, controls := range a.modeControls {
-		var shown, checked uintptr
+		var shown uintptr
 		if candidate == mode {
-			shown, checked = 5, 1
+			shown = 5
 		}
-		sendMessage.Call(a.modes[candidate], bmSetCheck, checked, 0)
+		invalidate(a.modes[candidate])
 		for _, control := range controls {
 			showWindow.Call(control, shown)
 		}
 	}
 	setText(a.runButton, buttons[mode])
+	a.updatePrintControls()
+}
+
+func (a *app) profileKey() string {
+	index, _, _ := sendMessage.Call(a.profiles, 0x0147, 0, 0)
+	if index >= uintptr(len(a.profileChoices)) {
+		return ""
+	}
+	return a.profileChoices[index].Key
+}
+
+func (a *app) updatePrintControls() {
+	if a.mode != idEditMode {
+		return
+	}
+	key := a.profileKey()
+	var raster, custom, hint uintptr
+	if key == "k" && !a.checked(a.outline) {
+		raster = 5
+	}
+	if key == "custom" {
+		custom = 5
+	} else {
+		hint = 5
+	}
+	showWindow.Call(a.raster, raster)
+	showWindow.Call(a.customICC, custom)
+	showWindow.Call(a.customBrowse, custom)
+	showWindow.Call(a.modeHint, hint)
+	switch {
+	case a.checked(a.decrypt):
+		setText(a.modeHint, "Omezení úprav lze odstranit bez hesla vlastníka, pokud se PDF otevře.")
+	case key == "k" && raster == 5:
+		setText(a.modeHint, "Rastrová oprava zasáhne jen strany s barvou mimo desku K.")
+	case key != "" && key != "k" && key != "custom":
+		setText(a.modeHint, "Profil ECI se při prvním použití stáhne z oficiálního zdroje.")
+	default:
+		setText(a.modeHint, "")
+	}
 }
 
 func setText(handle uintptr, value string) {
@@ -336,12 +422,16 @@ func getText(handle uintptr) string {
 }
 
 func (a *app) checked(handle uintptr) bool {
-	checked, _, _ := sendMessage.Call(handle, bmGetCheck, 0, 0)
-	return checked == 1
+	return a.checkedOptions[handle]
+}
+
+func (a *app) setChecked(handle uintptr, checked bool) {
+	a.checkedOptions[handle] = checked
+	invalidate(handle)
 }
 
 func notice(owner uintptr, text string, flags uintptr) uintptr {
-	code, _, _ := messageBox.Call(owner, uintptr(unsafe.Pointer(wideString(text))), uintptr(unsafe.Pointer(wideString("PDF Tisk"))), flags)
+	code, _, _ := messageBox.Call(owner, uintptr(unsafe.Pointer(wideString(text))), uintptr(unsafe.Pointer(wideString(appName))), flags)
 	return code
 }
 
@@ -394,17 +484,37 @@ const pdfFilter = "Soubory PDF (*.pdf)\x00*.pdf\x00Všechny soubory\x00*.*"
 
 func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	switch message {
+	case wmEraseBkgnd:
+		return 1
+	case wmPaint:
+		window.paint(hwnd)
+		return 0
+	case wmCtlColorEdit, wmCtlColorList, wmCtlColorText:
+		return window.colorControl(message, wParam, lParam)
+	case wmDrawItem:
+		if lParam != 0 {
+			var item buttonDraw
+			copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), lParam, unsafe.Sizeof(item))
+			if window.drawButton(&item) {
+				return 1
+			}
+		}
 	case wmCommand:
+		if int(wParam&0xffff) == idICCProfile && wParam>>16&0xffff == 1 {
+			if window.profileKey() != "" {
+				window.setChecked(window.decrypt, false)
+			}
+			window.updatePrintControls()
+			return 0
+		}
 		if wParam>>16&0xffff == 0 && window != nil && !window.busy {
 			switch int(wParam & 0xffff) {
 			case idEditMode, idSignMode, idVerifyMode:
 				window.setMode(int(wParam & 0xffff))
 			case idInBrowse:
 				window.chooseInput(window.input, pdfFilter)
-			case idGSBrowse:
-				window.chooseInput(window.gs, "Konzolový Ghostscript\x00gswin64c.exe;gswin32c.exe")
-			case idGSDownload:
-				window.openExternal("https://www.ghostscript.com/releases/gsdnld.html")
+			case idICCBrowse:
+				window.chooseInput(window.customICC, "Barevné profily ICC nebo ICM\x00*.icc;*.icm")
 			case idCertBrowse:
 				window.chooseInput(window.cert, "Osobní certifikát PKCS#12\x00*.p12;*.pfx")
 			case idTrustBrowse:
@@ -413,15 +523,23 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 				if window.lastOutput != "" {
 					window.openExternal(window.lastOutput)
 				}
-			case idGray, idOutline:
-				if window.checked(window.gray) || window.checked(window.outline) {
-					sendMessage.Call(window.decrypt, bmSetCheck, 0, 0)
+			case idOutline:
+				window.setChecked(window.outline, !window.checked(window.outline))
+				if window.checked(window.outline) {
+					window.setChecked(window.decrypt, false)
 				}
+				window.updatePrintControls()
 			case idDecrypt:
+				window.setChecked(window.decrypt, !window.checked(window.decrypt))
 				if window.checked(window.decrypt) {
-					sendMessage.Call(window.gray, bmSetCheck, 0, 0)
-					sendMessage.Call(window.outline, bmSetCheck, 0, 0)
+					sendMessage.Call(window.profiles, 0x014e, 0, 0)
+					window.setChecked(window.outline, false)
 				}
+				window.updatePrintControls()
+			case idRaster:
+				window.setChecked(window.raster, !window.checked(window.raster))
+			case idVisible:
+				window.setChecked(window.visible, !window.checked(window.visible))
 			case idRun:
 				window.start()
 			}
@@ -437,9 +555,7 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		}
 		return 0
 	case wmDestroy:
-		for _, font := range []uintptr{window.normalFont, window.titleFont, window.labelFont} {
-			gdi32.NewProc("DeleteObject").Call(font)
-		}
+		window.disposeTheme()
 		quitMessage.Call(0)
 		return 0
 	}
@@ -461,27 +577,35 @@ func (a *app) start() {
 	switch a.mode {
 	case idEditMode:
 		req.Action = "transform"
-		req.Gray, req.Outline, req.Decrypt = a.checked(a.gray), a.checked(a.outline), a.checked(a.decrypt)
+		key := a.profileKey()
+		req.Gray = key == "k"
+		req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
+		req.AllowRaster = req.Gray && !req.Outline && a.checked(a.raster)
 		req.PDFPassword = getText(a.editPassword)
-		req.Ghostscript = pathText(getText(a.gs))
-		if !req.Gray && !req.Outline && !req.Decrypt {
-			notice(a.window, "Vyberte alespoň jednu úpravu.", 0x30)
-			return
+		if !req.Gray {
+			req.Profile = key
 		}
-		if req.Gray || req.Outline {
-			req.Ghostscript, _ = filepath.Abs(req.Ghostscript)
-			base := strings.ToLower(filepath.Base(req.Ghostscript))
-			info, err := os.Stat(req.Ghostscript)
-			if err != nil || !info.Mode().IsRegular() || (base != "gswin64c.exe" && base != "gswin32c.exe") {
-				notice(a.window, "Nainstalujte Ghostscript nebo vyberte gswin64c.exe či gswin32c.exe.", 0x30)
+		if req.Profile == "custom" {
+			req.CustomICC = pathText(getText(a.customICC))
+			if info, err := os.Stat(req.CustomICC); err != nil || !info.Mode().IsRegular() {
+				notice(a.window, "Vyberte soubor s výstupním profilem CMYK ICC nebo ICM.", 0x30)
 				return
 			}
+		}
+		if !req.Gray && !req.Outline && !req.Decrypt && req.Profile == "" {
+			notice(a.window, "Vyberte alespoň jednu úpravu nebo výstupní profil.", 0x30)
+			return
 		}
 		switch {
 		case req.Gray && req.Outline:
 			suffix = "-K-krivky"
 		case req.Gray:
 			suffix = "-K"
+		case req.Profile != "":
+			suffix = "-" + req.Profile
+			if req.Outline {
+				suffix += "-krivky"
+			}
 		case req.Outline:
 			suffix = "-krivky"
 		default:
@@ -524,6 +648,8 @@ func (a *app) run(req request) {
 	}
 	if req.Gray {
 		a.updateReport("Převádím PDF a kontroluji tiskové separace. U vícestránkových souborů může kontrola chvíli trvat.")
+	} else if req.Profile != "" && req.Profile != "custom" {
+		a.updateReport("Převádím do tiskového profilu. Při prvním použití se profil stáhne z webu ECI.")
 	} else {
 		a.updateReport("Zpracovávám PDF…")
 	}
