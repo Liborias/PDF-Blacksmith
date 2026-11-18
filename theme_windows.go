@@ -6,10 +6,9 @@ import (
 )
 
 const (
-	appName        = "PDF Blaksmith"
+	appName        = "PDF Blacksmith"
+	storageName    = "PDF Blaksmith"
 	appIconID      = 2 // rsrc allocates the manifest first, then the icon group.
-	windowWidth    = 780
-	windowHeight   = 708
 	wmPaint        = 0x000f
 	wmEraseBkgnd   = 0x0014
 	wmDrawItem     = 0x002b
@@ -26,7 +25,8 @@ func (color paletteColor) win() uintptr {
 }
 
 var (
-	canvasColor = paletteColor{23, 23, 27}
+	titleColor  = paletteColor{22, 22, 24}
+	canvasColor = paletteColor{26, 26, 29}
 	panelColor  = paletteColor{33, 33, 39}
 	inputColor  = paletteColor{19, 19, 23}
 	textColor   = paletteColor{245, 242, 244}
@@ -45,8 +45,6 @@ var (
 	winFill       = user32.NewProc("FillRect")
 	winDrawText   = user32.NewProc("DrawTextW")
 	winInvalidate = user32.NewProc("InvalidateRect")
-	msimg32       = syscall.NewLazyDLL("msimg32.dll")
-	gdiGradient   = msimg32.NewProc("GradientFill")
 	copyDrawItem  = syscall.NewLazyDLL("ntdll.dll").NewProc("RtlMoveMemory")
 )
 
@@ -64,11 +62,6 @@ type buttonDraw struct {
 	handle, dc                                    uintptr
 	bounds                                        rect
 	itemData                                      uintptr
-}
-
-type gradientVertex struct {
-	x, y       int32
-	r, g, b, a uint16
 }
 
 func makeBrush(color paletteColor) uintptr {
@@ -110,18 +103,6 @@ func drawCheck(dc uintptr, bounds rect) {
 	gdiDelete.Call(pen)
 }
 
-func gradient(dc uintptr, bounds rect, left, right paletteColor, vertical bool) {
-	start := gradientVertex{bounds.left, bounds.top, uint16(left.red) << 8, uint16(left.green) << 8, uint16(left.blue) << 8, 0}
-	end := gradientVertex{bounds.right, bounds.bottom, uint16(right.red) << 8, uint16(right.green) << 8, uint16(right.blue) << 8, 0}
-	data := [2]gradientVertex{start, end}
-	index := [2]uint32{0, 1}
-	var mode uintptr
-	if vertical {
-		mode = 1
-	}
-	gdiGradient.Call(dc, uintptr(unsafe.Pointer(&data[0])), 2, uintptr(unsafe.Pointer(&index[0])), 1, mode)
-}
-
 func drawText(dc uintptr, text string, bounds rect, font uintptr, color paletteColor, align uintptr) {
 	old, _, _ := gdiSelect.Call(dc, font)
 	gdiTextColor.Call(dc, color.win())
@@ -135,7 +116,7 @@ func (a *app) area(left, top, right, bottom int) rect {
 	return rect{int32(a.scale(left)), int32(a.scale(top)), int32(a.scale(right)), int32(a.scale(bottom))}
 }
 
-func (a *app) applyTheme(width, height int32) {
+func (a *app) applyTheme() {
 	a.canvasBrush, a.panelBrush, a.inputBrush = makeBrush(canvasColor), makeBrush(panelColor), makeBrush(inputColor)
 	a.logo, _, _ = user32.NewProc("LoadImageW").Call(a.instance, appIconID, 1, 128, 128, 0)
 	dwm := syscall.NewLazyDLL("dwmapi.dll").NewProc("DwmSetWindowAttribute")
@@ -145,39 +126,35 @@ func (a *app) applyTheme(width, height int32) {
 		dwm.Call(a.window, 33, uintptr(unsafe.Pointer(&round)), 4)
 		dwm.Call(a.window, 35, uintptr(unsafe.Pointer(&caption)), 4)
 	}
-	user32.NewProc("SetLayeredWindowAttributes").Call(a.window, 0, 249, 2)
-	radius := a.scale(18)
-	region, _, _ := gdi32.NewProc("CreateRoundRectRgn").Call(0, 0, uintptr(width+1), uintptr(height+1), uintptr(radius), uintptr(radius))
-	result, _, _ := user32.NewProc("SetWindowRgn").Call(a.window, region, 1)
-	if result == 0 {
-		gdiDelete.Call(region)
-	}
+	a.loadBrand()
 }
 
 func (a *app) paint(hwnd uintptr) {
 	var info paintInfo
 	dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
-	fillColor(dc, a.area(0, 0, windowWidth, windowHeight), canvasColor)
-	gradient(dc, a.area(0, 0, windowWidth, 108), paletteColor{62, 27, 42}, paletteColor{27, 27, 33}, false)
-	gradient(dc, a.area(0, 108, windowWidth, 110), accentColor, paletteColor{49, 39, 50}, false)
-	if a.logo != 0 {
-		size := uintptr(a.scale(96))
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.scale(31)), uintptr(a.scale(5)), a.logo, size, size, 0, 0, 3)
+	fillColor(dc, rect{0, 0, int32(a.width), int32(a.height)}, canvasColor)
+	if !a.full {
+		fillColor(dc, rect{0, 0, int32(a.width), int32(a.scale(49))}, titleColor)
+		fillColor(dc, rect{0, int32(a.scale(49)), int32(a.width), int32(a.scale(50))}, divider)
+		fillColor(dc, rect{0, int32(a.scale(90)), int32(a.width), int32(a.scale(91))}, divider)
+		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
+		a.paintBrand(dc)
 	}
-	drawText(dc, appName, a.area(145, 19, 735, 66), a.titleFont, textColor, 0)
-	drawText(dc, "Tiskové separace, barevné profily a digitální podpisy", a.area(148, 66, 740, 91), a.normalFont, mutedColor, 0)
-	rounded(dc, a.area(24, 248, 756, 481), a.scale(20), panelColor, divider)
+	a.view.paint(dc)
 	user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
 }
 
 func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 	gdiTextColor.Call(dc, textColor.win())
-	if msg != wmCtlColorText || handle == a.report || a.readOnlyFields[handle] {
+	if msg != wmCtlColorText || a.readOnlyFields[handle] {
 		gdiBkColor.Call(dc, inputColor.win())
 		gdiBkMode.Call(dc, 2)
 		return a.inputBrush
 	}
 	gdiBkMode.Call(dc, 1)
+	if handle == a.documentName {
+		return a.canvasBrush
+	}
 	if a.panelLabels[handle] {
 		return a.panelBrush
 	}
@@ -187,6 +164,9 @@ func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 func (a *app) drawButton(item *buttonDraw) bool {
 	if item.controlType != 4 { // ODT_BUTTON
 		return false
+	}
+	if a.drawWindowButton(item) || a.drawChoice(item) {
+		return true
 	}
 	bounds := item.bounds
 	isOption := a.options[item.handle]
@@ -212,22 +192,27 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		bounds.left += int32(a.scale(28))
 		drawText(item.dc, getText(item.handle), bounds, a.normalFont, foreground, 0)
 	} else {
-		active := int(item.controlID) == a.mode || int(item.controlID) == idRun
-		border, body := divider, paletteColor{45, 43, 50}
-		if active {
-			border, body = accentColor, paletteColor{112, 42, 69}
+		_, tab := a.modes[int(item.controlID)]
+		active := int(item.controlID) == a.mode || a.primaryButtons[item.handle]
+		body, edge := paletteColor{42, 42, 47}, divider
+		if tab {
+			body, edge = canvasColor, canvasColor
+			if active {
+				body, edge = panelColor, panelColor
+			}
+		} else if active {
+			body, edge = paletteColor{91, 42, 63}, paletteColor{128, 58, 84}
 		}
 		if item.state&1 != 0 {
-			body = paletteColor{70, 36, 50}
+			body = paletteColor{69, 52, 62}
 		}
 		if item.state&4 != 0 {
-			body, border = background, divider
+			body, edge = background, divider
+			foreground = paletteColor{119, 114, 122}
 		}
-		rounded(item.dc, bounds, a.scale(12), body, border)
-		if active && item.state&5 == 0 {
-			inset := int32(a.scale(6))
-			inner := rect{bounds.left + inset, bounds.top + 2, bounds.right - inset, bounds.bottom - 2}
-			gradient(item.dc, inner, paletteColor{140, 57, 86}, body, true)
+		rounded(item.dc, bounds, a.scale(5), body, edge)
+		if tab && active {
+			fillColor(item.dc, rect{bounds.left + 1, bounds.bottom - int32(a.scale(3)), bounds.right - 1, bounds.bottom - 1}, accentColor)
 		}
 		drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, 1)
 	}

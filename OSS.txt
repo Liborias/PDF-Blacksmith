@@ -1,4 +1,4 @@
-PDF Blaksmith · použité open-source součásti
+PDF Blacksmith · použité open-source součásti
 
 Licence komponent jsou v rozbaleném běhovém prostředí v souboru LICENSE.txt
 a v jednotlivých složkách packages/*.dist-info/licenses. Verze a další údaje

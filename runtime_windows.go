@@ -41,6 +41,7 @@ type request struct {
 }
 
 type viewRequest struct {
+	Pixels       int      `json:"pixels,omitempty"`
 	Page         int      `json:"page,omitempty"`
 	Rotation     int      `json:"rotation,omitempty"`
 	Box          string   `json:"box,omitempty"`
@@ -59,13 +60,14 @@ type plateInfo struct {
 }
 
 type viewResponse struct {
-	Pages        int         `json:"pages"`
-	DPI          int         `json:"dpi"`
-	OutputIntent string      `json:"output_intent"`
-	Simulation   string      `json:"simulation"`
-	Image        []byte      `json:"image"`
-	Plates       []plateInfo `json:"plates"`
-	UsedPlates   []plateInfo `json:"used_plates"`
+	Sizes        []map[string][2]float64 `json:"sizes"`
+	Pages        int                     `json:"pages"`
+	DPI          int                     `json:"dpi"`
+	OutputIntent string                  `json:"output_intent"`
+	Simulation   string                  `json:"simulation"`
+	Image        []byte                  `json:"image"`
+	Plates       []plateInfo             `json:"plates"`
+	UsedPlates   []plateInfo             `json:"used_plates"`
 }
 
 type response struct {
@@ -84,7 +86,7 @@ func appRuntime() (string, error) {
 		return "", err
 	}
 	hash := sha256.Sum256(runtimeZip)
-	root := filepath.Join(cache, appName)
+	root := filepath.Join(cache, storageName)
 	target := filepath.Join(root, "runtime-"+hex.EncodeToString(hash[:12]))
 	if runtimeReady(target) {
 		return target, nil

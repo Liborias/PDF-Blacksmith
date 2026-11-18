@@ -31,6 +31,14 @@ def image(proof):
 
 def check_proofs(exe, folder):
     fixture = ROOT / "tests/fixtures/barvy.pdf"
+    described = call(exe, fixture, "describe")["view"]
+    assert len(described["sizes"]) == 11
+    assert described["sizes"][0]["media"] == [220, 245]
+    assert described["sizes"][10]["media"] == [245, 220]
+    screen = call(exe, fixture, "screen", view={"page": 1, "box": "crop", "pixels": 780})["view"]
+    assert image(screen).height > image(screen).width
+    screen_rotated = call(exe, fixture, "screen", view={"page": 1, "box": "crop", "pixels": 780, "rotation": 90})["view"]
+    assert image(screen_rotated).size == image(screen).size[::-1]
     proof = call(exe, fixture, "preview", view={"page": 1})["view"]
     assert proof["pages"] == 11
     assert {plate["name"] for plate in proof["plates"] if plate["active"]} == {
@@ -70,6 +78,11 @@ def check_proofs(exe, folder):
         dest = pdf.Root.Names.Dests.Names[1][0]
         assert dest.objgen == pdf.pages[0].objgen
         assert pdf.pages[0].label == "S-3"
+    draft_export = folder / "export se změnami.pdf"
+    call(exe, sep, "transform", gray=True, output=str(draft_export),
+         view={"order": [3, 1, 2], "rotations": [0, 0, 90]})
+    with Pdf.open(draft_export) as pdf:
+        assert [int(v) for v in pdf.pages[0].mediabox[2:]] == [220, 180]
 
     src = folder / "obrázek.pdf"
     output = folder / "nastavení.pdf"

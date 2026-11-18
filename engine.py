@@ -1,4 +1,4 @@
-"""Local PDF operations for PDF Blaksmith. The Windows front end uses JSON on stdin/stdout."""
+"""Local PDF operations for PDF Blacksmith. The Windows front end uses JSON on stdin/stdout."""
 
 from contextlib import contextmanager
 import json
@@ -13,7 +13,7 @@ import tempfile
 import pikepdf
 from print_profiles import ProfileError, attach_intent, get_profile, source_cmyk
 from export_settings import export_settings, pdfwrite_settings
-from proof import ProofError, page_proof, scan_plates
+from proof import ProofError, describe, page_proof, scan_plates, screen_page
 
 
 class UserError(Exception):
@@ -115,7 +115,7 @@ def ghostscript_path(request):
     bundled = Path(__file__).resolve().parent / "ghostscript" / "bin" / "gswin64c.exe"
     exe = request.get("ghostscript") or str(bundled)
     if not (Path(exe).is_absolute() and Path(exe).is_file()):
-        raise UserError("V aplikaci chybí součást Ghostscript. Použijte úplné sestavení PDF Blaksmith.")
+        raise UserError("V aplikaci chybí součást Ghostscript. Použijte úplné sestavení PDF Blacksmith.")
     return exe
 
 
@@ -598,11 +598,15 @@ def document_order(view, pages):
 
 
 def inspect_document(src, request):
-    exe = ghostscript_path(request)
     view = request.get("view", {})
     with open_pdf(src, request.get("pdf_password", "")) as pdf:
         if not len(pdf.pages):
             raise UserError("Vstupní PDF nemá žádné strany.")
+        if request["action"] == "describe":
+            return describe(pdf)
+        exe = ghostscript_path(request)
+        if request["action"] == "screen":
+            return screen_page(pdf, src, view, exe, run_ghostscript, stage_for_render)
         if request["action"] == "scan":
             order = document_order(view, len(pdf.pages))
             settings = export_settings(request.get("export"))
@@ -644,9 +648,17 @@ def dispatch(request):
     if not src.is_file():
         raise UserError("Vyberte existující soubor PDF.")
     operation = {"transform": transform, "sign": sign, "verify": verify,
-                 "preview": inspect_document, "scan": inspect_document, "edit_pages": save_page_edits}.get(request.get("action"))
+                 "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
+                 "screen": inspect_document, "edit_pages": save_page_edits}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
+    view = request.get("view", {})
+    if request["action"] in ("transform", "sign") and "rotations" in view:
+        # Keep draft edits in the same transaction as export or signing.
+        with tempfile.TemporaryDirectory(prefix="pdf-draft-") as folder, output_file(src, request) as pending:
+            draft = Path(folder) / "draft.pdf"
+            save_page_edits(src, {**request, "output": str(draft), "overwrite": False})
+            return operation(draft, {**request, "output": str(pending), "overwrite": False})
     return operation(src, request)
 
 

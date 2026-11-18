@@ -114,6 +114,57 @@ def box_options(req):
     return attribute, ([flag] if flag else [])
 
 
+def describe(pdf):
+    sizes = []
+    for page in pdf.pages:
+        unit = float(page.obj.get("/UserUnit", 1))
+        rotated = int(page.obj.get("/Rotate", 0)) % 180 == 90
+        boxes = {}
+        for name, (attribute, _) in BOXES.items():
+            left, bottom, right, top = map(float, getattr(page, attribute))
+            width, height = max(1, (right-left)*unit), max(1, (top-bottom)*unit)
+            if rotated:
+                width, height = height, width
+            boxes[name] = [width, height]
+        sizes.append(boxes)
+    return dict(pages=len(sizes), sizes=sizes, output_intent=output_intent(pdf))
+
+
+def page_options(pdf, req):
+    page = req.get("page", 1)
+    rotation = req.get("rotation", 0)
+    if type(page) is not int or not 1 <= page <= len(pdf.pages):
+        raise ProofError("Vyberte existující stránku PDF.")
+    if type(rotation) is not int or rotation not in (0, 90, 180, 270):
+        raise ProofError("Otočení stránky musí být násobkem 90 stupňů.")
+    return page, rotation
+
+
+def screen_page(pdf, src, req, exe, gs, stage):
+    page, rotation = page_options(pdf, req)
+    box, args = box_options(req)
+    target = req.get("pixels", 1850)
+    if type(target) is not int or not 400 <= target <= 3200:
+        raise ProofError("Rozlišení náhledu je neplatné.")
+    dpi = render_dpi(pdf, [page], 300, target, box)
+    with TemporaryDirectory(prefix="pdf-view-") as name:
+        folder = Path(name)
+        source = str(src.resolve())
+        if pdf.is_encrypted:
+            stage(pdf, src, folder / "nahled.pdf")
+            source = "nahled.pdf"
+        gs(exe, folder, ["-q", "-sDEVICE=png16m", "-dPrinted=false", "-dGraphicsAlphaBits=4",
+                         "-dTextAlphaBits=4", f"-r{dpi}", f"-sPageList={page}",
+                         "-sOutputFile=obraz.png", *args, "-f", source])
+        png = folder / "obraz.png"
+        if rotation:
+            with Image.open(png) as image:
+                data = BytesIO()
+                image.rotate(-rotation, expand=True).save(data, "PNG", compress_level=3)
+                return dict(image=b64encode(data.getvalue()).decode("ascii"))
+        return dict(image=b64encode(png.read_bytes()).decode("ascii"))
+
+
 def stat(path, name):
     with Image.open(path) as image:
         if image.mode != "L":
@@ -137,12 +188,7 @@ def proof_image(composite, profile):
 
 
 def page_proof(pdf, src, req, exe, gs, stage):
-    page = req.get("page", 1)
-    rotation = req.get("rotation", 0)
-    if type(page) is not int or not 1 <= page <= len(pdf.pages):
-        raise ProofError("Vyberte existující stránku PDF.")
-    if type(rotation) is not int or rotation not in (0, 90, 180, 270):
-        raise ProofError("Otočení stránky musí být násobkem 90 stupňů.")
+    page, rotation = page_options(pdf, req)
     with TemporaryDirectory(prefix="pdf-proof-") as name:
         folder = Path(name)
         stage(pdf, src, folder / "nahled.pdf")

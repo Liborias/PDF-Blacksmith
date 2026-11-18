@@ -1,17 +1,26 @@
-# PDF Blaksmith
+# PDF Blacksmith
 
 Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. Ghostscript a Python jsou součástí aplikace. Při prvním zpracování se rozbalí do `%LOCALAPPDATA%\PDF Blaksmith`.
 
+## Otevření a čtení PDF
+
+PDF otevřete tlačítkem **Otevřít PDF…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Záložky **Zobrazení**, **Stránky**, **Separace**, **Export** a **Podpisy** přepínají nástroje v postranním panelu.
+
+- V panelu **Zobrazení** zvolte rozvržení **Souvisle** nebo **Po stránkách**. Kolečko v souvislém režimu posouvá dokument. Ve stránkovém režimu posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku.
+- **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Přiblížený výřez posunete také tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
+- Tlačítko **Skrýt panel** přenechá dokumentu celou šířku okna. Okno maximalizujete tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
+- Pokud PDF vyžaduje heslo k otevření, zadejte je v panelu **Zobrazení** a použijte **Načíst znovu s heslem**.
+
 ## Příprava pro tisk
 
-1. Vyberte vstupní PDF a kartu **Upravit pro tisk**.
+1. Otevřete PDF a zvolte záložku **Export**.
 2. V poli **Barevný výstup** zvolte stupně šedi pro desku K, cílový profil CMYK nebo zachování barev.
 3. Potřebujete-li text jako vektorové obrysy, zaškrtněte **Převést text na křivky**. Text v naskenované bitmapě zůstává součástí bitmapy.
-4. Zvolte **Uložit upravené PDF…** a vyberte výstupní soubor.
+4. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte tlačítkem **Otevřít výstup**.
 
 ### Nastavení exportu
 
-V nabídce **Export → Nastavení exportu** lze zvolit záměr reprodukce ICC, kompenzaci černého bodu, převzorkování a kompresi obrázků nebo rozlišení kontroly a případné rastrové opravy desek K. Nastavení se po uložení použije i při příštím spuštění. Cílový barevný profil se vybírá v hlavním okně.
+V postranním panelu **Export** se volí cílový barevný profil, záměr reprodukce ICC, kompenzace černého bodu, převzorkování a komprese obrázků i rozlišení kontroly a případné rastrové opravy desek K. Nastavené parametry se použijí i při příštím spuštění.
 
 ### Pouze deska K
 
@@ -35,17 +44,17 @@ Export provede převod procesních barev CMYK a připojí zvolený profil ICC ja
 
 ## Náhled PDF a tiskové separace
 
-Tlačítko **Náhled a editor vstupu…** otevře zvolené PDF uvnitř aplikace. **Náhled výstupu** zobrazí uloženou kopii. U PDF s heslem k otevření použijte pole hesla v hlavním okně.
+Nástroje záložky **Stránky** lze používat při prohlížení dokumentu. Záložka **Separace** přepne zobrazení na tiskovou simulaci.
 
-- Stránku lze vybrat číslem nebo šipkami. Přiblíženým náhledem lze posouvat tažením myší. Nabídka rámečků volí celý arch, ořez pro zobrazení, čistý formát nebo spadávku.
+- Tiskovou oblast lze přepnout na celý arch, ořez pro zobrazení, čistý formát nebo spadávku.
 - Tiskový náhled simuluje přetisky. Panel uvádí výstupní záměr PDF a použitý profil CMYK. Simulaci lze přepnout na některý z profilů ECI.
 - V seznamu desek jsou Cyan, Magenta, Yellow, Black a rozpoznané přímé barvy. Kliknutí na řádek zapíná nebo vypíná danou separaci v obrazu. Údaje ukazují podíl bodů s nenulovým krytím a nejvyšší tón v dané desce při zobrazeném rozlišení.
 - **Zkontrolovat celý dokument** vypíše desky, na kterých jsou při vykreslení skutečně tiskové body, a čísla jejich stran. Kontrola bere v úvahu vybranou tiskovou oblast a profil simulace. U velkých formátů může snížit vzorkovací rozlišení a v přehledu uvede použitou hodnotu.
-- V editoru lze stránku otočit o 90°, přesunout ji o jednu pozici nebo poslední úpravu vrátit. **Uložit upravenou kopii…** uloží změny v PDF se zachováním obsahu stránek a odkazů na ně. U podepsaného souboru si aplikace vyžádá potvrzení uložení kopie bez původních podpisů.
+- V editoru lze stránku otočit o 90°, přesunout ji o jednu pozici nebo poslední úpravu vrátit. **Uložit upravenou kopii…** uloží změny v PDF se zachováním obsahu stránek a odkazů na ně. Rozpracované otočení a pořadí se promítnou i do exportu. U podepsaného souboru si aplikace vyžádá potvrzení uložení kopie bez původních podpisů.
 
 ## Odstranění omezení heslem
 
-V režimu **Upravit pro tisk** zaškrtněte **Pouze odstranit omezení heslem** a nechte pole hesla prázdné. Pokud se vstupní PDF otevře bez hesla, aplikace uloží odemčenou kopii i bez hesla vlastníka. Pokud PDF vyžaduje heslo už při otevření, k přečtení šifrovaného obsahu je nutné platné heslo.
+V panelu **Export** zaškrtněte **Pouze odstranit omezení heslem** a nechte pole hesla prázdné. Pokud se vstupní PDF otevře bez hesla, aplikace uloží odemčenou kopii i bez hesla vlastníka. Pokud PDF vyžaduje heslo už při otevření, k přečtení šifrovaného obsahu je nutné platné heslo.
 
 Při úpravě podepsaného PDF aplikace nabídne uložení kopie bez původních podpisů. Tiskový převod může zploštit tisknutelné poznámky a formuláře.
 

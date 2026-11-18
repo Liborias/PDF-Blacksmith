@@ -1,4 +1,4 @@
-# Sestavení PDF Blaksmith
+# Sestavení PDF Blacksmith
 
 Na Linuxu nainstalujte Go 1.26 nebo novější, Python 3 s pipem, curl, unzip, 7-Zip s podporou NSIS a sha256sum. Spuštěním `./build.sh` vznikne `PDFBlaksmith.exe` pro Windows x64. Výstupní cestu můžete předat jako první argument.
 
@@ -8,4 +8,4 @@ Skript ověřuje distribuci Ghostscriptu 10.08.0 a Python 3.14.10 kontrolním so
 
 Test backendu spustíte příkazem `python3 tests/smoke.py`. Cestu ke Ghostscriptu lze předat jako první argument. Nastavením `PDFBLAKSMITH_TEST_PROFILES=1` lze otestovat také export do profilů FOGRA39 a FOGRA51.
 
-`python3 tests/preview.py` ověří oddělené desky, tiskové rámečky, nastavení exportu a zachování odkazů po přesunu stránek. `proof.py` připravuje obraz tiskového náhledu a statistiky z separací Ghostscriptu. `viewer_windows.go` a `tools_windows.go` implementují náhled, editor a nastavení exportu.
+`python3 tests/preview.py` ověří čtecí a tiskové vykreslení, tiskové rámečky, nastavení exportu a zachování odkazů po přesunu stránek. `proof.py` připravuje obraz náhledu a statistiky ze separací Ghostscriptu. `viewer_windows.go` načítá stránky pracovního prostoru a zobrazuje je podle aktivního panelu. `workspace_windows.go` spravuje rozložení a nástroje. Test rozložení a zoomu lze spustit i na Linuxu příkazem `go test reader_layout.go reader_layout_test.go`.
