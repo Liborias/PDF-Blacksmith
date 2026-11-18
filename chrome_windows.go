@@ -16,6 +16,8 @@ const (
 //go:embed assets/blacksmith.png
 var wordmark []byte
 
+var brandBackground = paletteColor{102, 102, 102}
+
 func (a *app) loadBrand() {
 	img, err := png.Decode(bytes.NewReader(wordmark))
 	if err != nil {
@@ -28,34 +30,38 @@ func (a *app) loadBrand() {
 			r, g, b, alpha := img.At(area.Min.X+x, area.Min.Y+y).RGBA()
 			remaining := 65535 - alpha
 			offset := (y*picture.width + x) * 4
-			picture.pixels[offset] = byte((b + remaining*uint32(titleColor.blue)/255) >> 8)
-			picture.pixels[offset+1] = byte((g + remaining*uint32(titleColor.green)/255) >> 8)
-			picture.pixels[offset+2] = byte((r + remaining*uint32(titleColor.red)/255) >> 8)
+			picture.pixels[offset] = byte((b + remaining*uint32(brandBackground.blue)/255) >> 8)
+			picture.pixels[offset+1] = byte((g + remaining*uint32(brandBackground.green)/255) >> 8)
+			picture.pixels[offset+2] = byte((r + remaining*uint32(brandBackground.red)/255) >> 8)
 		}
 	}
 	a.brand = picture
 }
 
-func (a *app) paintBrand(dc uintptr) {
+func (a *app) paintBrand(dc uintptr, block rect) {
+	fillColor(dc, block, brandBackground)
+	padding := (block.bottom - block.top) / 5
+	size := int(block.bottom - block.top - 2*padding)
+	left := int(block.left + padding)
+	top := int(block.top + padding)
 	if a.logo != 0 {
-		rounded(dc, a.area(4, 4, 48, 46), a.scale(13), paletteColor{41, 29, 36}, paletteColor{64, 40, 50})
-		rounded(dc, a.area(7, 7, 45, 43), a.scale(10), paletteColor{65, 49, 56}, paletteColor{118, 77, 91})
-		size := uintptr(a.scale(34))
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.scale(9)), uintptr(a.scale((headerHeight-34)/2)), a.logo, size, size, 0, 0, 3)
+		user32.NewProc("DrawIconEx").Call(dc, uintptr(left), uintptr(top), a.logo, uintptr(size), uintptr(size), 0, 0, 3)
+		left += size + int(padding*7/8)
 	}
 	if a.brand == nil {
-		drawText(dc, "Blacksmith", a.area(54, 0, a.headerBrand-18, headerHeight), a.titleFont, textColor, 0)
+		drawText(dc, "Blacksmith", rect{int32(left), block.top, block.right - padding, block.bottom}, a.titleFont, textColor, 0)
 		return
 	}
-	width := a.scale(a.headerBrand - 77)
+	width := int(block.right-padding) - left
 	height := width * a.brand.height / a.brand.width
 	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
-	drawBitmap(dc, a.brand, a.scale(54), (a.scale(headerHeight)-height)/2, width, height)
+	drawBitmap(dc, a.brand, left, (int(block.top+block.bottom)-height)/2, width, height)
 }
 
 func (a *app) layoutHeader() {
 	const windowButtonsWidth = 108
 	const compactActions = 2 * 36
+	const widePanel, wideFullscreen = 138, 144
 	d := a.scale
 	tabWidth := 0
 	for _, tab := range workspaceTabs {
@@ -67,18 +73,23 @@ func (a *app) layoutHeader() {
 	if a.width < d(a.headerBrand+tabWidth+compactActions+windowButtonsWidth+6) {
 		a.headerBrand = 168
 	}
+	compactPages := a.width < d(a.headerBrand+tabWidth+compactActions+windowButtonsWidth+6)
 	x := a.headerBrand
 	for _, tab := range workspaceTabs {
 		if !tab.needsPDF || a.documentTools {
-			place(a.modes[tab.id], d(x), d(8), d(tab.width-2), d(34))
-			x += tab.width
+			width := tab.width
+			if tab.id == idPagesTab && compactPages {
+				width = 42
+			}
+			place(a.modes[tab.id], d(x), d(8), d(width-2), d(34))
+			x += width
 		}
 	}
 	a.headerTabs = d(x)
 
 	panel, full := 36, 36
-	if a.width-a.headerTabs >= d(windowButtonsWidth+124+144+20) {
-		panel, full = 124, 144
+	if a.width-a.headerTabs >= d(windowButtonsWidth+widePanel+wideFullscreen+20) {
+		panel, full = widePanel, wideFullscreen
 	}
 	a.headerActions = a.width - d(windowButtonsWidth+panel+full+4)
 	place(a.panelButton, a.headerActions, d(8), d(panel-2), d(34))
@@ -90,6 +101,16 @@ func (a *app) layoutHeader() {
 }
 
 var headerIcons = map[int][][]point{
+	idBrowseTab: {
+		{{1, 9}, {5, 5}, {9, 4}, {13, 5}, {17, 9}},
+		{{1, 9}, {5, 13}, {9, 14}, {13, 13}, {17, 9}},
+		{{7, 9}, {9, 7}, {11, 9}, {9, 11}, {7, 9}},
+	},
+	idPagesTab: {
+		{{4, 3}, {12, 3}, {16, 7}, {16, 16}, {4, 16}, {4, 3}},
+		{{12, 3}, {12, 7}, {16, 7}},
+		{{1, 13}, {1, 1}, {10, 1}},
+	},
 	idProofTab: {
 		{{1, 5}, {9, 1}, {17, 5}, {9, 9}, {1, 5}},
 		{{1, 9}, {9, 13}, {17, 9}},

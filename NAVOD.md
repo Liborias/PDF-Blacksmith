@@ -8,7 +8,7 @@ PDF otevřete přes rozbalovací nabídku **Soubor** a volbu **Otevřít soubor�
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V panelu **Zobrazení** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Panel **Zobrazení** ukazuje počet stránek v paměti. Dokument zavřete volbou **Soubor → Zavřít PDF** nebo zkratkou **Ctrl+W**.
-- **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Přiblížený výřez posunete také tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
+- **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Skrýt panel** přenechá dokumentu celou šířku okna. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v panelu **Zobrazení** a použijte **Načíst znovu s heslem**.
 

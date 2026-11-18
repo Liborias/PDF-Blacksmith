@@ -53,8 +53,8 @@ var workspaceTabs = []struct {
 	needsPDF  bool
 }{
 	{idFileTab, 82, "Soubor", false},
-	{idBrowseTab, 83, "Zobrazení", false},
-	{idPagesTab, 67, "Stránky", false},
+	{idBrowseTab, 109, "Zobrazení", false},
+	{idPagesTab, 94, "Stránky", false},
 	{idProofTab, 106, "Separace", true},
 	{idSignTab, 146, "Digitální podpis", true},
 }

@@ -138,7 +138,7 @@ func (a *app) paint(hwnd uintptr) {
 		fillColor(dc, rect{0, 0, int32(a.width), int32(a.scale(headerHeight))}, titleColor)
 		fillColor(dc, rect{0, int32(a.scale(headerHeight)) - 1, int32(a.width), int32(a.scale(headerHeight))}, divider)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
-		a.paintBrand(dc)
+		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
 		if a.view.path != "" && a.headerActions-a.headerTabs >= a.scale(93) {
 			nameArea := rect{int32(a.headerTabs + a.scale(12)), 0, int32(a.headerActions - a.scale(12)), int32(a.scale(headerHeight))}
 			drawText(dc, filepath.Base(a.view.path), nameArea, a.normalFont, mutedColor, 0x8000) // DT_END_ELLIPSIS

@@ -20,7 +20,7 @@ func (v *documentView) updateCacheLimit() {
 	v.cacheLimit = 0
 	if ok, _, _ := globalMemoryStatus.Call(uintptr(unsafe.Pointer(&status))); ok != 0 {
 		v.cacheLimit = readerCacheLimit(int64(min(status.availablePhysical, status.availableCommit)),
-			v.reading.bytes+v.printPreview.bytes)
+			v.reading.bytes+v.printPreview.bytes+v.detailBytes)
 	}
 }
 
@@ -92,8 +92,9 @@ func (v *documentView) trimCaches() {
 		v.trimCache(&v.printPreview, min(120<<20, v.cacheLimit), true)
 		v.trimCache(&v.reading, max(0, v.cacheLimit-v.printPreview.bytes), false)
 	} else {
-		v.trimCache(&v.reading, v.cacheLimit, true)
-		v.trimCache(&v.printPreview, min(120<<20, max(0, v.cacheLimit-v.reading.bytes)), false)
+		budget := max(0, v.cacheLimit-v.detailBytes)
+		v.trimCache(&v.reading, budget, true)
+		v.trimCache(&v.printPreview, min(120<<20, max(0, budget-v.reading.bytes)), false)
 	}
 }
 

@@ -50,14 +50,15 @@ type request struct {
 }
 
 type viewRequest struct {
-	Pixels       int      `json:"pixels,omitempty"`
-	Page         int      `json:"page,omitempty"`
-	Rotation     int      `json:"rotation,omitempty"`
-	Box          string   `json:"box,omitempty"`
-	ProofProfile string   `json:"proof_profile,omitempty"`
-	HidePlates   []string `json:"hide_plates,omitempty"`
-	Order        []int    `json:"order,omitempty"`
-	Rotations    []int    `json:"rotations,omitempty"`
+	Pixels       int           `json:"pixels,omitempty"`
+	Page         int           `json:"page,omitempty"`
+	Rotation     int           `json:"rotation,omitempty"`
+	Box          string        `json:"box,omitempty"`
+	Region       *screenRegion `json:"region,omitempty"`
+	ProofProfile string        `json:"proof_profile,omitempty"`
+	HidePlates   []string      `json:"hide_plates,omitempty"`
+	Order        []int         `json:"order,omitempty"`
+	Rotations    []int         `json:"rotations,omitempty"`
 }
 
 type plateInfo struct {

@@ -194,6 +194,7 @@ type readerTask struct {
 	generation   int
 	page, pixels int
 	background   bool
+	tile         *screenTile
 }
 
 type readerJob struct {
@@ -225,6 +226,10 @@ type documentView struct {
 	generation                                                                 int
 	running, describing, invalidSource                                         bool
 	reading, printPreview                                                      pageCache
+	visibleDetails                                                             []screenTile
+	detailFrames                                                               map[screenTile]*printBitmap
+	failedDetails                                                              map[screenTile]bool
+	detailBytes                                                                int64
 	cacheLimit                                                                 int64
 	prefetch                                                                   readerTask
 	prefetchFailed                                                             map[int]bool
@@ -339,9 +344,10 @@ func (v *documentView) sourceUnchanged() bool { return unchanged(v.path, v.origi
 func (v *documentView) resetDocument() {
 	v.generation++
 	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
-	hadFrames := v.reading.bytes+v.printPreview.bytes > 0
+	hadFrames := v.reading.bytes+v.printPreview.bytes+v.detailBytes > 0
 	v.reading.clear()
 	v.printPreview.clear()
+	v.clearDetails()
 	v.closeReaders()
 	v.path, v.password, v.original = "", "", nil
 	v.sizes, v.order, v.rotations, v.savedOrder, v.savedRotations, v.history = nil, nil, nil, nil, nil, nil
@@ -428,6 +434,7 @@ func (v *documentView) clearPlateView() {
 
 func (v *documentView) reframe(geometry bool) {
 	v.generation++
+	v.clearDetails()
 	v.clearPlateView()
 	setText(v.scanReport, "")
 	if geometry {
@@ -702,21 +709,16 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 func (v *documentView) changedViewport() {
 	v.updateActions()
 	v.syncProofPanel()
+	v.syncDetails()
 	invalidate(v.app.window)
 	v.schedule()
 }
 
 func previewPixels(size float64) int {
-	switch {
-	case size > 2050:
-		return 3000
-	case size > 1330:
-		return 2200
-	case size > 660:
+	if size > 660 {
 		return 1450
-	default:
-		return 780
 	}
+	return 780
 }
 
 func (v *documentView) schedule() {
@@ -728,7 +730,7 @@ func (v *documentView) schedule() {
 		return
 	}
 	if v.describing {
-		v.launch(v.request("describe"), 0, 0, false)
+		v.launch(v.request("describe"), 0, 0, false, nil)
 		return
 	}
 	if !v.ready() {
@@ -746,6 +748,9 @@ func (v *documentView) schedule() {
 		pixels := previewPixels(max(item.width, item.height))
 		if proof {
 			pixels = 1850
+		} else if max(item.width, item.height) > 1454 {
+			// Keep the quick page image as a fallback while the visible detail renders.
+			pixels = 780
 		}
 		if cache.failed[number] || frame.pixels >= pixels {
 			continue
@@ -756,6 +761,12 @@ func (v *documentView) schedule() {
 		v.renderPage(number, pixels, false)
 		return
 	}
+	for _, tile := range v.visibleDetails {
+		if v.detailFrames[tile] == nil && !v.failedDetails[tile] {
+			v.renderDetail(tile)
+			return
+		}
+	}
 	if !proof && !v.app.busy && v.prefetch.page == 0 {
 		v.schedulePrefetch()
 	}
@@ -763,7 +774,7 @@ func (v *documentView) schedule() {
 
 func (v *documentView) schedulePrefetch() {
 	v.updateCacheLimit()
-	free := v.cacheLimit - v.reading.bytes - v.printPreview.bytes
+	free := v.cacheLimit - v.reading.bytes - v.printPreview.bytes - v.detailBytes
 	if free > 0 {
 		box := v.box()
 		width, height := v.viewportSize()
@@ -778,7 +789,7 @@ func (v *documentView) schedulePrefetch() {
 			fit := min((width-margin)/size.width, (height-margin)/size.height)
 			pixels := previewPixels(fit * long)
 			// Leave room for Ghostscript rounding the width and height to pixels.
-			rendered := min(float64(pixels), long*300/72)
+			rendered := min(float64(pixels), long*64)
 			estimate := int64(math.Ceil(rendered)+2) * int64(math.Ceil(rendered*short/long)+2) * 4
 			if estimate <= free {
 				v.renderPage(number, pixels, true)
@@ -796,12 +807,12 @@ func (v *documentView) renderPage(number, pixels int, background bool) {
 	}
 	req := v.request(action)
 	req.View.Page, req.View.Rotation, req.View.Pixels = number, v.rotations[number-1], pixels
-	v.launch(req, number, pixels, background)
+	v.launch(req, number, pixels, background, nil)
 }
 
-func (v *documentView) launch(req request, number, pixels int, background bool) {
+func (v *documentView) launch(req request, number, pixels int, background bool, tile *screenTile) {
 	generation, original := v.generation, v.original
-	task := readerTask{generation, number, pixels, background}
+	task := readerTask{generation, number, pixels, background, tile}
 	engine := v.engine
 	if background {
 		v.prefetch = task
@@ -826,6 +837,9 @@ func (v *documentView) launch(req request, number, pixels int, background bool) 
 			job.frame.image, err = decodePrintBitmap(job.result.View.Image)
 			if err != nil {
 				job.result = operationError("Obraz náhledu se nepodařilo načíst.")
+			} else if tile != nil && (job.frame.image.width != tile.Width || job.frame.image.height != tile.Height) {
+				job.frame.image = nil
+				job.result = operationError("Rozměry vykresleného výřezu neodpovídají náhledu.")
 			} else {
 				job.frame.proof, job.frame.pixels = job.result.View, pixels
 			}
@@ -846,6 +860,10 @@ func (v *documentView) finished(job readerJob) {
 	v.running = false
 	if job.generation != v.generation {
 		v.schedule()
+		return
+	}
+	if job.tile != nil {
+		v.finishDetail(job)
 		return
 	}
 	if job.result.Status != "ok" {
@@ -901,8 +919,9 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 		case job.frame.image == nil:
 			v.prefetchFailed[job.page] = true
 		case v.reading.frames[job.page].image == nil &&
-			v.reading.bytes+v.printPreview.bytes+int64(len(job.frame.image.pixels)) <= v.cacheLimit:
+			v.reading.bytes+v.printPreview.bytes+v.detailBytes+int64(len(job.frame.image.pixels)) <= v.cacheLimit:
 			v.reading.store(job.page, job.frame)
+			v.syncDetails()
 			v.updateDocumentInfo()
 			_, height := v.viewportSize()
 			for _, item := range v.spread.visible(v.scrollY, height) {
@@ -1190,11 +1209,8 @@ func (v *documentView) paint(dc uintptr) {
 	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
 	cache := v.activeCache()
 	for _, page := range v.spread.visible(v.scrollY, height) {
-		x := int(viewport.left) + int(math.Round(page.left-v.scrollX))
-		y := int(viewport.top) + int(math.Round(page.top-v.scrollY))
-		width, height := max(1, int(math.Round(page.width))), max(1, int(math.Round(page.height)))
 		number := v.order[page.index]
-		bounds := rect{int32(x), int32(y), int32(x + width), int32(y + height)}
+		bounds := v.pageBounds(page)
 		shadow := rect{bounds.left + 3, bounds.top + 4, bounds.right + 5, bounds.bottom + 6}
 		fillColor(dc, shadow, paletteColor{10, 10, 12})
 		bitmap := cache.frames[number].image
@@ -1207,7 +1223,8 @@ func (v *documentView) paint(dc uintptr) {
 			drawText(dc, status, bounds, v.app.normalFont, canvasColor, 1)
 			continue
 		}
-		drawBitmap(dc, bitmap, x, y, width, height)
+		drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
+		v.paintDetails(dc, number, bounds)
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)
 	if v.app.full {

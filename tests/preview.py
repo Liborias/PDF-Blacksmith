@@ -46,6 +46,38 @@ def check_stream(exe, fixture, proof, folder):
     assert described["status"] == "ok" and described["view"]["pages"] == 11
 
 
+def check_screen_detail(exe, folder):
+    fixture = folder / "detail křivek.pdf"
+    with Pdf.new() as pdf:
+        page = pdf.add_blank_page(page_size=(260, 330))
+        page.obj.CropBox = Array([28, 30, 172, 246])
+        page.obj.Rotate = 90
+        page.obj.UserUnit = 2
+        font = Dictionary(Type=Name.Font, Subtype=Name.Type1, BaseFont=Name.Helvetica)
+        page.obj.Resources = Dictionary(Font=Dictionary(F1=font))
+        page.obj.Contents = pdf.make_stream(
+            b"0.4 w 32 60 m 150 120 35 190 170 230 c S "
+            b"BT /F1 9 Tf 52 145 Td (Vector PDF text) Tj ET "
+            b"0.5 0.2 0.6 rg 50 80 28 90 re f")
+        pdf.save(fixture)
+
+    dimensions = call(exe, fixture, "describe")["view"]["sizes"][0]
+    assert dimensions["crop"] == dimensions["trim"] == [432, 288]
+    for zoom, rotation, box in ((2, 0, "crop"), (3, 90, "trim"), (7, 270, "crop")):
+        # The full-page reference at the same scale models both the PDF's own
+        # rotation and a pending rotation made in the reader.
+        view = dict(page=1, box=box, rotation=rotation, pixels=432*zoom)
+        full = image(call(exe, fixture, "screen", view=view)["view"])
+        x, y = full.width//4, full.height//4
+        w, h = full.width//2, full.height//2
+        region = dict(zoom=zoom, x=x, y=y, width=w, height=h)
+        detail = image(call(exe, fixture, "screen", view={**view, "region": region})["view"])
+        expected = full.crop((x, y, x+w, y+h))
+        assert detail.size == expected.size
+        assert detail.tobytes() == expected.tobytes()
+        assert detail.getextrema() != ((255, 255),) * 3
+
+
 def check_proofs(exe, folder):
     fixture = ROOT / "tests/fixtures/barvy.pdf"
     described = call(exe, fixture, "describe")["view"]
@@ -143,4 +175,5 @@ if __name__ == "__main__":
         sys.exit("Test vyžaduje Ghostscript.")
     with TemporaryDirectory(prefix="pdf-proof-test-") as folder:
         check_proofs(str(Path(gs).resolve()), Path(folder))
+        check_screen_detail(str(Path(gs).resolve()), Path(folder))
     print("Print proof, editor and export settings tests passed.")

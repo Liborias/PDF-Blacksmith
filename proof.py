@@ -2,6 +2,7 @@
 
 from base64 import b64encode
 from io import BytesIO
+import math
 from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
@@ -69,12 +70,7 @@ def print_profile(exe, folder, pdf, key):
 
 
 def render_dpi(pdf, pages, requested, pixel_limit, box):
-    max_inches = 0
-    for n in pages:
-        page = pdf.pages[n - 1]
-        left, bottom, right, top = (float(v) for v in getattr(page, box))
-        scale = float(page.obj.get("/UserUnit", 1))
-        max_inches = max(max_inches, max(right - left, top - bottom) * scale / 72)
+    max_inches = max(max(page_size(pdf.pages[n-1], box)) for n in pages) / 72
     if max_inches <= 0 or max_inches > pixel_limit:
         raise ProofError("Formát stránky je pro bezpečný náhled příliš velký nebo neplatný.")
     return min(requested, int(pixel_limit / max_inches))
@@ -111,22 +107,29 @@ def box_options(req):
     if box is None:
         raise ProofError("Typ rámečku stránky je neplatný.")
     attribute, flag = box
-    return attribute, ([flag] if flag else [])
+    if attribute in ("trimbox", "bleedbox"):
+        # A missing TrimBox or BleedBox takes the CropBox as its default.
+        return attribute, [flag, "-dUseCropBox"]
+    return attribute, [flag] if flag else []
+
+
+def page_size(page, box):
+    left, bottom, right, top = map(float, getattr(page, box))
+    left, right = sorted((left, right))
+    bottom, top = sorted((bottom, top))
+    if box != "mediabox":
+        ml, mb, mr, mt = map(float, page.mediabox)
+        left, right = max(left, min(ml, mr)), min(right, max(ml, mr))
+        bottom, top = max(bottom, min(mb, mt)), min(top, max(mb, mt))
+    unit = float(page.obj.get("/UserUnit", 1))
+    width, height = max(1, (right-left)*unit), max(1, (top-bottom)*unit)
+    if int(page.obj.get("/Rotate", 0)) % 180 == 90:
+        return height, width
+    return width, height
 
 
 def describe(pdf):
-    sizes = []
-    for page in pdf.pages:
-        unit = float(page.obj.get("/UserUnit", 1))
-        rotated = int(page.obj.get("/Rotate", 0)) % 180 == 90
-        boxes = {}
-        for name, (attribute, _) in BOXES.items():
-            left, bottom, right, top = map(float, getattr(page, attribute))
-            width, height = max(1, (right-left)*unit), max(1, (top-bottom)*unit)
-            if rotated:
-                width, height = height, width
-            boxes[name] = [width, height]
-        sizes.append(boxes)
+    sizes = [{name: page_size(page, attr) for name, (attr, _) in BOXES.items()} for page in pdf.pages]
     return dict(pages=len(sizes), sizes=sizes, output_intent=output_intent(pdf))
 
 
@@ -147,19 +150,52 @@ def render_source(pdf, src, folder, stage):
     return str(src.resolve())
 
 
+def screen_region_args(page, box, rotation, region):
+    if not isinstance(region, dict):
+        raise ProofError("Výřez náhledu je neplatný.")
+    zoom = region.get("zoom")
+    coordinates = [region.get(key) for key in ("x", "y", "width", "height")]
+    if (type(zoom) not in (int, float) or not 0 < zoom <= 64
+            or any(type(value) is not int for value in coordinates)):
+        raise ProofError("Výřez náhledu je neplatný.")
+    x, y, w, h = coordinates
+    if min(x, y) < 0 or not (1 <= w <= 1536 and 1 <= h <= 1536):
+        raise ProofError("Rozměry výřezu náhledu jsou neplatné.")
+    width, height = (max(1, math.floor(points*zoom + 0.5)) for points in page_size(page, box))
+    rotated_width, rotated_height = (height, width) if rotation % 180 else (width, height)
+    if x + w > rotated_width or y + h > rotated_height:
+        raise ProofError("Výřez přesahuje stránku.")
+    # Undo the reader's draft rotation before placing the region on the device.
+    if rotation == 90:
+        x, y, w, h = y, height-x-w, h, w
+    elif rotation == 180:
+        x, y = width-x-w, height-y-h
+    elif rotation == 270:
+        x, y, w, h = width-y-h, x, h, w
+    # PageOffset is in device directions. Its Y origin shifts when the device
+    # height is reduced from the full page to the region height.
+    dx, dy = -x/zoom, (height-y-h)/zoom
+    return [f"-r{zoom*72:.12f}", f"-g{w}x{h}", "-dFIXEDMEDIA",
+            "-c", f"<< /PageOffset [{dx:.12f} {dy:.12f}] >> setpagedevice"]
+
+
 def screen_page(pdf, src, req, exe, gs, stage, *, printed=False):
     page, rotation = page_options(pdf, req)
     box, args = box_options(req)
     target = req.get("pixels", 1850)
     if type(target) is not int or not 400 <= target <= (4096 if printed else 3200):
         raise ProofError("Rozlišení náhledu je neplatné.")
-    dpi = render_dpi(pdf, [page], 300, target, box)
+    if not printed and "region" in req:
+        resolution = screen_region_args(pdf.pages[page-1], box, rotation, req["region"])
+    else:
+        dpi = render_dpi(pdf, [page], 300 if printed else 4608, target, box)
+        resolution = [f"-r{dpi}"]
     with TemporaryDirectory(prefix="pdf-view-") as name:
         folder = Path(name)
         source = render_source(pdf, src, folder, stage)
         gs(exe, folder, ["-q", "-sDEVICE=png16m", f"-dPrinted={'true' if printed else 'false'}", "-dGraphicsAlphaBits=4",
-                         "-dTextAlphaBits=4", f"-r{dpi}", f"-sPageList={page}",
-                         "-sOutputFile=obraz.png", *args, "-f", source])
+                         "-dTextAlphaBits=4", f"-sPageList={page}",
+                         "-sOutputFile=obraz.png", *args, *resolution, "-f", source])
         png = folder / "obraz.png"
         if rotation:
             with Image.open(png) as image:
