@@ -1,9 +1,11 @@
 package main
 
-import "unsafe"
+import (
+	"strconv"
+	"unsafe"
+)
 
 const (
-	thumbnailPixels    = 400
 	thumbnailCacheSize = 8 << 20
 	thumbnailDragTimer = 7
 	wmThumbnailUpdate  = 0x8003
@@ -15,6 +17,76 @@ type thumbnailDrag struct {
 	pressed, moving, overDelete bool
 }
 
+func (v *documentView) buildThumbnails() {
+	a := v.app
+	v.thumbnailHeading = a.label("Náhledy stránek", 16, 4, 160, true)
+	a.panelLabels[v.thumbnailHeading] = true
+	v.thumbnailHint = a.label("Ctrl + kolečko", 196, 4, 123, false)
+	a.panelLabels[v.thumbnailHint] = true
+	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100 | 0x0800 // LBS_EXTENDEDSEL
+	v.pageList = a.add("LISTBOX", "Náhledy stránek", idReaderPageList, 16, 31, 298, 1, wsTabstop|listStyle, 0, a.normalFont)
+	rowHeight := a.scale(112)
+	sendMessage.Call(v.pageList, 0x01a0, 0, uintptr(rowHeight))
+	a.addScrollPane(v.pageList, rowHeight, true)
+}
+
+func (v *documentView) thumbnailWidth() int {
+	return v.app.scale(panelWidth) * v.thumbnailScale / 100
+}
+
+func (v *documentView) layoutThumbnails(width, height int) {
+	d := v.app.scale
+	place(v.thumbnailHeading, d(16), d(5), d(172), d(22))
+	place(v.thumbnailHint, width-d(125), d(5), d(108), d(22))
+	frame := rect{int32(d(16)), int32(d(31)), int32(width - d(16)), int32(height)}
+	pane := v.app.scrollPanes[v.pageList]
+	rowHeight := max(1, min(int(frame.bottom-frame.top), v.thumbnailWidth()*3/2+d(32)))
+	changed := rowHeight != pane.lineHeight
+	if changed {
+		pane.lineHeight = rowHeight
+		sendMessage.Call(v.pageList, 0x01a0, 0, uintptr(rowHeight)) // LB_SETITEMHEIGHT
+	}
+	pane.arrange(frame, true)
+	if changed {
+		pane.reflow()
+		invalidate(v.pageList)
+	}
+}
+
+func thumbnailWheelSteps(delta int) int {
+	if delta > 0 {
+		return max(1, delta/120)
+	}
+	if delta < 0 {
+		return min(-1, delta/120)
+	}
+	return 0
+}
+
+func (v *documentView) zoomThumbnails(screen point, delta int) {
+	if delta == 0 || !v.ready() || v.pageDrag.pressed {
+		return
+	}
+	scale := max(10, min(v.thumbnailScale+5*thumbnailWheelSteps(delta), 60))
+	if scale == v.thumbnailScale {
+		return
+	}
+	user32.NewProc("ScreenToClient").Call(v.pageList, uintptr(unsafe.Pointer(&screen)))
+	x, y := screen.x, max(0, int(screen.y))
+	pane := v.app.scrollPanes[v.pageList]
+	_, _, top := pane.lines()
+	row := min(len(v.order)-1, top+y/pane.lineHeight)
+	if !contains(v.pageListBounds(), x, screen.y) {
+		row, y = top, 0
+	}
+	v.thumbnailScale = scale
+	var bounds rect
+	getClientRect.Call(v.app.thumbnailSidebar, uintptr(unsafe.Pointer(&bounds)))
+	v.layoutThumbnails(int(bounds.right), int(bounds.bottom))
+	pane.bar.setPosition(row - y/pane.lineHeight)
+	v.schedule()
+}
+
 func (v *documentView) thumbnailRange() (int, int) {
 	pane := v.app.scrollPanes[v.pageList]
 	visible, _, _ := user32.NewProc("IsWindowVisible").Call(v.pageList)
@@ -22,6 +94,7 @@ func (v *documentView) thumbnailRange() (int, int) {
 		return 0, 0
 	}
 	_, rows, top := pane.lines()
+	top = max(0, min(top, len(v.order)))
 	return top, min(len(v.order), top+rows+1)
 }
 
@@ -54,22 +127,34 @@ func (v *documentView) scheduleThumbnails() bool {
 		return false
 	}
 	v.updateCacheLimit()
-	const estimate = (thumbnailPixels + 2) * (thumbnailPixels + 2) * 4
+	pixels := 640
+	rowHeight := v.app.scrollPanes[v.pageList].lineHeight
+	for _, size := range []int{128, 256, 400} {
+		if rowHeight <= size {
+			pixels = size
+			break
+		}
+	}
+	estimate := int64((pixels + 2) * (pixels + 2) * 4)
 	budget := v.thumbnailBudget()
 	if budget < estimate {
 		return false
 	}
 	for _, number := range v.order[first:last] {
-		if v.thumbnails.frames[number].image != nil || v.thumbnails.failed[number] {
+		if v.thumbnails.frames[number].pixels >= pixels || v.thumbnails.failed[number] {
 			continue
 		}
-		v.trimThumbnails(budget - estimate)
-		if v.thumbnails.bytes+estimate > budget {
+		var used int64
+		if old := v.thumbnails.frames[number].image; old != nil {
+			used = int64(len(old.pixels))
+		}
+		v.trimThumbnails(budget - estimate + used)
+		if v.thumbnails.bytes+estimate-used > budget {
 			break
 		}
 		req := v.request("thumbnail")
-		req.View.Page, req.View.Rotation, req.View.Pixels, req.View.Box = number, v.rotations[number-1], thumbnailPixels, "crop"
-		v.launch(req, number, thumbnailPixels, true, nil)
+		req.View.Page, req.View.Rotation, req.View.Pixels, req.View.Box = number, v.rotations[number-1], pixels, "crop"
+		v.launch(req, number, pixels, true, nil)
 		return true
 	}
 	return false
@@ -79,7 +164,8 @@ func (v *documentView) drawPageThumbnail(item *buttonDraw, index int, color pale
 	d, bounds := v.app.scale, item.bounds
 	number := v.order[index]
 	image := v.thumbnails.frames[number].image
-	width, height := d(78), d(93)
+	labelHeight, gap := d(18), d(2)
+	width, height := v.thumbnailWidth(), max(1, int(bounds.bottom-bounds.top)-labelHeight-gap-d(12))
 	size := v.pageDimensions(number, "crop")
 	if image != nil {
 		size = pageSize{float64(image.width), float64(image.height)}
@@ -88,17 +174,19 @@ func (v *documentView) drawPageThumbnail(item *buttonDraw, index int, color pale
 		fit := min(float64(width)/size.width, float64(height)/size.height)
 		width, height = max(1, int(size.width*fit)), max(1, int(size.height*fit))
 	}
-	x := int(bounds.left) + d(7) + (d(78)-width)/2
-	y := (int(bounds.top+bounds.bottom) - height) / 2
+	x := (int(bounds.left+bounds.right) - width) / 2
+	y := (int(bounds.top+bounds.bottom) - height - gap - labelHeight) / 2
 	if image != nil {
 		gdi32.NewProc("SetStretchBltMode").Call(item.dc, 4)
 		drawBitmap(item.dc, image, x, y, width, height)
 	} else {
 		fillColor(item.dc, rect{int32(x), int32(y), int32(x + width), int32(y + height)}, divider)
 	}
-	label := bounds
-	label.left += int32(d(99))
-	drawText(item.dc, pageListLabel(index, number), label, v.app.normalFont, color, 0x8000)
+	labelTop := int32(y + height + gap)
+	labelWidth := max(width, d(45))
+	labelLeft := (int(bounds.left+bounds.right) - labelWidth) / 2
+	label := rect{int32(labelLeft), labelTop, int32(labelLeft + labelWidth), labelTop + int32(labelHeight)}
+	drawText(item.dc, strconv.Itoa(index+1), label, v.app.normalFont, color, 1)
 	if item.state&16 != 0 {
 		v.app.drawFocus(item.dc, label)
 	}
@@ -120,7 +208,7 @@ func (v *documentView) pageListBounds() rect {
 	getClientRect.Call(v.pageList, uintptr(unsafe.Pointer(&bounds)))
 	var sidebar rect
 	var origin point
-	user32.NewProc("GetWindowRect").Call(v.app.sidebar, uintptr(unsafe.Pointer(&sidebar)))
+	user32.NewProc("GetWindowRect").Call(v.app.thumbnailSidebar, uintptr(unsafe.Pointer(&sidebar)))
 	user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&origin)))
 	bounds.top = max(bounds.top, sidebar.top-origin.y)
 	bounds.bottom = min(bounds.bottom, sidebar.bottom-origin.y)
@@ -138,7 +226,7 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 	drag := &v.pageDrag
 	switch msg {
 	case 0x0201: // WM_LBUTTONDOWN
-		if !v.ready() || keys&(4|8) != 0 { // Use native Shift and Ctrl selection.
+		if !v.ready() || v.app.mode != idPagesTab || keys&(4|8) != 0 { // Use native Shift and Ctrl selection.
 			return false
 		}
 		if row := v.pageAt(xy.y); row >= 0 && row < len(v.order) {
@@ -152,7 +240,7 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 			drag.current = xy
 			deltaX, deltaY := xy.x-drag.start.x, xy.y-drag.start.y
 			distance := max(max(deltaX, -deltaX), max(deltaY, -deltaY))
-			if !drag.moving && !v.app.busy && distance >= int32(v.app.scale(5)) {
+			if !drag.moving && v.app.mode == idPagesTab && !v.app.busy && distance >= int32(v.app.scale(5)) {
 				if !v.inPageSelection(drag.page) {
 					v.selectOnlyPage(drag.page)
 				}

@@ -57,6 +57,7 @@ const (
 	exportAllPages = iota
 	exportCurrentPage
 	exportPageRanges
+	exportThumbnails
 )
 
 const (
@@ -78,7 +79,7 @@ var workspaceTabs = []struct {
 	{idPageOrderTool, "Pořadí stránek", true},
 }
 
-var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"}
+var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr", "Vybrané náhledy"}
 
 type panelItem struct {
 	handle              uintptr
@@ -114,10 +115,12 @@ func (a *app) setupWorkspace() bool {
 	}
 	a.sidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
-	if a.sidebar == 0 {
+	a.thumbnailSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
+		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+	if a.sidebar == 0 || a.thumbnailSidebar == 0 {
 		return false
 	}
-	a.sideScroll = a.addPanelScrollbar(func(offset int) {
+	a.sideScroll = a.addPanelScrollbar(a.sidebar, func(offset int) {
 		a.panelScroll[a.detailsTab()] = offset
 		a.layoutPanel()
 	})
@@ -133,7 +136,7 @@ func (a *app) setupWorkspace() bool {
 	}
 
 	a.toolsToggle = a.button("Sbalit panel nástrojů", idToggleTools, 0, 0, sidebarRailWidth, 0)
-	a.detailsToggle = a.button("Rozbalit panel nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
+	a.detailsToggle = a.button("Sbalit panel nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
@@ -179,7 +182,9 @@ func (a *app) setupWorkspace() bool {
 	a.buildFilePanel()
 	a.beginPanel(idSplitTab)
 	a.buildSplitPanel()
-	a.addingTab, a.controlParent = 0, 0
+	a.addingTab, a.controlParent = 0, a.thumbnailSidebar
+	a.view.buildThumbnails()
+	a.controlParent = 0
 	a.layout()
 	a.updateActions()
 	return true
@@ -349,11 +354,10 @@ func (a *app) activate(id int) {
 		a.view.reframe()
 	}
 	a.layout()
-	if a.mode == idPagesTab {
-		a.view.schedule()
-	} else if old == idPagesTab {
+	if old == idPagesTab && a.mode != idPagesTab {
 		a.view.endPageDrag()
 	}
+	a.view.schedule()
 }
 
 func (a *app) layout() {
@@ -441,7 +445,7 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 	return item, manual || index < a.exportManualStart
 }
 
-func (a *app) panelMetrics() (int, int) {
+func (a *app) panelContentHeight() int {
 	height := 1
 	tab := a.detailsTab()
 	for index, item := range a.panelItems[tab] {
@@ -449,17 +453,32 @@ func (a *app) panelMetrics() (int, int) {
 			height = max(height, placed.y+placed.height+18)
 		}
 	}
-	var bounds rect
-	getClientRect.Call(a.sidebar, uintptr(unsafe.Pointer(&bounds)))
-	available := max(1, int(bounds.bottom)*96/a.dpi)
-	return height, available
+	return height
 }
 
 func (a *app) layoutPanel() {
 	if a.full || a.detailsCollapsed {
 		return
 	}
-	height, available := a.panelMetrics()
+	height := a.panelContentHeight()
+	area := a.detailsArea
+	d := a.scale
+	total := max(2, int(area.bottom-area.top))
+	settingsHeight := total
+	if a.view.ready() {
+		reserve := min(total/2, d(370))
+		settingsHeight = min(d(height), total-reserve)
+	}
+	settingsHeight = max(1, settingsHeight)
+	left, top, width := int(area.left), int(area.top), int(area.right-area.left)
+	place(a.sidebar, left, top, width, settingsHeight)
+	if a.view.ready() {
+		thumbHeight := total - settingsHeight
+		place(a.thumbnailSidebar, left, top+settingsHeight, width, thumbHeight)
+		a.view.layoutThumbnails(width, thumbHeight)
+	}
+	showControl(a.thumbnailSidebar, a.view.ready())
+	available := max(1, settingsHeight*96/a.dpi)
 	active := a.detailsTab()
 	offset := min(max(0, a.panelScroll[active]), max(0, height-available))
 	a.panelScroll[active] = offset
@@ -491,7 +510,9 @@ func (a *app) revealFocusedControl() {
 		return
 	}
 	focus, _, _ := user32.NewProc("GetFocus").Call()
-	_, height := a.panelMetrics()
+	var bounds rect
+	getClientRect.Call(a.sidebar, uintptr(unsafe.Pointer(&bounds)))
+	height := max(1, int(bounds.bottom)*96/a.dpi)
 	tab := a.detailsTab()
 	offset := a.panelScroll[tab]
 	for index, item := range a.panelItems[tab] {
@@ -516,6 +537,9 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&bounds)))
 		dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
 		fillColor(dc, bounds, panelColor)
+		if hwnd == a.thumbnailSidebar {
+			fillColor(dc, rect{right: bounds.right, bottom: 1}, divider)
+		}
 		user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
 		return 0
 	case wmEraseBkgnd:
@@ -530,7 +554,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 		return 0
 	case 0x020a: // WM_MOUSEWHEEL
-		a.wheelSettings(lParam, int(int16(wParam>>16)))
+		a.wheelSettings(lParam, int(int16(wParam>>16)), wParam&8 != 0)
 		return 0
 	}
 	result, _, _ := defWindowProc.Call(hwnd, uintptr(msg), wParam, lParam)
@@ -763,6 +787,10 @@ func (a *app) selectPages(req *request, scope, pageRange uintptr) bool {
 	switch comboIndex(scope) {
 	case exportCurrentPage:
 		req.View.Pages = []int{a.view.page + 1}
+	case exportThumbnails:
+		for _, position := range a.view.selectedPagePositions() {
+			req.View.Pages = append(req.View.Pages, position+1)
+		}
 	case exportPageRanges:
 		pages, err := parseExportPages(getText(pageRange), len(a.view.order))
 		if err != nil {
@@ -1010,7 +1038,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 		}
 		if !a.full && !a.detailsCollapsed && pos.x >= a.viewport.right+int32(a.scale(sidebarRailWidth)) && pos.x < int32(a.width) &&
 			pos.y >= a.viewport.top && pos.y < a.viewport.bottom {
-			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)))
+			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
 		}
 	}
@@ -1021,7 +1049,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 		a.view.moveToPosition()
 		return true
 	}
-	if msg.wParam == 0x2e && msg.window == a.view.pageList {
+	if msg.wParam == 0x2e && msg.window == a.view.pageList && a.mode == idPagesTab {
 		a.view.deleteSelectedPages()
 		return true
 	}

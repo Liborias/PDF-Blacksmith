@@ -36,6 +36,7 @@ func (a *app) printDocument() {
 		return
 	}
 	const (
+		pdSelection       = 0x00000001
 		pdPageNums        = 0x00000002
 		pdNoSelection     = 0x00000004
 		pdReturnDC        = 0x00000100
@@ -44,8 +45,11 @@ func (a *app) printDocument() {
 	)
 	maximum := uint16(min(len(v.order), 65535))
 	dialog := printerDialog{
-		owner: a.window, flags: pdNoSelection | pdReturnDC | pdDriverCopies | pdHidePrintToFile,
+		owner: a.window, flags: pdReturnDC | pdDriverCopies | pdHidePrintToFile,
 		minimum: 1, maximum: maximum, from: 1, to: maximum, copies: 1,
+	}
+	if len(v.pageSelection) == 0 {
+		dialog.flags |= pdNoSelection
 	}
 	dialog.size = uint32(unsafe.Sizeof(dialog))
 	ok, _, _ := comdlg32.NewProc("PrintDlgW").Call(uintptr(unsafe.Pointer(&dialog)))
@@ -78,8 +82,12 @@ func (a *app) printDocument() {
 		notice(a.window, "Rozsah stran k tisku je neplatný.", 0x30)
 		return
 	}
-	pages := make([]printPage, 0, last-first+1)
-	for _, number := range v.order[first-1 : last] {
+	numbers := v.order[first-1 : last]
+	if dialog.flags&pdSelection != 0 && len(v.pageSelection) > 0 {
+		numbers = v.selectedSourcePages()
+	}
+	pages := make([]printPage, 0, len(numbers))
+	for _, number := range numbers {
 		pages = append(pages, printPage{number, v.rotations[number-1], v.pageDimensions(number, "crop")})
 	}
 	req := v.request("print_page")

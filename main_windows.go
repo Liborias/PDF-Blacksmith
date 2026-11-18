@@ -108,7 +108,8 @@ type app struct {
 	window, instance, normalFont, titleFont, labelFont uintptr
 	dpi, width, height                                 int
 	tool, mode                                         int
-	sidebar, controlParent                             uintptr
+	sidebar, thumbnailSidebar, controlParent           uintptr
+	detailsArea                                        rect
 	panelItems                                         map[int][]panelItem
 	panelScroll                                        map[int]int
 	sideScroll                                         *panelScrollbar
@@ -176,7 +177,7 @@ func main() {
 		dpi = min(dpi, (screenWidth-24)*96/850, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, detailsCollapsed: true,
+		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),

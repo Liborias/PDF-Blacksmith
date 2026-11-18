@@ -31,13 +31,6 @@ func (v *documentView) buildPagePanel() {
 	v.undoButton = a.button("Vrátit změnu", idReaderUndo, 169, 160, 145, 0)
 	v.save = a.button("Uložit upravenou kopii…", idReaderSave, 16, 200, 298, 0)
 	a.primaryButtons[v.save] = true
-	a.label("Náhledy stránek", 16, 249, 298, true)
-	a.label("Ctrl vybírá jednotlivé strany, Shift rozsah.", 16, 274, 298, false)
-	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100 | 0x0800 // LBS_EXTENDEDSEL
-	v.pageList = a.add("LISTBOX", "", idReaderPageList, 16, 303, 298, 348, wsTabstop|listStyle, 0, a.normalFont)
-	rowHeight := a.scale(112)
-	sendMessage.Call(v.pageList, 0x01a0, 0, uintptr(rowHeight))
-	a.addScrollPane(v.pageList, rowHeight, true)
 }
 
 func (v *documentView) updatePageEditActions(editing bool) {
@@ -56,14 +49,23 @@ func (v *documentView) updatePageEditActions(editing bool) {
 }
 
 func (v *documentView) selectedPagePositions() []int {
-	if len(v.pageSelection) > 1 {
+	if len(v.pageSelection) > 0 {
 		return v.pageSelection
 	}
 	return []int{v.page}
 }
 
+func (v *documentView) selectedSourcePages() []int {
+	positions := v.selectedPagePositions()
+	numbers := make([]int, len(positions))
+	for i, position := range positions {
+		numbers[i] = v.order[position]
+	}
+	return numbers
+}
+
 func (v *documentView) inPageSelection(index int) bool {
-	if len(v.pageSelection) > 1 {
+	if len(v.pageSelection) > 0 {
 		_, found := slices.BinarySearch(v.pageSelection, index)
 		return found
 	}
@@ -83,7 +85,7 @@ func (v *documentView) resetPageListSelection() {
 }
 
 func (v *documentView) syncPageListSelection() {
-	if len(v.pageSelection) > 1 {
+	if len(v.pageSelection) > 0 {
 		return
 	}
 	count, _, _ := sendMessage.Call(v.pageList, lbGetSelCount, 0, 0)
@@ -113,9 +115,7 @@ func (v *documentView) readPageSelection() {
 			if _, found := slices.BinarySearch(selected, index); !found {
 				index = selected[0]
 			}
-			if len(selected) > 1 {
-				v.pageSelection = selected
-			}
+			v.pageSelection = selected
 		}
 	}
 	if index != v.page {
@@ -126,8 +126,9 @@ func (v *documentView) readPageSelection() {
 }
 
 func (v *documentView) selectOnlyPage(index int) {
-	v.pageSelection = nil
+	v.pageSelection = []int{index}
 	v.gotoPage(index, false)
+	v.resetPageListSelection()
 }
 
 func (v *documentView) rememberOrder() {
@@ -153,7 +154,7 @@ func (v *documentView) moveSelectedPages(first int) bool {
 	}
 	v.rememberOrder()
 	var selection []int
-	if len(selected) > 1 {
+	if len(v.pageSelection) > 0 {
 		selection = make([]int, len(selected))
 		for i := range selection {
 			selection[i] = first + i

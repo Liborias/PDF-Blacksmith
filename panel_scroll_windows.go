@@ -30,9 +30,9 @@ func (a *app) registerScrollTrack(cursor uintptr) bool {
 	return ok != 0
 }
 
-func (a *app) addPanelScrollbar(apply func(int)) *panelScrollbar {
+func (a *app) addPanelScrollbar(parent uintptr, apply func(int)) *panelScrollbar {
 	handle, _, _ := createWindow.Call(0, uintptr(unsafe.Pointer(wideString(trackClassName))), 0,
-		wsChild, 0, 0, 1, 1, a.sidebar, 0, a.instance, 0)
+		wsChild, 0, 0, 1, 1, parent, 0, a.instance, 0)
 	bar := &panelScrollbar{handle: handle, apply: apply}
 	a.scrollbars[handle] = bar
 	return bar
@@ -146,7 +146,8 @@ var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam
 
 func (a *app) addScrollPane(handle uintptr, lineHeight int, list bool) {
 	pane := &scrollPane{handle: handle, lineHeight: max(1, lineHeight), list: list}
-	pane.bar = a.addPanelScrollbar(pane.scrollTo)
+	parent, _, _ := user32.NewProc("GetParent").Call(handle)
+	pane.bar = a.addPanelScrollbar(parent, pane.scrollTo)
 	a.scrollPanes[handle] = pane
 	comctl32.NewProc("SetWindowSubclass").Call(handle, paneSubclass, 1, 0)
 	showControl(handle, false)
@@ -227,6 +228,12 @@ func (pane *scrollPane) scrollTo(position int) {
 }
 
 func (a *app) layoutScrollPane(pane *scrollPane, item panelItem, offset int, shown bool) {
+	d := a.scale
+	left, top := int32(d(item.x)), int32(d(item.y-offset))
+	pane.arrange(rect{left, top, left + int32(d(item.width)), top + int32(d(item.height))}, shown)
+}
+
+func (pane *scrollPane) arrange(frame rect, shown bool) {
 	if !shown {
 		if pane.shown {
 			pane.shown = false
@@ -235,12 +242,9 @@ func (a *app) layoutScrollPane(pane *scrollPane, item panelItem, offset int, sho
 		}
 		return
 	}
-	d := a.scale
-	left, top := int32(d(item.x)), int32(d(item.y-offset))
-	width, height := int32(d(item.width)), int32(d(item.height))
 	old := pane.frame
-	pane.frame = rect{left, top, left + width, top + height}
-	if resized := old.right-old.left != width || old.bottom-old.top != height; !pane.shown || resized {
+	pane.frame = frame
+	if resized := old.right-old.left != frame.right-frame.left || old.bottom-old.top != frame.bottom-frame.top; !pane.shown || resized {
 		pane.shown = true
 		pane.reflow()
 		showControl(pane.handle, true)
@@ -249,21 +253,31 @@ func (a *app) layoutScrollPane(pane *scrollPane, item panelItem, offset int, sho
 	}
 }
 
-func (a *app) wheelSettings(location uintptr, delta int) {
-	x, y := int32(int16(location)), int32(int16(location>>16))
-	hover, _, _ := user32.NewProc("WindowFromPoint").Call(uintptr(uint32(x)) | uintptr(uint32(y))<<32)
+func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
+	screen := point{int32(int16(location)), int32(int16(location >> 16))}
+	hover, _, _ := user32.NewProc("WindowFromPoint").Call(uintptr(uint32(screen.x)) | uintptr(uint32(screen.y))<<32)
+	rows := delta / 40
+	if delta > 0 {
+		rows = max(1, rows)
+	} else if delta < 0 {
+		rows = min(-1, rows)
+	}
+	thumbs := a.scrollPanes[a.view.pageList]
+	parent, _, _ := user32.NewProc("GetParent").Call(hover)
+	if hood := a.thumbnailSidebar; hover == hood || parent == hood {
+		if ctrl {
+			a.view.zoomThumbnails(screen, delta)
+		} else {
+			thumbs.bar.setPosition(thumbs.bar.position - thumbnailWheelSteps(delta))
+		}
+		return
+	}
 	bar := a.scrollbars[hover]
 	if pane := a.scrollPanes[hover]; pane != nil {
 		bar = pane.bar
 	}
-	if bar != nil && bar != a.sideScroll && delta != 0 {
-		rows := max(1, delta/40)
-		if delta < 0 {
-			rows = min(-1, delta/40)
-		}
-		if bar.setPosition(bar.position - rows) {
-			return
-		}
+	if bar != nil && bar != a.sideScroll && delta != 0 && bar.setPosition(bar.position-rows) {
+		return
 	}
 	a.sideScroll.setPosition(a.sideScroll.position - delta*62/120)
 }

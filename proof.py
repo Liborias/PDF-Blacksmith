@@ -71,11 +71,12 @@ def print_profile(exe, folder, pdf, key):
     return profile, label, args
 
 
-def render_dpi(pdf, pages, requested, pixel_limit, box):
+def render_dpi(pdf, pages, requested, pixel_limit, box, *, fractional=False):
     max_inches = max(max(page_size(pdf.pages[n-1], box)) for n in pages) / 72
-    if max_inches <= 0 or max_inches > pixel_limit:
+    if max_inches <= 0 or (max_inches > pixel_limit and not fractional):
         raise ProofError("Formát stránky je pro bezpečný náhled příliš velký nebo neplatný.")
-    return min(requested, int(pixel_limit / max_inches))
+    limit = pixel_limit / max_inches
+    return min(requested, limit if fractional else int(limit))
 
 
 def render(exe, folder, gs, source, pages, dpi, profile_args, prefix, spot_colors=None):
@@ -161,9 +162,10 @@ def render_source(pdf, src, folder, stage):
     return str(src.resolve())
 
 
-def screen_target(req, printed):
+def screen_target(req, printed, *, thumbnail=False):
     target = req.get("pixels", 1850)
-    if type(target) is not int or not 400 <= target <= (4096 if printed else 3200):
+    minimum, maximum = (128, 640) if thumbnail else (400, 4096 if printed else 3200)
+    if type(target) is not int or not minimum <= target <= maximum:
         raise ProofError("Rozlišení náhledu je neplatné.")
     return target
 
@@ -202,14 +204,14 @@ def screen_region_args(page, box, rotation, region):
             "-c", f"<< /PageOffset [{dx:.12f} {dy:.12f}] >> setpagedevice"]
 
 
-def screen_page(pdf, src, req, exe, gs, stage, *, printed=False):
+def screen_page(pdf, src, req, exe, gs, stage, *, printed=False, thumbnail=False):
     page, rotation = page_options(pdf, req)
     box, args = box_options(req)
-    target = screen_target(req, printed)
+    target = screen_target(req, printed, thumbnail=thumbnail)
     if not printed and "region" in req:
         resolution = screen_region_args(pdf.pages[page-1], box, rotation, req["region"])
     else:
-        dpi = render_dpi(pdf, [page], 300 if printed else 4608, target, box)
+        dpi = render_dpi(pdf, [page], 300 if printed else 4608, target, box, fractional=thumbnail)
         resolution = [f"-r{dpi}"]
     with TemporaryDirectory(prefix="pdf-view-") as name:
         folder = Path(name)

@@ -6,7 +6,9 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
 
-Levý panel slouží k výběru nástroje, v pravém se zobrazí jeho nastavení. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí. Delší výpisy lze posouvat kolečkem nebo šedým jezdcem.
+Oba boční panely jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
+
+Náhledy stránek jsou společné pro všechny nástroje. Najdete je vpravo pod nastavením až k zápatí. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. V nižším okně se náhled přizpůsobí dostupné výšce. Výběr se zachová při posouvání, změně velikosti i přepnutí nástroje.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete křížkem vedle jeho názvu v horní liště nebo zkratkou **Ctrl+W**. Pokud máte neuložené změny, aplikace se před zavřením zeptá, zda je zahodit.
@@ -20,14 +22,14 @@ Volby nástroje **Soubor** zůstávají nahoře v pravém panelu. Ovládání vy
 
 - **Soubor → Uložit → Uložit změny** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
 - **Soubor → Uložit jako → Vybrat umístění…** nebo **Ctrl+Shift+S** uloží kopii a otevře ji jako aktuální dokument.
-- **Soubor → Tisk → Otevřít tiskový dialog…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
+- **Soubor → Tisk → Otevřít tiskový dialog…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Volba **Výběr** vytiskne označené náhledy. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
 - **Soubor → Podepsaná kopie** otevře nastavení digitálního podpisu pod volbami souboru.
 
 ## Příprava pro tisk
 
 1. Otevřete PDF a zvolte **Soubor → Export**.
 2. V nabídce **Předvolba PDF** vyberte účel výstupu. **Vlastní nastavení** zpřístupní ruční výběr barev, převod na desku K i převod textu na křivky.
-3. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
+3. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu, **Vybrané náhledy** nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
 4. U předvolby pro tiskárnu vyberte profil ICC. Ve **Vlastním nastavení** zvolte požadovaný barevný výstup a případně převod textu na křivky. Text v naskenované bitmapě zůstává součástí bitmapy.
 5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte přes **Soubor → Otevřít výstup → Otevřít tento výstup**.
 
@@ -81,11 +83,11 @@ Nástroj **Separace** přepne náhled na simulaci tisku a vpravo zobrazí její 
 - Tiskovou oblast lze přepnout na celý arch, ořez pro zobrazení, čistý formát nebo spadávku.
 - Tiskový náhled simuluje přetisky. Panel uvádí výstupní záměr PDF a použitý profil CMYK. Simulaci lze přepnout na některý z profilů ECI.
 - V seznamu desek jsou Cyan, Magenta, Yellow, Black a rozpoznané přímé barvy. Jakmile se seznam zobrazí, kliknutím na řádek zapnete nebo vypnete příslušnou desku. Náhled se skládá z vybraných desek. Údaje ukazují podíl bodů s nenulovým krytím a nejvyšší tón v každé desce při zobrazeném rozlišení.
-- **Zkontrolovat celý dokument** vypíše desky, na kterých jsou při vykreslení skutečně tiskové body, a čísla jejich stran. Kontrola bere v úvahu vybranou tiskovou oblast a profil simulace. U velkých formátů může snížit vzorkovací rozlišení a v přehledu uvede použitou hodnotu.
+- **Zkontrolovat celý dokument** nebo **Zkontrolovat vybrané náhledy** vypíše aktivní desky a čísla jejich stran. Kontrola bere v úvahu vybranou tiskovou oblast a profil simulace. U velkých formátů může snížit vzorkovací rozlišení a v přehledu uvede použitou hodnotu.
 
 ## Pořadí a náhledy stránek
 
-Otevřete vlevo **Pořadí stránek** nebo **Zobrazení → Stránky**. Náhledy jsou vpravo pod ovládáním. Kliknutí otevře vybranou stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah.
+Otevřete vlevo **Pořadí stránek** nebo **Zobrazení → Stránky**. Přesun, otočení i smazání lze použít na více označených náhledů najednou.
 
 - **Přesunout** vloží vybrané stránky na zadanou pozici. Zadané číslo bude výsledná pozice první přesunuté strany. Stejného výsledku dosáhnete přetažením vybraných náhledů k vínové čáře mezi stránkami.
 - **Smazat vybrané** odstraní výběr z rozpracovaného dokumentu. Použít lze také klávesu **Delete** při zaměření seznamu nebo přetažení náhledů na tlačítko. Dokument musí obsahovat alespoň jednu stranu.
@@ -95,7 +97,7 @@ Po smazání stránek se při uložení přenese výstupní záměr ICC a označ
 
 ## Rozdělení PDF po stránkách
 
-Vlevo zvolte **Rozdělit PDF**. Vpravo vyberte všechny strany, aktuální stranu nebo vlastní rozsah, například `1, 3–5, 8`. Tlačítko **Vybrat složku a rozdělit PDF…** uloží každou vybranou stranu jako samostatné PDF, například `katalog-strana-003.pdf`.
+Vlevo zvolte **Rozdělit PDF**. Vpravo vyberte všechny strany, aktuální stranu, **Vybrané náhledy** nebo vlastní rozsah, například `1, 3–5, 8`. Tlačítko **Vybrat složku a rozdělit PDF…** uloží každou vybranou stranu jako samostatné PDF, například `katalog-strana-003.pdf`.
 
 Čísla souborů odpovídají aktuálnímu pořadí stran. Přenesou se i rozpracovaná otočení a existující ochrana heslem. Původní dokument zůstává beze změny. Pokud ve složce názvy už existují, aplikace požádá o jinou složku. U podepsaného dokumentu potvrdíte vytvoření souborů bez původních podpisů.
 

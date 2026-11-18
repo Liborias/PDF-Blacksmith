@@ -39,6 +39,7 @@ const (
 	idReaderSave
 	idReaderMoveTo
 	idReaderDeletePages
+	idReaderScanSelection
 )
 
 const (
@@ -201,9 +202,12 @@ func (v *documentView) showScan(result *viewResponse) {
 }
 
 type pageEdit struct {
-	page, angle      int
+	page             int
 	order, selection []int
+	rotations        []pageRotation
 }
+
+type pageRotation struct{ number, angle int }
 
 type readerFrame struct {
 	image  *printBitmap
@@ -237,6 +241,7 @@ type documentView struct {
 	page, reference                                                            int
 	pageSelection                                                              []int
 	pageDrag                                                                   thumbnailDrag
+	thumbnailScale                                                             int
 	continuous                                                                 bool
 	fitMode                                                                    int
 	zoom                                                                       float64
@@ -268,12 +273,13 @@ type documentView struct {
 	previous, next, jump, pageInput, location, zoomOut, zoomIn, zoomLabel, fit uintptr
 	flow, screenBox, proofBox, proof, list, pageList, documentInfo             uintptr
 	outputInfo, sample, scanReport, all, none                                  uintptr
+	thumbnailHeading, thumbnailHint, scanSelection                             uintptr
 	left, right, back, ahead, undoButton, save                                 uintptr
 	moveLabel, moveTarget, moveButton, deleteButton                            uintptr
 }
 
 func newDocumentView(a *app) *documentView {
-	return &documentView{app: a, fitMode: 1, proofPage: -1, jobs: make(chan readerJob, 2)}
+	return &documentView{app: a, fitMode: 1, proofPage: -1, thumbnailScale: 32, jobs: make(chan readerJob, 2)}
 }
 
 func (v *documentView) buildToolbar() {
@@ -333,7 +339,8 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	v.none = a.button("Vypnout všechny", idReaderNone, 169, 441, 145, 0)
 	v.sample = a.label("", 16, 486, 298, false)
 	a.scanButton = a.button("Zkontrolovat celý dokument", idReaderScan, 16, 519, 298, 0)
-	v.scanReport = a.readout(16, 562, 298, 133)
+	v.scanSelection = a.button("Zkontrolovat vybrané náhledy", idReaderScanSelection, 16, 559, 298, 0)
+	v.scanReport = a.readout(16, 602, 298, 133)
 }
 
 func (v *documentView) ready() bool { return len(v.order) > 0 && !v.invalidSource }
@@ -800,8 +807,8 @@ func (v *documentView) schedule() {
 			return
 		}
 	}
-	if !proof && !v.app.busy && v.prefetch.page == 0 {
-		if !v.scheduleThumbnails() {
+	if !v.app.busy && v.prefetch.page == 0 {
+		if !v.scheduleThumbnails() && !proof {
 			v.schedulePrefetch()
 		}
 	}
@@ -978,7 +985,8 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 			}
 		}
 	}
-	if !v.ready() || v.proofMode() || v.app.busy {
+	first, last := v.thumbnailRange()
+	if !v.ready() || (v.proofMode() && first == last) || v.app.busy {
 		v.stopPrefetchEngine()
 	}
 	v.schedule()
@@ -1045,20 +1053,11 @@ func (v *documentView) platesChanged() {
 	v.changedViewport()
 }
 
-func pageListLabel(index, source int) string {
-	label := fmt.Sprintf("Stránka %d", index+1)
-	if index+1 != source {
-		label += fmt.Sprintf("   ·   původní %d", source)
-	}
-	return label
-}
-
 func (v *documentView) updatePageList() {
 	sendMessage.Call(v.pageList, 0x000b, 0, 0)
 	sendMessage.Call(v.pageList, 0x0184, 0, 0)
-	for i, n := range v.order {
-		item := pageListLabel(i, n)
-		sendMessage.Call(v.pageList, 0x0180, 0, uintptr(unsafe.Pointer(wideString(item))))
+	for i := range v.order {
+		sendMessage.Call(v.pageList, 0x0180, 0, uintptr(unsafe.Pointer(wideString(strconv.Itoa(i+1)))))
 	}
 	v.resetPageListSelection()
 	sendMessage.Call(v.pageList, 0x000b, 1, 0)
@@ -1076,9 +1075,11 @@ func (v *documentView) updateActions() {
 	setEnabled(v.next, loaded && v.page+1 < len(v.order))
 	setEnabled(v.left, editing)
 	setEnabled(v.right, editing)
-	single := len(v.pageSelection) == 0
-	setEnabled(v.back, editing && single && v.page > 0)
-	setEnabled(v.ahead, editing && single && v.page+1 < len(v.order))
+	selected := v.selectedPagePositions()
+	single := len(selected) == 1
+	setEnabled(v.back, editing && single && selected[0] > 0)
+	setEnabled(v.ahead, editing && single && selected[0]+1 < len(v.order))
+	setEnabled(v.scanSelection, editing)
 	setEnabled(v.undoButton, editing && len(v.history) > 0)
 	setEnabled(v.save, editing && v.changed())
 	v.updatePageEditActions(editing)
@@ -1103,18 +1104,29 @@ func (v *documentView) updateActions() {
 }
 
 func (v *documentView) rotate(angle int) {
-	number := v.order[v.page] - 1
-	v.history = append(v.history, pageEdit{page: v.page, angle: v.rotations[number]})
-	v.rotations[number] = (v.rotations[number] + 360 + angle) % 360
-	v.rotationChanged(number + 1)
+	selected := v.selectedPagePositions()
+	before := make([]pageRotation, 0, len(selected))
+	after := make([]pageRotation, 0, len(selected))
+	for _, position := range selected {
+		number := v.order[position]
+		previous := v.rotations[number-1]
+		before = append(before, pageRotation{number, previous})
+		after = append(after, pageRotation{number, (previous + 360 + angle) % 360})
+	}
+	v.history = append(v.history, pageEdit{page: v.page, rotations: before})
+	v.applyRotations(after)
 }
 
-func (v *documentView) rotationChanged(number int) {
-	v.reading.remove(number)
-	v.printPreview.remove(number)
-	v.thumbnails.remove(number)
+func (v *documentView) applyRotations(rotations []pageRotation) {
+	for _, rotation := range rotations {
+		number := rotation.number
+		v.rotations[number-1] = rotation.angle
+		v.reading.remove(number)
+		v.printPreview.remove(number)
+		v.thumbnails.remove(number)
+		delete(v.prefetchFailed, number)
+	}
 	invalidate(v.pageList)
-	delete(v.prefetchFailed, number)
 	v.updateDocumentInfo()
 	v.reframe()
 }
@@ -1129,9 +1141,7 @@ func (v *documentView) undo() {
 	v.history = v.history[:index]
 	if edit.order == nil {
 		v.page, v.reference = edit.page, edit.page
-		number := v.order[edit.page]
-		v.rotations[number-1] = edit.angle
-		v.rotationChanged(number)
+		v.applyRotations(edit.rotations)
 		v.gotoPage(edit.page, false)
 		return
 	}
@@ -1209,10 +1219,14 @@ func (v *documentView) command(id, notification int) bool {
 		}
 		v.syncPlateSelection()
 		v.platesChanged()
-	case idReaderScan:
+	case idReaderScan, idReaderScanSelection:
 		if !v.app.busy {
 			req := v.request("scan")
-			req.View.Order = slices.Clone(v.order)
+			if id == idReaderScanSelection {
+				req.View.Order = v.selectedSourcePages()
+			} else {
+				req.View.Order = slices.Clone(v.order)
+			}
 			v.app.run(req)
 		}
 	case idReaderRotateLeft, idReaderRotateRight, idReaderMoveBack, idReaderMoveAhead, idReaderUndo, idReaderSave,
@@ -1226,9 +1240,9 @@ func (v *documentView) command(id, notification int) bool {
 		case idReaderRotateRight:
 			v.rotate(90)
 		case idReaderMoveBack:
-			v.moveSelectedPages(v.page - 1)
+			v.moveSelectedPages(v.selectedPagePositions()[0] - 1)
 		case idReaderMoveAhead:
-			v.moveSelectedPages(v.page + 1)
+			v.moveSelectedPages(v.selectedPagePositions()[0] + 1)
 		case idReaderMoveTo:
 			v.moveToPosition()
 		case idReaderDeletePages:

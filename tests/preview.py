@@ -151,6 +151,11 @@ def check_proofs(exe, folder):
     assert image(screen).height > image(screen).width
     screen_rotated = call(exe, fixture, "screen", view={"page": 1, "box": "crop", "pixels": 780, "rotation": 90})["view"]
     assert image(screen_rotated).size == image(screen).size[::-1]
+    for size in (128, 256, 400, 640):
+        thumb = call(exe, fixture, "thumbnail", view={"pixels": size, "rotation": 90})["view"]
+        assert image(thumb).width == size and image(thumb).height < size
+    call(exe, fixture, "thumbnail", expected="error", view={"pixels": 127})
+    call(exe, fixture, "screen", expected="error", view={"pixels": 128})
     printed = call(exe, fixture, "print_page", view={"page": 1, "box": "crop", "pixels": 3508, "rotation": 90})["view"]
     assert image(printed).width > image(printed).height
     proof = call(exe, fixture, "preview", view={"page": 1})["view"]

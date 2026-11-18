@@ -105,13 +105,16 @@ func (a *app) layoutSidebars() {
 		case viewOptionsVisible:
 			detailY = top + d(76)
 		}
-		place(a.sidebar, x, detailY, d(panelWidth), int(a.viewport.bottom)-detailY)
+		a.detailsArea = rect{int32(x), int32(detailY), int32(x + d(panelWidth)), a.viewport.bottom}
 		if fileOptionsVisible {
 			a.updateFileOptions()
 		}
 	}
 	showControl(a.sidebarTitle, detailsVisible)
 	showControl(a.sidebar, detailsVisible)
+	if !detailsVisible {
+		showControl(a.thumbnailSidebar, false)
+	}
 	a.layoutPanel()
 }
 

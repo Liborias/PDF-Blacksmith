@@ -5,15 +5,15 @@ import math
 from proof import box_options, page_box, page_options, page_size, render_dpi, screen_region, screen_target
 
 
-def render_screen(pdf, src, req, password):
+def render_screen(pdf, src, req, password, *, thumbnail=False):
     number, rotation = page_options(pdf, req)
     box, _ = box_options(req)
-    target = screen_target(req, printed=False)
+    target = screen_target(req, printed=False, thumbnail=thumbnail)
     source_page = pdf.pages[number-1]
     if "region" in req:
         _, (x, y, width, height), full_size = screen_region(source_page, box, rotation, req["region"])
     else:
-        dpi = render_dpi(pdf, [number], 4608, target, box)
+        dpi = render_dpi(pdf, [number], 4608, target, box, fractional=thumbnail)
         full_size = tuple(max(1, math.floor(points * dpi / 72 + 0.5)) for points in page_size(source_page, box))
         x, y = 0, 0
         width, height = full_size[::-1] if rotation % 180 else full_size

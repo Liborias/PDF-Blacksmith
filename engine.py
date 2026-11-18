@@ -784,20 +784,21 @@ def apply_page_order(pdf, pages, order):
 def inspect_document(src, request, *, raster=False):
     view = request.get("view", {})
     password = request.get("pdf_password", "")
+    action = request["action"]
     with open_pdf(src, password) as pdf:
         if not len(pdf.pages):
             raise UserError("Vstupní PDF nemá žádné strany.")
-        if request["action"] == "describe":
+        if action == "describe":
             return describe(pdf)
-        if request["action"] in ("screen", "thumbnail") and raster:
-            rendered = render_screen(pdf, src, view, password)
+        if action in ("screen", "thumbnail") and raster:
+            rendered = render_screen(pdf, src, view, password, thumbnail=action == "thumbnail")
             if rendered is not None:
                 return rendered
         exe = ghostscript_path(request)
-        if request["action"] in ("screen", "thumbnail", "print_page"):
+        if action in ("screen", "thumbnail", "print_page"):
             return screen_page(pdf, src, view, exe, run_ghostscript, stage_for_render,
-                               printed=request["action"] == "print_page")
-        if request["action"] == "scan":
+                               printed=action == "print_page", thumbnail=action == "thumbnail")
+        if action == "scan":
             order = document_order(view, len(pdf.pages))
             settings = export_settings(request.get("export"))
             return scan_plates(pdf, src, {**view, "order": order, "proof_dpi": settings["proof_dpi"]},
