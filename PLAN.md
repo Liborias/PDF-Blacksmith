@@ -14,3 +14,7 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách, kopírovat mezi nimi, při zavírání nabídnout uložení změn a umožnit zobrazení dvou dokumentů vedle sebe.
 11. **Úpravy obsahu.** Vybrat, přesouvat, kopírovat a mazat objekty. U textu měnit písmo, velikost a řez i podtržení.
 12. **Poznámky a kreslení.** Přidat poznámky, elipsy, obdélníky, volné čáry a šipky s nastavitelnou barvou a tloušťkou čáry.
+
+## Levý panel nástrojů
+
+Postupně sem přibudou **Nástroje výběru**, **Úprava textu**, **Poznámky**, **OCR**, **Sloučit PDF**, **Rozdělit PDF** a **Pořadí stránek**. Každá položka dostane piktogram a otevře své nastavení v pravém panelu.

@@ -5,22 +5,100 @@ import (
 	"path/filepath"
 )
 
-func (a *app) openFileMenu() {
-	ready := !a.busy && a.view.ready()
-	entries := []popupItem{
-		{command: idOpen, label: "Otevřít soubor…", shortcut: "Ctrl+O", disabled: a.busy},
-		{command: idShowOutput, label: "Otevřít výstup", disabled: a.busy || a.lastOutput == ""},
-		{separator: true},
-		{command: idSaveDocument, label: "Uložit", shortcut: "Ctrl+S", disabled: !ready || !a.view.changed()},
-		{command: idSaveDocumentAs, label: "Uložit jako…", shortcut: "Ctrl+Shift+S", disabled: !ready},
-		{command: idExportTab, label: "Export…", disabled: !ready},
-		{command: idSignTab, label: "Uložit podepsanou kopii…", disabled: !ready},
-		{separator: true},
-		{command: idPrintDocument, label: "Tisk…", shortcut: "Ctrl+P", disabled: !ready},
-		{command: idClosePDF, label: "Zavřít PDF", shortcut: "Ctrl+W", disabled: a.busy || a.view.path == ""},
+var fileOptions = []struct {
+	id    int
+	label string
+}{
+	{idOpen, "Otevřít soubor"},
+	{idShowOutput, "Otevřít výstup"},
+	{idSaveDocument, "Uložit"},
+	{idSaveDocumentAs, "Uložit jako"},
+	{idExportTab, "Export"},
+	{idFileSign, "Podepsaná kopie"},
+	{idPrintDocument, "Tisk"},
+	{idClosePDF, "Zavřít PDF"},
+}
+
+func (a *app) fileOptionEnabled(option int) bool {
+	if a.busy {
+		return false
 	}
-	if index := a.trackPopup(a.modes[idFileTab], 300, entries); index >= 0 {
-		a.command(entries[index].command, 0)
+	switch option {
+	case idOpen:
+		return true
+	case idShowOutput:
+		return a.lastOutput != ""
+	case idSaveDocument:
+		return a.view.ready() && a.view.changed()
+	case idClosePDF:
+		return a.view.path != ""
+	default:
+		return a.view.ready()
+	}
+}
+
+func (a *app) activeFileOption() int {
+	if a.mode == idSignTab {
+		return idFileSign
+	}
+	return a.mode
+}
+
+func (a *app) buildFilePanel() {
+	a.fileHint = a.add("STATIC", "", 0, 16, 16, 298, 44, 0x80, 0, a.normalFont)
+	a.filePath = a.readout(16, 65, 298, 54)
+	a.fileRun = a.button("", idFileRun, 16, 134, 298, 0)
+	a.primaryButtons[a.fileRun] = true
+}
+
+func (a *app) updateFilePanel() {
+	path := a.view.path
+	var hint, command string
+	switch a.mode {
+	case idOpen:
+		hint, command = "PDF můžete také přetáhnout do okna aplikace.", "Vybrat soubor PDF…"
+	case idShowOutput:
+		hint, command = "Poslední uložený výstup", "Otevřít tento výstup"
+		path = a.lastOutput
+	case idSaveDocument:
+		hint, command = "Úpravy se uloží do otevřeného PDF po potvrzení přepsání.", "Uložit změny"
+	case idSaveDocumentAs:
+		hint, command = "Vyberte název a umístění kopie otevřeného PDF.", "Vybrat umístění…"
+	case idPrintDocument:
+		hint, command = "V tiskovém dialogu vyberte tiskárnu, rozsah stran a počet kopií.", "Otevřít tiskový dialog…"
+	case idClosePDF:
+		hint, command = "Aktuálně otevřený soubor", "Zavřít tento dokument"
+	}
+	setText(a.fileHint, hint)
+	setText(a.filePath, path)
+	setText(a.fileRun, command)
+	setEnabled(a.fileRun, a.fileOptionEnabled(a.mode))
+}
+
+func (a *app) updateFileOptions() {
+	for _, option := range fileOptions {
+		setEnabled(a.detailButtons[option.id], a.fileOptionEnabled(option.id))
+	}
+	if a.detailsTab() == idFileDetails {
+		a.updateFilePanel()
+	}
+}
+
+func (a *app) runFileOption() {
+	if a.tool != idFileTab || !a.fileOptionEnabled(a.mode) {
+		return
+	}
+	switch a.mode {
+	case idOpen:
+		a.openDialog()
+	case idShowOutput:
+		a.openDocument(a.lastOutput, a.lastPassword)
+	case idSaveDocument, idSaveDocumentAs:
+		a.saveDocument(a.mode == idSaveDocumentAs)
+	case idPrintDocument:
+		a.printDocument()
+	case idClosePDF:
+		a.closeDocument()
 	}
 }
 

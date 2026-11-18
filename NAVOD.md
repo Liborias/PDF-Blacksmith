@@ -4,28 +4,32 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 ## Otevření a čtení PDF
 
-PDF otevřete přes rozbalovací nabídku **Soubor** a volbu **Otevřít soubor…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Postranní panel se otevře po výběru nástroje nebo volby s nastavením. **Separace** a **Digitální podpis** se objeví po načtení PDF.
+V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
 
-- PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V panelu **Zobrazení** lze přepnout na **Souvisle** a posouvat dokument plynule.
-- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Panel **Zobrazení** ukazuje počet stránek v paměti. Dokument zavřete volbou **Soubor → Zavřít PDF** nebo zkratkou **Ctrl+W**.
+Levý panel slouží k výběru nástroje, v pravém se zobrazí jeho nastavení. Po načtení PDF se vlevo objeví **Separace** a **Digitální podpis**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
+
+- PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
+- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete pomocí **Soubor → Zavřít PDF → Zavřít tento dokument** nebo zkratkou **Ctrl+W**.
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Při listování a zoomu se předchozí obraz vymění najednou, jakmile je nový náhled hotový. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
-- Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Skrýt panel** přenechá dokumentu celou šířku okna. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
-- Pokud PDF vyžaduje heslo k otevření, zadejte je v panelu **Zobrazení** a použijte **Načíst znovu s heslem**.
+- Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Zobrazení → Náhled → Zobrazit na celou obrazovku** nebo **F11** otevře samotné PDF přes celou obrazovku. **Esc** obnoví předchozí rozložení panelů.
+- Pokud PDF vyžaduje heslo k otevření, zadejte je v **Zobrazení → Náhled** a použijte **Načíst znovu s heslem**.
 
 ## Uložení a tisk
 
-- **Soubor → Uložit** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
-- **Soubor → Uložit jako…** nebo **Ctrl+Shift+S** uloží kopii a otevře ji jako aktuální dokument.
-- **Soubor → Tisk…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
-- **Soubor → Uložit podepsanou kopii…** otevře nastavení digitálního podpisu.
+Volby nástroje **Soubor** zůstávají nahoře v pravém panelu. Ovládání vybrané akce se zobrazí pod nimi.
+
+- **Soubor → Uložit → Uložit změny** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
+- **Soubor → Uložit jako → Vybrat umístění…** nebo **Ctrl+Shift+S** uloží kopii a otevře ji jako aktuální dokument.
+- **Soubor → Tisk → Otevřít tiskový dialog…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
+- **Soubor → Podepsaná kopie** otevře nastavení digitálního podpisu pod volbami souboru.
 
 ## Příprava pro tisk
 
-1. Otevřete PDF a zvolte **Soubor → Export…**.
+1. Otevřete PDF a zvolte **Soubor → Export**.
 2. V nabídce **Předvolba PDF** vyberte účel výstupu. **Vlastní nastavení** zpřístupní ruční výběr barev, převod na desku K i převod textu na křivky.
 3. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
 4. U předvolby pro tiskárnu vyberte profil ICC. Ve **Vlastním nastavení** zvolte požadovaný barevný výstup a případně převod textu na křivky. Text v naskenované bitmapě zůstává součástí bitmapy.
-5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte volbou **Soubor → Otevřít výstup**.
+5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte přes **Soubor → Otevřít výstup → Otevřít tento výstup**.
 
 ### Předvolby PDF
 
@@ -64,7 +68,7 @@ Export provede převod procesních barev CMYK a připojí zvolený profil ICC ja
 
 ## Náhled PDF a tiskové separace
 
-Nástroje záložky **Stránky** lze používat při prohlížení dokumentu. Záložka **Separace** přepne zobrazení na tiskovou simulaci.
+Správa stran je v **Zobrazení → Stránky**. Nástroj **Separace** přepne náhled na simulaci tisku a vpravo zobrazí její nastavení.
 
 - Tiskovou oblast lze přepnout na celý arch, ořez pro zobrazení, čistý formát nebo spadávku.
 - Tiskový náhled simuluje přetisky. Panel uvádí výstupní záměr PDF a použitý profil CMYK. Simulaci lze přepnout na některý z profilů ECI.

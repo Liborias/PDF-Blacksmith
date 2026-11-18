@@ -139,8 +139,9 @@ func (a *app) paint(hwnd uintptr) {
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), int32(a.height)}, canvasColor)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
 		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
-		if a.view.path != "" && a.headerActions-a.headerTabs >= a.scale(93) {
-			nameArea := rect{int32(a.headerTabs + a.scale(12)), 0, int32(a.headerActions - a.scale(12)), int32(a.scale(headerHeight))}
+		a.paintSidebars(dc)
+		if a.view.path != "" {
+			nameArea := rect{int32(a.scale(a.headerBrand)), 0, int32(a.windowButtonStart - a.scale(12)), int32(a.scale(headerHeight))}
 			drawText(dc, filepath.Base(a.view.path), nameArea, a.normalFont, mutedColor, 0x8000) // DT_END_ELLIPSIS
 		}
 	}
@@ -166,16 +167,15 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	if item.controlType != 4 { // ODT_BUTTON
 		return false
 	}
-	if a.drawWindowButton(item) || a.drawChoice(item) {
+	if a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) {
 		return true
 	}
 	bounds := item.bounds
 	isOption := a.options[item.handle]
-	_, tab := a.modes[int(item.controlID)]
+	id := int(item.controlID)
+	tool := a.toolButtons[id] == item.handle
 	background := canvasColor
-	if tab || item.handle == a.panelButton || item.handle == a.fullButton {
-		background = titleColor
-	} else if a.panelButtons[item.handle] {
+	if a.panelButtons[item.handle] {
 		background = panelColor
 	}
 	fillColor(item.dc, bounds, background)
@@ -196,14 +196,17 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		bounds.left += int32(a.scale(28))
 		drawText(item.dc, getText(item.handle), bounds, a.normalFont, foreground, 0)
 	} else {
-		id := int(item.controlID)
-		active := (id == a.mode && (!tab || !a.panelHidden)) ||
-			(id == idFileTab && a.mode == idExportTab && !a.panelHidden) || a.primaryButtons[item.handle]
+		selectedDetail := a.mode
+		if a.tool == idFileTab {
+			selectedDetail = a.activeFileOption()
+		}
+		active := (tool && id == a.tool) || (a.detailButtons[id] == item.handle && id == selectedDetail) ||
+			a.primaryButtons[item.handle]
 		body, edge := paletteColor{42, 42, 47}, divider
-		if tab {
+		if tool {
 			body, edge = background, background
 			if active {
-				body, edge = panelColor, panelColor
+				body, edge = paletteColor{54, 44, 51}, divider
 			}
 		} else if active {
 			body, edge = paletteColor{91, 42, 63}, paletteColor{128, 58, 84}
@@ -216,10 +219,11 @@ func (a *app) drawButton(item *buttonDraw) bool {
 			foreground = paletteColor{119, 114, 122}
 		}
 		rounded(item.dc, bounds, a.scale(5), body, edge)
-		if tab && active {
-			fillColor(item.dc, rect{bounds.left + 1, bounds.bottom - int32(a.scale(3)), bounds.right - 1, bounds.bottom - 1}, accentColor)
+		if tool && active {
+			fillColor(item.dc, rect{bounds.left + 1, bounds.top + int32(a.scale(5)),
+				bounds.left + int32(a.scale(4)), bounds.bottom - int32(a.scale(5))}, accentColor)
 		}
-		if !a.drawHeaderIconLabel(item, foreground) {
+		if !a.drawToolIconLabel(item, foreground) {
 			drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, 1)
 		}
 	}

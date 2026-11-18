@@ -108,15 +108,15 @@ type profileChoice struct {
 type app struct {
 	window, instance, normalFont, titleFont, labelFont uintptr
 	dpi, width, height                                 int
-	mode                                               int
+	tool, mode                                         int
 	sidebar, controlParent                             uintptr
 	panelItems                                         map[int][]panelItem
 	panelScroll                                        map[int]int
 	addingTab                                          int
-	modes                                              map[int]uintptr
+	toolButtons, detailButtons                         map[int]uintptr
 	documentTools                                      bool
-	headerBrand, headerTabs, headerActions             int
-	panelHidden                                        bool
+	headerBrand, windowButtonStart                     int
+	toolsCollapsed, detailsCollapsed                   bool
 	full                                               bool
 	placement                                          windowPlacement
 	savedStyle                                         uintptr
@@ -131,7 +131,8 @@ type app struct {
 	options, checkedOptions, panelLabels, panelButtons map[uintptr]bool
 	readOnlyFields, primaryButtons                     map[uintptr]bool
 	view                                               *documentView
-	panelButton, fullButton, status                    uintptr
+	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
+	fileHint, filePath, fileRun                        uintptr
 	exportScope, exportRange                           uintptr
 	exportFormat, exportHint, exportColorLabel         uintptr
 	profiles, pressProfiles, customICC, customBrowse   uintptr
@@ -170,9 +171,9 @@ func main() {
 		dpi = min(dpi, (screenWidth-24)*96/850, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		instance: instance, dpi: int(dpi), mode: idBrowseTab, panelHidden: true,
+		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, detailsCollapsed: true,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
-		modes: make(map[int]uintptr), results: make(chan response, 1),
+		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
 		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
 		panelLabels: make(map[uintptr]bool), panelButtons: make(map[uintptr]bool),
 		primaryButtons: make(map[uintptr]bool), readOnlyFields: make(map[uintptr]bool),
@@ -185,7 +186,7 @@ func main() {
 	}
 	defer window.view.closeReaders()
 	showWindow.Call(window.window, 3) // SW_SHOWMAXIMIZED retains the normal window placement.
-	setFocus.Call(window.modes[idFileTab])
+	setFocus.Call(window.toolButtons[idFileTab])
 	if len(os.Args) > 1 {
 		window.openDocument(os.Args[1], "")
 	}

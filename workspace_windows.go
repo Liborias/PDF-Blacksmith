@@ -14,7 +14,7 @@ import (
 const (
 	idOpen = 100 + iota
 	idShowOutput
-	idTogglePanel
+	idToggleTools
 	idFullscreen
 	idBrowseTab
 	idPagesTab
@@ -43,6 +43,10 @@ const (
 	idExportScope
 	idExportPreset
 	idPressICC
+	idToggleDetails
+	idFileSign
+	idFileRun
+	idFileDetails
 )
 
 const (
@@ -58,15 +62,14 @@ const (
 )
 
 var workspaceTabs = []struct {
-	id, width int
-	name      string
-	needsPDF  bool
+	id       int
+	name     string
+	needsPDF bool
 }{
-	{idFileTab, 82, "Soubor", false},
-	{idBrowseTab, 109, "Zobrazení", false},
-	{idPagesTab, 94, "Stránky", false},
-	{idProofTab, 106, "Separace", true},
-	{idSignTab, 146, "Digitální podpis", true},
+	{idFileTab, "Soubor", false},
+	{idBrowseTab, "Zobrazení", false},
+	{idProofTab, "Separace", true},
+	{idSignTab, "Digitální podpis", true},
 }
 
 type panelItem struct {
@@ -124,35 +127,39 @@ func (a *app) setupWorkspace() bool {
 		return false
 	}
 
-	a.panelButton = a.button("Skrýt panel", idTogglePanel, 0, 0, 118, 0)
-	a.fullButton = a.button("Celá obrazovka", idFullscreen, 0, 0, 134, 0)
+	a.toolsToggle = a.button("Sbalit panel nástrojů", idToggleTools, 0, 0, sidebarRailWidth, 0)
+	a.detailsToggle = a.button("Rozbalit panel nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
-	for index, tab := range workspaceTabs {
-		style := uintptr(0)
-		if index == 0 {
-			style = wsGroup
-		}
-		a.modes[tab.id] = a.button(tab.name, tab.id, 0, 0, tab.width, style)
+	for _, tab := range workspaceTabs {
+		handle := a.button(tab.name, tab.id, 0, 0, toolPanelWidth-20, 0)
+		a.toolButtons[tab.id] = handle
+		a.panelButtons[handle] = true
 	}
+	a.sidebarTitle = a.label("", 0, 0, 298, true)
+	a.panelLabels[a.sidebarTitle] = true
+	for _, option := range fileOptions {
+		a.addDetailButton(option.id, option.label)
+	}
+	a.addDetailButton(idBrowseTab, "Náhled")
+	a.addDetailButton(idPagesTab, "Stránky")
 
 	a.view = newDocumentView(a)
 	a.view.buildToolbar()
 	a.beginPanel(idBrowseTab)
-	a.label("Zobrazení stránek", 16, 18, 290, true)
-	a.label("Rozvržení", 16, 55, 290, false)
-	a.view.flow = a.combo(idReaderFlow, 16, 77, 298, []string{"Souvisle", "Po stránkách"})
+	a.button("Zobrazit na celou obrazovku · F11", idFullscreen, 16, 16, 298, 0)
+	a.label("Režim zobrazení", 16, 66, 298, true)
+	a.view.flow = a.combo(idReaderFlow, 16, 88, 298, []string{"Souvisle", "Po stránkách"})
 	chooseCombo(a.view.flow, 1)
-	a.label("Rámeček PDF v náhledu", 16, 120, 290, false)
-	a.view.screenBox = a.combo(idReaderScreenBox, 16, 142, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
-	a.view.documentInfo = a.readout(16, 187, 298, 82)
-	a.label("Heslo k otevření PDF", 16, 292, 290, false)
-	a.password = a.edit(16, 315, 298, true)
-	a.button("Načíst znovu s heslem", idReload, 16, 353, 298, 0)
-	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 408, 298, false)
-	a.label("F11  ·  celá obrazovka", 16, 433, 298, false)
+	a.label("Rámeček PDF v náhledu", 16, 131, 298, false)
+	a.view.screenBox = a.combo(idReaderScreenBox, 16, 153, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
+	a.view.documentInfo = a.readout(16, 198, 298, 82)
+	a.label("Heslo k otevření PDF", 16, 302, 298, false)
+	a.password = a.edit(16, 325, 298, true)
+	a.button("Načíst znovu s heslem", idReload, 16, 363, 298, 0)
+	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 414, 298, false)
 
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
@@ -162,6 +169,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildExportPanel()
 	a.beginPanel(idSignTab)
 	a.buildSignPanel()
+	a.beginPanel(idFileDetails)
+	a.buildFilePanel()
 	a.addingTab, a.controlParent = 0, 0
 	a.layout()
 	a.updateActions()
@@ -296,11 +305,33 @@ func (a *app) profileKey() string {
 }
 
 func (a *app) activate(id int) {
-	if (id == idProofTab || id == idSignTab || id == idExportTab) && !a.documentTools {
-		return
-	}
 	old := a.mode
-	a.mode, a.panelHidden = id, false
+	switch id {
+	case idFileTab:
+		if a.tool != idFileTab {
+			a.mode = idOpen
+		}
+		a.tool = idFileTab
+	case idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument, idClosePDF:
+		if !a.fileOptionEnabled(id) {
+			return
+		}
+		a.tool, a.mode = idFileTab, id
+		if id == idFileSign {
+			a.mode = idSignTab
+		}
+	case idBrowseTab, idPagesTab:
+		if id == idPagesTab && !a.documentTools {
+			return
+		}
+		a.tool, a.mode = idBrowseTab, id
+	case idProofTab, idSignTab:
+		if !a.documentTools {
+			return
+		}
+		a.tool, a.mode = id, id
+	}
+	a.detailsCollapsed = false
 	if (old == idProofTab) != (id == idProofTab) {
 		a.view.reframe()
 	}
@@ -320,48 +351,41 @@ func (a *app) layout() {
 	if a.full {
 		a.viewport = size
 	} else {
-		right := a.width
-		if !a.panelHidden {
+		left, right := d(sidebarRailWidth), a.width-d(sidebarRailWidth)
+		if !a.toolsCollapsed {
+			left += d(toolPanelWidth)
+		}
+		if !a.detailsCollapsed {
 			right -= d(panelWidth)
 		}
-		a.viewport = rect{0, int32(d(headerHeight)), int32(right), int32(max(d(headerHeight+1), a.height-d(footerHeight)))}
+		a.viewport = rect{int32(left), int32(d(headerHeight)), int32(right), int32(max(d(headerHeight+1), a.height-d(footerHeight)))}
 		a.layoutHeader()
 		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
 		a.view.layoutToolbar()
-		place(a.sidebar, a.width-d(panelWidth), d(headerHeight), d(panelWidth), max(1, a.height-d(headerHeight+footerHeight)))
 	}
 	chrome := uintptr(5)
 	if a.full {
 		chrome = 0
 	}
-	for _, control := range []uintptr{a.panelButton, a.fullButton, a.status} {
-		showWindow.Call(control, chrome)
-	}
-	for _, tab := range workspaceTabs {
-		show := chrome
-		if tab.needsPDF && !a.documentTools {
-			show = 0
-		}
-		handle := a.modes[tab.id]
-		showWindow.Call(handle, show)
-		invalidate(handle)
-	}
+	showWindow.Call(a.status, chrome)
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}
 	a.view.showToolbar(chrome)
-	sidebar := chrome
-	if a.panelHidden {
-		sidebar = 0
-	}
-	showWindow.Call(a.sidebar, sidebar)
-	setText(a.panelButton, map[bool]string{true: "Zobrazit panel", false: "Skrýt panel"}[a.panelHidden])
-	a.layoutPanel()
+	a.layoutSidebars()
 	a.view.resize(a.viewport)
 	invalidate(a.window)
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if tab == idFileDetails && a.mode == idOpen {
+		if item.handle == a.filePath {
+			return item, false
+		}
+		if item.handle == a.fileRun {
+			item.y = 60
+		}
+	}
 	if tab != idExportTab {
 		return item, true
 	}
@@ -397,27 +421,31 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 
 func (a *app) panelMetrics() (int, int) {
 	height := 1
-	for index, item := range a.panelItems[a.mode] {
-		if placed, show := a.panelItemLayout(a.mode, index, item); show {
+	tab := a.detailsTab()
+	for index, item := range a.panelItems[tab] {
+		if placed, show := a.panelItemLayout(tab, index, item); show {
 			height = max(height, placed.y+placed.height+18)
 		}
 	}
-	available := max(1, (a.height-a.scale(headerHeight+footerHeight))*96/a.dpi)
+	var bounds rect
+	getClientRect.Call(a.sidebar, uintptr(unsafe.Pointer(&bounds)))
+	available := max(1, int(bounds.bottom)*96/a.dpi)
 	return height, available
 }
 
 func (a *app) layoutPanel() {
-	if a.full || a.panelHidden {
+	if a.full || a.detailsCollapsed {
 		return
 	}
 	height, available := a.panelMetrics()
-	offset := min(max(0, a.panelScroll[a.mode]), max(0, height-available))
-	a.panelScroll[a.mode] = offset
+	active := a.detailsTab()
+	offset := min(max(0, a.panelScroll[active]), max(0, height-available))
+	a.panelScroll[active] = offset
 	info := scrollInfo{size: uint32(unsafe.Sizeof(scrollInfo{})), mask: 7, maximum: int32(height - 1), page: uint32(available), position: int32(offset)}
 	user32.NewProc("SetScrollInfo").Call(a.sidebar, 1, uintptr(unsafe.Pointer(&info)), 1)
 	for tab, items := range a.panelItems {
 		for index, item := range items {
-			show := tab == a.mode
+			show := tab == active
 			if show {
 				item, show = a.panelItemLayout(tab, index, item)
 			}
@@ -433,19 +461,20 @@ func (a *app) layoutPanel() {
 }
 
 func (a *app) revealFocusedControl() {
-	if a.panelHidden || a.full {
+	if a.detailsCollapsed || a.full {
 		return
 	}
 	focus, _, _ := user32.NewProc("GetFocus").Call()
 	_, height := a.panelMetrics()
-	offset := a.panelScroll[a.mode]
-	for index, item := range a.panelItems[a.mode] {
+	tab := a.detailsTab()
+	offset := a.panelScroll[tab]
+	for index, item := range a.panelItems[tab] {
 		if item.handle != focus {
 			continue
 		}
-		item, show := a.panelItemLayout(a.mode, index, item)
+		item, show := a.panelItemLayout(tab, index, item)
 		if show && (item.y < offset || item.y+item.height > offset+height) {
-			a.panelScroll[a.mode] = max(0, min(item.y, item.y+item.height-height))
+			a.panelScroll[tab] = max(0, min(item.y, item.y+item.height-height))
 			a.layoutPanel()
 		}
 		return
@@ -475,12 +504,13 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 		return 0
 	case 0x020a: // WM_MOUSEWHEEL
-		a.panelScroll[a.mode] -= int(int16(wParam>>16)) * 62 / 120
+		a.panelScroll[a.detailsTab()] -= int(int16(wParam>>16)) * 62 / 120
 		a.layoutPanel()
 		return 0
 	case 0x0115: // WM_VSCROLL
 		total, height := a.panelMetrics()
-		value := a.panelScroll[a.mode]
+		tab := a.detailsTab()
+		value := a.panelScroll[tab]
 		switch wParam & 0xffff {
 		case 0:
 			value -= 25
@@ -499,7 +529,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		case 7:
 			value = total
 		}
-		a.panelScroll[a.mode] = value
+		a.panelScroll[tab] = value
 		a.layoutPanel()
 		return 0
 	}
@@ -580,7 +610,11 @@ func (a *app) closeDocument() {
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	a.reportStatus("")
-	a.mode, a.panelHidden = idBrowseTab, true
+	if a.tool == idFileTab {
+		a.mode = idOpen
+	} else {
+		a.tool, a.mode = idBrowseTab, idBrowseTab
+	}
 	a.updateActions()
 	a.layout()
 }
@@ -602,7 +636,11 @@ func (a *app) openDocument(path, password string) {
 	if !a.mayReplaceDocument() {
 		return
 	}
-	a.mode, a.panelHidden = idBrowseTab, true
+	if a.tool == idFileTab {
+		a.mode = idOpen
+	} else {
+		a.tool, a.mode = idBrowseTab, idBrowseTab
+	}
 	a.loadDocument(path, password, info)
 }
 
@@ -651,24 +689,16 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab:
-		a.openFileMenu()
-	case idBrowseTab, idPagesTab, idProofTab, idExportTab, idSignTab:
+	case idFileTab, idBrowseTab, idPagesTab, idProofTab, idSignTab,
+		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument, idClosePDF:
 		a.activate(id)
-	case idOpen:
-		a.openDialog()
-	case idClosePDF:
-		a.closeDocument()
-	case idSaveDocument, idSaveDocumentAs:
-		a.saveDocument(id == idSaveDocumentAs)
-	case idPrintDocument:
-		a.printDocument()
-	case idShowOutput:
-		if !a.busy && a.lastOutput != "" {
-			a.openDocument(a.lastOutput, a.lastPassword)
-		}
-	case idTogglePanel:
-		a.panelHidden = !a.panelHidden
+	case idFileRun:
+		a.runFileOption()
+	case idToggleTools:
+		a.toolsCollapsed = !a.toolsCollapsed
+		a.layout()
+	case idToggleDetails:
+		a.detailsCollapsed = !a.detailsCollapsed
 		a.layout()
 	case idFullscreen:
 		a.toggleFullscreen()
@@ -801,10 +831,17 @@ func (a *app) updateActions() {
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
 		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab) {
-			a.activate(idBrowseTab)
-		} else {
-			a.layout()
+			if a.tool == idFileTab {
+				a.mode = idOpen
+			} else {
+				a.tool, a.mode = idBrowseTab, idBrowseTab
+			}
 		}
+		a.layout()
+	}
+	setEnabled(a.detailButtons[idPagesTab], documentReady)
+	if a.tool == idFileTab {
+		a.updateFileOptions()
 	}
 	ready := !a.busy && documentReady
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton} {
@@ -937,6 +974,14 @@ func (a *app) handleInput(msg *winMessage) bool {
 		if contains(a.viewport, pos.x, pos.y) {
 			a.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
 			return true
+		}
+		if !a.full && !a.detailsCollapsed && pos.x >= a.viewport.right+int32(a.scale(sidebarRailWidth)) && pos.x < int32(a.width) &&
+			pos.y >= a.viewport.top && pos.y < a.viewport.bottom && msg.window != a.sidebar {
+			child, _, _ := user32.NewProc("IsChild").Call(a.sidebar, msg.window)
+			if child == 0 {
+				sendMessage.Call(a.sidebar, uintptr(msg.message), msg.wParam, msg.lParam)
+				return true
+			}
 		}
 	}
 	if msg.message != 0x0100 {

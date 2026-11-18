@@ -2,7 +2,7 @@
 
 Česká utilita pro přípravu PDF k tisku a práci s digitálními podpisy na Windows x64. Převádí dokumenty na desku K, text na křivky a procesní barvy do profilů CMYK, včetně FOGRA39, 47, 51, 52 a 54.
 
-PDF se otevírá přímo v hlavním okně. Podporuje souvislé a stránkové čtení, přiblížení ke kurzoru pomocí Ctrl a kolečka a celoobrazovkový režim. Horní záložky přepínají nástroje v postranním panelu.
+PDF se otevírá přímo v hlavním okně. Podporuje souvislé a stránkové čtení, přiblížení ke kurzoru pomocí Ctrl a kolečka a celoobrazovkový režim. Nástroje se volí vlevo a jejich nastavení se zobrazí vpravo. Oba panely lze samostatně sbalit.
 
 Editor umožňuje otáčet a přesouvat stránky a uložit upravenou kopii. Tiskový náhled zobrazuje výstupní záměr, procesní i přímé desky a jejich pokrytí. Panel **Export** nabízí výběr stran, předvolby pro tisk a digitální použití i vlastní parametry převodu.
 

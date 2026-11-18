@@ -60,47 +60,19 @@ func (a *app) paintBrand(dc uintptr, block rect) {
 
 func (a *app) layoutHeader() {
 	const windowButtonsWidth = 108
-	const compactActions = 2 * 36
-	const widePanel, wideFullscreen = 138, 144
 	d := a.scale
-	tabWidth := 0
-	for _, tab := range workspaceTabs {
-		if !tab.needsPDF || a.documentTools {
-			tabWidth += tab.width
-		}
-	}
 	a.headerBrand = 200
-	if a.width < d(a.headerBrand+tabWidth+compactActions+windowButtonsWidth+6) {
-		a.headerBrand = 168
-	}
-	compactPages := a.width < d(a.headerBrand+tabWidth+compactActions+windowButtonsWidth+6)
-	x := a.headerBrand
-	for _, tab := range workspaceTabs {
-		if !tab.needsPDF || a.documentTools {
-			width := tab.width
-			if tab.id == idPagesTab && compactPages {
-				width = 42
-			}
-			place(a.modes[tab.id], d(x), d(8), d(width-2), d(34))
-			x += width
-		}
-	}
-	a.headerTabs = d(x)
-
-	panel, full := 36, 36
-	if a.width-a.headerTabs >= d(windowButtonsWidth+widePanel+wideFullscreen+20) {
-		panel, full = widePanel, wideFullscreen
-	}
-	a.headerActions = a.width - d(windowButtonsWidth+panel+full+4)
-	place(a.panelButton, a.headerActions, d(8), d(panel-2), d(34))
-	place(a.fullButton, a.width-d(windowButtonsWidth+full+4), d(8), d(full-2), d(34))
+	a.windowButtonStart = a.width - d(windowButtonsWidth)
 	for i, handle := range a.windowButtons {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
 		invalidate(handle)
 	}
 }
 
-var headerIcons = map[int][][]point{
+var toolIcons = map[int][][]point{
+	idFileTab: {
+		{{1, 4}, {6, 4}, {8, 6}, {17, 6}, {17, 16}, {1, 16}, {1, 4}},
+	},
 	idBrowseTab: {
 		{{1, 9}, {5, 5}, {9, 4}, {13, 5}, {17, 9}},
 		{{1, 9}, {5, 13}, {9, 14}, {13, 13}, {17, 9}},
@@ -121,12 +93,6 @@ var headerIcons = map[int][][]point{
 		{{11, 4}, {14, 7}},
 		{{9, 16}, {17, 16}},
 	},
-	idTogglePanel: {
-		{{1, 2}, {17, 2}, {17, 16}, {1, 16}, {1, 2}},
-		{{11, 2}, {11, 16}},
-		{{13, 6}, {15, 6}},
-		{{13, 10}, {15, 10}},
-	},
 	idFullscreen: {
 		{{1, 6}, {1, 1}, {6, 1}},
 		{{12, 1}, {17, 1}, {17, 6}},
@@ -135,31 +101,20 @@ var headerIcons = map[int][][]point{
 	},
 }
 
-func (a *app) drawHeaderIconLabel(item *buttonDraw, color paletteColor) bool {
-	if int(item.controlID) == idFileTab {
-		bounds := item.bounds
-		a.arrow(item.dc, int(bounds.right)-a.scale(11), int(bounds.top+bounds.bottom)/2, color)
-		bounds.right -= int32(a.scale(18))
-		drawText(item.dc, getText(item.handle), bounds, a.labelFont, color, 1)
-		return true
-	}
-	paths := headerIcons[int(item.controlID)]
+func (a *app) drawToolIconLabel(item *buttonDraw, color paletteColor) bool {
+	paths := toolIcons[int(item.controlID)]
 	if len(paths) == 0 {
 		return false
 	}
 	bounds := item.bounds
 	size := int32(a.scale(18))
-	iconOnly := bounds.right-bounds.left < int32(a.scale(74))
 	left := bounds.left + int32(a.scale(9))
-	if iconOnly {
-		left = (bounds.left + bounds.right - size) / 2
-	}
 	top := (bounds.top + bounds.bottom - size) / 2
 	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(1))), color.win())
 	old, _, _ := gdiSelect.Call(item.dc, pen)
 	polyline := gdi32.NewProc("Polyline")
 	for _, path := range paths {
-		var shape [6]point
+		var shape [8]point
 		for index, vertex := range path {
 			shape[index] = point{left + int32(a.scale(int(vertex.x))), top + int32(a.scale(int(vertex.y)))}
 		}
@@ -167,10 +122,9 @@ func (a *app) drawHeaderIconLabel(item *buttonDraw, color paletteColor) bool {
 	}
 	gdiSelect.Call(item.dc, old)
 	gdiDelete.Call(pen)
-	if !iconOnly {
-		bounds.left = left + size + int32(a.scale(7))
-		drawText(item.dc, getText(item.handle), bounds, a.labelFont, color, 0)
-	}
+	bounds.left = left + size + int32(a.scale(7))
+	bounds.right -= int32(a.scale(5))
+	drawText(item.dc, getText(item.handle), bounds, a.labelFont, color, 0x8000)
 	return true
 }
 
@@ -305,7 +259,7 @@ func (a *app) hitTest(hwnd, param uintptr) uintptr {
 			return 15
 		}
 	}
-	if y < a.scale(headerHeight) && (x < a.scale(a.headerBrand) || (x >= a.headerTabs && x < a.headerActions)) {
+	if y < a.scale(headerHeight) && x < a.windowButtonStart {
 		return 2
 	}
 	return 1
