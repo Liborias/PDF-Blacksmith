@@ -213,7 +213,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 			selectedDetail = a.activeFileOption()
 		}
 		active := (tool && id == a.tool) || (a.detailButtons[id] == item.handle && id == selectedDetail) ||
-			a.primaryButtons[item.handle]
+			a.primaryButtons[item.handle] || (id == idReaderDeletePages && a.view.pageDrag.overDelete)
 		body, edge := paletteColor{42, 42, 47}, divider
 		if tool {
 			body, edge = background, background

@@ -751,9 +751,9 @@ def selected_pages(view, count):
 
 def document_order(view, pages):
     order = view.get("order", list(range(1, pages + 1)))
-    if (not isinstance(order, list) or len(order) != pages
-            or any(type(page) is not int for page in order)
-            or set(order) != set(range(1, pages + 1))):
+    if (not isinstance(order, list) or not order or len(order) > pages
+            or any(type(page) is not int or not 1 <= page <= pages for page in order)
+            or len(set(order)) != len(order)):
         raise UserError("Pořadí stran neodpovídá otevřenému PDF.")
     return order
 
@@ -789,12 +789,12 @@ def inspect_document(src, request, *, raster=False):
             raise UserError("Vstupní PDF nemá žádné strany.")
         if request["action"] == "describe":
             return describe(pdf)
-        if request["action"] == "screen" and raster:
+        if request["action"] in ("screen", "thumbnail") and raster:
             rendered = render_screen(pdf, src, view, password)
             if rendered is not None:
                 return rendered
         exe = ghostscript_path(request)
-        if request["action"] in ("screen", "print_page"):
+        if request["action"] in ("screen", "thumbnail", "print_page"):
             return screen_page(pdf, src, view, exe, run_ghostscript, stage_for_render,
                                printed=request["action"] == "print_page")
         if request["action"] == "scan":
@@ -807,7 +807,8 @@ def inspect_document(src, request, *, raster=False):
 
 def save_page_edits(src, request):
     view = request.get("view", {})
-    with output_file(src, request) as pending, open_pdf(src, request.get("pdf_password", "")) as pdf:
+    password = request.get("pdf_password", "")
+    with output_file(src, request) as pending, open_pdf(src, password) as pdf:
         pages = list(pdf.pages)
         order = document_order(view, len(pages))
         rotations = page_rotations(view.get("rotations", []), len(pages))
@@ -815,8 +816,13 @@ def save_page_edits(src, request):
         for page, angle in zip(pages, rotations):
             if angle:
                 page.rotate(angle, relative=True)
-        apply_page_order(pdf, pages, order)
-        pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+        if len(order) == len(pages):
+            apply_page_order(pdf, pages, order)
+            pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+        else:
+            with (open_pdf(src, password) if pdf.is_encrypted else pikepdf.Pdf.new()) as kept:
+                copy_page_subset(pdf, kept, [number - 1 for number in order],
+                                 subset_attributes(pdf), pending, keep_document_options=True)
     return "Uložena upravená kopie PDF."
 
 
@@ -829,33 +835,56 @@ def save_document(src, request):
     return "PDF bylo uloženo."
 
 
-def save_split_page(source, single, index, rotation, attributes, destination):
+def subset_attributes(pdf):
+    return {key: pdf.make_indirect(pdf.Root[key]) for key in ("/OutputIntents", "/Metadata")
+            if isinstance(pdf.Root.get(key), (pikepdf.Array, pikepdf.Stream))}
+
+
+def copy_page_subset(source, target, indices, attributes, destination, *, rotation=0, keep_document_options=False):
     if source.is_encrypted:
         # Retain qpdf's original encryption parameters while rebuilding the catalog.
-        del single.pages[:]
-        for key in set(single.Root.keys()) - {"/Type", "/Pages"}:
-            del single.Root[key]
-    single.add_pages_from(source, [index])
+        del target.pages[:]
+        for key in set(target.Root.keys()) - {"/Type", "/Pages"}:
+            del target.Root[key]
+    target.add_pages_from(source, indices)
     if rotation:
-        single.pages[0].rotate(rotation, relative=True)
+        target.pages[0].rotate(rotation, relative=True)
     if "/Lang" in source.Root:
-        single.Root.Lang = str(source.Root.Lang)
+        target.Root.Lang = str(source.Root.Lang)
     if "/PageLabels" in source.Root:
-        label = source.pages[index].label
-        single.Root.PageLabels = pikepdf.Dictionary(Nums=[0, pikepdf.Dictionary(P=label)])
+        labels = []
+        for position, index in enumerate(indices):
+            labels.extend([position, pikepdf.Dictionary(P=source.pages[index].label)])
+        target.Root.PageLabels = pikepdf.Dictionary(Nums=pikepdf.Array(labels))
     for key, attribute in attributes.items():
-        single.Root[key] = single.copy_foreign(attribute)
-    single.docinfo = single.copy_foreign(source.docinfo)
+        target.Root[key] = target.copy_foreign(attribute)
+    if keep_document_options:
+        for key in ("/PageLayout", "/PageMode"):
+            if isinstance(source.Root.get(key), pikepdf.Name):
+                target.Root[key] = source.Root[key]
+        preferences = source.Root.get("/ViewerPreferences")
+        if isinstance(preferences, pikepdf.Dictionary):
+            target.Root.ViewerPreferences = target.copy_foreign(source.make_indirect(preferences))
+        names = source.Root.get("/Names", {})
+        files = names.get("/EmbeddedFiles") if isinstance(names, pikepdf.Dictionary) else None
+        if isinstance(files, pikepdf.Dictionary):
+            if "/Names" not in target.Root:
+                target.Root.Names = pikepdf.Dictionary()
+            target.Root.Names.EmbeddedFiles = target.copy_foreign(source.make_indirect(files))
+        associated_files = source.Root.get("/AF")
+        if isinstance(associated_files, pikepdf.Array):
+            target.Root.AF = target.copy_foreign(source.make_indirect(associated_files))
+    target.docinfo = target.copy_foreign(source.docinfo)
     # Document-level conformance does not carry over automatically to an extracted page.
-    clear_pdfx_claim(single)
-    if "/Metadata" in single.Root:
-        with single.open_metadata(set_pikepdf_as_editor=False, update_docinfo=False) as metadata:
+    clear_pdfx_claim(target)
+    if "/Metadata" in target.Root:
+        with target.open_metadata(set_pikepdf_as_editor=False, update_docinfo=False) as metadata:
             for namespace in ("pdfaid", "pdfuaid"):
                 for name in ("part", "conformance", "rev", "amd", "corr"):
                     key = f"{namespace}:{name}"
                     if key in metadata:
                         del metadata[key]
-    single.save(destination, encryption=source.is_encrypted,
+    target.save(destination, encryption=source.is_encrypted,
                 min_version=(source.pdf_version, source.extension_level), fix_metadata_version=False)
 
 
@@ -902,8 +931,8 @@ def split_document(src, request):
             raise UserError("Vstupní PDF nemá žádné strany.")
         order = document_order(view, count)
         rotations = page_rotations(view.get("rotations", [0] * count), count)
-        pages = selected_pages(view, count) or range(1, count + 1)
-        width = max(3, len(str(count)))
+        pages = selected_pages(view, len(order)) or range(1, len(order) + 1)
+        width = max(3, len(str(len(order))))
         outputs = [(order[number - 1] - 1, destination / f"{src.stem}-strana-{number:0{width}d}.pdf")
                    for number in pages]
         for _, target in outputs:
@@ -911,14 +940,13 @@ def split_document(src, request):
                 raise UserError(f"Soubor {target.name} už existuje. Vyberte jinou složku.")
 
         prepare_edit(pdf, request)
-        attributes = {key: pdf.make_indirect(pdf.Root[key]) for key in ("/OutputIntents", "/Metadata")
-                      if isinstance(pdf.Root.get(key), (pikepdf.Array, pikepdf.Stream))}
+        attributes = subset_attributes(pdf)
         with tempfile.TemporaryDirectory(prefix="pdftisk-", dir=destination) as folder:
             staged = []
             for index, target in outputs:
                 draft = Path(folder) / target.name
                 with (open_pdf(src, password) if pdf.is_encrypted else pikepdf.Pdf.new()) as single:
-                    save_split_page(pdf, single, index, rotations[index], attributes, draft)
+                    copy_page_subset(pdf, single, [index], attributes, draft, rotation=rotations[index])
                 staged.append((draft, target))
             if not same_file_state(original, src.stat()):
                 raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
@@ -932,7 +960,7 @@ def dispatch(request, *, raster=False):
         raise UserError("Vyberte existující soubor PDF.")
     operation = {"transform": transform, "sign": sign, "verify": verify,
                  "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
-                 "screen": inspect_document, "print_page": inspect_document,
+                 "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,
                  "edit_pages": save_page_edits, "save_document": save_document,
                  "split": split_document}.get(request.get("action"))
     if operation is None:

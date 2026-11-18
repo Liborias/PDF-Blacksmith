@@ -50,6 +50,7 @@ const (
 	idSplitTab
 	idSplitScope
 	idSplitRun
+	idPageOrderTool
 )
 
 const (
@@ -74,6 +75,7 @@ var workspaceTabs = []struct {
 	{idProofTab, "Separace", true},
 	{idSignTab, "Digitální podpis", true},
 	{idSplitTab, "Rozdělit PDF", true},
+	{idPageOrderTool, "Pořadí stránek", true},
 }
 
 var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr"}
@@ -331,6 +333,11 @@ func (a *app) activate(id int) {
 			return
 		}
 		a.tool, a.mode = idBrowseTab, id
+	case idPageOrderTool:
+		if !a.documentTools {
+			return
+		}
+		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idProofTab, idSignTab, idSplitTab:
 		if !a.documentTools {
 			return
@@ -342,6 +349,11 @@ func (a *app) activate(id int) {
 		a.view.reframe()
 	}
 	a.layout()
+	if a.mode == idPagesTab {
+		a.view.schedule()
+	} else if old == idPagesTab {
+		a.view.endPageDrag()
+	}
 }
 
 func (a *app) layout() {
@@ -686,7 +698,7 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab, idBrowseTab, idPagesTab, idProofTab, idSignTab, idSplitTab,
+	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab,
 		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.activate(id)
 	case idFileRun:
@@ -697,6 +709,7 @@ func (a *app) command(id, notification int) {
 	case idToggleDetails:
 		a.detailsCollapsed = !a.detailsCollapsed
 		a.layout()
+		a.view.schedule()
 	case idFullscreen:
 		a.toggleFullscreen()
 	case idMinimize:
@@ -838,7 +851,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab) {
 			if a.tool == idFileTab {
 				a.mode = idOpen
 			} else {
@@ -1003,6 +1016,18 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if msg.message != 0x0100 {
 		return false
+	}
+	if msg.wParam == 0x0d && msg.window == a.view.moveTarget {
+		a.view.moveToPosition()
+		return true
+	}
+	if msg.wParam == 0x2e && msg.window == a.view.pageList {
+		a.view.deleteSelectedPages()
+		return true
+	}
+	if msg.wParam == 0x1b && a.view.pageDrag.pressed {
+		a.view.endPageDrag()
+		return true
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)
 	if ctrl&0x8000 != 0 {

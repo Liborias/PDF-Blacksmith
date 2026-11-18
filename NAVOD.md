@@ -6,7 +6,7 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
 
-Levý panel slouží k výběru nástroje, v pravém se zobrazí jeho nastavení. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis** a **Rozdělit PDF**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí. Delší výpisy lze posouvat kolečkem nebo šedým jezdcem.
+Levý panel slouží k výběru nástroje, v pravém se zobrazí jeho nastavení. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí. Delší výpisy lze posouvat kolečkem nebo šedým jezdcem.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete křížkem vedle jeho názvu v horní liště nebo zkratkou **Ctrl+W**. Pokud máte neuložené změny, aplikace se před zavřením zeptá, zda je zahodit.
@@ -76,13 +76,22 @@ Export provede převod procesních barev CMYK a připojí zvolený profil ICC ja
 
 ## Náhled PDF a tiskové separace
 
-Správa stran je v **Zobrazení → Stránky**. Nástroj **Separace** přepne náhled na simulaci tisku a vpravo zobrazí její nastavení.
+Nástroj **Separace** přepne náhled na simulaci tisku a vpravo zobrazí její nastavení.
 
 - Tiskovou oblast lze přepnout na celý arch, ořez pro zobrazení, čistý formát nebo spadávku.
 - Tiskový náhled simuluje přetisky. Panel uvádí výstupní záměr PDF a použitý profil CMYK. Simulaci lze přepnout na některý z profilů ECI.
 - V seznamu desek jsou Cyan, Magenta, Yellow, Black a rozpoznané přímé barvy. Jakmile se seznam zobrazí, kliknutím na řádek zapnete nebo vypnete příslušnou desku. Náhled se skládá z vybraných desek. Údaje ukazují podíl bodů s nenulovým krytím a nejvyšší tón v každé desce při zobrazeném rozlišení.
 - **Zkontrolovat celý dokument** vypíše desky, na kterých jsou při vykreslení skutečně tiskové body, a čísla jejich stran. Kontrola bere v úvahu vybranou tiskovou oblast a profil simulace. U velkých formátů může snížit vzorkovací rozlišení a v přehledu uvede použitou hodnotu.
-- V editoru lze stránku otočit o 90°, přesunout ji o jednu pozici nebo poslední úpravu vrátit. **Uložit upravenou kopii…** uloží změny v PDF se zachováním obsahu stránek a odkazů na ně. Rozpracované otočení a pořadí se promítnou i do exportu. U podepsaného souboru si aplikace vyžádá potvrzení uložení kopie bez původních podpisů.
+
+## Pořadí a náhledy stránek
+
+Otevřete vlevo **Pořadí stránek** nebo **Zobrazení → Stránky**. Náhledy jsou vpravo pod ovládáním. Kliknutí otevře vybranou stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah.
+
+- **Přesunout** vloží vybrané stránky na zadanou pozici. Zadané číslo bude výsledná pozice první přesunuté strany. Stejného výsledku dosáhnete přetažením vybraných náhledů k vínové čáře mezi stránkami.
+- **Smazat vybrané** odstraní výběr z rozpracovaného dokumentu. Použít lze také klávesu **Delete** při zaměření seznamu nebo přetažení náhledů na tlačítko. Dokument musí obsahovat alespoň jednu stranu.
+- **Vrátit změnu** obnoví stav před posledním přesunem, smazáním nebo otočením. **Uložit upravenou kopii…** uloží úpravy do nového PDF. Rozpracované pořadí platí i pro export a rozdělení. U podepsaného souboru aplikace zobrazí potvrzení uložení bez původních podpisů.
+
+Po smazání stránek se při uložení přenese výstupní záměr ICC a označení původní shody PDF/X se odstraní. Pro vytvoření nového PDF/X použijte příslušnou předvolbu v **Soubor → Export**.
 
 ## Rozdělení PDF po stránkách
 

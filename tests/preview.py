@@ -255,6 +255,30 @@ def check_proofs(exe, folder):
     with Pdf.open(split_folder / f"{encrypted.stem}-strana-002.pdf", password="cteni") as pdf:
         assert pdf.is_encrypted and len(pdf.pages) == 1 and pdf.pages[0].label == "S-2"
 
+    without_page = {"order": [3, 1], "rotations": [0, 0, 90]}
+    deleted = folder / "bez druhé strany.pdf"
+    call(exe, sep, "save_document", output=str(deleted), view=without_page)
+    with Pdf.open(deleted) as pdf:
+        assert [page.label for page in pdf.pages] == ["S-3", "S-1"]
+        assert pdf.pages[0].Rotate == 90 and not pdf.check_pdf_syntax()
+        assert not any(isinstance(obj, Stream) and b"1 0 0 0 k" in obj.read_bytes() for obj in pdf.objects)
+    call(exe, encrypted, "save_document", overwrite=True, output=str(deleted),
+         pdf_password="cteni", view=without_page)
+    with Pdf.open(deleted, password="cteni") as pdf:
+        assert pdf.is_encrypted and [page.label for page in pdf.pages] == ["S-3", "S-1"]
+
+    call(exe, sep, "transform", preset="export", overwrite=True, output=str(deleted),
+         view={**without_page, "pages": [2]})
+    with Pdf.open(deleted) as pdf:
+        assert len(pdf.pages) == 1 and pdf.pages[0].label == "S-1"
+
+    after_delete = folder / "rozdělení po smazání"
+    after_delete.mkdir()
+    call(exe, sep, "split", output_dir=str(after_delete), view={**without_page, "pages": [2]})
+    with Pdf.open(after_delete / f"{sep.stem}-strana-002.pdf") as pdf:
+        assert len(pdf.pages) == 1 and pdf.pages[0].label == "S-1"
+    call(exe, sep, "split", expected="error", output_dir=str(after_delete), view={**without_page, "pages": [3]})
+
     src = folder / "obrázek.pdf"
     output = folder / "nastavení.pdf"
     with Pdf.new() as pdf:

@@ -396,6 +396,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmReaderFinished:
 		a.view.finished(<-a.view.jobs)
 		return 0
+	case wmThumbnailUpdate:
+		a.view.schedule()
+		return 0
 	case 0x0113: // WM_TIMER
 		if wParam == readerZoomTimer && a.view != nil {
 			a.view.finishZoom()

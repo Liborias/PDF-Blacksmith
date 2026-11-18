@@ -125,12 +125,15 @@ type scrollPane struct {
 }
 
 var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
+	if v := window.view; v != nil && hwnd == v.pageList && v.pageListMouse(message, wParam, lParam) {
+		return 0
+	}
 	result, _, _ := defSubclass.Call(hwnd, uintptr(message), wParam, lParam)
 	if pane := window.scrollPanes[hwnd]; pane != nil {
 		switch message {
 		case 0x000c: // WM_SETTEXT
 			pane.reflow()
-		case 0x00b6, 0x00b7, 0x0113, 0x0100, 0x0102, 0x0201, 0x0202, 0x0186, 0x0197:
+		case 0x00b6, 0x00b7, 0x0113, 0x0100, 0x0102, 0x0201, 0x0202, 0x0186, 0x0197, lbSetCaretIndex:
 			pane.syncScrollbar()
 		case 0x0200: // Dragging a text selection can scroll the native edit control.
 			if wParam&1 != 0 {
@@ -180,7 +183,11 @@ func (pane *scrollPane) syncScrollbar() {
 		return
 	}
 	total, visible, position := pane.lines()
+	old := pane.bar.position
 	pane.bar.update(total, visible, position, true)
+	if v := window.view; v != nil && pane.handle == v.pageList && old != pane.bar.position {
+		postMessage.Call(window.window, wmThumbnailUpdate, 0, 0)
+	}
 }
 
 func (pane *scrollPane) reflow() {
