@@ -855,18 +855,21 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 		}
 		if job.result.Status == "ok" && number > 0 && job.result.View != nil {
 			var err error
-			job.frame.image, err = decodePrintBitmap(job.result.View.Image)
+			view := job.result.View
+			if view.RasterWidth != 0 {
+				job.frame.image = &printBitmap{width: view.RasterWidth, height: view.RasterHeight, pixels: view.Image}
+			} else {
+				job.frame.image, err = decodePrintBitmap(view.Image)
+			}
 			if err != nil {
 				job.result = operationError("Obraz náhledu se nepodařilo načíst.")
 			} else if tile != nil && (job.frame.image.width != tile.Width || job.frame.image.height != tile.Height) {
 				job.frame.image = nil
 				job.result = operationError("Rozměry vykresleného výřezu neodpovídají náhledu.")
 			} else {
-				job.frame.proof, job.frame.pixels = job.result.View, pixels
+				job.frame.proof, job.frame.pixels = view, pixels
 			}
-			if job.frame.proof != nil {
-				job.frame.proof.Image = nil
-			}
+			view.Image = nil
 		}
 		v.jobs <- job
 		postMessage.Call(v.app.window, wmReaderFinished, 0, 0)

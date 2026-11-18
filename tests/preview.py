@@ -9,7 +9,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
-from PIL import Image
+from PIL import Image, ImageChops
 from pikepdf import Array, Dictionary, Encryption, Name, Pdf, Stream
 
 
@@ -63,6 +63,7 @@ def check_screen_detail(exe, folder):
 
     dimensions = call(exe, fixture, "describe")["view"]["sizes"][0]
     assert dimensions["crop"] == dimensions["trim"] == [432, 288]
+    screen_views = []
     for zoom, rotation, box in ((2, 0, "crop"), (3, 90, "trim"), (7, 270, "crop")):
         # The full-page reference at the same scale models both the PDF's own
         # rotation and a pending rotation made in the reader.
@@ -76,6 +77,41 @@ def check_screen_detail(exe, folder):
         assert detail.size == expected.size
         assert detail.tobytes() == expected.tobytes()
         assert detail.getextrema() != ((255, 255),) * 3
+        screen_views.extend((view, {**view, "region": region}))
+
+    # The desktop stream mixes packed screen frames and ordinary JSON replies.
+    # Use an invalid Ghostscript path for screen requests to require PDFium.
+    request = dict(input=str(fixture), action="screen", ghostscript=str(folder / "missing"))
+    requests = [{**request, "view": view} for view in screen_views]
+    requests.extend(({**request, "view": {"region": {"zoom": 100}}},
+                     {**request, "action": "preview", "ghostscript": exe},
+                     {**request, "action": "describe"}))
+    lines = b"".join(json.dumps(req).encode("ascii") + b"\n" for req in requests)
+    response = subprocess.run([sys.executable, str(ROOT / "engine.py"), "--reader-stream"],
+                              input=lines, capture_output=True, check=True, timeout=30)
+    replies = BytesIO(response.stdout)
+    for index in range(0, len(screen_views), 2):
+        rendered = []
+        for _ in range(2):
+            frame = json.loads(replies.readline())
+            assert frame["status"] == "ok", frame
+            view = frame["view"]
+            size = (view["raster_width"], view["raster_height"])
+            rendered.append(Image.frombytes("RGB", size, replies.read(size[0]*size[1]*4), "raw", "BGRX", 0, 1))
+        full, detail = rendered
+        assert max(full.size) == screen_views[index]["pixels"]
+        r = screen_views[index+1]["region"]
+        x, y, w, h = r["x"], r["y"], r["width"], r["height"]
+        assert detail.size == (w, h)
+        assert detail.getextrema() != ((255, 255),) * 3
+        expected = full.crop((x, y, x+w, y+h))
+        # Clipping antialiased paths can round individual channels by one level.
+        assert max(hi for _, hi in ImageChops.difference(detail, expected).getextrema()) <= 1
+    assert json.loads(replies.readline())["status"] == "error"
+    proof = json.loads(replies.readline())
+    assert proof["status"] == "ok" and proof["view"]["plates"] and proof["view"]["image"]
+    assert json.loads(replies.readline())["view"]["sizes"][0] == dimensions
+    assert replies.read() == b""
 
 
 def check_plate_switching(exe, folder):

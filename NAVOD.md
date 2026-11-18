@@ -1,6 +1,6 @@
 # PDF Blacksmith
 
-Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. Ghostscript a Python jsou součástí aplikace. Při prvním zpracování se rozbalí do `%LOCALAPPDATA%\PDF Blaksmith`.
+Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscript a Python jsou součástí aplikace. Při prvním zpracování se rozbalí do `%LOCALAPPDATA%\PDF Blaksmith`.
 
 ## Otevření a čtení PDF
 

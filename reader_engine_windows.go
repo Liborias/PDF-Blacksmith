@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ type readerProcess struct {
 	input   io.WriteCloser
 	output  io.ReadCloser
 	send    *json.Encoder
-	receive *json.Decoder
+	receive *bufio.Reader
 }
 
 func (e *readerEngine) start() (*readerProcess, error) {
@@ -38,7 +39,7 @@ func (e *readerEngine) start() (*readerProcess, error) {
 	}
 	e.mu.Unlock()
 
-	cmd, err := engineCommand("--stream")
+	cmd, err := engineCommand("--reader-stream")
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +63,32 @@ func (e *readerEngine) start() (*readerProcess, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("Zpracování náhledu se nepodařilo spustit.\n%w", err)
 	}
-	e.process = &readerProcess{cmd, input, output, json.NewEncoder(input), json.NewDecoder(output)}
+	e.process = &readerProcess{cmd, input, output, json.NewEncoder(input), bufio.NewReader(output)}
 	return e.process, nil
+}
+
+func (p *readerProcess) readResponse() (response, error) {
+	var result response
+	header, err := p.receive.ReadBytes('\n')
+	if err != nil {
+		return result, err
+	}
+	if err := json.Unmarshal(header, &result); err != nil {
+		return result, err
+	}
+	view := result.View
+	if view != nil && (view.RasterWidth != 0 || view.RasterHeight != 0) {
+		// Screen frames are packed, top-down BGRX pixels after the JSON line.
+		w, h := view.RasterWidth, view.RasterHeight
+		if w < 1 || h < 1 || w > screenRegionEdge || h > screenRegionEdge || w*h > 3200*3200 {
+			return result, fmt.Errorf("neplatné rozměry náhledu %d × %d", w, h)
+		}
+		view.Image = make([]byte, w*h*4)
+		if _, err := io.ReadFull(p.receive, view.Image); err != nil {
+			return result, err
+		}
+	}
+	return result, nil
 }
 
 func (e *readerEngine) run(req request) response {
@@ -71,9 +96,11 @@ func (e *readerEngine) run(req request) response {
 	if err != nil {
 		return operationError(err.Error())
 	}
-	var result response
-	if process.send.Encode(req) == nil && process.receive.Decode(&result) == nil && result.Status != "" {
-		return result
+	if process.send.Encode(req) == nil {
+		result, err := process.readResponse()
+		if err == nil && result.Status != "" {
+			return result
+		}
 	}
 	e.mu.Lock()
 	retry := e.process == process

@@ -8,7 +8,7 @@ Editor umožňuje otáčet a přesouvat stránky a uložit upravenou kopii. Tisk
 
 ## Použití
 
-Stáhněte `PDFBlaksmith.exe` z vydání a spusťte jej. Ghostscript je vestavěný. [Vydání](https://github.com/Liborias/PDF-Blacksmith/releases) · [Návod](NAVOD.md)
+Stáhněte `PDFBlaksmith.exe` z vydání a spusťte jej. Součástí aplikace je PDFium pro prohlížení a Ghostscript pro tiskové operace. [Vydání](https://github.com/Liborias/PDF-Blacksmith/releases) · [Návod](NAVOD.md)
 
 ## Vývoj
 

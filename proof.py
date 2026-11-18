@@ -119,7 +119,7 @@ def box_options(req):
     return attribute, [flag] if flag else []
 
 
-def page_size(page, box):
+def page_box(page, box):
     left, bottom, right, top = map(float, getattr(page, box))
     left, right = sorted((left, right))
     bottom, top = sorted((bottom, top))
@@ -127,6 +127,11 @@ def page_size(page, box):
         ml, mb, mr, mt = map(float, page.mediabox)
         left, right = max(left, min(ml, mr)), min(right, max(ml, mr))
         bottom, top = max(bottom, min(mb, mt)), min(top, max(mb, mt))
+    return left, bottom, right, top
+
+
+def page_size(page, box):
+    left, bottom, right, top = page_box(page, box)
     unit = float(page.obj.get("/UserUnit", 1))
     width, height = max(1, (right-left)*unit), max(1, (top-bottom)*unit)
     if int(page.obj.get("/Rotate", 0)) % 180 == 90:
@@ -156,7 +161,14 @@ def render_source(pdf, src, folder, stage):
     return str(src.resolve())
 
 
-def screen_region_args(page, box, rotation, region):
+def screen_target(req, printed):
+    target = req.get("pixels", 1850)
+    if type(target) is not int or not 400 <= target <= (4096 if printed else 3200):
+        raise ProofError("Rozlišení náhledu je neplatné.")
+    return target
+
+
+def screen_region(page, box, rotation, region):
     if not isinstance(region, dict):
         raise ProofError("Výřez náhledu je neplatný.")
     zoom = region.get("zoom")
@@ -171,6 +183,11 @@ def screen_region_args(page, box, rotation, region):
     rotated_width, rotated_height = (height, width) if rotation % 180 else (width, height)
     if x + w > rotated_width or y + h > rotated_height:
         raise ProofError("Výřez přesahuje stránku.")
+    return zoom, (x, y, w, h), (width, height)
+
+
+def screen_region_args(page, box, rotation, region):
+    zoom, (x, y, w, h), (width, height) = screen_region(page, box, rotation, region)
     # Undo the reader's draft rotation before placing the region on the device.
     if rotation == 90:
         x, y, w, h = y, height-x-w, h, w
@@ -188,9 +205,7 @@ def screen_region_args(page, box, rotation, region):
 def screen_page(pdf, src, req, exe, gs, stage, *, printed=False):
     page, rotation = page_options(pdf, req)
     box, args = box_options(req)
-    target = req.get("pixels", 1850)
-    if type(target) is not int or not 400 <= target <= (4096 if printed else 3200):
-        raise ProofError("Rozlišení náhledu je neplatné.")
+    target = screen_target(req, printed)
     if not printed and "region" in req:
         resolution = screen_region_args(pdf.pages[page-1], box, rotation, req["region"])
     else:

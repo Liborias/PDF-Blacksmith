@@ -14,6 +14,7 @@ import pikepdf
 from print_profiles import ProfileError, attach_intent, get_profile, source_cmyk
 from export_settings import export_settings, pdfwrite_settings
 from proof import ProofError, describe, page_proof, scan_plates, screen_page
+from reader_render import render_screen
 
 
 class UserError(Exception):
@@ -611,13 +612,18 @@ def document_order(view, pages):
     return order
 
 
-def inspect_document(src, request):
+def inspect_document(src, request, *, raster=False):
     view = request.get("view", {})
-    with open_pdf(src, request.get("pdf_password", "")) as pdf:
+    password = request.get("pdf_password", "")
+    with open_pdf(src, password) as pdf:
         if not len(pdf.pages):
             raise UserError("Vstupní PDF nemá žádné strany.")
         if request["action"] == "describe":
             return describe(pdf)
+        if request["action"] == "screen" and raster:
+            rendered = render_screen(pdf, src, view, password)
+            if rendered is not None:
+                return rendered
         exe = ghostscript_path(request)
         if request["action"] in ("screen", "print_page"):
             return screen_page(pdf, src, view, exe, run_ghostscript, stage_for_render,
@@ -666,7 +672,7 @@ def save_document(src, request):
     return "PDF bylo uloženo."
 
 
-def dispatch(request):
+def dispatch(request, *, raster=False):
     src = Path(request["input"])
     if not src.is_file():
         raise UserError("Vyberte existující soubor PDF.")
@@ -676,6 +682,8 @@ def dispatch(request):
                  "edit_pages": save_page_edits, "save_document": save_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
+    if operation is inspect_document:
+        return inspect_document(src, request, raster=raster)
     view = request.get("view", {})
     if request["action"] in ("transform", "sign") and "rotations" in view:
         # Keep draft edits in the same transaction as export or signing.
@@ -686,9 +694,12 @@ def dispatch(request):
     return operation(src, request)
 
 
-def respond(payload):
+def respond(payload, *, raster=False):
+    pixels = None
     try:
-        result = dispatch(json.loads(payload))
+        result = dispatch(json.loads(payload), raster=raster)
+        if raster and isinstance(result, dict):
+            pixels = result.pop("raster", None)
         response = {"status": "ok", "message": result} if isinstance(result, str) else {"status": "ok", "view": result}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
@@ -701,16 +712,21 @@ def respond(payload):
                     "Zkontrolujte přístup a zavřete soubor v jiné aplikaci."}
     except Exception as exc:
         response = {"status": "error", "message": f"PDF se nepodařilo zpracovat ({type(exc).__name__}).\n{str(exc)[:1600]}"}
-    return json.dumps(response, ensure_ascii=True)
+    return json.dumps(response, ensure_ascii=True), pixels
 
 
 def main():
     logging.disable(logging.CRITICAL)
-    if sys.argv[1:] == ["--stream"]:
-        for line in sys.stdin.buffer:
-            print(respond(line), flush=True)
-    else:
-        print(respond(sys.stdin.buffer.read()))
+    args = sys.argv[1:]
+    raster = args == ["--reader-stream"]
+    source, output = sys.stdin.buffer, sys.stdout.buffer
+    for line in source if raster or args == ["--stream"] else (source.read(),):
+        header, pixels = respond(line, raster=raster)
+        output.write(header.encode("ascii") + b"\n")
+        if pixels is not None:
+            output.write(pixels)
+        output.flush()
+        del header, pixels
 
 
 if __name__ == "__main__":

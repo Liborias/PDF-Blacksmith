@@ -76,6 +76,8 @@ type viewResponse struct {
 	OutputIntent string                  `json:"output_intent"`
 	Simulation   string                  `json:"simulation"`
 	Image        []byte                  `json:"image"`
+	RasterWidth  int                     `json:"raster_width"`
+	RasterHeight int                     `json:"raster_height"`
 	Plates       []plateInfo             `json:"plates"`
 	UsedPlates   []plateInfo             `json:"used_plates"`
 }
