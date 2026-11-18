@@ -4,7 +4,7 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. Ghostscript a Pyt
 
 ## Otevření a čtení PDF
 
-PDF otevřete přes záložku **Soubor** a volbu **Otevřít soubor…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Horní záložky přepínají nástroje v postranním panelu. **Separace** a **Digitální podpis** se objeví po načtení PDF.
+PDF otevřete přes rozbalovací nabídku **Soubor** a volbu **Otevřít soubor…**, zkratkou **Ctrl+O** nebo přetažením do okna. Dokument se zobrazí uprostřed. Postranní panel se otevře po výběru nástroje nebo volby s nastavením. **Separace** a **Digitální podpis** se objeví po načtení PDF.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V panelu **Zobrazení** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Panel **Zobrazení** ukazuje počet stránek v paměti. Dokument zavřete volbou **Soubor → Zavřít PDF** nebo zkratkou **Ctrl+W**.
@@ -12,9 +12,16 @@ PDF otevřete přes záložku **Soubor** a volbu **Otevřít soubor…**, zkratk
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Skrýt panel** přenechá dokumentu celou šířku okna. **F11** otevře samotné PDF přes celou obrazovku a **Esc** vrátí předchozí rozložení.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v panelu **Zobrazení** a použijte **Načíst znovu s heslem**.
 
+## Uložení a tisk
+
+- **Soubor → Uložit** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
+- **Soubor → Uložit jako…** nebo **Ctrl+Shift+S** uloží kopii a otevře ji jako aktuální dokument.
+- **Soubor → Tisk…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
+- **Soubor → Uložit podepsanou kopii…** otevře nastavení digitálního podpisu.
+
 ## Příprava pro tisk
 
-1. Otevřete PDF a zvolte záložku **Export**.
+1. Otevřete PDF a zvolte **Soubor → Export…**.
 2. V poli **Barevný výstup** zvolte stupně šedi pro desku K, cílový profil CMYK nebo zachování barev.
 3. Potřebujete-li text jako vektorové obrysy, zaškrtněte **Převést text na křivky**. Text v naskenované bitmapě zůstává součástí bitmapy.
 4. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte volbou **Soubor → Otevřít výstup**.

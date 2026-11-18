@@ -38,17 +38,19 @@ func (a *app) loadBrand() {
 
 func (a *app) paintBrand(dc uintptr) {
 	if a.logo != 0 {
-		size := uintptr(a.scale(36))
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.scale(8)), uintptr(a.scale((headerHeight-36)/2)), a.logo, size, size, 0, 0, 3)
+		rounded(dc, a.area(4, 4, 48, 46), a.scale(13), paletteColor{41, 29, 36}, paletteColor{64, 40, 50})
+		rounded(dc, a.area(7, 7, 45, 43), a.scale(10), paletteColor{65, 49, 56}, paletteColor{118, 77, 91})
+		size := uintptr(a.scale(34))
+		user32.NewProc("DrawIconEx").Call(dc, uintptr(a.scale(9)), uintptr(a.scale((headerHeight-34)/2)), a.logo, size, size, 0, 0, 3)
 	}
 	if a.brand == nil {
-		drawText(dc, "Blacksmith", a.area(47, 0, a.headerBrand-5, headerHeight), a.titleFont, textColor, 0)
+		drawText(dc, "Blacksmith", a.area(54, 0, a.headerBrand-18, headerHeight), a.titleFont, textColor, 0)
 		return
 	}
-	width := a.scale(a.headerBrand - 51)
+	width := a.scale(a.headerBrand - 77)
 	height := width * a.brand.height / a.brand.width
 	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
-	drawBitmap(dc, a.brand, a.scale(45), (a.scale(headerHeight)-height)/2, width, height)
+	drawBitmap(dc, a.brand, a.scale(54), (a.scale(headerHeight)-height)/2, width, height)
 }
 
 func (a *app) layoutHeader() {
@@ -61,9 +63,9 @@ func (a *app) layoutHeader() {
 			tabWidth += tab.width
 		}
 	}
-	a.headerBrand = 174
+	a.headerBrand = 200
 	if a.width < d(a.headerBrand+tabWidth+compactActions+windowButtonsWidth+6) {
-		a.headerBrand = 139
+		a.headerBrand = 168
 	}
 	x := a.headerBrand
 	for _, tab := range workspaceTabs {
@@ -113,6 +115,13 @@ var headerIcons = map[int][][]point{
 }
 
 func (a *app) drawHeaderIconLabel(item *buttonDraw, color paletteColor) bool {
+	if int(item.controlID) == idFileTab {
+		bounds := item.bounds
+		a.arrow(item.dc, int(bounds.right)-a.scale(11), int(bounds.top+bounds.bottom)/2, color)
+		bounds.right -= int32(a.scale(18))
+		drawText(item.dc, getText(item.handle), bounds, a.labelFont, color, 1)
+		return true
+	}
 	paths := headerIcons[int(item.controlID)]
 	if len(paths) == 0 {
 		return false
@@ -144,11 +153,12 @@ func (a *app) drawHeaderIconLabel(item *buttonDraw, color paletteColor) bool {
 	return true
 }
 
-func drawBitmap(dc uintptr, bitmap *printBitmap, x, y, width, height int) {
+func drawBitmap(dc uintptr, bitmap *printBitmap, x, y, width, height int) int32 {
 	header := bitmapHeader{size: 40, width: int32(bitmap.width), height: -int32(bitmap.height), planes: 1, bits: 32}
-	gdi32.NewProc("StretchDIBits").Call(dc, uintptr(x), uintptr(y), uintptr(width), uintptr(height), 0, 0,
+	lines, _, _ := gdi32.NewProc("StretchDIBits").Call(dc, uintptr(x), uintptr(y), uintptr(width), uintptr(height), 0, 0,
 		uintptr(bitmap.width), uintptr(bitmap.height), uintptr(unsafe.Pointer(&bitmap.pixels[0])),
 		uintptr(unsafe.Pointer(&header)), 0, 0x00cc0020)
+	return int32(lines)
 }
 
 func (a *app) maximized() bool {

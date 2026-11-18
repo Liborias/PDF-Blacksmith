@@ -36,6 +36,9 @@ const (
 	idVisible
 	idClosePDF
 	idFileTab
+	idSaveDocument
+	idSaveDocumentAs
+	idPrintDocument
 )
 
 const (
@@ -49,11 +52,10 @@ var workspaceTabs = []struct {
 	name      string
 	needsPDF  bool
 }{
-	{idFileTab, 61, "Soubor", false},
+	{idFileTab, 82, "Soubor", false},
 	{idBrowseTab, 83, "Zobrazení", false},
 	{idPagesTab, 67, "Stránky", false},
 	{idProofTab, 106, "Separace", true},
-	{idExportTab, 62, "Export", false},
 	{idSignTab, 146, "Digitální podpis", true},
 }
 
@@ -125,12 +127,6 @@ func (a *app) setupWorkspace() bool {
 
 	a.view = newDocumentView(a)
 	a.view.buildToolbar()
-	a.beginPanel(idFileTab)
-	a.open = a.button("Otevřít soubor…   (Ctrl+O)", idOpen, 16, 18, 298, 0)
-	a.primaryButtons[a.open] = true
-	a.outputButton = a.button("Otevřít výstup", idShowOutput, 16, 61, 298, 0)
-	a.closePDF = a.button("Zavřít PDF   (Ctrl+W)", idClosePDF, 16, 104, 298, 0)
-
 	a.beginPanel(idBrowseTab)
 	a.label("Zobrazení stránek", 16, 18, 290, true)
 	a.label("Rozvržení", 16, 55, 290, false)
@@ -154,7 +150,7 @@ func (a *app) setupWorkspace() bool {
 	a.beginPanel(idSignTab)
 	a.buildSignPanel()
 	a.addingTab, a.controlParent = 0, 0
-	a.activate(idFileTab)
+	a.layout()
 	a.updateActions()
 	return true
 }
@@ -252,7 +248,7 @@ func (a *app) profileKey() string {
 }
 
 func (a *app) activate(id int) {
-	if (id == idProofTab || id == idSignTab) && !a.documentTools {
+	if (id == idProofTab || id == idSignTab || id == idExportTab) && !a.documentTools {
 		return
 	}
 	old := a.mode
@@ -503,8 +499,9 @@ func (a *app) closeDocument() {
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	a.reportStatus("")
-	a.activate(idFileTab)
+	a.mode, a.panelHidden = idBrowseTab, true
 	a.updateActions()
+	a.layout()
 }
 
 func (a *app) openDocument(path, password string) {
@@ -524,14 +521,17 @@ func (a *app) openDocument(path, password string) {
 	if !a.mayReplaceDocument() {
 		return
 	}
+	a.mode, a.panelHidden = idBrowseTab, true
+	a.loadDocument(path, password, info)
+}
+
+func (a *app) loadDocument(path, password string, info os.FileInfo) {
 	setText(a.password, password)
 	setText(a.window, filepath.Base(path)+" · "+appName)
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	a.view.open(path, password, info)
-	if a.mode == idFileTab {
-		a.activate(idBrowseTab)
-	}
+	a.layout()
 }
 
 func (a *app) command(id, notification int) {
@@ -558,14 +558,20 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab, idBrowseTab, idPagesTab, idProofTab, idExportTab, idSignTab:
+	case idFileTab:
+		a.openFileMenu()
+	case idBrowseTab, idPagesTab, idProofTab, idExportTab, idSignTab:
 		a.activate(id)
 	case idOpen:
 		a.openDialog()
 	case idClosePDF:
 		a.closeDocument()
+	case idSaveDocument, idSaveDocumentAs:
+		a.saveDocument(id == idSaveDocumentAs)
+	case idPrintDocument:
+		a.printDocument()
 	case idShowOutput:
-		if a.lastOutput != "" {
+		if !a.busy && a.lastOutput != "" {
 			a.openDocument(a.lastOutput, a.lastPassword)
 		}
 	case idTogglePanel:
@@ -680,7 +686,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab) {
 			a.activate(idBrowseTab)
 		} else {
 			a.layout()
@@ -690,9 +696,6 @@ func (a *app) updateActions() {
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton} {
 		setEnabled(button, ready)
 	}
-	setEnabled(a.open, !a.busy)
-	setEnabled(a.closePDF, !a.busy && a.view.path != "")
-	setEnabled(a.outputButton, !a.busy && a.lastOutput != "")
 	a.view.updateActions()
 }
 
@@ -715,15 +718,45 @@ func (a *app) report(message string) {
 }
 
 func (a *app) run(req request) {
+	if req.ReplaceSource {
+		if a.beginJob(req, "Ukládám dokument…") {
+			a.waitingOverwrite = true
+			a.startOverwrite()
+		}
+		return
+	}
+	if a.beginJob(req, "Zpracovávám dokument…") {
+		a.launchJob(func() response { return runOperation(req) })
+	}
+}
+
+func (a *app) beginJob(req request, status string) bool {
+	if a.busy {
+		return false
+	}
 	if !a.view.sourceUnchanged() {
 		a.report("Vstupní PDF se změnilo. Otevřete je znovu.")
-		return
+		return false
 	}
 	a.pending, a.busy = req, true
 	a.updateActions()
-	a.reportStatus("Zpracovávám dokument…")
+	a.reportStatus(status)
+	return true
+}
+
+func (a *app) startOverwrite() {
+	// Ghostscript may still have the original open. Wait for both readers to
+	// finish before replacing the file on Windows.
+	if a.waitingOverwrite && !a.view.running && a.view.prefetch.page == 0 {
+		a.waitingOverwrite = false
+		req := a.pending
+		a.launchJob(func() response { return runOperation(req) })
+	}
+}
+
+func (a *app) launchJob(operation func() response) {
 	go func() {
-		a.results <- runOperation(req)
+		a.results <- operation()
 		postMessage.Call(a.window, wmJobFinished, 0, 0)
 	}()
 }
@@ -733,19 +766,27 @@ func (a *app) finish(result response) {
 	a.busy = false
 	a.pending = request{}
 	if result.Status == "signed_pdf" {
-		if notice(a.window, result.Message+"\n\nUložit kopii bez původních podpisů?", 0x134) == 6 {
+		message := result.Message
+		question := "Uložit kopii bez původních podpisů?"
+		if req.ReplaceSource {
+			message = "Původní PDF obsahuje digitální podpis."
+			question = "Přepsat původní soubor a odstranit jeho stávající podpisy?"
+		}
+		if notice(a.window, message+"\n\n"+question, 0x134) == 6 {
 			req.ClearSignatures = true
 			a.run(req)
 			return
 		}
 		result.Message = "Uložení zrušeno."
 	}
-	if result.Status == "ok" && req.Output != "" {
+	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource {
 		a.lastOutput, a.lastPassword = req.Output, ""
-		if req.Action == "edit_pages" {
+		if req.Action == "save_document" {
 			a.lastPassword = req.PDFPassword
-			a.view.markSaved()
 		}
+	}
+	if result.Status == "ok" && req.Action == "save_document" {
+		a.reopenSaved(req)
 	}
 	if result.Status == "ok" && req.Action == "scan" && result.View != nil {
 		a.view.showScan(result.View)
@@ -765,6 +806,9 @@ func (a *app) finish(result response) {
 	}
 	if req.Action == "sign" {
 		setText(a.certPass, "")
+	}
+	if result.Status == "error" && (req.Action == "save_document" || req.Action == "print_page") {
+		notice(a.window, result.Message, 0x10)
 	}
 	a.updateActions()
 	a.view.schedule()
@@ -790,6 +834,13 @@ func (a *app) handleInput(msg *winMessage) bool {
 			return true
 		case 'W':
 			a.closeDocument()
+			return true
+		case 'S':
+			shift, _, _ := user32.NewProc("GetKeyState").Call(0x10)
+			a.saveDocument(shift&0x8000 != 0)
+			return true
+		case 'P':
+			a.printDocument()
 			return true
 		}
 	}

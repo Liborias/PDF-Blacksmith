@@ -720,6 +720,10 @@ func previewPixels(size float64) int {
 }
 
 func (v *documentView) schedule() {
+	if v.app.busy && v.app.pending.ReplaceSource {
+		v.app.startOverwrite()
+		return
+	}
 	if v.running || v.path == "" || v.invalidSource {
 		return
 	}
@@ -870,6 +874,8 @@ func (v *documentView) finished(job readerJob) {
 		for i := range v.order {
 			v.order[i] = i + 1
 		}
+		v.page = min(v.page, len(v.order)-1)
+		v.reference = v.page
 		v.markSaved()
 		v.app.report("")
 		v.updatePageList()
@@ -1155,11 +1161,7 @@ func (v *documentView) command(id, notification int) bool {
 			v.undo()
 		case idReaderSave:
 			if v.changed() {
-				req := v.request("edit_pages")
-				v.includeEdits(&req)
-				if v.app.chooseOutput(&req, "-upraveno") {
-					v.app.run(req)
-				}
+				v.app.saveDocument(true)
 			}
 		}
 	default:

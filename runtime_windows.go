@@ -41,6 +41,9 @@ type request struct {
 	Decrypt         bool           `json:"decrypt,omitempty"`
 	Visible         bool           `json:"visible,omitempty"`
 	Overwrite       bool           `json:"overwrite,omitempty"`
+	ReplaceSource   bool           `json:"replace_source,omitempty"`
+	SourceSize      int64          `json:"source_size,omitempty"`
+	SourceMtime     int64          `json:"source_mtime_ns,omitempty"`
 	ClearSignatures bool           `json:"clear_signatures,omitempty"`
 	Export          *exportOptions `json:"export,omitempty"`
 	View            *viewRequest   `json:"view,omitempty"`

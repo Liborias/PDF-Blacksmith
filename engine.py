@@ -48,11 +48,25 @@ def output_file(src, request):
     dst = Path(request["output"])
     if dst.suffix.lower() != ".pdf":
         raise UserError("Výstupní soubor musí mít příponu .pdf.")
-    if dst.resolve() == src.resolve() or (dst.exists() and dst.samefile(src)):
-        raise UserError("Pro výstup vyberte jiný soubor než vstupní PDF.")
+    original = None
+    same_path = dst.resolve() == src.resolve()
+    if same_path or (dst.exists() and dst.samefile(src)):
+        if not (same_path and request["action"] == "save_document" and request.get("replace_source")
+                and request.get("overwrite")):
+            raise UserError("Pro výstup vyberte jiný soubor než vstupní PDF.")
+        dst = src.resolve(strict=True)
+        original = dst.stat()
+        if ((original.st_size, original.st_mtime_ns)
+                != (request.get("source_size"), request.get("source_mtime_ns"))):
+            raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
     with tempfile.TemporaryDirectory(prefix="pdftisk-", dir=dst.parent) as folder:
         pending = Path(folder) / "vystup.pdf"
         yield pending
+        if original is not None:
+            current = dst.stat()
+            if (not os.path.samestat(original, current)
+                    or (original.st_size, original.st_mtime_ns) != (current.st_size, current.st_mtime_ns)):
+                raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
         if request.get("overwrite"):
             os.replace(pending, dst)
         elif os.name == "nt":
@@ -605,8 +619,9 @@ def inspect_document(src, request):
         if request["action"] == "describe":
             return describe(pdf)
         exe = ghostscript_path(request)
-        if request["action"] == "screen":
-            return screen_page(pdf, src, view, exe, run_ghostscript, stage_for_render)
+        if request["action"] in ("screen", "print_page"):
+            return screen_page(pdf, src, view, exe, run_ghostscript, stage_for_render,
+                               printed=request["action"] == "print_page")
         if request["action"] == "scan":
             order = document_order(view, len(pdf.pages))
             settings = export_settings(request.get("export"))
@@ -617,7 +632,7 @@ def inspect_document(src, request):
 
 def save_page_edits(src, request):
     view = request.get("view", {})
-    with open_pdf(src, request.get("pdf_password", "")) as pdf:
+    with output_file(src, request) as pending, open_pdf(src, request.get("pdf_password", "")) as pdf:
         pages = list(pdf.pages)
         order = document_order(view, len(pages))
         rotations = view.get("rotations", [])
@@ -638,9 +653,17 @@ def save_page_edits(src, request):
                 for index, number in enumerate(order):
                     numbers.extend([index, pikepdf.Dictionary(P=labels[number - 1])])
                 pdf.Root.PageLabels = pikepdf.Dictionary(Nums=numbers)
-        with output_file(src, request) as pending:
-            pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+        pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
     return "Uložena upravená kopie PDF."
+
+
+def save_document(src, request):
+    if "rotations" in request.get("view", {}):
+        save_page_edits(src, request)
+    else:
+        with output_file(src, request) as pending:
+            shutil.copyfile(src, pending)
+    return "PDF bylo uloženo."
 
 
 def dispatch(request):
@@ -649,7 +672,8 @@ def dispatch(request):
         raise UserError("Vyberte existující soubor PDF.")
     operation = {"transform": transform, "sign": sign, "verify": verify,
                  "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
-                 "screen": inspect_document, "edit_pages": save_page_edits}.get(request.get("action"))
+                 "screen": inspect_document, "print_page": inspect_document,
+                 "edit_pages": save_page_edits, "save_document": save_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     view = request.get("view", {})

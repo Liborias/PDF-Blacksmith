@@ -16,12 +16,12 @@ from pikepdf import Array, Dictionary, Encryption, Name, Pdf, Stream
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def call(exe, pdf, action, **options):
+def call(exe, pdf, action, expected="ok", **options):
     payload = dict(input=str(pdf), action=action, ghostscript=exe, **options)
     result = subprocess.run([sys.executable, str(ROOT / "engine.py")],
                             input=json.dumps(payload), text=True, capture_output=True, check=True)
     response = json.loads(result.stdout)
-    assert response["status"] == "ok", response
+    assert response["status"] == expected, response
     return response
 
 
@@ -56,6 +56,8 @@ def check_proofs(exe, folder):
     assert image(screen).height > image(screen).width
     screen_rotated = call(exe, fixture, "screen", view={"page": 1, "box": "crop", "pixels": 780, "rotation": 90})["view"]
     assert image(screen_rotated).size == image(screen).size[::-1]
+    printed = call(exe, fixture, "print_page", view={"page": 1, "box": "crop", "pixels": 3508, "rotation": 90})["view"]
+    assert image(printed).width > image(printed).height
     proof = call(exe, fixture, "preview", view={"page": 1})["view"]
     assert proof["pages"] == 11
     assert {plate["name"] for plate in proof["plates"] if plate["active"]} == {
@@ -88,6 +90,21 @@ def check_proofs(exe, folder):
     assert {plate["name"]: plate["pages"] for plate in exported["used_plates"]} == {
         "Black": [1], "Cyan": [2], "Magenta": [3],
     }
+    plain_copy = folder / "uloženo jako.pdf"
+    call(exe, sep, "save_document", output=str(plain_copy))
+    assert plain_copy.read_bytes() == sep.read_bytes()
+    src_stat = plain_copy.stat()
+    overwriting = dict(output=str(plain_copy), overwrite=True,
+                       view={"order": [3, 1, 2], "rotations": [0, 0, 90]})
+    call(exe, plain_copy, "save_document", expected="error", **overwriting)
+    call(exe, plain_copy, "save_document", expected="error", replace_source=True,
+         source_size=src_stat.st_size, source_mtime_ns=src_stat.st_mtime_ns-1, **overwriting)
+    assert plain_copy.read_bytes() == sep.read_bytes()
+    call(exe, plain_copy, "save_document", replace_source=True,
+         source_size=src_stat.st_size, source_mtime_ns=src_stat.st_mtime_ns, **overwriting)
+    with Pdf.open(plain_copy) as pdf:
+        assert pdf.pages[0].obj.Rotate == 90
+
     edited = folder / "otočené a přesunuté.pdf"
     call(exe, sep, "edit_pages", output=str(edited),
          view={"order": [3, 1, 2], "rotations": [0, 0, 90]})

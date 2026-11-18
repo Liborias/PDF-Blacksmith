@@ -147,17 +147,17 @@ def render_source(pdf, src, folder, stage):
     return str(src.resolve())
 
 
-def screen_page(pdf, src, req, exe, gs, stage):
+def screen_page(pdf, src, req, exe, gs, stage, *, printed=False):
     page, rotation = page_options(pdf, req)
     box, args = box_options(req)
     target = req.get("pixels", 1850)
-    if type(target) is not int or not 400 <= target <= 3200:
+    if type(target) is not int or not 400 <= target <= (4096 if printed else 3200):
         raise ProofError("Rozlišení náhledu je neplatné.")
     dpi = render_dpi(pdf, [page], 300, target, box)
     with TemporaryDirectory(prefix="pdf-view-") as name:
         folder = Path(name)
         source = render_source(pdf, src, folder, stage)
-        gs(exe, folder, ["-q", "-sDEVICE=png16m", "-dPrinted=false", "-dGraphicsAlphaBits=4",
+        gs(exe, folder, ["-q", "-sDEVICE=png16m", f"-dPrinted={'true' if printed else 'false'}", "-dGraphicsAlphaBits=4",
                          "-dTextAlphaBits=4", f"-r{dpi}", f"-sPageList={page}",
                          "-sOutputFile=obraz.png", *args, "-f", source])
         png = folder / "obraz.png"

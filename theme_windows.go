@@ -196,7 +196,9 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		bounds.left += int32(a.scale(28))
 		drawText(item.dc, getText(item.handle), bounds, a.normalFont, foreground, 0)
 	} else {
-		active := int(item.controlID) == a.mode || a.primaryButtons[item.handle]
+		id := int(item.controlID)
+		active := (id == a.mode && (!tab || !a.panelHidden)) ||
+			(id == idFileTab && a.mode == idExportTab && !a.panelHidden) || a.primaryButtons[item.handle]
 		body, edge := paletteColor{42, 42, 47}, divider
 		if tab {
 			body, edge = background, background
