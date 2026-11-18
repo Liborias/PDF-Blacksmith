@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -38,7 +39,11 @@ const (
 	idReaderSave
 )
 
-const wmReaderFinished = 0x8002
+const (
+	wmReaderFinished = 0x8002
+	readerZoomTimer  = 2
+	zoomSettleDelay  = 65 * time.Millisecond
+)
 
 type printBitmap struct {
 	width, height int
@@ -227,9 +232,13 @@ type documentView struct {
 	running, describing, invalidSource                                         bool
 	reading, printPreview                                                      pageCache
 	visibleDetails                                                             []screenTile
-	detailFrames                                                               map[screenTile]*printBitmap
+	detailFrames                                                               map[screenTile]detailFrame
 	failedDetails                                                              map[screenTile]bool
+	detailClock                                                                uint64
 	detailBytes                                                                int64
+	canvas                                                                     viewportSurface
+	canvasDirty                                                                bool
+	zoomDeadline                                                               time.Time
 	cacheLimit                                                                 int64
 	prefetch                                                                   readerTask
 	prefetchFailed                                                             map[int]bool
@@ -344,7 +353,10 @@ func (v *documentView) sourceUnchanged() bool { return unchanged(v.path, v.origi
 func (v *documentView) resetDocument() {
 	v.generation++
 	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
+	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
+	v.zoomDeadline = time.Time{}
 	hadFrames := v.reading.bytes+v.printPreview.bytes+v.detailBytes > 0
+	v.canvas.close()
 	v.reading.clear()
 	v.printPreview.clear()
 	v.clearDetails()
@@ -432,15 +444,13 @@ func (v *documentView) clearPlateView() {
 	setText(v.outputInfo, "")
 }
 
-func (v *documentView) reframe(geometry bool) {
+func (v *documentView) reframe() {
 	v.generation++
 	v.clearDetails()
 	v.clearPlateView()
 	setText(v.scanReport, "")
-	if geometry {
-		v.reference = v.page
-		v.rebuild(true)
-	}
+	v.reference = v.page
+	v.rebuild(true)
 	v.changedViewport()
 }
 
@@ -612,7 +622,20 @@ func (v *documentView) zoomAt(delta, x, y float64) {
 	v.buildLayout()
 	v.restore(anchor, x, y)
 	v.updatePageFromCenter()
+	if timer, _, _ := user32.NewProc("SetTimer").Call(v.app.window, readerZoomTimer,
+		uintptr(zoomSettleDelay/time.Millisecond), 0); timer != 0 {
+		v.zoomDeadline = time.Now().Add(zoomSettleDelay)
+	}
 	v.changedViewport()
+}
+
+func (v *documentView) finishZoom() {
+	if !v.zoomDeadline.IsZero() && time.Now().Before(v.zoomDeadline) {
+		return
+	}
+	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
+	v.zoomDeadline = time.Time{}
+	v.schedule()
 }
 
 func (v *documentView) wheel(delta float64, control bool, cursor point) {
@@ -707,18 +730,22 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 }
 
 func (v *documentView) changedViewport() {
-	v.updateActions()
 	v.syncProofPanel()
+	v.updateActions()
 	v.syncDetails()
-	invalidate(v.app.window)
+	v.invalidateCanvas()
 	v.schedule()
 }
 
 func previewPixels(size float64) int {
-	if size > 660 {
+	switch {
+	case size <= 780:
+		return 820
+	case size <= 1020:
+		return 1070
+	default:
 		return 1450
 	}
-	return 780
 }
 
 func (v *documentView) schedule() {
@@ -733,7 +760,7 @@ func (v *documentView) schedule() {
 		v.launch(v.request("describe"), 0, 0, false, nil)
 		return
 	}
-	if !v.ready() {
+	if !v.ready() || !v.zoomDeadline.IsZero() {
 		return
 	}
 	_, height := v.viewportSize()
@@ -745,14 +772,8 @@ func (v *documentView) schedule() {
 	for _, item := range candidates {
 		number := v.order[item.index]
 		frame := cache.frames[number]
-		pixels := previewPixels(max(item.width, item.height))
-		if proof {
-			pixels = 1850
-		} else if max(item.width, item.height) > 1454 {
-			// Keep the quick page image as a fallback while the visible detail renders.
-			pixels = 780
-		}
-		if cache.failed[number] || frame.pixels >= pixels {
+		pixels := v.fullPreviewTarget(item)
+		if pixels == 0 || cache.failed[number] || frame.pixels >= pixels {
 			continue
 		}
 		if !proof && v.prefetch.generation == v.generation && v.prefetch.page == number && v.prefetch.pixels >= pixels {
@@ -762,7 +783,7 @@ func (v *documentView) schedule() {
 		return
 	}
 	for _, tile := range v.visibleDetails {
-		if v.detailFrames[tile] == nil && !v.failedDetails[tile] {
+		if v.detailFrames[tile].image == nil && !v.failedDetails[tile] {
 			v.renderDetail(tile)
 			return
 		}
@@ -774,7 +795,7 @@ func (v *documentView) schedule() {
 
 func (v *documentView) schedulePrefetch() {
 	v.updateCacheLimit()
-	free := v.cacheLimit - v.reading.bytes - v.printPreview.bytes - v.detailBytes
+	free := v.cacheLimit - v.reading.bytes - v.printPreview.bytes - v.detailBytes - v.canvas.bytes()
 	if free > 0 {
 		box := v.box()
 		width, height := v.viewportSize()
@@ -919,14 +940,14 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 		case job.frame.image == nil:
 			v.prefetchFailed[job.page] = true
 		case v.reading.frames[job.page].image == nil &&
-			v.reading.bytes+v.printPreview.bytes+v.detailBytes+int64(len(job.frame.image.pixels)) <= v.cacheLimit:
+			v.reading.bytes+v.printPreview.bytes+v.detailBytes+v.canvas.bytes()+int64(len(job.frame.image.pixels)) <= v.cacheLimit:
 			v.reading.store(job.page, job.frame)
 			v.syncDetails()
 			v.updateDocumentInfo()
 			_, height := v.viewportSize()
 			for _, item := range v.spread.visible(v.scrollY, height) {
 				if v.order[item.index] == job.page {
-					invalidate(v.app.window)
+					v.invalidateCanvas()
 					break
 				}
 			}
@@ -969,18 +990,32 @@ func (v *documentView) syncProofPanel() {
 	v.proofPage = number
 	result := frame.proof
 	v.plates = result.Plates
-	for index, plate := range v.plates {
+	for _, plate := range v.plates {
 		sendMessage.Call(v.list, 0x0180, 0, uintptr(unsafe.Pointer(wideString(plateRow(plate)))))
-		if !v.hidden[plate.Name] {
-			sendMessage.Call(v.list, 0x0185, 1, uintptr(index))
-		}
 	}
+	v.syncPlateSelection()
 	intent := result.OutputIntent
 	if intent == "" {
 		intent = "Neuveden"
 	}
 	setText(v.outputInfo, multiline("Výstupní záměr\n"+intent+"\nSimulace  "+result.Simulation))
 	setText(v.sample, fmt.Sprintf("Str. %d · plocha / maximální tón · %d dpi", v.page+1, result.DPI))
+}
+
+func (v *documentView) syncPlateSelection() {
+	for index, plate := range v.plates {
+		selected := uintptr(1)
+		if v.hidden[plate.Name] {
+			selected = 0
+		}
+		sendMessage.Call(v.list, 0x0185, selected, uintptr(index)) // LB_SETSEL
+	}
+}
+
+func (v *documentView) platesChanged() {
+	v.generation++
+	v.printPreview.clear()
+	v.changedViewport()
 }
 
 func (v *documentView) updatePageList() {
@@ -1046,7 +1081,7 @@ func (v *documentView) rotationChanged(number int) {
 	v.printPreview.remove(number)
 	delete(v.prefetchFailed, number)
 	v.updateDocumentInfo()
-	v.reframe(true)
+	v.reframe()
 }
 
 func (v *documentView) move(destination int) {
@@ -1110,10 +1145,10 @@ func (v *documentView) command(id, notification int) bool {
 			v.reading.clear()
 			clear(v.prefetchFailed)
 			v.updateDocumentInfo()
-			v.reframe(true)
+			v.reframe()
 		case idReaderProofBox, idReaderProof:
 			v.printPreview.clear()
-			v.reframe(true)
+			v.reframe()
 		case idReaderPageList:
 			number, _, _ := sendMessage.Call(v.pageList, 0x0188, 0, 0)
 			v.gotoPage(int(int32(number)), false)
@@ -1122,8 +1157,7 @@ func (v *documentView) command(id, notification int) bool {
 				on, _, _ := sendMessage.Call(v.list, 0x0187, uintptr(index), 0)
 				v.hidden[plate.Name] = on == 0
 			}
-			v.printPreview.clear()
-			v.reframe(false)
+			v.platesChanged()
 		default:
 			return false
 		}
@@ -1155,8 +1189,8 @@ func (v *documentView) command(id, notification int) bool {
 		for _, plate := range v.plates {
 			v.hidden[plate.Name] = id == idReaderNone
 		}
-		v.printPreview.clear()
-		v.reframe(false)
+		v.syncPlateSelection()
+		v.platesChanged()
 	case idReaderScan:
 		if !v.app.busy {
 			req := v.request("scan")
@@ -1189,7 +1223,7 @@ func (v *documentView) command(id, notification int) bool {
 	return true
 }
 
-func (v *documentView) paint(dc uintptr) {
+func (v *documentView) paintCanvas(dc uintptr) {
 	viewport := v.viewport
 	fillColor(dc, viewport, inputColor)
 	if len(v.spread.sheets) == 0 {
@@ -1214,16 +1248,22 @@ func (v *documentView) paint(dc uintptr) {
 		shadow := rect{bounds.left + 3, bounds.top + 4, bounds.right + 5, bounds.bottom + 6}
 		fillColor(dc, shadow, paletteColor{10, 10, 12})
 		bitmap := cache.frames[number].image
-		if bitmap == nil {
-			fillColor(dc, bounds, paletteColor{235, 234, 232})
-			status := fmt.Sprintf("Načítám stránku %d…", page.index+1)
-			if cache.failed[number] {
-				status = "Stránku nelze vykreslit."
+		details := v.fullPreviewTarget(page) == 0
+		if details {
+			fillColor(dc, bounds, paletteColor{255, 255, 255})
+			for _, tile := range v.visibleDetails {
+				if tile.page == number && v.failedDetails[tile] {
+					details = false
+					break
+				}
 			}
-			drawText(dc, status, bounds, v.app.normalFont, canvasColor, 1)
-			continue
 		}
-		drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
+		if !details && bitmap == nil {
+			fillColor(dc, bounds, paletteColor{235, 234, 232})
+			drawText(dc, "Stránku nelze vykreslit.", bounds, v.app.normalFont, canvasColor, 1)
+		} else if !details {
+			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
+		}
 		v.paintDetails(dc, number, bounds)
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)

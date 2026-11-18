@@ -1,13 +1,15 @@
 """Plate proofs from Ghostscript's actual rendered separations."""
 
 from base64 import b64encode
+from collections import OrderedDict
+from dataclasses import dataclass
 from io import BytesIO
 import math
 from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
 
-from PIL import Image, ImageCms
+from PIL import Image, ImageChops, ImageCms, ImageMath
 
 from print_profiles import get_profile, source_cmyk
 
@@ -76,18 +78,22 @@ def render_dpi(pdf, pages, requested, pixel_limit, box):
     return min(requested, int(pixel_limit / max_inches))
 
 
-def render(exe, folder, gs, source, pages, dpi, profile_args, prefix, selected=None):
+def render(exe, folder, gs, source, pages, dpi, profile_args, prefix, spot_colors=None):
     args = ["-q", "-sDEVICE=tiffsep", "-dPrinted=true",
             "-dOverprint=/enable", "-dDeviceGrayToK=true", "-sCompression=lzw",
             f"-r{dpi}", "-sPageList=" + ",".join(map(str, pages)),
             f"-sOutputFile={prefix}-%d.tif", *profile_args]
-    if selected is not None:
-        # Names come from the PDF. Only hexadecimal data is placed in PostScript.
-        order = " ".join(f"<{name.encode('utf-8').hex()}> cvn" for name in selected)
-        args += ["-dNoSeparationFiles", "-c", f"<< /SeparationOrder [{order}] >> setpagedevice"]
+    if spot_colors is not None:
+        args.append("-dPrintSpotCMYK=true")
     log = gs(exe, folder, [*args, "-f", source])
     if re.search(r"too many (?:spot colors|colorants)|maximum number.*(?:spots|colorants)", log, re.I):
         raise ProofError("Ghostscript překročil počet podporovaných tiskových desek.")
+    if spot_colors is not None:
+        for name, c, m, y, k in re.findall(
+                r'^%%SeparationColor: "(.*)" 100% ink = (\d+) (\d+) (\d+) (\d+) CMYK\r?$', log, re.M):
+            weights = tuple(map(int, (c, m, y, k)))
+            if max(weights) <= FULL_INK:
+                spot_colors[name] = weights
     groups = {}
     pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)(?:\((.*)\))?\.tif$", re.S)
     for path in folder.glob(f"{prefix}-*.tif"):
@@ -97,7 +103,7 @@ def render(exe, folder, gs, source, pages, dpi, profile_args, prefix, selected=N
     rendered = [group for _, group in sorted(groups.items())]
     if len(rendered) != len(pages) or any(None not in group for group in rendered):
         raise ProofError("Ghostscript nevytvořil tiskový náhled všech vybraných stran.")
-    if selected is None and any(not set(PROCESS).issubset(group) for group in rendered):
+    if any(not set(PROCESS).issubset(group) for group in rendered):
         raise ProofError("Ghostscript nevytvořil úplné procesní separace.")
     return rendered
 
@@ -159,7 +165,7 @@ def screen_region_args(page, box, rotation, region):
             or any(type(value) is not int for value in coordinates)):
         raise ProofError("Výřez náhledu je neplatný.")
     x, y, w, h = coordinates
-    if min(x, y) < 0 or not (1 <= w <= 1536 and 1 <= h <= 1536):
+    if min(x, y) < 0 or not (1 <= w <= 4096 and 1 <= h <= 4096) or w*h > (4 << 20):
         raise ProofError("Rozměry výřezu náhledu jsou neplatné.")
     width, height = (max(1, math.floor(points*zoom + 0.5)) for points in page_size(page, box))
     rotated_width, rotated_height = (height, width) if rotation % 180 else (width, height)
@@ -216,54 +222,118 @@ def stat(path, name):
     return dict(name=name, active=pixels > 0, coverage=100 * pixels / size, maximum=100 * peak / 255)
 
 
-def proof_image(composite, profile):
-    with Image.open(composite) as raw:
-        if profile:
-            try:
-                return ImageCms.profileToProfile(raw, BytesIO(profile), ImageCms.createProfile("sRGB"),
-                                                renderingIntent=1, outputMode="RGB")
-            except ImageCms.PyCMSError as exc:
-                raise ProofError("Výstupní ICC nelze použít pro zobrazení na monitoru.") from exc
-        return raw.convert("RGB")
+def proof_image(raw, profile):
+    if profile:
+        try:
+            return ImageCms.profileToProfile(raw, BytesIO(profile), ImageCms.createProfile("sRGB"),
+                                            renderingIntent=1, outputMode="RGB")
+        except ImageCms.PyCMSError as exc:
+            raise ProofError("Výstupní ICC nelze použít pro zobrazení na monitoru.") from exc
+    return raw.convert("RGB")
+
+
+@dataclass
+class ProofSnapshot:
+    profile: bytes | None
+    spot_colors: dict
+    rasters: dict
+    overview: dict
+
+    def open_raster(self, name):
+        source = self.rasters[name]
+        return Image.open(BytesIO(source) if isinstance(source, bytes) else source)
+
+
+# Keep the current page and a visible neighboring page within a single budget.
+# The reader process closes with the document, and nothing is retained on disk.
+_proof_cache = OrderedDict()
+PROOF_CACHE_LIMIT = 24 << 20
+FULL_INK = 32760  # Ghostscript writes spot equivalents in its fixed-point frac units.
+
+
+def composite_plates(snapshot, selected, size):
+    empty = Image.new("L", size, 0)
+    channels = [empty] * 4
+    spot_ink = [None] * 4
+    for name in selected:
+        with snapshot.open_raster(name) as gray:
+            if gray.size != size or gray.mode != "L":
+                raise ProofError("Tiskové desky nemají shodný rozměr nebo formát.")
+            coverage = ImageChops.invert(gray)
+        if name in PROCESS:
+            channels[PROCESS.index(name)] = coverage
+            continue
+        weights = snapshot.spot_colors.get(name)
+        if weights is None:
+            raise ProofError(f"Chybí náhledová barva přímé desky {name}.")
+        intensity = coverage.convert("I")
+        for index, weight in enumerate(weights):
+            if not weight:
+                continue
+            total = spot_ink[index]
+            spot_ink[index] = ImageMath.lambda_eval(
+                lambda operands: operands["previous"] + operands["coverage"] * weight,
+                previous=0 if total is None else total, coverage=intensity)
+    for index, total in enumerate(spot_ink):
+        if total is not None:
+            extra = ImageMath.lambda_eval(lambda operands: operands["ink"] / FULL_INK, ink=total)
+            channels[index] = ImageChops.add(channels[index], extra.convert("L"))
+    return Image.merge("CMYK", channels)
+
+
+def render_proof_selection(snapshot, selection, hidden, rotation):
+    names = [plate["name"] for plate in snapshot.overview["plates"]]
+    enabled = ([name for name in names if name not in hidden] if selection is None
+               else [name for name in names if name in selection])
+    with snapshot.open_raster(None) as full:
+        if not enabled:
+            image = Image.new("RGB", full.size, "white")
+        elif len(enabled) == len(names):
+            image = proof_image(full, snapshot.profile)
+        else:
+            image = proof_image(composite_plates(snapshot, enabled, full.size), snapshot.profile)
+    if rotation:
+        image = image.rotate(-rotation, expand=True)
+    encoded = BytesIO()
+    image.save(encoded, "PNG", compress_level=1)
+    return {**snapshot.overview, "image": b64encode(encoded.getvalue()).decode("ascii")}
 
 
 def page_proof(pdf, src, req, exe, gs, stage):
     page, rotation = page_options(pdf, req)
+    selected = req.get("plates")
+    hidden = req.get("hide_plates", [])
+    if not isinstance(hidden, list) or any(not isinstance(name, str) for name in hidden):
+        raise ProofError("Výběr tiskových desek je neplatný.")
+    if selected is not None and (not isinstance(selected, list) or any(not isinstance(name, str) for name in selected)):
+        raise ProofError("Výběr tiskových desek je neplatný.")
+    box, box_args = box_options(req)
+    profile_key = req.get("proof_profile", "")
+    file_status = src.stat()
+    key = (src.resolve(), file_status.st_dev, file_status.st_ino, file_status.st_size,
+           file_status.st_mtime_ns, exe, page, box, profile_key)
+    if key in _proof_cache:
+        _proof_cache.move_to_end(key)
+        return render_proof_selection(_proof_cache[key][0], selected, hidden, rotation)
     with TemporaryDirectory(prefix="pdf-proof-") as name:
         folder = Path(name)
         source = render_source(pdf, src, folder, stage)
-        profile, label, args = print_profile(exe, folder, pdf, req.get("proof_profile", ""))
-        box, box_args = box_options(req)
-        args += box_args
+        profile, label, args = print_profile(exe, folder, pdf, profile_key)
         dpi = render_dpi(pdf, [page], 192, 1850, box)
-        group = render(exe, folder, gs, source, [page], dpi, args, "plate")[0]
+        spot_colors = {}
+        group = render(exe, folder, gs, source, [page], dpi, args+box_args, "plate", spot_colors)[0]
         names = sorted((name for name in group if name is not None), key=plate_order)
-        stats = [stat(group[name], name) for name in names]
-        selected = req.get("plates")
-        hidden = req.get("hide_plates", [])
-        if not isinstance(hidden, list) or any(not isinstance(name, str) for name in hidden):
-            raise ProofError("Výběr tiskových desek je neplatný.")
-        if selected is not None:
-            if not isinstance(selected, list) or any(not isinstance(name, str) for name in selected):
-                raise ProofError("Výběr tiskových desek je neplatný.")
-            selected = [name for name in names if name in selected]
-        elif hidden:
-            selected = [name for name in names if name not in hidden]
-        if selected == []:
-            with Image.open(group[None]) as raw:
-                image = Image.new("RGB", raw.size, "white")
-        else:
-            composite = group[None]
-            if selected is not None and len(selected) < len(names):
-                composite = render(exe, folder, gs, source, [page], dpi, args, "selected", selected)[0][None]
-            image = proof_image(composite, profile)
-        if rotation:
-            image = image.rotate(-rotation, expand=True)
-        encoded = BytesIO()
-        image.save(encoded, "PNG", compress_level=3)
-        return dict(pages=len(pdf.pages), dpi=dpi, plates=stats,
-                    output_intent=output_intent(pdf), simulation=label,
-                    image=b64encode(encoded.getvalue()).decode("ascii"))
+        overview = dict(pages=len(pdf.pages), dpi=dpi, plates=[stat(group[name], name) for name in names],
+                        output_intent=output_intent(pdf), simulation=label)
+        cost = sum(path.stat().st_size for path in group.values()) + len(profile or b"")
+        if cost <= PROOF_CACHE_LIMIT:
+            while len(_proof_cache) >= 2 or sum(entry[1] for entry in _proof_cache.values()) + cost > PROOF_CACHE_LIMIT:
+                _proof_cache.popitem(last=False)
+            group = {name: path.read_bytes() for name, path in group.items()}
+        snapshot = ProofSnapshot(profile, spot_colors, group, overview)
+        if cost <= PROOF_CACHE_LIMIT:
+            _proof_cache[key] = snapshot, cost
+        return render_proof_selection(snapshot, selected, hidden, rotation)
 
 
 def scan_plates(pdf, src, req, exe, gs, stage):

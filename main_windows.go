@@ -382,6 +382,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.view.finished(<-a.view.jobs)
 		return 0
 	case 0x0113: // WM_TIMER
+		if wParam == readerZoomTimer && a.view != nil {
+			a.view.finishZoom()
+			return 0
+		}
 		if wParam == readerMemoryTimer && a.view.path != "" {
 			a.view.refreshCache()
 			return 0
@@ -397,6 +401,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 		return 0
 	case wmDestroy:
+		if a.view != nil {
+			a.view.canvas.close()
+		}
 		a.disposeTheme()
 		quitMessage.Call(0)
 		return 0

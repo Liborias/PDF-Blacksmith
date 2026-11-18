@@ -20,7 +20,7 @@ func (v *documentView) updateCacheLimit() {
 	v.cacheLimit = 0
 	if ok, _, _ := globalMemoryStatus.Call(uintptr(unsafe.Pointer(&status))); ok != 0 {
 		v.cacheLimit = readerCacheLimit(int64(min(status.availablePhysical, status.availableCommit)),
-			v.reading.bytes+v.printPreview.bytes+v.detailBytes)
+			v.reading.bytes+v.printPreview.bytes+v.detailBytes+v.canvas.bytes())
 	}
 }
 
@@ -88,11 +88,13 @@ func (v *documentView) trimCaches() {
 	if !v.ready() {
 		return
 	}
+	budget := max(0, v.cacheLimit-v.canvas.bytes())
+	v.trimDetails(min(detailCacheCeiling, budget))
+	budget = max(0, budget-v.detailBytes)
 	if v.proofMode() {
-		v.trimCache(&v.printPreview, min(120<<20, v.cacheLimit), true)
-		v.trimCache(&v.reading, max(0, v.cacheLimit-v.printPreview.bytes), false)
+		v.trimCache(&v.printPreview, min(120<<20, budget), true)
+		v.trimCache(&v.reading, max(0, budget-v.printPreview.bytes), false)
 	} else {
-		budget := max(0, v.cacheLimit-v.detailBytes)
 		v.trimCache(&v.reading, budget, true)
 		v.trimCache(&v.printPreview, min(120<<20, max(0, budget-v.reading.bytes)), false)
 	}
@@ -100,9 +102,9 @@ func (v *documentView) trimCaches() {
 
 func (v *documentView) refreshCache() {
 	v.updateCacheLimit()
-	previous := v.reading.bytes + v.printPreview.bytes
+	previous := v.reading.bytes + v.printPreview.bytes + v.detailBytes
 	v.trimCaches()
-	released := previous - v.reading.bytes - v.printPreview.bytes
+	released := previous - v.reading.bytes - v.printPreview.bytes - v.detailBytes
 	if released > 0 {
 		v.updateDocumentInfo()
 		if released >= 32<<20 {

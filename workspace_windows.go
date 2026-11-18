@@ -254,7 +254,7 @@ func (a *app) activate(id int) {
 	old := a.mode
 	a.mode, a.panelHidden = id, false
 	if (old == idProofTab) != (id == idProofTab) {
-		a.view.reframe(true)
+		a.view.reframe()
 	}
 	a.layout()
 }

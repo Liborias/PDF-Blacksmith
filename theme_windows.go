@@ -133,10 +133,10 @@ func (a *app) applyTheme() {
 func (a *app) paint(hwnd uintptr) {
 	var info paintInfo
 	dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
-	fillColor(dc, rect{0, 0, int32(a.width), int32(a.height)}, canvasColor)
 	if !a.full {
 		fillColor(dc, rect{0, 0, int32(a.width), int32(a.scale(headerHeight))}, titleColor)
 		fillColor(dc, rect{0, int32(a.scale(headerHeight)) - 1, int32(a.width), int32(a.scale(headerHeight))}, divider)
+		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), int32(a.height)}, canvasColor)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
 		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
 		if a.view.path != "" && a.headerActions-a.headerTabs >= a.scale(93) {

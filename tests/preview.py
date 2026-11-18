@@ -78,6 +78,33 @@ def check_screen_detail(exe, folder):
         assert detail.getextrema() != ((255, 255),) * 3
 
 
+def check_plate_switching(exe, folder):
+    fixture = folder / "hladké separace.pdf"
+    with Pdf.new() as pdf:
+        page = pdf.add_blank_page(page_size=(271, 331))
+        page.obj.Contents = pdf.make_stream(b"0.63 0.49 0.38 0.26 k 0 0 271 331 re f")
+        pdf.save(fixture)
+    toggles = [[], ["Magenta"], ["Cyan", "Magenta", "Black"],
+               ["Cyan", "Magenta", "Yellow", "Black"]]
+    request = dict(input=str(fixture), action="preview", ghostscript=exe)
+    lines = "\n".join(json.dumps({**request, "view": {"hide_plates": hidden}}) for hidden in toggles)
+    result = subprocess.run([sys.executable, str(ROOT / "engine.py"), "--stream"], input=lines,
+                            text=True, capture_output=True, check=True, timeout=30)
+    responses = [json.loads(line) for line in result.stdout.splitlines()]
+    assert len(responses) == len(toggles)
+    colors = []
+    for response in responses:
+        assert response["status"] == "ok", response
+        assert response["view"]["plates"] == responses[0]["view"]["plates"]
+        bitmap = image(response["view"])
+        # The entire interior is one overprinted color. Selecting plates must
+        # neither introduce stripes nor alter the measured coverage of a plate.
+        flat = bitmap.crop((8, 8, bitmap.width-8, bitmap.height-8)).getcolors(maxcolors=2)
+        assert flat is not None and len(flat) == 1
+        colors.append(flat[0][1])
+    assert len(set(colors)) == len(toggles) and colors[-1] == (255, 255, 255)
+
+
 def check_proofs(exe, folder):
     fixture = ROOT / "tests/fixtures/barvy.pdf"
     described = call(exe, fixture, "describe")["view"]
@@ -176,4 +203,5 @@ if __name__ == "__main__":
     with TemporaryDirectory(prefix="pdf-proof-test-") as folder:
         check_proofs(str(Path(gs).resolve()), Path(folder))
         check_screen_detail(str(Path(gs).resolve()), Path(folder))
+        check_plate_switching(str(Path(gs).resolve()), Path(folder))
     print("Print proof, editor and export settings tests passed.")
