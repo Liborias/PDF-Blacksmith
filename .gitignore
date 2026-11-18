@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+/PDFTisk.exe
+/runtime.zip
+/rsrc_windows_amd64.syso
+*.p12
+*.pfx

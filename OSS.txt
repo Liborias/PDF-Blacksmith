@@ -1,0 +1,22 @@
+PDF Tisk · použité open-source součásti
+
+Licence komponent jsou v rozbaleném běhovém prostředí v souboru LICENSE.txt
+a v jednotlivých složkách packages/*.dist-info/licenses. Verze a další údaje
+jsou v packages/*.dist-info/METADATA.
+
+CPython 3.14.10
+  https://www.python.org/downloads/release/python-31410/
+  https://github.com/python/cpython/tree/v3.14.10
+
+pikepdf 10.18.2 (MPL 2.0) · odpovídající zdrojový kód
+  https://files.pythonhosted.org/packages/3b/03/b6e74f4e6c2dda1f0afa0a98fff902cab6c24c38e6eb6324f27d8cf1d5ab/pikepdf-10.18.2.tar.gz
+QPDF · zdrojový kód a licence
+  https://github.com/qpdf/qpdf/releases/tag/v12.4.2
+pyHanko 0.38.1 (MIT) a pyhanko-certvalidator 0.33.0 (MIT)
+  https://pypi.org/project/pyHanko/0.38.1/
+  https://pypi.org/project/pyhanko-certvalidator/0.33.0/
+Go 1.26.11 · standardní knihovna a běhové prostředí (BSD)
+  https://go.googlesource.com/go/+/refs/tags/go1.26.11/LICENSE
+
+Ghostscript se instaluje samostatně a není součástí PDFTisk.exe.
+  https://www.ghostscript.com/releases/gsdnld.html
