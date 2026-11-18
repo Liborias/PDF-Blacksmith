@@ -13,11 +13,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
 //go:embed runtime.zip
 var runtimeZip []byte
+
+var runtimeVersion = sync.OnceValue(func() string {
+	hash := sha256.Sum256(runtimeZip)
+	return "runtime-" + hex.EncodeToString(hash[:12])
+})
 
 type request struct {
 	Action          string         `json:"action"`
@@ -85,9 +91,8 @@ func appRuntime() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	hash := sha256.Sum256(runtimeZip)
 	root := filepath.Join(cache, storageName)
-	target := filepath.Join(root, "runtime-"+hex.EncodeToString(hash[:12]))
+	target := filepath.Join(root, runtimeVersion())
 	if runtimeReady(target) {
 		return target, nil
 	}
@@ -159,19 +164,28 @@ func extractEntry(entry *zip.File, destination string) error {
 	return errors.Join(writeErr, dst.Close())
 }
 
-func runOperation(req request) response {
+func engineCommand(args ...string) (*exec.Cmd, error) {
 	dir, err := appRuntime()
 	if err != nil {
-		return operationError("Součásti aplikace se nepodařilo rozbalit.\n" + err.Error())
+		return nil, fmt.Errorf("Součásti aplikace se nepodařilo rozbalit.\n%w", err)
+	}
+	cmd := exec.Command(filepath.Join(dir, "python.exe"),
+		append([]string{"-B", "-I", "-X", "utf8", filepath.Join(dir, "engine.py")}, args...)...)
+	cmd.Dir = dir
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	return cmd, nil
+}
+
+func runOperation(req request) response {
+	cmd, err := engineCommand()
+	if err != nil {
+		return operationError(err.Error())
 	}
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return operationError(err.Error())
 	}
-	cmd := exec.Command(filepath.Join(dir, "python.exe"), "-B", "-I", "-X", "utf8", filepath.Join(dir, "engine.py"))
-	cmd.Dir = dir
 	cmd.Stdin = bytes.NewReader(payload)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	output, err := cmd.Output()
 	if err != nil {
 		return operationError(fmt.Sprintf("Zpracování PDF se nepodařilo spustit.\n%v", err))

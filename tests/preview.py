@@ -10,7 +10,7 @@ import sys
 from tempfile import TemporaryDirectory
 
 from PIL import Image
-from pikepdf import Array, Dictionary, Name, Pdf, Stream
+from pikepdf import Array, Dictionary, Encryption, Name, Pdf, Stream
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +29,23 @@ def image(proof):
     return Image.open(BytesIO(b64decode(proof["image"])))
 
 
+def check_stream(exe, fixture, proof, folder):
+    encrypted = folder / "šifrovaný náhled.pdf"
+    with Pdf.open(fixture) as pdf:
+        pdf.save(encrypted, encryption=Encryption(user="cteni", owner="vlastnik"))
+    request = dict(input=str(encrypted), action="preview", ghostscript=exe, view={"page": 1})
+    payload = "\n".join(map(json.dumps, [request, {**request, "pdf_password": "cteni"},
+                                        {**request, "input": str(fixture), "action": "describe"}]))
+    result = subprocess.run([sys.executable, str(ROOT / "engine.py"), "--stream"],
+                            input=payload, text=True, capture_output=True, check=True, timeout=30)
+    refused, opened, described = map(json.loads, result.stdout.splitlines())
+    assert refused["status"] == "error" and "heslo" in refused["message"]
+    assert opened["status"] == "ok", opened
+    assert opened["view"]["plates"] == proof["plates"]
+    assert image(opened["view"]).tobytes() == image(proof).tobytes()
+    assert described["status"] == "ok" and described["view"]["pages"] == 11
+
+
 def check_proofs(exe, folder):
     fixture = ROOT / "tests/fixtures/barvy.pdf"
     described = call(exe, fixture, "describe")["view"]
@@ -44,6 +61,7 @@ def check_proofs(exe, folder):
     assert {plate["name"] for plate in proof["plates"] if plate["active"]} == {
         "Cyan", "Magenta", "Yellow", "Black", "TestSpot",
     }
+    check_stream(exe, fixture, proof, folder)
 
     single = call(exe, fixture, "preview", view={"page": 1, "plates": ["TestSpot"]})["view"]
     assert image(single).tobytes() != image(proof).tobytes()

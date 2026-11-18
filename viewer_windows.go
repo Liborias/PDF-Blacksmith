@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"image/png"
 	"math"
 	"os"
@@ -60,6 +61,17 @@ func decodePrintBitmap(data []byte) (*printBitmap, error) {
 	bounds := decoded.Bounds()
 	result := &printBitmap{width: bounds.Dx(), height: bounds.Dy(),
 		pixels: make([]byte, bounds.Dx()*bounds.Dy()*4)}
+	if rgba, ok := decoded.(*image.RGBA); ok {
+		rowSize := result.width * 4
+		for y := range result.height {
+			src := rgba.Pix[y*rgba.Stride : y*rgba.Stride+rowSize]
+			dst := result.pixels[y*rowSize : (y+1)*rowSize]
+			for i := 0; i < rowSize; i += 4 {
+				dst[i], dst[i+1], dst[i+2] = src[i+2], src[i+1], src[i]
+			}
+		}
+		return result, nil
+	}
 	for y := range result.height {
 		for x := range result.width {
 			r, g, b, _ := decoded.At(x+bounds.Min.X, y+bounds.Min.Y).RGBA()
@@ -187,6 +199,7 @@ type readerJob struct {
 
 type documentView struct {
 	app                                                                        *app
+	engine                                                                     readerEngine
 	path, password                                                             string
 	original                                                                   os.FileInfo
 	sizes                                                                      []map[string][2]float64
@@ -711,11 +724,13 @@ func (v *documentView) launch(req request, number, pixels int) {
 	v.running = true
 	generation, original := v.generation, v.original
 	go func() {
-		job := readerJob{generation: generation, page: number, pixels: pixels, action: req.Action}
-		if !unchanged(req.Input, original) {
-			job.result = response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}
-		} else {
-			job.result = runOperation(req)
+		job := readerJob{generation: generation, page: number, pixels: pixels, action: req.Action,
+			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
+		if unchanged(req.Input, original) {
+			result := v.engine.run(req)
+			if unchanged(req.Input, original) {
+				job.result = result
+			}
 		}
 		if job.result.Status == "ok" && number > 0 && job.result.View != nil {
 			var err error

@@ -80,7 +80,7 @@ def render_dpi(pdf, pages, requested, pixel_limit, box):
     return min(requested, int(pixel_limit / max_inches))
 
 
-def render(exe, folder, gs, pages, dpi, profile_args, prefix, selected=None):
+def render(exe, folder, gs, source, pages, dpi, profile_args, prefix, selected=None):
     args = ["-q", "-sDEVICE=tiffsep", "-dPrinted=true",
             "-dOverprint=/enable", "-dDeviceGrayToK=true", "-sCompression=lzw",
             f"-r{dpi}", "-sPageList=" + ",".join(map(str, pages)),
@@ -89,7 +89,7 @@ def render(exe, folder, gs, pages, dpi, profile_args, prefix, selected=None):
         # Names come from the PDF. Only hexadecimal data is placed in PostScript.
         order = " ".join(f"<{name.encode('utf-8').hex()}> cvn" for name in selected)
         args += ["-dNoSeparationFiles", "-c", f"<< /SeparationOrder [{order}] >> setpagedevice"]
-    log = gs(exe, folder, [*args, "-f", "nahled.pdf"])
+    log = gs(exe, folder, [*args, "-f", source])
     if re.search(r"too many (?:spot colors|colorants)|maximum number.*(?:spots|colorants)", log, re.I):
         raise ProofError("Ghostscript překročil počet podporovaných tiskových desek.")
     groups = {}
@@ -140,6 +140,13 @@ def page_options(pdf, req):
     return page, rotation
 
 
+def render_source(pdf, src, folder, stage):
+    if pdf.is_encrypted:
+        stage(pdf, src, folder / "nahled.pdf")
+        return "nahled.pdf"
+    return str(src.resolve())
+
+
 def screen_page(pdf, src, req, exe, gs, stage):
     page, rotation = page_options(pdf, req)
     box, args = box_options(req)
@@ -149,10 +156,7 @@ def screen_page(pdf, src, req, exe, gs, stage):
     dpi = render_dpi(pdf, [page], 300, target, box)
     with TemporaryDirectory(prefix="pdf-view-") as name:
         folder = Path(name)
-        source = str(src.resolve())
-        if pdf.is_encrypted:
-            stage(pdf, src, folder / "nahled.pdf")
-            source = "nahled.pdf"
+        source = render_source(pdf, src, folder, stage)
         gs(exe, folder, ["-q", "-sDEVICE=png16m", "-dPrinted=false", "-dGraphicsAlphaBits=4",
                          "-dTextAlphaBits=4", f"-r{dpi}", f"-sPageList={page}",
                          "-sOutputFile=obraz.png", *args, "-f", source])
@@ -191,12 +195,12 @@ def page_proof(pdf, src, req, exe, gs, stage):
     page, rotation = page_options(pdf, req)
     with TemporaryDirectory(prefix="pdf-proof-") as name:
         folder = Path(name)
-        stage(pdf, src, folder / "nahled.pdf")
+        source = render_source(pdf, src, folder, stage)
         profile, label, args = print_profile(exe, folder, pdf, req.get("proof_profile", ""))
         box, box_args = box_options(req)
         args += box_args
         dpi = render_dpi(pdf, [page], 192, 1850, box)
-        group = render(exe, folder, gs, [page], dpi, args, "plate")[0]
+        group = render(exe, folder, gs, source, [page], dpi, args, "plate")[0]
         names = sorted((name for name in group if name is not None), key=plate_order)
         stats = [stat(group[name], name) for name in names]
         selected = req.get("plates")
@@ -215,7 +219,7 @@ def page_proof(pdf, src, req, exe, gs, stage):
         else:
             composite = group[None]
             if selected is not None and len(selected) < len(names):
-                composite = render(exe, folder, gs, [page], dpi, args, "selected", selected)[0][None]
+                composite = render(exe, folder, gs, source, [page], dpi, args, "selected", selected)[0][None]
             image = proof_image(composite, profile)
         if rotation:
             image = image.rotate(-rotation, expand=True)
@@ -241,7 +245,7 @@ def scan_plates(pdf, src, req, exe, gs, stage):
             batch = pages[offset:offset + 4]
             dpi = render_dpi(pdf, batch, requested, 2200, box)
             lowest = min(lowest, dpi)
-            frames = render(exe, folder, gs, batch, dpi, args, "scan")
+            frames = render(exe, folder, gs, "nahled.pdf", batch, dpi, args, "scan")
             for number, group in zip(batch, frames):
                 for ink, path in group.items():
                     if ink is not None:

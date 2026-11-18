@@ -172,6 +172,7 @@ func main() {
 		notice(0, "Okno aplikace PDF Blacksmith se nepodařilo vytvořit.", 0x10)
 		return
 	}
+	defer window.view.engine.close()
 	showWindow.Call(window.window, 5)
 	setFocus.Call(window.open)
 	if len(os.Args) > 1 {

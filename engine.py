@@ -662,11 +662,9 @@ def dispatch(request):
     return operation(src, request)
 
 
-def main():
-    logging.disable(logging.CRITICAL)
+def respond(payload):
     try:
-        request = json.load(sys.stdin)
-        result = dispatch(request)
+        result = dispatch(json.loads(payload))
         response = {"status": "ok", "message": result} if isinstance(result, str) else {"status": "ok", "view": result}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
@@ -679,7 +677,16 @@ def main():
                     "Zkontrolujte přístup a zavřete soubor v jiné aplikaci."}
     except Exception as exc:
         response = {"status": "error", "message": f"PDF se nepodařilo zpracovat ({type(exc).__name__}).\n{str(exc)[:1600]}"}
-    print(json.dumps(response, ensure_ascii=True))
+    return json.dumps(response, ensure_ascii=True)
+
+
+def main():
+    logging.disable(logging.CRITICAL)
+    if sys.argv[1:] == ["--stream"]:
+        for line in sys.stdin.buffer:
+            print(respond(line), flush=True)
+    else:
+        print(respond(sys.stdin.buffer.read()))
 
 
 if __name__ == "__main__":
