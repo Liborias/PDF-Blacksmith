@@ -17,7 +17,6 @@ var (
 	user32   = syscall.NewLazyDLL("user32.dll")
 	gdi32    = syscall.NewLazyDLL("gdi32.dll")
 	comdlg32 = syscall.NewLazyDLL("comdlg32.dll")
-	shell32  = syscall.NewLazyDLL("shell32.dll")
 	kernel32 = syscall.NewLazyDLL("kernel32.dll")
 
 	registerClass = user32.NewProc("RegisterClassExW")
@@ -41,7 +40,6 @@ var (
 	chooseOpen    = comdlg32.NewProc("GetOpenFileNameW")
 	chooseSave    = comdlg32.NewProc("GetSaveFileNameW")
 	dialogError   = comdlg32.NewProc("CommDlgExtendedError")
-	shellExecute  = shell32.NewProc("ShellExecuteW")
 )
 
 const (
@@ -140,6 +138,8 @@ type app struct {
 	lastOutput                                          string
 	pending                                             request
 	results                                             chan response
+	export                                              exportOptions
+	readOnlyFields                                      map[uintptr]bool
 }
 
 var window *app
@@ -167,6 +167,7 @@ func main() {
 		results: make(chan response, 1),
 		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
 		panelLabels: make(map[uintptr]bool), panelButtons: make(map[uintptr]bool),
+		export: loadExportOptions(),
 	}
 	if !window.create() {
 		notice(0, "Okno aplikace PDF Blaksmith se nepodařilo vytvořit.", 0x10)
@@ -180,7 +181,11 @@ func main() {
 		if int32(result) <= 0 {
 			break
 		}
-		handled, _, _ := isDialogMsg.Call(window.window, uintptr(unsafe.Pointer(&msg)))
+		focusWindow := window.window
+		if activeTool != nil {
+			focusWindow = activeTool.host.window
+		}
+		handled, _, _ := isDialogMsg.Call(focusWindow, uintptr(unsafe.Pointer(&msg)))
 		if handled == 0 {
 			translateMsg.Call(uintptr(unsafe.Pointer(&msg)))
 			dispatchMsg.Call(uintptr(unsafe.Pointer(&msg)))
@@ -224,11 +229,12 @@ func (a *app) create() bool {
 		return false
 	}
 	bounds := rect{right: int32(a.scale(windowWidth)), bottom: int32(a.scale(windowHeight))}
-	user32.NewProc("AdjustWindowRectEx").Call(uintptr(unsafe.Pointer(&bounds)), baseStyle, 0, exStyle)
+	menu := mainMenu()
+	user32.NewProc("AdjustWindowRectEx").Call(uintptr(unsafe.Pointer(&bounds)), baseStyle, 1, exStyle)
 	a.window, _, _ = createWindow.Call(
 		exStyle, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(wideString(appName))),
 		baseStyle, 0x80000000, 0x80000000, uintptr(bounds.right-bounds.left),
-		uintptr(bounds.bottom-bounds.top), 0, 0, a.instance, 0,
+		uintptr(bounds.bottom-bounds.top), 0, menu, a.instance, 0,
 	)
 	if a.window == 0 {
 		return false
@@ -342,7 +348,8 @@ func (a *app) setupControls() {
 	)
 
 	a.runButton = a.button("Uložit upravené PDF…", idRun, 32, 505, 268, wsGroup)
-	a.outputButton = a.button("Otevřít výstupní PDF", idShowOutput, 313, 505, 224, 0)
+	a.outputButton = a.button("Náhled výstupu", idShowOutput, 313, 505, 205, 0)
+	a.button("Náhled a editor vstupu…", idPreview, 530, 505, 218, 0)
 	enableWindow.Call(a.outputButton, 0)
 	a.label("Výsledek", 32, 561, 716, true)
 	a.report = a.add("EDIT", "", 0, 32, 587, 716, 96,
@@ -385,6 +392,7 @@ func (a *app) updatePrintControls() {
 		return
 	}
 	key := a.profileKey()
+	setText(a.raster, fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI))
 	var raster, custom, hint uintptr
 	if key == "k" && !a.checked(a.outline) {
 		raster = 5
@@ -473,13 +481,6 @@ func (a *app) chooseInput(target uintptr, filter string) {
 	}
 }
 
-func (a *app) openExternal(path string) {
-	result, _, _ := shellExecute.Call(a.window, uintptr(unsafe.Pointer(wideString("open"))), uintptr(unsafe.Pointer(wideString(path))), 0, 0, 1)
-	if result <= 32 {
-		notice(a.window, "Soubor ani odkaz se nepodařilo otevřít.", 0x10)
-	}
-}
-
 const pdfFilter = "Soubory PDF (*.pdf)\x00*.pdf\x00Všechny soubory\x00*.*"
 
 func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
@@ -519,9 +520,13 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 				window.chooseInput(window.cert, "Osobní certifikát PKCS#12\x00*.p12;*.pfx")
 			case idTrustBrowse:
 				window.chooseInput(window.trust, "Kořenové certifikáty\x00*.pem;*.cer;*.crt;*.der\x00Všechny soubory\x00*.*")
+			case idSettings:
+				window.settings()
+			case idPreview:
+				window.previewPDF(pathText(getText(window.input)), window.previewPassword())
 			case idShowOutput:
 				if window.lastOutput != "" {
-					window.openExternal(window.lastOutput)
+					window.previewPDF(window.lastOutput, window.previewPassword())
 				}
 			case idOutline:
 				window.setChecked(window.outline, !window.checked(window.outline))
@@ -548,7 +553,9 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		window.finish(<-window.results)
 		return 0
 	case wmClose:
-		if window.busy {
+		if activeTool != nil {
+			activeTool.close()
+		} else if window.busy {
 			notice(hwnd, "Počkejte, až se dokončí zpracování PDF.", 0x40)
 		} else {
 			destroyWindow.Call(hwnd)
@@ -567,6 +574,13 @@ func pathText(value string) string {
 	return strings.Trim(strings.TrimSpace(value), "\"")
 }
 
+func (a *app) previewPassword() string {
+	if a.mode == idVerifyMode {
+		return getText(a.verifyPassword)
+	}
+	return getText(a.editPassword)
+}
+
 func (a *app) start() {
 	req := request{Input: pathText(getText(a.input))}
 	if info, err := os.Stat(req.Input); err != nil || !info.Mode().IsRegular() {
@@ -577,6 +591,8 @@ func (a *app) start() {
 	switch a.mode {
 	case idEditMode:
 		req.Action = "transform"
+		options := a.export
+		req.Export = &options
 		key := a.profileKey()
 		req.Gray = key == "k"
 		req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
@@ -623,21 +639,29 @@ func (a *app) start() {
 		req.Action = "verify"
 		req.PDFPassword, req.Trust = getText(a.verifyPassword), pathText(getText(a.trust))
 	}
-	if req.Action != "verify" {
-		defaultPath := strings.TrimSuffix(req.Input, filepath.Ext(req.Input)) + suffix + ".pdf"
-		req.Output = a.fileDialog(pdfFilter, defaultPath, "pdf", true)
-		if req.Output == "" {
-			return
-		}
-		_, err := os.Stat(req.Output)
-		if err == nil {
-			if notice(a.window, "Chcete přepsat tento výstupní soubor?\n\n"+req.Output, 0x134) != 6 {
-				return
-			}
-			req.Overwrite = true
-		}
+	if req.Action != "verify" && !a.chooseOutput(&req, suffix) {
+		return
 	}
 	a.run(req)
+}
+
+func (a *app) chooseOutput(req *request, suffix string) bool {
+	defaultPath := strings.TrimSuffix(req.Input, filepath.Ext(req.Input)) + suffix + ".pdf"
+	req.Output = a.fileDialog(pdfFilter, defaultPath, "pdf", true)
+	if req.Output == "" {
+		return false
+	}
+	if info, err := os.Stat(req.Output); err == nil {
+		if original, statErr := os.Stat(req.Input); statErr == nil && os.SameFile(info, original) {
+			notice(a.window, "Vyberte jiný výstupní soubor. Vstupní PDF se nepřepisuje.", 0x30)
+			return false
+		}
+		if notice(a.window, "Chcete přepsat tento výstupní soubor?\n\n"+req.Output, 0x134) != 6 {
+			return false
+		}
+		req.Overwrite = true
+	}
+	return true
 }
 
 func (a *app) run(req request) {

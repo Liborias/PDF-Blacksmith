@@ -12,6 +12,8 @@ import tempfile
 
 import pikepdf
 from print_profiles import ProfileError, attach_intent, get_profile, source_cmyk
+from export_settings import export_settings, pdfwrite_settings
+from proof import ProofError, page_proof, scan_plates
 
 
 class UserError(Exception):
@@ -95,6 +97,35 @@ def clear_signatures(pdf, signed_fields):
                 del perms[key]
 
 
+def prepare_edit(pdf, request):
+    signed = list(signature_fields(pdf))
+    perms = pdf.Root.get("/Perms")
+    has_permissions_signature = isinstance(perms, pikepdf.Dictionary) and any(
+        key in perms for key in ("/DocMDP", "/UR", "/UR3")
+    )
+    if not (signed or has_permissions_signature):
+        return False
+    if not request.get("clear_signatures"):
+        raise SignedPDF("PDF obsahuje digitální podpis. Úprava vytvoří kopii bez stávajících podpisů.")
+    clear_signatures(pdf, signed)
+    return True
+
+
+def ghostscript_path(request):
+    bundled = Path(__file__).resolve().parent / "ghostscript" / "bin" / "gswin64c.exe"
+    exe = request.get("ghostscript") or str(bundled)
+    if not (Path(exe).is_absolute() and Path(exe).is_file()):
+        raise UserError("V aplikaci chybí součást Ghostscript. Použijte úplné sestavení PDF Blaksmith.")
+    return exe
+
+
+def stage_for_render(pdf, src, destination):
+    if pdf.is_encrypted:
+        pdf.save(destination, encryption=False, fix_metadata_version=False)
+    else:
+        shutil.copyfile(src, destination)
+
+
 def run_ghostscript(exe, folder, args):
     env = os.environ.copy()
     # Ghostscript otherwise loads additional options and resources from these variables.
@@ -121,16 +152,17 @@ def run_ghostscript(exe, folder, args):
     return result.stdout.decode("utf-8", errors="replace")
 
 
-def verify_plates(exe, folder, pages):
+def verify_plates(exe, folder, pages, dpi=150):
     from PIL import Image
 
     plate_names = {"Cyan", "Magenta", "Yellow", "Black"}
     hits = {}
     # Render in bounded groups so large jobs do not accumulate plate TIFFs.
-    for first in range(1, pages + 1, 10):
-        last = min(first + 9, pages)
+    batch = 4 if dpi > 150 else 10
+    for first in range(1, pages + 1, batch):
+        last = min(first + batch - 1, pages)
         run_ghostscript(exe, folder, [
-            "-q", "-sDEVICE=tiffsep", "-r150", "-sCompression=lzw", "-dDeviceGrayToK=true",
+            "-q", "-sDEVICE=tiffsep", f"-r{dpi}", "-sCompression=lzw", "-dDeviceGrayToK=true",
             f"-dFirstPage={first}", f"-dLastPage={last}",
             "-sOutputFile=separace-%d.tif", "-f", "hotovo.pdf",
         ])
@@ -160,10 +192,10 @@ def verify_plates(exe, folder, pages):
         raise PlateError(hits)
 
 
-def repair_k_pages(exe, folder, pages):
+def repair_k_pages(exe, folder, pages, dpi=600):
     page_list = ",".join(map(str, pages))
     run_ghostscript(exe, folder, [
-        "-sDEVICE=pdfimage8", "-r600", "-sCompression=Flate", f"-sPageList={page_list}",
+        "-sDEVICE=pdfimage8", f"-r{dpi}", "-sCompression=Flate", f"-sPageList={page_list}",
         "-dOverprint=/simulate", "-sOutputFile=oprava.pdf", "-f", "hotovo.pdf",
     ])
     with pikepdf.Pdf.open(folder / "hotovo.pdf") as pdf, pikepdf.Pdf.open(folder / "oprava.pdf") as raster:
@@ -171,7 +203,7 @@ def repair_k_pages(exe, folder, pages):
             raise UserError("Rastrová oprava vrátila jiný počet stran.")
         for number, replacement in zip(pages, raster.pages):
             page = pdf.pages[number - 1]
-            if (any(abs(float(a) - float(b)) > 0.13 for a, b in zip(page.mediabox, replacement.mediabox))
+            if (any(abs(float(a) - float(b)) > 72 / dpi + 0.01 for a, b in zip(page.mediabox, replacement.mediabox))
                     or page.obj.get("/Rotate", 0) != replacement.obj.get("/Rotate", 0)):
                 raise UserError(f"Rastrová oprava by změnila velikost nebo orientaci strany {number}.")
             page.obj.Contents = pdf.copy_foreign(raster.make_indirect(replacement.obj.Contents))
@@ -277,21 +309,12 @@ def transform(src, request):
     convert = gray or outline or bool(profile_key)
     if not (convert or request.get("decrypt")):
         raise UserError("Vyberte alespoň jednu úpravu PDF.")
-    bundled = Path(__file__).resolve().parent / "ghostscript" / "bin" / "gswin64c.exe"
-    exe = request.get("ghostscript") or str(bundled)
-    if convert and not (Path(exe).is_absolute() and Path(exe).is_file()):
-        raise UserError("V aplikaci chybí součást Ghostscript. Použijte úplné sestavení PDF Blaksmith.")
+    options = export_settings(request.get("export"))
+    proof_dpi, repair_dpi = options["proof_dpi"], options["repair_dpi"]
+    exe = ghostscript_path(request) if convert else None
 
     with open_pdf(src, request.get("pdf_password", "")) as pdf:
-        signed = list(signature_fields(pdf))
-        perms = pdf.Root.get("/Perms")
-        has_permissions_signature = isinstance(perms, pikepdf.Dictionary) and any(
-            key in perms for key in ("/DocMDP", "/UR", "/UR3")
-        )
-        if (signed or has_permissions_signature) and not request.get("clear_signatures"):
-            raise SignedPDF("PDF obsahuje digitální podpis. Úprava vytvoří kopii bez stávajících podpisů.")
-        if signed or has_permissions_signature:
-            clear_signatures(pdf, signed)
+        modified = prepare_edit(pdf, request)
         if not convert:
             if not pdf.is_encrypted:
                 raise UserError("Vstupní PDF už je bez šifrování a omezení heslem.")
@@ -310,14 +333,14 @@ def transform(src, request):
         with tempfile.TemporaryDirectory(prefix="pdftisk-") as tmp:
             folder = Path(tmp)
             staged = folder / "vstup.pdf"
-            if pdf.is_encrypted or signed or has_permissions_signature:
+            if pdf.is_encrypted or modified:
                 pdf.save(staged, encryption=False, fix_metadata_version=False)
             else:
                 shutil.copyfile(src, staged)
 
             args = [
                 "-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.7", "-dAutoRotatePages=/None",
-                "-dPreserveAnnots=false", "-dPrinted=true", "-sOutputFile=hotovo.pdf",
+                "-dPreserveAnnots=false", "-dPrinted=true", "-sOutputFile=hotovo.pdf", *pdfwrite_settings(options),
             ]
             if gray:
                 args.extend([
@@ -360,22 +383,22 @@ def transform(src, request):
                 os.replace(revised_pdf, folder / "hotovo.pdf")
             if gray:
                 try:
-                    verify_plates(exe, folder, pages)
+                    verify_plates(exe, folder, pages, proof_dpi)
                 except PlateError as exc:
                     if outline:
                         raise UserError(f"{exc}\nVýstup se neuložil. Rastrovou opravu K lze použít při převodu bez křivek.") from exc
                     if not request.get("allow_raster"):
-                        raise UserError(f"{exc}\nVýstup se neuložil. Pro tyto strany lze povolit rastrovou opravu K (600 dpi).") from exc
+                        raise UserError(f"{exc}\nVýstup se neuložil. Pro tyto strany lze povolit rastrovou opravu K ({repair_dpi} dpi).") from exc
                     repaired = exc.pages
-                    repair_k_pages(exe, folder, repaired)
-                    verify_plates(exe, folder, pages)
+                    repair_k_pages(exe, folder, repaired, repair_dpi)
+                    verify_plates(exe, folder, pages, proof_dpi)
             with output_file(src, request) as pending:
                 shutil.copyfile(folder / "hotovo.pdf", pending)
     lines = [f"Uloženo PDF. Počet stran {pages}."]
     if gray:
-        lines.append("Separace při 150 dpi ověřeny na všech stranách. C, M, Y i případné přímé desky jsou prázdné.")
+        lines.append(f"Separace při {proof_dpi} dpi ověřeny na všech stranách. C, M, Y i případné přímé desky jsou prázdné.")
     if repaired:
-        lines.append("Rastrová oprava 600 dpi na stranách " + ", ".join(map(str, repaired)) + ".")
+        lines.append(f"Rastrová oprava {repair_dpi} dpi na stranách " + ", ".join(map(str, repaired)) + ".")
     if profile:
         lines.append(f"Výstupní profil CMYK: {profile[1]}. Profil ICC je vložen v PDF.")
     if outline:
@@ -565,11 +588,63 @@ def verify(src, request):
     return "\n".join(result)
 
 
+def document_order(view, pages):
+    order = view.get("order", list(range(1, pages + 1)))
+    if (not isinstance(order, list) or len(order) != pages
+            or any(type(page) is not int for page in order)
+            or set(order) != set(range(1, pages + 1))):
+        raise UserError("Pořadí stran neodpovídá otevřenému PDF.")
+    return order
+
+
+def inspect_document(src, request):
+    exe = ghostscript_path(request)
+    view = request.get("view", {})
+    with open_pdf(src, request.get("pdf_password", "")) as pdf:
+        if not len(pdf.pages):
+            raise UserError("Vstupní PDF nemá žádné strany.")
+        if request["action"] == "scan":
+            order = document_order(view, len(pdf.pages))
+            settings = export_settings(request.get("export"))
+            return scan_plates(pdf, src, {**view, "order": order, "proof_dpi": settings["proof_dpi"]},
+                               exe, run_ghostscript, stage_for_render)
+        return page_proof(pdf, src, view, exe, run_ghostscript, stage_for_render)
+
+
+def save_page_edits(src, request):
+    view = request.get("view", {})
+    with open_pdf(src, request.get("pdf_password", "")) as pdf:
+        pages = list(pdf.pages)
+        order = document_order(view, len(pages))
+        rotations = view.get("rotations", [])
+        if (not isinstance(rotations, list) or len(rotations) != len(pages)
+                or any(type(angle) is not int or angle not in (0, 90, 180, 270) for angle in rotations)):
+            raise UserError("Otočení stran má neplatný formát.")
+        prepare_edit(pdf, request)
+        for page, angle in zip(pages, rotations):
+            if angle:
+                page.rotate(angle, relative=True)
+        if order != list(range(1, len(pages) + 1)):
+            labels = [page.label for page in pages] if "/PageLabels" in pdf.Root else None
+            # Remove before adding so QPDF reuses the page objects that bookmarks target.
+            del pdf.pages[:]
+            pdf.pages.extend(pages[number - 1] for number in order)
+            if labels is not None:
+                numbers = pikepdf.Array()
+                for index, number in enumerate(order):
+                    numbers.extend([index, pikepdf.Dictionary(P=labels[number - 1])])
+                pdf.Root.PageLabels = pikepdf.Dictionary(Nums=numbers)
+        with output_file(src, request) as pending:
+            pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+    return "Uložena upravená kopie PDF."
+
+
 def dispatch(request):
     src = Path(request["input"])
     if not src.is_file():
         raise UserError("Vyberte existující soubor PDF.")
-    operation = {"transform": transform, "sign": sign, "verify": verify}.get(request.get("action"))
+    operation = {"transform": transform, "sign": sign, "verify": verify,
+                 "preview": inspect_document, "scan": inspect_document, "edit_pages": save_page_edits}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     return operation(src, request)
@@ -579,10 +654,11 @@ def main():
     logging.disable(logging.CRITICAL)
     try:
         request = json.load(sys.stdin)
-        response = {"status": "ok", "message": dispatch(request)}
+        result = dispatch(request)
+        response = {"status": "ok", "message": result} if isinstance(result, str) else {"status": "ok", "view": result}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
-    except (UserError, ProfileError) as exc:
+    except (UserError, ProfileError, ProofError) as exc:
         response = {"status": "error", "message": str(exc)}
     except FileExistsError:
         response = {"status": "error", "message": "Cílový soubor už existuje. Vyberte nový název."}

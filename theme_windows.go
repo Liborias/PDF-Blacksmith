@@ -99,6 +99,17 @@ func rounded(dc uintptr, bounds rect, radius int, fill, border paletteColor) {
 	gdiDelete.Call(pen)
 }
 
+func drawCheck(dc uintptr, bounds rect) {
+	width, height := bounds.right-bounds.left, bounds.bottom-bounds.top
+	pen, _, _ := gdiPen.Call(0, uintptr(max(1, width/9)), textColor.win())
+	previous, _, _ := gdiSelect.Call(dc, pen)
+	gdi32.NewProc("MoveToEx").Call(dc, uintptr(bounds.left+width/4), uintptr(bounds.top+height/2), 0)
+	gdi32.NewProc("LineTo").Call(dc, uintptr(bounds.left+width*7/16), uintptr(bounds.top+height*11/16))
+	gdi32.NewProc("LineTo").Call(dc, uintptr(bounds.left+width*3/4), uintptr(bounds.top+height/3))
+	gdiSelect.Call(dc, previous)
+	gdiDelete.Call(pen)
+}
+
 func gradient(dc uintptr, bounds rect, left, right paletteColor, vertical bool) {
 	start := gradientVertex{bounds.left, bounds.top, uint16(left.red) << 8, uint16(left.green) << 8, uint16(left.blue) << 8, 0}
 	end := gradientVertex{bounds.right, bounds.bottom, uint16(right.red) << 8, uint16(right.green) << 8, uint16(right.blue) << 8, 0}
@@ -161,7 +172,7 @@ func (a *app) paint(hwnd uintptr) {
 
 func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 	gdiTextColor.Call(dc, textColor.win())
-	if msg != wmCtlColorText || handle == a.report {
+	if msg != wmCtlColorText || handle == a.report || a.readOnlyFields[handle] {
 		gdiBkColor.Call(dc, inputColor.win())
 		gdiBkMode.Call(dc, 2)
 		return a.inputBrush
@@ -194,7 +205,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		box := rect{bounds.left + offset, top, bounds.left + offset + edge, top + edge}
 		if a.checked(item.handle) {
 			rounded(item.dc, box, a.scale(5), paletteColor{113, 42, 70}, accentColor)
-			drawText(item.dc, "✓", box, a.labelFont, textColor, 1)
+			drawCheck(item.dc, box)
 		} else {
 			rounded(item.dc, box, a.scale(5), inputColor, paletteColor{116, 109, 122})
 		}

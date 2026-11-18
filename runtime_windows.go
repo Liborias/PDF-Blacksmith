@@ -20,27 +20,62 @@ import (
 var runtimeZip []byte
 
 type request struct {
-	Action          string `json:"action"`
-	Input           string `json:"input"`
-	Output          string `json:"output,omitempty"`
-	PDFPassword     string `json:"pdf_password,omitempty"`
-	Profile         string `json:"profile,omitempty"`
-	CustomICC       string `json:"custom_icc,omitempty"`
-	Certificate     string `json:"certificate,omitempty"`
-	CertPassword    string `json:"cert_password,omitempty"`
-	Trust           string `json:"trust,omitempty"`
-	Gray            bool   `json:"gray,omitempty"`
-	AllowRaster     bool   `json:"allow_raster,omitempty"`
-	Outline         bool   `json:"outline,omitempty"`
-	Decrypt         bool   `json:"decrypt,omitempty"`
-	Visible         bool   `json:"visible,omitempty"`
-	Overwrite       bool   `json:"overwrite,omitempty"`
-	ClearSignatures bool   `json:"clear_signatures,omitempty"`
+	Action          string         `json:"action"`
+	Input           string         `json:"input"`
+	Output          string         `json:"output,omitempty"`
+	PDFPassword     string         `json:"pdf_password,omitempty"`
+	Profile         string         `json:"profile,omitempty"`
+	CustomICC       string         `json:"custom_icc,omitempty"`
+	Certificate     string         `json:"certificate,omitempty"`
+	CertPassword    string         `json:"cert_password,omitempty"`
+	Trust           string         `json:"trust,omitempty"`
+	Gray            bool           `json:"gray,omitempty"`
+	AllowRaster     bool           `json:"allow_raster,omitempty"`
+	Outline         bool           `json:"outline,omitempty"`
+	Decrypt         bool           `json:"decrypt,omitempty"`
+	Visible         bool           `json:"visible,omitempty"`
+	Overwrite       bool           `json:"overwrite,omitempty"`
+	ClearSignatures bool           `json:"clear_signatures,omitempty"`
+	Export          *exportOptions `json:"export,omitempty"`
+	View            *viewRequest   `json:"view,omitempty"`
+}
+
+type viewRequest struct {
+	Page         int      `json:"page,omitempty"`
+	Rotation     int      `json:"rotation,omitempty"`
+	Box          string   `json:"box,omitempty"`
+	ProofProfile string   `json:"proof_profile,omitempty"`
+	HidePlates   []string `json:"hide_plates,omitempty"`
+	Order        []int    `json:"order,omitempty"`
+	Rotations    []int    `json:"rotations,omitempty"`
+}
+
+type plateInfo struct {
+	Name     string  `json:"name"`
+	Active   bool    `json:"active"`
+	Coverage float64 `json:"coverage"`
+	Maximum  float64 `json:"maximum"`
+	Pages    []int   `json:"pages"`
+}
+
+type viewResponse struct {
+	Pages        int         `json:"pages"`
+	DPI          int         `json:"dpi"`
+	OutputIntent string      `json:"output_intent"`
+	Simulation   string      `json:"simulation"`
+	Image        []byte      `json:"image"`
+	Plates       []plateInfo `json:"plates"`
+	UsedPlates   []plateInfo `json:"used_plates"`
 }
 
 type response struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Status  string        `json:"status"`
+	Message string        `json:"message"`
+	View    *viewResponse `json:"view"`
+}
+
+func operationError(message string) response {
+	return response{Status: "error", Message: message}
 }
 
 func appRuntime() (string, error) {
@@ -75,7 +110,7 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"), filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
+	for _, name := range []string{"ready", "python.exe", "engine.py", "export_settings.py", "proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"), filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))
 		if err != nil || !info.Mode().IsRegular() {
 			return false
@@ -125,11 +160,11 @@ func extractEntry(entry *zip.File, destination string) error {
 func runOperation(req request) response {
 	dir, err := appRuntime()
 	if err != nil {
-		return response{"error", "Součásti aplikace se nepodařilo rozbalit.\n" + err.Error()}
+		return operationError("Součásti aplikace se nepodařilo rozbalit.\n" + err.Error())
 	}
 	payload, err := json.Marshal(req)
 	if err != nil {
-		return response{"error", err.Error()}
+		return operationError(err.Error())
 	}
 	cmd := exec.Command(filepath.Join(dir, "python.exe"), "-B", "-I", "-X", "utf8", filepath.Join(dir, "engine.py"))
 	cmd.Dir = dir
@@ -137,11 +172,11 @@ func runOperation(req request) response {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	output, err := cmd.Output()
 	if err != nil {
-		return response{"error", fmt.Sprintf("Zpracování PDF se nepodařilo spustit.\n%v", err)}
+		return operationError(fmt.Sprintf("Zpracování PDF se nepodařilo spustit.\n%v", err))
 	}
 	var result response
 	if err := json.Unmarshal(output, &result); err != nil {
-		return response{"error", "Komunikace se zpracováním PDF se nezdařila."}
+		return operationError("Komunikace se zpracováním PDF se nezdařila.")
 	}
 	return result
 }
