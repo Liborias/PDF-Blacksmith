@@ -1148,12 +1148,16 @@ def merge_intents(pdf):
     return tuple(fingerprints), intents
 
 
-def append_merge_source(target, pdf, entry):
+def append_merge_source(target, pdf, entry, *, require_selection=False):
     count = len(pdf.pages)
     view = entry.get("view", {})
     order = document_order(view, count)
     rotations = page_rotations(view.get("rotations", [0] * count), count)
-    positions = selected_pages(view, len(order)) or range(1, len(order) + 1)
+    positions = selected_pages(view, len(order))
+    if positions is None:
+        if require_selection:
+            raise UserError("Vyberte strany ke vložení.")
+        positions = range(1, len(order) + 1)
     indices = [order[position-1]-1 for position in positions]
     first = len(target.pages)
     apply_bookmarks(pdf, view.get("bookmarks", []))
@@ -1201,6 +1205,41 @@ def merge_documents(request):
     return message
 
 
+def insert_document_pages(src, request):
+    insertion = request["insert_pages"]
+    entry, before = insertion["source"], insertion["before"]
+    donor_path = Path(entry["path"])
+    donor_state, target_state = merge_source_state(donor_path, entry), src.stat()
+    view, password = request.get("view", {}), request.get("pdf_password", "")
+
+    with output_file(src, request, protected=(donor_path,)) as pending:
+        target_path = src
+        if view.keys() & {"order", "rotations", "bookmarks"}:
+            target_path = pending.with_name("upraveny-cil.pdf")
+            save_page_edits(src, {**request, "output": str(target_path), "overwrite": False})
+        with open_pdf(target_path, password) as target, open_pdf(donor_path, entry.get("pdf_password", "")) as donor:
+            prepare_edit(target, request)
+            if donor.is_encrypted and not target.is_encrypted and not request.get("allow_unencrypted_merge"):
+                raise MergeEncryption("Zdrojové PDF je šifrované, cílové PDF není.")
+            first = len(target.pages)
+            if type(before) is not int or not 0 <= before <= first:
+                raise UserError("Cílová pozice je mimo rozsah stran.")
+            # Import page resources and inter-page links together, then move the new pages
+            # within the target PDF so its links and outlines keep their page references.
+            clear_signatures(donor, list(signature_fields(donor)))
+            append_merge_source(target, donor, entry, require_selection=True)
+            last = len(target.pages)
+            order = [*range(1, before+1), *range(first+1, last+1), *range(before+1, first+1)]
+            apply_page_order(target, list(target.pages), order)
+            clear_pdfx_claim(target)
+            target.save(pending, min_version=(donor.pdf_version, donor.extension_level),
+                        encryption=target.is_encrypted, fix_metadata_version=False)
+            description = {**describe(target), "bookmarks": describe_bookmarks(target)}
+        if not same_file_state(donor_state, donor_path.stat()) or not same_file_state(target_state, src.stat()):
+            raise UserError("Jedno z PDF se během vkládání změnilo. Otevřete je znovu.")
+    return {**description, "message": f"Vložené strany: {last-first}."}
+
+
 def dispatch(request, *, raster=False):
     if request.get("action") == "merge_probe":
         return inspect_merge(request)
@@ -1213,7 +1252,7 @@ def dispatch(request, *, raster=False):
                  "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
                  "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,
                  "edit_pages": save_page_edits, "save_document": save_document,
-                 "split": split_document, "ocr": ocr_document,
+                 "split": split_document, "ocr": ocr_document, "insert_pages": insert_document_pages,
                  "text_probe": edit_text_document, "text_edit": edit_text_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")

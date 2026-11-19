@@ -130,7 +130,9 @@ func (v *documentView) readPageSelection() {
 
 func (v *documentView) selectOnlyPage(index int) {
 	v.pageSelection = []int{index}
-	v.app.applyThumbnailScope()
+	if !v.secondary {
+		v.app.applyThumbnailScope()
+	}
 	v.gotoPage(index, false)
 	v.resetPageListSelection()
 }

@@ -58,6 +58,7 @@ type request struct {
 	View            *viewRequest   `json:"view,omitempty"`
 
 	MergeInputs           []mergeInput `json:"merge_inputs,omitempty"`
+	InsertPages           *pageInsertion `json:"insert_pages,omitempty"`
 	AllowUnencryptedMerge bool         `json:"allow_unencrypted_merge,omitempty"`
 	OCRLanguage           string       `json:"ocr_language,omitempty"`
 	OCRRegion             []textPoint  `json:"ocr_region,omitempty"`

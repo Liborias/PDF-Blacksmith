@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"slices"
 	"unsafe"
 )
 
@@ -13,10 +14,12 @@ type fileMenu struct {
 	open    bool
 }
 
-var fileOptions = []struct {
+type fileOption struct {
 	id    int
 	label string
-}{
+}
+
+var fileOptions = []fileOption{
 	{idOpen, "Otevřít soubor"},
 	{idRecentFiles, "Nedávné"},
 	{idShowOutput, "Otevřít výstup"},
@@ -26,6 +29,10 @@ var fileOptions = []struct {
 	{idFileSign, "Podepsaná kopie"},
 	{idPrintDocument, "Tisk"},
 }
+
+var fileDetailOptions = slices.DeleteFunc(slices.Clone(fileOptions), func(option fileOption) bool {
+	return option.id == idRecentFiles
+})
 
 func (a *app) fileOptionEnabled(option int) bool {
 	if a.busy {
@@ -177,10 +184,10 @@ func (a *app) drawFileMenuButton(item *buttonDraw) bool {
 }
 
 func (a *app) updateFileOptions() {
-	for _, option := range fileOptions {
+	for _, option := range fileDetailOptions {
 		setEnabled(a.detailButtons[option.id], a.fileOptionEnabled(option.id))
 	}
-	if a.detailsTab() == idRecentFiles {
+	if a.detailsTab() == idFileDetails {
 		a.updateRecentActions()
 	}
 }
@@ -198,7 +205,15 @@ func (a *app) runFileOption(option int) {
 		a.saveDocument(option == idSaveDocumentAs)
 	case idPrintDocument:
 		a.printDocument()
-	case idRecentFiles, idExportTab, idFileSign:
+	case idRecentFiles:
+		a.mode = idFileDetails
+		a.detailsCollapsed = false
+		a.layout()
+		if a.recent.visibleCount() > 0 {
+			setFocus.Call(a.recent.list)
+			a.revealFocusedControl()
+		}
+	case idExportTab, idFileSign:
 		a.activate(option)
 	}
 }

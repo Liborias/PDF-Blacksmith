@@ -14,6 +14,7 @@ const (
 type thumbnailDrag struct {
 	start, current              point
 	page, boundary              int
+	target                      *documentView
 	pressed, moving, overDelete bool
 }
 
@@ -203,17 +204,26 @@ func (v *documentView) drawPageThumbnail(item *buttonDraw, index int, color pale
 	if item.state&16 != 0 {
 		v.app.drawFocus(item.dc, label)
 	}
-	if v.pageDrag.moving {
+	if boundary := v.thumbnailDropBoundary(); boundary >= 0 {
 		line := bounds.top
 		switch {
-		case v.pageDrag.boundary == index:
-		case v.pageDrag.boundary == index+1 && index+1 == len(v.order):
+		case boundary == index:
+		case boundary == index+1 && index+1 == len(v.order):
 			line = bounds.bottom - int32(d(2))
 		default:
 			return
 		}
 		fillColor(item.dc, rect{bounds.left, line, bounds.right, line + int32(d(2))}, selectionColor)
 	}
+}
+
+func (v *documentView) thumbnailDropBoundary() int {
+	for _, view := range [...]*documentView{v.app.view, v.app.comparison.view} {
+		if view != nil && view.pageDrag.target == v {
+			return view.pageDrag.boundary
+		}
+	}
+	return -1
 }
 
 func (v *documentView) pageListBounds() rect {
@@ -235,14 +245,13 @@ func (v *documentView) pageAt(y int32) int {
 }
 
 func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
-	if v.secondary {
-		return false
-	}
+	a := v.app
 	xy := point{int32(int16(position)), int32(int16(position >> 16))}
 	drag := &v.pageDrag
 	switch msg {
 	case 0x0201: // WM_LBUTTONDOWN
-		if !v.ready() || v.app.mode != idPagesTab || keys&(4|8) != 0 { // Use native Shift and Ctrl selection.
+		if !v.ready() || a.busy || (!a.comparisonVisible() && a.mode != idPagesTab) ||
+			keys&(4|8) != 0 || !contains(v.pageListBounds(), xy.x, xy.y) { // Use native Shift and Ctrl selection.
 			return false
 		}
 		if row := v.pageAt(xy.y); row >= 0 && row < len(v.order) {
@@ -256,7 +265,7 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 			drag.current = xy
 			deltaX, deltaY := xy.x-drag.start.x, xy.y-drag.start.y
 			distance := max(max(deltaX, -deltaX), max(deltaY, -deltaY))
-			if !drag.moving && v.app.mode == idPagesTab && !v.app.busy && distance >= int32(v.app.scale(5)) {
+			if !drag.moving && !a.busy && distance >= int32(a.scale(5)) {
 				if !v.inPageSelection(drag.page) {
 					v.selectOnlyPage(drag.page)
 				}
@@ -278,22 +287,25 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 			v.endPageDrag()
 			if !last.moving {
 				v.selectOnlyPage(last.page)
-			} else if !v.app.busy && last.overDelete {
+			} else if !a.busy && last.overDelete {
 				v.deleteSelectedPages()
-			} else if !v.app.busy && last.boundary >= 0 {
+			} else if !a.busy && last.target == v {
 				v.moveSelectedPages(dropPosition(v.selectedPagePositions(), last.boundary))
+			} else if !a.busy && last.target != nil {
+				a.insertDraggedPages(v, last.target, last.boundary)
 			}
 			return true
 		}
 	case 0x0113: // WM_TIMER
 		if keys == thumbnailDragTimer && drag.moving {
-			bounds := v.pageListBounds()
-			if contains(bounds, drag.current.x, drag.current.y) {
-				bar := v.app.scrollPanes[v.pageList].bar
-				margin := int32(v.app.scale(24))
-				if drag.current.y < bounds.top+margin {
+			if target := drag.target; target != nil {
+				xy := v.thumbnailPoint(target)
+				bounds := target.pageListBounds()
+				bar := a.scrollPanes[target.pageList].bar
+				margin := int32(a.scale(24))
+				if xy.y < bounds.top+margin {
 					bar.setPosition(bar.position - 1)
-				} else if drag.current.y >= bounds.bottom-margin {
+				} else if xy.y >= bounds.bottom-margin {
 					bar.setPosition(bar.position + 1)
 				}
 				v.updatePageDrop()
@@ -306,25 +318,51 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 	return false
 }
 
+func (v *documentView) thumbnailPoint(target *documentView) point {
+	xy := v.pageDrag.current
+	if target != v {
+		user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&xy)))
+		user32.NewProc("ScreenToClient").Call(target.pageList, uintptr(unsafe.Pointer(&xy)))
+	}
+	return xy
+}
+
 func (v *documentView) updatePageDrop() {
+	a := v.app
 	drag := &v.pageDrag
-	oldBoundary, oldDelete := drag.boundary, drag.overDelete
-	drag.boundary, drag.overDelete = -1, false
-	if contains(v.pageListBounds(), drag.current.x, drag.current.y) {
-		row := v.pageAt(drag.current.y)
-		line := v.app.scrollPanes[v.pageList].lineHeight
-		if int(drag.current.y)%line >= line/2 {
+	oldTarget, oldBoundary, oldDelete := drag.target, drag.boundary, drag.overDelete
+	drag.target, drag.boundary, drag.overDelete = nil, -1, false
+	canReorder := !v.secondary && a.mode == idPagesTab
+	for _, target := range [...]*documentView{a.view, a.comparison.view} {
+		if (target == v && !canReorder) || (target != v && !a.comparisonVisible()) || !target.ready() {
+			continue
+		}
+		visible, _, _ := user32.NewProc("IsWindowVisible").Call(target.pageList)
+		xy := v.thumbnailPoint(target)
+		if visible == 0 || !contains(target.pageListBounds(), xy.x, xy.y) {
+			continue
+		}
+		row := target.pageAt(xy.y)
+		line := a.scrollPanes[target.pageList].lineHeight
+		if int(xy.y)%line >= line/2 {
 			row++
 		}
-		drag.boundary = min(row, len(v.order))
-	} else {
+		drag.target, drag.boundary = target, min(row, len(target.order))
+		break
+	}
+	if drag.target == nil && canReorder && !a.detailsCollapsed && !a.full {
 		screen := drag.current
 		user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&screen)))
 		hover, _, _ := user32.NewProc("WindowFromPoint").Call(uintptr(uint32(screen.x)) | uintptr(uint32(screen.y))<<32)
 		drag.overDelete = hover == v.deleteButton && len(v.selectedPagePositions()) < len(v.order)
 	}
-	if oldBoundary != drag.boundary {
-		invalidate(v.pageList)
+	if oldTarget != drag.target || oldBoundary != drag.boundary {
+		if oldTarget != nil {
+			invalidate(oldTarget.pageList)
+		}
+		if drag.target != nil && drag.target != oldTarget {
+			invalidate(drag.target.pageList)
+		}
 	}
 	if oldDelete != drag.overDelete {
 		invalidate(v.deleteButton)
@@ -335,11 +373,16 @@ func (v *documentView) endPageDrag() {
 	if !v.pageDrag.pressed {
 		return
 	}
+	target, overDelete := v.pageDrag.target, v.pageDrag.overDelete
 	v.pageDrag = thumbnailDrag{}
 	user32.NewProc("KillTimer").Call(v.pageList, thumbnailDragTimer)
 	if capture, _, _ := user32.NewProc("GetCapture").Call(); capture == v.pageList {
 		user32.NewProc("ReleaseCapture").Call()
 	}
-	invalidate(v.pageList)
-	invalidate(v.deleteButton)
+	if target != nil {
+		invalidate(target.pageList)
+	}
+	if overDelete {
+		invalidate(v.deleteButton)
+	}
 }

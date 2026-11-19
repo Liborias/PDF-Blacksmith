@@ -24,6 +24,8 @@ Otevřete alespoň dvě PDF a zvolte **Zobrazení → Náhled → Zobrazit vedle
 
 V každém panelu můžete samostatně listovat, přibližovat **Ctrl + kolečkem** a označovat stránky v náhledech. Tlačítko **Náhledy** podél názvu souboru sbalí nebo rozbalí náhledy daného panelu. Klikněte na název PDF nad stránkou nebo na jeho kartu v záhlaví, pokud s ním chcete pracovat pomocí nástrojů vlevo. Název aktivního dokumentu je zvýrazněný vínově.
 
+Přetažením jednoho náhledu nebo označeného výběru do druhého panelu vložíte kopie stránek v jejich aktuálním pořadí. Vínová čára ukazuje místo vložení. Přiblížením kurzoru k okraji seznamu jej při tažení posunete. Cílová karta zobrazí vložené strany jako neuloženou úpravu. **Ctrl+Z** vrátí vložení a **Soubor → Uložit** nebo **Uložit jako** změnu uloží.
+
 **Zobrazení → Náhled → Ukončit zobrazení vedle sebe** vrátí náhled jednoho dokumentu a obě karty zůstanou otevřené. Přepnutí na kartu mimo dvojici nebo zavření jedné z porovnávaných karet ukončí společné zobrazení. **F11** zobrazí aktivní PDF na celé obrazovce, **Esc** obnoví dvojici.
 
 ## Vyhledávání v PDF
@@ -62,9 +64,9 @@ Do souboru zapíšete změny přes **Soubor → Uložit** nebo **Uložit jako**.
 
 ## Uložení a tisk
 
-Stejné volby najdete v rozbalovací nabídce **Soubor** vlevo i nahoře v panelu nastavení vpravo. **Nedávné**, **Export** a **Podepsaná kopie** zobrazí své volby pod tlačítky vpravo.
+Volby souboru najdete v rozbalovací nabídce **Soubor** vlevo a nahoře v panelu nastavení vpravo. **Export** a **Podepsaná kopie** otevřou nastavení pod tlačítky. Položka **Nedávné** v levé nabídce přejde na seznam vpravo.
 
-- **Soubor → Nedávné** zobrazí až 10 naposledy otevřených PDF i po restartu. Vyberte dokument a stiskněte **Otevřít vybrané PDF**, Enter nebo na něj poklikejte. Pod seznamem je úplná cesta k vybranému souboru. Historie ukládá pouze cesty.
+- **Nedávné soubory** jsou přímo v pravém panelu **Soubor**. Zpočátku se zobrazí posledních 10 PDF. Volba **Zobrazit více** zpřístupní až 100 položek s vlastním posuvníkem. Poklikejte na soubor, stiskněte Enter nebo použijte tlačítko **Otevřít vybrané PDF**. Pod seznamem uvidíte celou cestu k vybranému souboru. Historie cest je dostupná i po restartu.
 - **Soubor → Uložit** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
 - **Soubor → Uložit jako** nebo **Ctrl+Shift+S** otevře dialog pro uložení kopie. Uložená kopie se otevře jako aktuální dokument.
 - **Soubor → Tisk** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Volba **Výběr** vytiskne označené náhledy. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.

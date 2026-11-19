@@ -114,6 +114,8 @@ func (a *app) setComparisonTab(tab *documentTab) {
 		return
 	}
 	v := c.view
+	v.endPageDrag()
+	a.view.endPageDrag()
 	if c.tab != nil {
 		v.storeReadingPosition(c.tab)
 		c.tab.content = v.documentContent

@@ -62,6 +62,7 @@ const (
 	idRecentFiles
 	idRecentList
 	idRecentOpen
+	idRecentMore
 )
 
 const (
@@ -181,7 +182,7 @@ func (a *app) setupWorkspace() bool {
 	}
 	a.sidebarTitle = a.label("", 0, 0, 298, true)
 	a.panelLabels[a.sidebarTitle] = true
-	for _, option := range fileOptions {
+	for _, option := range fileDetailOptions {
 		a.addDetailButton(option.id, option.label)
 	}
 	a.addDetailButton(idBrowseTab, "Náhled")
@@ -213,8 +214,6 @@ func (a *app) setupWorkspace() bool {
 	a.beginPanel(idSignTab)
 	a.buildSignPanel()
 	a.beginPanel(idFileDetails)
-	a.label("PDF můžete také přetáhnout do okna.", 16, 16, 298, false)
-	a.beginPanel(idRecentFiles)
 	a.buildRecentPanel()
 	a.beginPanel(idSearchTab)
 	a.view.buildSearchPanel()
@@ -399,14 +398,11 @@ func (a *app) activate(id int) {
 			a.mode = idFileDetails
 		}
 		a.tool = idFileTab
-	case idRecentFiles, idExportTab, idFileSign:
+	case idExportTab, idFileSign:
 		if !a.fileOptionEnabled(id) {
 			return
 		}
 		a.tool, a.mode = idFileTab, id
-		if id == idRecentFiles {
-			a.refreshRecentPanel()
-		}
 		if id == idFileSign {
 			a.mode = idSignTab
 		}
@@ -489,12 +485,8 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 		item.height = max(100, int(a.detailsArea.bottom-a.detailsArea.top)*96/a.dpi-item.y-18)
 		return item, true
 	}
-	if tab == idRecentFiles {
-		empty := len(a.recent.files) == 0
-		if item.handle == a.recent.empty {
-			return item, empty
-		}
-		return item, !empty
+	if tab == idFileDetails {
+		return a.recentItemLayout(item)
 	}
 	if item.handle == a.splitRange {
 		return item, comboIndex(a.splitScope) == exportPageRanges
@@ -901,6 +893,8 @@ func (a *app) command(id, notification int) {
 		a.runFileOption(id)
 	case idRecentOpen:
 		a.openRecentFile()
+	case idRecentMore:
+		a.toggleRecentFiles()
 	case idToggleTools:
 		a.toolsCollapsed = !a.toolsCollapsed
 		a.layout()
@@ -1213,14 +1207,22 @@ func (a *app) finish(result response) {
 		return
 	}
 
-	draft := req.Action == "ocr" || req.Action == "text_edit"
+	draft := req.Action == "ocr" || req.Action == "text_edit" || req.Action == "insert_pages"
 	if result.Status == "merge_encrypted" {
-		if notice(a.window, result.Message+"\n\nUložit sloučené PDF bez šifrování?", 0x134) == 6 {
+		question := "Uložit sloučené PDF bez šifrování?"
+		if req.InsertPages != nil {
+			question = "Vložit vybrané strany do nešifrovaného PDF?"
+		}
+		if notice(a.window, result.Message+"\n\n"+question, 0x134) == 6 {
 			req.AllowUnencryptedMerge = true
-			a.run(req)
-			return
+			if a.run(req) {
+				return
+			}
 		}
 		result.Message = "Sloučení zrušeno."
+		if req.InsertPages != nil {
+			result.Message = "Vložení stránek zrušeno."
+		}
 	}
 	if result.Status == "signed_pdf" {
 		message := result.Message
@@ -1236,6 +1238,9 @@ func (a *app) finish(result response) {
 		}
 		if req.Action == "text_edit" {
 			question = "Použít úpravu textu v pracovní kartě bez původních podpisů?"
+		}
+		if req.InsertPages != nil {
+			question = "Vložit strany do pracovní karty bez původních podpisů cílového PDF?"
 		}
 		if req.ReplaceSource {
 			message = "Původní PDF obsahuje digitální podpis."
@@ -1394,8 +1399,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 		a.view.deleteSelectedPages()
 		return true
 	}
-	if msg.wParam == 0x1b && a.view.pageDrag.pressed {
+	if msg.wParam == 0x1b && (a.view.pageDrag.pressed || a.comparison.view.pageDrag.pressed) {
 		a.view.endPageDrag()
+		a.comparison.view.endPageDrag()
 		return true
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)

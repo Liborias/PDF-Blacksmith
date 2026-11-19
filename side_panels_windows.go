@@ -33,7 +33,7 @@ func (a *app) addDetailButton(id int, label string) {
 func (a *app) detailsTab() int {
 	if a.tool == idFileTab {
 		switch a.mode {
-		case idExportTab, idSignTab, idRecentFiles:
+		case idExportTab, idSignTab:
 		default:
 			return idFileDetails
 		}
@@ -103,8 +103,8 @@ func (a *app) preferredSettingsWidth() int {
 	if tab == idSearchTab {
 		width = max(width, a.view.search.widest+d(80))
 	}
-	if tab == idRecentFiles {
-		for _, path := range a.recent.files {
+	if tab == idFileDetails {
+		for _, path := range a.recent.files[:min(recentFilePreview, len(a.recent.files))] {
 			width = max(width, a.captionWidth(filepath.Base(path), a.normalFont)+d(80))
 		}
 	}
@@ -160,7 +160,7 @@ func (a *app) layoutSidebars() {
 	gridWidth := d(145) + max(0, a.settingsWidth-d(panelWidth))/2
 	fileOptionsVisible := detailsVisible && a.tool == idFileTab
 	viewOptionsVisible := detailsVisible && a.tool == idBrowseTab
-	for index, option := range fileOptions {
+	for index, option := range fileDetailOptions {
 		button := a.detailButtons[option.id]
 		if fileOptionsVisible {
 			place(button, x+d(16)+(index%2)*(gridWidth+d(8)), top+d(39+(index/2)*35), gridWidth, d(30))
@@ -187,7 +187,7 @@ func (a *app) layoutSidebars() {
 		detailY := top + d(38)
 		switch {
 		case fileOptionsVisible:
-			detailY = top + d(181)
+			detailY = top + d(41+35*((len(fileDetailOptions)+1)/2))
 		case viewOptionsVisible:
 			detailY = top + d(76)
 		}

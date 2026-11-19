@@ -10,11 +10,23 @@ import (
 	"unsafe"
 )
 
-const recentFileLimit = 10
+const (
+	recentFileLimit   = 100
+	recentFilePreview = 10
+	recentRowHeight   = 24
+)
 
 type recentPanel struct {
-	files                   []string
-	empty, list, path, open uintptr
+	files                                  []string
+	expanded                               bool
+	empty, heading, more, list, path, open uintptr
+}
+
+func (p *recentPanel) visibleCount() int {
+	if p.expanded {
+		return len(p.files)
+	}
+	return min(recentFilePreview, len(p.files))
 }
 
 func recentFilePaths(paths []string) []string {
@@ -78,13 +90,17 @@ func (a *app) buildRecentPanel() {
 	if history, err := localAppFile("recent-files.json"); err == nil {
 		p.files = readRecentFiles(history)
 	}
-	p.empty = a.label("Zatím tu nejsou žádná nedávná PDF.", 16, 16, 298, false)
+	p.heading = a.label("Nedávné soubory", 16, 16, 145, true)
+	p.more = a.button("Zobrazit více", idRecentMore, 169, 12, 145, 0)
+	a.panelButtons[p.more] = true
+	p.empty = a.label("Zatím tu nejsou žádná nedávná PDF.", 16, 49, 298, false)
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100 // Notify, owner-drawn rows with strings.
-	p.list = a.add("LISTBOX", "Nedávno otevřené soubory PDF", idRecentList, 16, 16, 298, 120, wsTabstop|listStyle, 0, a.normalFont)
-	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(24))) // LB_SETITEMHEIGHT
-	a.addScrollPane(p.list, a.scale(24), true)
-	p.path = a.readout(16, 144, 298, 48)
-	p.open = a.button("Otevřít vybrané PDF", idRecentOpen, 16, 202, 298, 0)
+	p.list = a.add("LISTBOX", "Nedávno otevřené soubory PDF", idRecentList, 16, 49, 298, 120, wsTabstop|listStyle, 0, a.normalFont)
+	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(recentRowHeight))) // LB_SETITEMHEIGHT
+	a.addScrollPane(p.list, a.scale(recentRowHeight), true)
+	p.path = a.readout(16, 0, 298, 48)
+	p.open = a.button("Otevřít vybrané PDF", idRecentOpen, 16, 0, 298, 0)
+	a.refreshRecentPanel()
 }
 
 func (a *app) rememberRecentFile(path string) {
@@ -95,8 +111,8 @@ func (a *app) rememberRecentFile(path string) {
 			p.files = files
 		}
 	}
-	if a.detailsTab() == idRecentFiles {
-		a.refreshRecentPanel()
+	a.refreshRecentPanel()
+	if a.detailsTab() == idFileDetails {
 		a.layoutPanel()
 	}
 }
@@ -105,7 +121,7 @@ func (a *app) refreshRecentPanel() {
 	p := &a.recent
 	sendMessage.Call(p.list, 0x000b, 0, 0) // WM_SETREDRAW
 	sendMessage.Call(p.list, 0x0184, 0, 0) // LB_RESETCONTENT
-	for _, path := range p.files {
+	for _, path := range p.files[:p.visibleCount()] {
 		sendMessage.Call(p.list, 0x0180, 0, uintptr(unsafe.Pointer(wideString(filepath.Base(path))))) // LB_ADDSTRING
 	}
 	if len(p.files) > 0 {
@@ -121,9 +137,52 @@ func (a *app) refreshRecentPanel() {
 	a.updateRecentActions()
 }
 
+func (a *app) toggleRecentFiles() {
+	p := &a.recent
+	if a.busy || a.detailsTab() != idFileDetails || len(p.files) <= recentFilePreview {
+		return
+	}
+	selected, _, _ := sendMessage.Call(p.list, 0x0188, 0, 0) // LB_GETCURSEL
+	p.expanded = !p.expanded
+	a.refreshRecentPanel()
+	a.layoutPanel()
+	if selected < uintptr(p.visibleCount()) {
+		sendMessage.Call(p.list, 0x0186, selected, 0) // LB_SETCURSEL
+		a.scrollPanes[p.list].syncScrollbar()
+		a.updateRecentActions()
+	}
+}
+
+func (a *app) recentItemLayout(item panelItem) (panelItem, bool) {
+	p := &a.recent
+	switch item.handle {
+	case p.heading:
+		return item, true
+	case p.more:
+		return item, len(p.files) > recentFilePreview
+	case p.empty:
+		return item, len(p.files) == 0
+	case p.list, p.path, p.open:
+		// Keep room below the list for the selected path and the open action.
+		available := int(a.detailsArea.bottom-a.detailsArea.top)*96/a.dpi - 155
+		rows := min(p.visibleCount(), max(3, available/recentRowHeight))
+		height := rows * recentRowHeight
+		switch item.handle {
+		case p.list:
+			item.height = height
+		case p.path:
+			item.y = 55 + height
+		case p.open:
+			item.y = 109 + height
+		}
+		return item, rows > 0
+	}
+	return item, true
+}
+
 func (p *recentPanel) selectedPath() string {
 	index, _, _ := sendMessage.Call(p.list, 0x0188, 0, 0) // LB_GETCURSEL
-	if index >= uintptr(len(p.files)) {
+	if index >= uintptr(p.visibleCount()) {
 		return ""
 	}
 	return p.files[index]
@@ -135,10 +194,16 @@ func (a *app) updateRecentActions() {
 	setText(p.path, path)
 	setEnabled(p.list, !a.busy)
 	setEnabled(p.open, !a.busy && path != "")
+	setEnabled(p.more, !a.busy)
+	label := "Zobrazit více"
+	if p.expanded {
+		label = "Zobrazit méně"
+	}
+	setText(p.more, label)
 }
 
 func (a *app) openRecentFile() {
-	if a.detailsTab() == idRecentFiles && a.fileOptionEnabled(idRecentFiles) {
+	if a.detailsTab() == idFileDetails && a.fileOptionEnabled(idRecentFiles) {
 		if path := a.recent.selectedPath(); path != "" {
 			a.openDocument(path, "")
 		}

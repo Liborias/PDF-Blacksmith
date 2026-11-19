@@ -58,8 +58,12 @@ func (a *app) runDocumentDraft(req request, status string, report uintptr) {
 	if a.view.hasPageEdits() {
 		a.view.includeEdits(&req)
 	}
-	setText(report, status)
-	if !a.run(req) {
+	if report != 0 {
+		setText(report, status)
+	}
+	if a.run(req) {
+		a.reportStatus(status)
+	} else {
 		a.retiredDrafts = append(a.retiredDrafts, req.Output)
 		a.pruneDrafts()
 	}
@@ -86,7 +90,11 @@ func (a *app) documentDraftPath() (string, error) {
 
 func (a *app) applyDocumentDraft(req request, result response) bool {
 	info, err := os.Stat(req.Output)
-	if err != nil || result.View == nil || len(result.View.Sizes) != len(a.view.order) {
+	count := len(a.view.order)
+	if req.InsertPages != nil {
+		count += len(req.InsertPages.Source.View.Pages)
+	}
+	if err != nil || result.View == nil || len(result.View.Sizes) != count {
 		return false
 	}
 	v := a.view
@@ -101,6 +109,14 @@ func (a *app) applyDocumentDraft(req request, result response) bool {
 	v.draft, v.draftInfo = req.Output, info
 	v.page, v.zoom, v.continuous, v.fitMode = base.page, base.zoom, base.continuous, base.fitMode
 	v.thumbnailScale, v.pageSelection = base.thumbnailScale, slices.Clone(base.pageSelection)
+	if insert := req.InsertPages; insert != nil {
+		v.page = insert.Before
+		v.pageSelection = make([]int, len(insert.Source.View.Pages))
+		for i := range v.pageSelection {
+			v.pageSelection[i] = insert.Before + i
+		}
+		found = false
+	}
 	v.history = []pageEdit{{draftBase: &base, draftAction: req.Action}}
 	v.resumeReader()
 	v.syncReadingControls()
@@ -135,9 +151,12 @@ func (a *app) undoDocumentDraft(base documentContent, action string) {
 	if automaticScope {
 		a.applyThumbnailScope()
 	}
-	if action == "ocr" {
+	switch action {
+	case "ocr":
 		a.report("Poslední rozpoznávání OCR bylo vráceno.")
-	} else {
+	case "insert_pages":
+		a.report("Vložení stránek bylo vráceno.")
+	default:
 		a.report("Poslední úprava textu byla vrácena.")
 	}
 	a.pruneDrafts()
