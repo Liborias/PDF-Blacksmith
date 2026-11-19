@@ -38,6 +38,10 @@ type request struct {
 	CertPassword    string         `json:"cert_password,omitempty"`
 	Trust           string         `json:"trust,omitempty"`
 	Gray            bool           `json:"gray,omitempty"`
+	ColorMode       string         `json:"color_mode,omitempty"`
+	GrayProfile     string         `json:"gray_profile,omitempty"`
+	GrayCustomICC   string         `json:"gray_custom_icc,omitempty"`
+	KProfile        string         `json:"k_profile,omitempty"`
 	AllowRaster     bool           `json:"allow_raster,omitempty"`
 	Outline         bool           `json:"outline,omitempty"`
 	Decrypt         bool           `json:"decrypt,omitempty"`
