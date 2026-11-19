@@ -221,8 +221,9 @@ func (a *app) addOpenPDFToMerge(selectionOnly bool) {
 	a.rememberMergeFields()
 	req := v.request("merge")
 	v.includeEdits(&req)
-	entry := mergeEntry{input: mergeInput{Path: v.path, Password: v.password, View: req.View,
-		SourceSize: v.original.Size(), SourceMtime: v.original.ModTime().UnixNano()},
+	path, info := v.readSource()
+	entry := mergeEntry{input: mergeInput{Path: path, Password: v.password, View: req.View,
+		SourceSize: info.Size(), SourceMtime: info.ModTime().UnixNano()},
 		info: mergeSourceInfo{Pages: len(v.order)}}
 	if selectionOnly {
 		positions := make([]int, len(v.pageSelection))

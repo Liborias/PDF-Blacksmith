@@ -120,7 +120,7 @@ type app struct {
 	toolButtons, detailButtons                         map[int]uintptr
 	documentTools                                      bool
 	headerBrand, windowButtonStart                     int
-	documentNameBounds, documentCloseBounds            rect
+	tabBounds                                          rect
 	toolsCollapsed, detailsCollapsed                   bool
 	thumbnailsCollapsed, bookmarksCollapsed            bool
 	leftPanelsOpen, rightPanelsOpen                     [2]bool
@@ -131,7 +131,12 @@ type app struct {
 	canvasBrush, panelBrush, inputBrush, logo          uintptr
 	brand                                              *printBitmap
 	windowButtons                                      [3]uintptr
-	documentClose                                      uintptr
+	tabs                                               []*documentTab
+	activeTab                                          *documentTab
+	tabList                                             uintptr
+	closing                                             *documentClose
+	workDir                                             string
+	retiredDrafts                                       []string
 	choices                                            map[uintptr]*choiceControl
 	choiceCommands                                     map[int]*choiceControl
 	popup                                              []popupItem
@@ -201,6 +206,7 @@ func main() {
 		notice(0, "Okno aplikace PDF Blacksmith se nepodařilo vytvořit.", 0x10)
 		return
 	}
+	defer window.cleanupDrafts()
 	defer window.view.closeReaders()
 	defer func() {
 		if task := window.view.search.task; task != nil {
@@ -210,8 +216,8 @@ func main() {
 	}()
 	showWindow.Call(window.window, 3) // SW_SHOWMAXIMIZED retains the normal window placement.
 	setFocus.Call(window.toolButtons[idFileTab])
-	if len(os.Args) > 1 {
-		window.openDocument(os.Args[1], "")
+	for _, path := range os.Args[1:] {
+		window.openDocument(path, "")
 	}
 	var msg winMessage
 	for {
@@ -412,6 +418,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 	case wmCommand:
 		if a.view != nil {
+			if wParam>>16&0xffff == 0 && a.tabCommand(int(wParam&0xffff), lParam) {
+				return 0
+			}
 			a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 			return 0
 		}
@@ -420,9 +429,11 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return 0
 	case wmReaderFinished:
 		a.view.finished(<-a.view.jobs)
+		a.pruneDrafts()
 		return 0
 	case wmSearchUpdate:
 		a.view.receiveSearch(<-a.view.search.events)
+		a.pruneDrafts()
 		return 0
 	case wmThumbnailUpdate:
 		a.view.schedule()
@@ -440,11 +451,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.openDrop(wParam)
 		return 0
 	case wmClose:
-		if a.busy {
-			notice(hwnd, "Počkejte na dokončení probíhající úlohy.", 0x40)
-		} else if a.mayReplaceDocument() {
-			destroyWindow.Call(hwnd)
-		}
+		a.closeWindow()
 		return 0
 	case wmDestroy:
 		if a.view != nil {
@@ -562,12 +569,27 @@ func (a *app) chooseInput(target uintptr, filter string) {
 const pdfFilter = "Soubory PDF (*.pdf)\x00*.pdf\x00Všechny soubory\x00*.*"
 
 func (a *app) chooseOutput(req *request, suffix string, otherInputs ...string) bool {
-	defaultPath := strings.TrimSuffix(req.Input, filepath.Ext(req.Input)) + suffix + ".pdf"
+	base := req.Input
+	if base == a.view.draft {
+		base = a.view.path
+	}
+	defaultPath := strings.TrimSuffix(base, filepath.Ext(base)) + suffix + ".pdf"
 	req.Output = a.fileDialog(pdfFilter, defaultPath, "pdf", true)
 	if req.Output == "" {
 		return false
 	}
-	if info, err := os.Stat(req.Output); err == nil {
+	info, err := os.Stat(req.Output)
+	if tab := a.openedFile(req.Output, info); tab != nil {
+		if tab != a.activeTab {
+			notice(a.window, "Cílové PDF je otevřené v jiné kartě. Vyberte jiné umístění.", 0x30)
+			return false
+		}
+		if a.view.draft != "" {
+			notice(a.window, "Chcete-li přepsat původní PDF, použijte Soubor → Uložit.", 0x30)
+			return false
+		}
+	}
+	if err == nil {
 		for _, input := range append([]string{req.Input}, otherInputs...) {
 			if original, statErr := os.Stat(input); statErr == nil && os.SameFile(info, original) {
 				message := "Vyberte jiný výstupní soubor. Pro uložení úprav do původního PDF použijte Soubor → Uložit."

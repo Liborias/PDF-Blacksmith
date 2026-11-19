@@ -6,12 +6,14 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu rozbalte **Soubor** a vyberte **Otevřít soubor**. Stejné tlačítko najdete vpravo v nastavení nástroje **Soubor**. Dialog můžete otevřít i zkratkou **Ctrl+O** nebo PDF přetáhnout do okna.
 
+Každé otevřené PDF má vlastní kartu se stránkou, přiblížením, výběrem náhledů a rozpracovanými úpravami. Mezi kartami přepnete kliknutím nebo zkratkami **Ctrl+Tab** a **Ctrl+Shift+Tab**. Pokud se všechny nevejdou do horní lišty, zobrazí se nabídka **Seznam otevřených PDF**.
+
 Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Najít v PDF**, **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šířka panelů se přizpůsobuje obsahu a dostupnému místu. Na každé straně je jedna úzká lišta. Horní ouško **Levá strana** nebo **Pravá strana** sbalí otevřené panely na dané straně a dalším kliknutím je obnoví. Ostatní ouška ovládají jednotlivé panely.
 
 Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a ovládá se ouškem **Náhledy**. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
-- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete křížkem vedle jeho názvu v horní liště nebo zkratkou **Ctrl+W**. Pokud máte neuložené změny, aplikace se před zavřením zeptá, zda je zahodit.
+- Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Kartu zavřete jejím křížkem nebo zkratkou **Ctrl+W**. U upraveného PDF můžete změny uložit, zahodit nebo zavření zrušit. Křížek okna se při více kartách nejdřív zeptá, zda zavřít aktivní kartu, nebo všechny karty a aplikaci.
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Při listování a zoomu se předchozí obraz vymění najednou, jakmile je nový náhled hotový. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Zobrazení → Náhled → Zobrazit na celou obrazovku** nebo **F11** otevře samotné PDF přes celou obrazovku. **Esc** obnoví předchozí rozložení panelů.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v **Zobrazení → Náhled** a použijte **Načíst znovu s heslem**.
@@ -26,7 +28,7 @@ Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a ske
 
 Otevřete nástroj **OCR** a zvolte **Všechny strany**, **Aktuální strana**, **Vybrané náhledy** nebo **Vlastní výběr**. Pro vlastní výběr zadejte například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí v aplikaci. Před rozpoznáním otočte případné strany na bok do čitelné polohy.
 
-Vyberte jazyk a klikněte na **Rozpoznat a uložit kopii…**. Čeština i angličtina jsou dostupné bez další instalace. Kopie obsahuje celý dokument. Na vybraných stranách přibude neviditelná textová vrstva a původní sken, křivky i barevné objekty zůstanou v PDF. Výsledek se otevře v aplikaci a text můžete zkontrolovat pomocí **Ctrl+F**. Pokud OCR nenajde žádný nový text, kopie se nevytvoří.
+Vyberte jazyk a klikněte na **Rozpoznat text**. Čeština i angličtina jsou dostupné bez další instalace. Neviditelná textová vrstva se přidá přímo do otevřené karty a objeví se označení neuložených změn. Původní grafika zůstává zachovaná. Rozpoznaný text můžete ihned hledat přes **Ctrl+F**. **Vrátit OCR** zruší poslední rozpoznávání. Výsledek uložíte do původního PDF přes **Soubor → Uložit**, kopii vytvoříte přes **Soubor → Uložit jako**.
 
 ## Záložky v PDF
 

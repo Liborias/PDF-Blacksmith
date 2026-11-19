@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"image/png"
 	"path/filepath"
+	"slices"
+	"strings"
 	"unsafe"
 )
 
@@ -68,24 +70,112 @@ func (a *app) layoutHeader() {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
 		invalidate(handle)
 	}
-	a.documentNameBounds, a.documentCloseBounds = rect{}, rect{}
-	if a.view.path == "" {
-		return
+}
+
+func (a *app) layoutDocumentTabs() {
+	d := a.scale
+	left, right := d(a.headerBrand), a.windowButtonStart-d(4)
+	widths := make([]int, len(a.tabs))
+	names := make(map[string]int, len(a.tabs))
+	for _, tab := range a.tabs {
+		names[strings.ToLower(filepath.Base(a.contentOf(tab).path))]++
 	}
-	left := d(a.headerBrand)
-	maxWidth := max(0, a.windowButtonStart-d(46)-left)
-	dc, _, _ := user32.NewProc("GetDC").Call(a.window)
-	previous, _, _ := gdiSelect.Call(dc, a.normalFont)
-	var measured rect
-	winDrawText.Call(dc, uintptr(unsafe.Pointer(wideString(filepath.Base(a.view.path)))), ^uintptr(0),
-		uintptr(unsafe.Pointer(&measured)), 0x0c20) // DT_CALCRECT | DT_NOPREFIX | DT_SINGLELINE
-	gdiSelect.Call(dc, previous)
-	user32.NewProc("ReleaseDC").Call(a.window, dc)
-	end := left + min(int(measured.right), maxWidth)
-	a.documentNameBounds = rect{int32(left), 0, int32(end), int32(d(headerHeight))}
-	x, y, edge := end+d(7), (d(headerHeight)-d(26))/2, d(26)
-	a.documentCloseBounds = rect{int32(x), int32(y), int32(x + edge), int32(y + edge)}
-	place(a.documentClose, x, y, edge, edge)
+	duplicates := false
+	total := 0
+	for index, tab := range a.tabs {
+		path := a.contentOf(tab).path
+		caption := filepath.Base(path)
+		if names[strings.ToLower(caption)] > 1 {
+			caption += " · " + filepath.Base(filepath.Dir(path))
+			duplicates = true
+		}
+		if getText(tab.button) != caption {
+			setText(tab.button, caption)
+		}
+		widths[index] = min(d(225), max(d(112), a.captionWidth(caption, a.normalFont)+d(54)))
+		total += widths[index] + d(3)
+	}
+	showList := !a.full && (total > right-left || duplicates) && len(a.tabs) > 1
+	if showList {
+		right -= d(28)
+		place(a.tabList, right, d(8), d(26), d(33))
+	}
+	showControl(a.tabList, showList)
+	a.tabBounds = rect{}
+	first := 0
+	if current := slices.Index(a.tabs, a.activeTab); current >= 0 {
+		throughActive := 0
+		for _, width := range widths[:current+1] {
+			throughActive += width + d(3)
+		}
+		for first < current && throughActive > right-left {
+			throughActive -= widths[first] + d(3)
+			first++
+		}
+	}
+	x := left
+	for index, tab := range a.tabs {
+		width := min(widths[index], right-x)
+		show := !a.full && index >= first && width >= d(84)
+		if show {
+			place(tab.button, x, d(8), width-d(25), d(33))
+			place(tab.close, x+width-d(25), d(8), d(25), d(33))
+			x += width + d(3)
+		}
+		showControl(tab.button, show)
+		showControl(tab.close, show)
+		invalidate(tab.button)
+		invalidate(tab.close)
+	}
+	if x > left || showList {
+		end := x
+		if showList {
+			end = right + d(26)
+		}
+		a.tabBounds = rect{int32(left), int32(d(8)), int32(end), int32(d(41))}
+	}
+}
+
+func (a *app) drawDocumentTab(item *buttonDraw) bool {
+	id := int(item.controlID)
+	if id == idListDocumentTabs {
+		fillColor(item.dc, item.bounds, titleColor)
+		a.arrow(item.dc, int(item.bounds.left+item.bounds.right)/2, int(item.bounds.top+item.bounds.bottom)/2, textColor)
+	} else if id == idSelectDocumentTab || id == idClosePDF {
+		for _, tab := range a.tabs {
+			if item.handle != tab.button && item.handle != tab.close {
+				continue
+			}
+			body, foreground := sidebarRailColor, mutedColor
+			if tab == a.activeTab {
+				body, foreground = panelColor, textColor
+			}
+			if item.state&1 != 0 {
+				body = divider
+			}
+			r := item.bounds
+			fillColor(item.dc, r, body)
+			if tab == a.activeTab {
+				fillColor(item.dc, rect{r.left, r.top, r.right, r.top + 1}, selectionColor)
+			}
+			label, align := "×", uintptr(1)
+			if item.handle == tab.button {
+				label, align = getText(tab.button), 0x8000
+				r.left += int32(a.scale(9))
+				if a.contentOf(tab).changed() {
+					label = "● " + label
+				}
+			}
+			drawText(item.dc, label, r, a.normalFont, foreground, align)
+			break
+		}
+	} else {
+		return false
+	}
+	if item.state&16 != 0 {
+		a.drawFocus(item.dc, item.bounds)
+	}
+	return true
 }
 
 var pagesIcon = [][]point{
@@ -313,7 +403,7 @@ func (a *app) hitTest(hwnd, param uintptr) uintptr {
 			return 15
 		}
 	}
-	if y < a.scale(headerHeight) && x < a.windowButtonStart && !contains(a.documentCloseBounds, pos.x, pos.y) {
+	if y < a.scale(headerHeight) && x < a.windowButtonStart && !contains(a.tabBounds, pos.x, pos.y) {
 		return 2
 	}
 	return 1

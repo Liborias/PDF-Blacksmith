@@ -26,7 +26,7 @@ func (a *app) splitDocument() {
 	if !a.selectPages(&req, a.splitScope, a.splitRange) {
 		return
 	}
-	req.OutputDir = a.selectFolder(filepath.Dir(req.Input))
+	req.OutputDir = a.selectFolder(filepath.Dir(a.view.path))
 	if req.OutputDir == "" {
 		return
 	}

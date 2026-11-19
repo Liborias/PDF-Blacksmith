@@ -11,7 +11,7 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 7. **Záložky v PDF.** Zobrazit strom záložek v postranním panelu, přejít na cílovou stranu, přidat záložku a upravit její název nebo cíl. [Hotovo ve verzi 0.4.16](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.16)
 8. **Fulltextové vyhledávání.** Prohledat textovou vrstvu dokumentu, zobrazit výsledky podle stran a zvýraznit shody v náhledu. [Hotovo ve verzi 0.4.19](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.19)
 9. **OCR.** Rozpoznat skeny i text převedený na křivky na vybraných stranách či rozsazích. Přidat českou nebo anglickou textovou vrstvu při zachování původní grafiky. [Hotovo ve verzi 0.4.19](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.19)
-10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách a při zavírání nabídnout uložení změn.
+10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách a při zavírání nabídnout uložení změn. OCR se používá přímo v otevřené kartě a ukládá se nástrojem Soubor. [Hotovo ve verzi 0.4.20](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.20)
 11. **Dva dokumenty vedle sebe.** Umožnit zobrazení dvou PDF vedle sebe. Každý dokument má vlastní panel náhledů a vlastní výběr stránek.
 12. **Přetahování stránek mezi PDF.** Přetáhnout jeden náhled nebo více označených náhledů do druhého panelu a vložit stránky na vybrané místo v jejich pořadí.
 13. **Barvy při přenosu stránek.** Při vložení tažením se zeptat, zda mají vložené stránky zachovat svůj barevný prostor, nebo se mají převést do barevného prostoru cílového PDF. Stránky ve stupních šedi zůstanou šedé. Když převod může vést k nevratné změně nebo ztrátě vlastností, upozornit na konkrétní dopad před potvrzením.

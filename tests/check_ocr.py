@@ -69,7 +69,9 @@ def check_ocr(folder, exe, models):
     output = folder / "recognized.pdf"
     request = dict(action="ocr", input=str(source), output=str(output), ghostscript=exe, ocr_models=models,
                    ocr_language="eng", view={"pages": [1, 2, 4]})
-    dispatch(request)
+    original_bytes = source.read_bytes()
+    description = dispatch(request)
+    assert len(description["sizes"]) == 4 and source.read_bytes() == original_bytes
     with pikepdf.Pdf.open(output) as pdf:
         assert not pdf.check_pdf_syntax()
         assert len(pdf.pages) == 4
@@ -94,6 +96,20 @@ def check_ocr(folder, exe, models):
     else:
         raise AssertionError("OCR copied text from an existing layer")
     assert not retry.exists()
+
+    state = source.stat()
+    save = dict(action="save_document", input=str(output), output=str(source), overwrite=True,
+                replace_source=True, replace_document=str(source),
+                source_size=state.st_size, source_mtime_ns=state.st_mtime_ns)
+    try:
+        dispatch({**save, "source_mtime_ns": state.st_mtime_ns - 1})
+    except UserError as exc:
+        assert "se mezitím změnilo" in str(exc)
+    else:
+        raise AssertionError("Saving an OCR draft overwrote a changed original")
+    assert source.read_bytes() == original_bytes
+    dispatch(save)
+    assert source.read_bytes() == output.read_bytes()
 
 
 if __name__ == "__main__":

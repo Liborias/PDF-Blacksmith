@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"unsafe"
 )
 
@@ -208,7 +207,7 @@ func (a *app) saveDocument(saveAs bool) {
 	}
 	req := v.request("save_document")
 	changed := v.changed()
-	if changed {
+	if v.hasPageEdits() {
 		v.includeEdits(&req)
 	}
 	if saveAs {
@@ -223,29 +222,38 @@ func (a *app) saveDocument(saveAs bool) {
 		if !changed || notice(a.window, "Uložit změny a přepsat původní PDF?\n\n"+v.path, 0x134) != 6 {
 			return
 		}
-		req.Output, req.Overwrite, req.ReplaceSource = v.path, true, true
-		req.SourceSize, req.SourceMtime = v.original.Size(), v.original.ModTime().UnixNano()
+		a.saveOriginal()
+		return
 	}
 	a.run(req)
 }
 
-func (a *app) reopenSaved(req request) {
+func (a *app) saveOriginal() bool {
+	v := a.view
+	if !unchanged(v.path, v.original) {
+		notice(a.window, "Původní PDF se mezitím změnilo. Změny můžete uložit do nového souboru, pokud je pracovní PDF dostupné.", 0x30)
+		return false
+	}
+	req := v.request("save_document")
+	if v.hasPageEdits() {
+		v.includeEdits(&req)
+	}
+	req.Output, req.Overwrite, req.ReplaceSource = v.path, true, true
+	req.ReplaceDocument = v.path
+	req.SourceSize, req.SourceMtime = v.original.Size(), v.original.ModTime().UnixNano()
+	return a.run(req)
+}
+
+func (a *app) reopenSaved(req request) bool {
 	info, err := os.Stat(req.Output)
 	if err != nil {
-		notice(a.window, "PDF bylo uloženo. Soubor se nepodařilo znovu otevřít.\n"+filepath.Base(req.Output), 0x30)
-		return
+		return false
 	}
 	v := a.view
 	page, continuous, fit, zoom := v.page, v.continuous, v.fitMode, v.zoom
 	a.loadDocument(req.Output, req.PDFPassword, info)
 	v.page, v.reference = page, page
 	v.continuous, v.fitMode, v.zoom = continuous, fit, zoom
-	if continuous {
-		chooseCombo(v.flow, 0)
-	}
-	if fit == 0 {
-		chooseCombo(v.fit, 2)
-	} else {
-		chooseCombo(v.fit, fit-1)
-	}
+	v.syncReadingControls()
+	return true
 }

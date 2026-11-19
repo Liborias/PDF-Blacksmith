@@ -92,7 +92,7 @@ func (a *app) printDocument() {
 	}
 	req := v.request("print_page")
 	req.View.Box = "crop"
-	original := v.original
+	_, original := v.readSource()
 	if a.beginJob(req, "Připravuji tisk…") {
 		a.launchJob(func() response { return spoolPDF(dialog.dc, req, pages, original) })
 	} else {

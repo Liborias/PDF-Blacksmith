@@ -210,6 +210,7 @@ type pageEdit struct {
 	rotations        []pageRotation
 	bookmarks        []pdfBookmark
 	bookmarkSelection int
+	ocrBase          *documentContent
 }
 
 type pageRotation struct{ number, angle int }
@@ -234,26 +235,34 @@ type readerJob struct {
 	frame  readerFrame
 }
 
+type documentContent struct {
+	path, password, draft                        string
+	original, draftInfo                          os.FileInfo
+	sizes                                        []map[string][2]float64
+	intent                                       string
+	order, rotations, savedOrder, savedRotations  []int
+	history                                      []pageEdit
+	bookmarks, savedBookmarks                    []pdfBookmark
+	page, reference                              int
+	pageSelection                                []int
+	thumbnailScale, fitMode                      int
+	continuous, describing, invalidSource        bool
+	zoom                                         float64
+	hidden                                       map[string]bool
+}
+
+func emptyDocument() documentContent {
+	return documentContent{fitMode: 1, thumbnailScale: 32, hidden: make(map[string]bool)}
+}
+
 type documentView struct {
+	documentContent
 	app                                                                        *app
 	engine, prefetchEngine                                                     *readerEngine
-	path, password                                                             string
-	original                                                                   os.FileInfo
-	sizes                                                                      []map[string][2]float64
-	intent                                                                     string
-	order, rotations, savedOrder, savedRotations                               []int
-	history                                                                    []pageEdit
-	bookmarks, savedBookmarks                                                  []pdfBookmark
 	bookmarkPanel                                                              bookmarkPanel
 	search                                                                     searchPanel
-	page, reference                                                            int
-	pageSelection                                                              []int
 	pageDrag                                                                   thumbnailDrag
-	thumbnailScale                                                             int
 	thumbnailPanelPixels                                                       int
-	continuous                                                                 bool
-	fitMode                                                                    int
-	zoom                                                                       float64
 	viewport                                                                   rect
 	spread                                                                     readingLayout
 	scrollX, scrollY                                                           float64
@@ -261,7 +270,7 @@ type documentView struct {
 	dragX, dragY                                                               int32
 	wheelRemainder                                                             float64
 	generation                                                                 int
-	running, describing, invalidSource                                         bool
+	running                                                                    bool
 	reading, printPreview, thumbnails                                          pageCache
 	visibleDetails                                                             []screenTile
 	detailFrames                                                               map[screenTile]detailFrame
@@ -276,7 +285,6 @@ type documentView struct {
 	prefetchFailed                                                             map[int]bool
 	jobs                                                                       chan readerJob
 	profiles                                                                   []string
-	hidden                                                                     map[string]bool
 	plates                                                                     []plateInfo
 	proofPage                                                                  int
 	previous, next, jump, pageInput, location, zoomOut, zoomIn, zoomLabel, fit uintptr
@@ -290,7 +298,7 @@ type documentView struct {
 }
 
 func newDocumentView(a *app) *documentView {
-	return &documentView{app: a, fitMode: 1, proofPage: -1, thumbnailScale: 32, jobs: make(chan readerJob, 2)}
+	return &documentView{app: a, documentContent: emptyDocument(), proofPage: -1, jobs: make(chan readerJob, 2)}
 }
 
 func (v *documentView) buildToolbar() {
@@ -378,6 +386,14 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 func (v *documentView) ready() bool { return len(v.order) > 0 && !v.invalidSource }
 
 func (v *documentView) changed() bool {
+	return v.documentContent.changed()
+}
+
+func (v *documentContent) changed() bool {
+	return v.draft != "" || v.hasPageEdits()
+}
+
+func (v *documentContent) hasPageEdits() bool {
 	return !slices.Equal(v.order, v.savedOrder) || !slices.Equal(v.rotations, v.savedRotations) ||
 		!slices.Equal(v.bookmarks, v.savedBookmarks)
 }
@@ -398,7 +414,17 @@ func unchanged(path string, original os.FileInfo) bool {
 		info.Size() == original.Size() && info.ModTime().Equal(original.ModTime())
 }
 
-func (v *documentView) sourceUnchanged() bool { return unchanged(v.path, v.original) }
+func (v *documentView) readSource() (string, os.FileInfo) {
+	if v.draft != "" {
+		return v.draft, v.draftInfo
+	}
+	return v.path, v.original
+}
+
+func (v *documentView) sourceUnchanged() bool {
+	path, info := v.readSource()
+	return unchanged(path, info)
+}
 
 func (v *documentView) resetDocument() {
 	v.generation++
@@ -406,7 +432,7 @@ func (v *documentView) resetDocument() {
 	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
 	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
 	v.zoomDeadline = time.Time{}
-	hadFrames := v.reading.bytes+v.printPreview.bytes+v.detailBytes+v.thumbnails.bytes > 0
+	released := v.reading.bytes + v.printPreview.bytes + v.detailBytes + v.thumbnails.bytes
 	v.canvas.close()
 	v.reading.clear()
 	v.printPreview.clear()
@@ -415,16 +441,10 @@ func (v *documentView) resetDocument() {
 	v.endPageDrag()
 	v.clearDetails()
 	v.closeReaders()
-	v.path, v.password, v.original = "", "", nil
-	v.sizes, v.order, v.rotations, v.savedOrder, v.savedRotations, v.history = nil, nil, nil, nil, nil, nil
-	v.bookmarks, v.savedBookmarks = nil, nil
+	v.documentContent = emptyDocument()
 	v.bookmarkPanel.collapsed = nil
 	v.refreshBookmarks(-1)
-	v.intent = ""
-	v.page, v.reference, v.fitMode = 0, 0, 1
 	v.scrollX, v.scrollY, v.wheelRemainder = 0, 0, 0
-	v.continuous, v.describing, v.invalidSource = false, false, false
-	v.hidden = make(map[string]bool)
 	v.prefetchFailed = make(map[int]bool)
 	v.clearPlateView()
 	chooseCombo(v.fit, 0)
@@ -433,7 +453,7 @@ func (v *documentView) resetDocument() {
 	setText(v.scanReport, "")
 	v.rebuild(false)
 	v.updatePageList()
-	if hadFrames {
+	if released >= 32<<20 {
 		go debug.FreeOSMemory()
 	}
 }
@@ -457,12 +477,16 @@ func (v *documentView) open(path, password string, original os.FileInfo) {
 	v.resetDocument()
 	v.path, v.password, v.original = path, password, original
 	v.describing = true
-	v.engine = &readerEngine{}
-	v.updateCacheLimit()
-	user32.NewProc("SetTimer").Call(v.app.window, readerMemoryTimer, 3000, 0)
+	v.resumeReader()
 	v.app.report("Načítám dokument…")
 	v.app.updateActions()
 	v.changedViewport()
+}
+
+func (v *documentView) resumeReader() {
+	v.engine = &readerEngine{}
+	v.updateCacheLimit()
+	user32.NewProc("SetTimer").Call(v.app.window, readerMemoryTimer, 3000, 0)
 }
 
 func (v *documentView) proofMode() bool { return v.app.mode == idProofTab }
@@ -478,7 +502,8 @@ func (v *documentView) box() string {
 
 func (v *documentView) request(action string) request {
 	opts := v.app.export
-	req := request{Action: action, Input: v.path, PDFPassword: v.password, Export: &opts,
+	path, _ := v.readSource()
+	req := request{Action: action, Input: path, PDFPassword: v.password, Export: &opts,
 		View: &viewRequest{Box: v.box()}}
 	if index := comboIndex(v.proof); index >= 0 && index < len(v.profiles) {
 		req.View.ProofProfile = v.profiles[index]
@@ -901,7 +926,8 @@ func (v *documentView) renderPage(number, pixels int, background bool) {
 }
 
 func (v *documentView) launch(req request, number, pixels int, background bool, tile *screenTile) {
-	generation, original := v.generation, v.original
+	_, original := v.readSource()
+	generation := v.generation
 	task := readerTask{generation, number, pixels, background, tile}
 	engine := v.engine
 	if background {
@@ -979,21 +1005,9 @@ func (v *documentView) finished(job readerJob) {
 			v.app.report("Rozměry stránek nelze načíst.")
 			return
 		}
-		v.sizes, v.intent = data.Sizes, data.OutputIntent
-		v.bookmarks = data.Bookmarks
-		v.order = make([]int, len(v.sizes))
-		v.rotations = make([]int, len(v.sizes))
-		for i := range v.order {
-			v.order[i] = i + 1
-		}
-		v.page = min(v.page, len(v.order)-1)
-		v.reference = v.page
-		v.markSaved()
-		v.refreshBookmarks(-1)
+		v.applyDescription(data)
 		v.app.rememberRecentFile(v.path)
 		v.app.report("")
-		v.updatePageList()
-		v.rebuild(false)
 	} else if job.frame.image != nil {
 		v.activeCache().store(job.page, job.frame)
 		v.trimCaches()
@@ -1001,6 +1015,20 @@ func (v *documentView) finished(job readerJob) {
 	v.updateDocumentInfo()
 	v.app.updateActions()
 	v.changedViewport()
+}
+
+func (v *documentView) applyDescription(data *viewResponse) {
+	v.sizes, v.intent, v.bookmarks = data.Sizes, data.OutputIntent, data.Bookmarks
+	v.order, v.rotations = make([]int, len(v.sizes)), make([]int, len(v.sizes))
+	for i := range v.order {
+		v.order[i] = i + 1
+	}
+	v.page = min(v.page, len(v.order)-1)
+	v.reference = v.page
+	v.markSaved()
+	v.refreshBookmarks(-1)
+	v.updatePageList()
+	v.rebuild(false)
 }
 
 func (v *documentView) finishedPrefetch(job readerJob) {
@@ -1193,6 +1221,10 @@ func (v *documentView) undo() {
 	edit := v.history[index]
 	v.history[index] = pageEdit{}
 	v.history = v.history[:index]
+	if edit.ocrBase != nil {
+		v.app.undoOCR(*edit.ocrBase)
+		return
+	}
 	if edit.bookmarks != nil {
 		v.bookmarks = edit.bookmarks
 		v.refreshBookmarks(edit.bookmarkSelection)

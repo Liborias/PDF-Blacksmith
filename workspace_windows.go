@@ -166,7 +166,7 @@ func (a *app) setupWorkspace() bool {
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
-	a.documentClose = a.button("Zavřít PDF", idClosePDF, 0, 0, 26, 0)
+	a.tabList = a.button("Seznam otevřených PDF", idListDocumentTabs, 0, 0, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
 	a.toolsWidth = a.scale(168)
 	for _, tab := range workspaceTabs {
@@ -459,7 +459,7 @@ func (a *app) layout() {
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}
-	showControl(a.documentClose, !a.full && a.view.path != "")
+	a.layoutDocumentTabs()
 	a.view.showToolbar(chrome)
 	a.layoutSidebars()
 	a.view.resize(a.viewport)
@@ -686,10 +686,7 @@ func (a *app) openDrop(handle uintptr) {
 	if a.busy {
 		return
 	}
-	count := uintptr(1)
-	if a.mode == idMergeTab {
-		count, _, _ = proc.Call(handle, 0xffffffff, 0, 0)
-	}
+	count, _, _ := proc.Call(handle, 0xffffffff, 0, 0)
 	var paths []string
 	for index := range count {
 		if length, _, _ := proc.Call(handle, index, 0, 0); length > 0 {
@@ -700,8 +697,10 @@ func (a *app) openDrop(handle uintptr) {
 	}
 	if a.mode == idMergeTab {
 		a.addMergeFiles(paths)
-	} else if len(paths) > 0 {
-		a.openDocument(paths[0], "")
+	} else {
+		for _, path := range paths {
+			a.openDocument(path, "")
+		}
 	}
 }
 
@@ -709,34 +708,13 @@ func (a *app) openDialog() {
 	if a.busy {
 		return
 	}
-	if path := a.fileDialog(pdfFilter, "", "", false); path != "" {
+	for _, path := range a.fileDialogPaths(pdfFilter, "", "", false, true) {
 		a.openDocument(path, "")
 	}
 }
 
 func (a *app) mayReplaceDocument() bool {
 	return !a.view.changed() || notice(a.window, "Zahodit neuložené úpravy PDF?", 0x134) == 6
-}
-
-func (a *app) closeDocument() {
-	if a.busy || a.view.path == "" || !a.mayReplaceDocument() {
-		return
-	}
-	a.view.resetDocument()
-	setText(a.window, appName)
-	setText(a.password, "")
-	setText(a.signReport, "")
-	setText(a.exportReport, "")
-	setText(a.splitReport, "")
-	setText(a.ocr.report, "")
-	a.reportStatus("")
-	if a.tool == idFileTab {
-		a.mode = idFileDetails
-	} else {
-		a.tool, a.mode = idBrowseTab, idBrowseTab
-	}
-	a.updateActions()
-	a.layout()
 }
 
 func (a *app) openDocument(path, password string) {
@@ -753,20 +731,11 @@ func (a *app) openDocument(path, password string) {
 		a.report("Vyberte existující soubor PDF.")
 		return
 	}
-	if !a.mayReplaceDocument() {
-		return
-	}
-	if a.tool == idFileTab {
-		a.mode = idFileDetails
-	} else {
-		a.tool, a.mode = idBrowseTab, idBrowseTab
-	}
-	a.loadDocument(path, password, info)
+	a.addDocumentTab(path, password, info)
 }
 
-func (a *app) loadDocument(path, password string, info os.FileInfo) {
-	setText(a.password, password)
-	setText(a.window, filepath.Base(path)+" · "+appName)
+func (a *app) clearDocumentControls() {
+	setText(a.password, "")
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	chooseCombo(a.exportScope, exportAllPages)
@@ -777,6 +746,13 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 	chooseCombo(a.ocr.scope, exportAllPages)
 	setText(a.ocr.pageRange, "")
 	setText(a.ocr.report, "")
+}
+
+func (a *app) loadDocument(path, password string, info os.FileInfo) {
+	a.retireDocumentDrafts(a.view.documentContent)
+	a.clearDocumentControls()
+	setText(a.password, password)
+	setText(a.window, filepath.Base(path)+" · "+appName)
 	a.view.open(path, password, info)
 	a.layout()
 }
@@ -911,15 +887,21 @@ func (a *app) command(id, notification int) {
 		a.toggleMaximized()
 	case idCloseWindow:
 		postMessage.Call(a.window, wmClose, 0, 0)
-	case idClosePDF:
-		a.closeDocument()
 	case idSplitRun:
 		a.splitDocument()
 	case idOCRRun:
 		a.startOCR()
+	case idOCRUndo:
+		if !a.busy && len(a.view.history) > 0 && a.view.history[len(a.view.history)-1].ocrBase != nil {
+			a.view.undo()
+		}
 	case idReload:
 		if !a.busy && a.view.path != "" {
-			a.openDocument(a.view.path, getText(a.password))
+			if info, err := os.Stat(a.view.path); err == nil && a.mayReplaceDocument() {
+				a.loadDocument(a.view.path, getText(a.password), info)
+			} else if err != nil {
+				a.report("Původní PDF nelze otevřít.")
+			}
 		}
 	case idICCBrowse:
         a.chooseInput(a.customICC, "Barevné profily ICC nebo ICM\x00*.icc;*.icm")
@@ -1088,7 +1070,14 @@ func (a *app) updateActions() {
 		a.updateFileOptions()
 	}
 	ready := !a.busy && documentReady
-	setEnabled(a.documentClose, !a.busy && a.view.path != "")
+	for _, tab := range a.tabs {
+		setEnabled(tab.button, !a.busy)
+		setEnabled(tab.close, !a.busy)
+		invalidate(tab.button)
+	}
+	setEnabled(a.tabList, !a.busy)
+	history := a.view.history
+	setEnabled(a.ocr.undo, ready && len(history) > 0 && history[len(history)-1].ocrBase != nil)
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply, a.ocr.start} {
 		setEnabled(button, ready)
 	}
@@ -1122,18 +1111,21 @@ func (a *app) report(message string) {
 	}
 }
 
-func (a *app) run(req request) {
+func (a *app) run(req request) bool {
 	if req.ReplaceSource {
 		if a.beginJob(req, "Ukládám dokument…") {
 			a.waitingOverwrite = true
 			a.view.cancelSearch()
 			a.startOverwrite()
+			return true
 		}
-		return
+		return false
 	}
 	if a.beginJob(req, "Zpracovávám dokument…") {
 		a.launchJob(func() response { return runOperation(req) })
+		return true
 	}
+	return false
 }
 
 func (a *app) beginJob(req request, status string) bool {
@@ -1194,34 +1186,50 @@ func (a *app) finish(result response) {
 		if req.Action == "merge" {
 			question = "Sloučit dokumenty do jednoho PDF bez původních podpisů?"
 		}
+		if req.Action == "ocr" {
+			question = "Použít OCR v pracovní kartě bez původních podpisů?"
+		}
 		if req.ReplaceSource {
 			message = "Původní PDF obsahuje digitální podpis."
 			question = "Přepsat původní soubor a odstranit jeho stávající podpisy?"
 		}
 		if notice(a.window, message+"\n\n"+question, 0x134) == 6 {
 			req.ClearSignatures = true
-			a.run(req)
-			return
+			if a.run(req) {
+				return
+			}
 		}
 		result.Message = "Uložení zrušeno."
 	}
-	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource {
+	if req.Action == "ocr" {
+		if result.Status == "ok" && !a.applyOCR(req, result) {
+			result = operationError("Rozpoznaný text se nepodařilo načíst do pracovní karty.")
+		}
+		if result.Status != "ok" {
+			a.retiredDrafts = append(a.retiredDrafts, req.Output)
+		}
+	}
+	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource && req.Action != "ocr" {
 		a.lastOutput, a.lastPassword = req.Output, ""
-		if req.Action == "save_document" || req.Action == "ocr" ||
+		if req.Action == "save_document" ||
 			(req.Action == "transform" && (req.Preset == "export" ||
 				(req.Preset == "" && !req.Gray && !req.Outline && req.Profile == "" && !req.Decrypt))) {
 			a.lastPassword = req.PDFPassword
 		}
 	}
-	if result.Status == "ok" && (req.Action == "save_document" || req.OpenResult) {
-        a.reopenSaved(req)
-    }
+	if result.Status == "ok" && req.Action == "save_document" {
+		if !a.reopenSaved(req) {
+			result = operationError("PDF bylo uloženo, ale nepodařilo se znovu otevřít. Karta zůstala otevřená.")
+		}
+	} else if result.Status == "ok" && req.OpenResult {
+		a.openDocument(req.Output, a.lastPassword)
+	}
 	if result.Status == "ok" && req.Action == "scan" && result.View != nil {
 		a.view.showScan(result.View)
 		a.reportStatus("Kontrola tiskových desek dokončena.")
 	} else {
 		message := result.Message
-		if result.Status == "ok" && req.Output != "" {
+		if result.Status == "ok" && req.Output != "" && req.Action != "ocr" {
 			message += "\n" + req.Output
 		}
 		a.reportStatus(message)
@@ -1253,7 +1261,21 @@ func (a *app) finish(result response) {
 		notice(a.window, result.Message, 0x10)
 	}
 	a.updateActions()
+	if active, _, _ := user32.NewProc("GetForegroundWindow").Call(); active == a.window {
+		focus, _, _ := user32.NewProc("GetFocus").Call()
+		if enabled, _, _ := user32.NewProc("IsWindowEnabled").Call(focus); enabled == 0 {
+			setFocus.Call(a.window)
+		}
+	}
 	a.view.schedule()
+	a.pruneDrafts()
+	if a.closing != nil {
+		if result.Status == "ok" && req.Action == "save_document" {
+			a.continueCloseDocuments()
+		} else {
+			a.closing = nil
+		}
+	}
 }
 
 func (a *app) handleInput(msg *winMessage) bool {
@@ -1322,6 +1344,14 @@ func (a *app) handleInput(msg *winMessage) bool {
 			return true
 		case 'W':
 			a.closeDocument()
+			return true
+		case 9:
+			shift, _, _ := user32.NewProc("GetKeyState").Call(0x10)
+			step := 1
+			if shift&0x8000 != 0 {
+				step = -1
+			}
+			a.stepDocumentTab(step)
 			return true
 		case 'S':
 			shift, _, _ := user32.NewProc("GetKeyState").Call(0x10)

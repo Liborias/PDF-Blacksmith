@@ -63,16 +63,17 @@ def output_file(src, request, *, protected=()):
     if dst.suffix.lower() != ".pdf":
         raise UserError("Výstupní soubor musí mít příponu .pdf.")
     original = None
-    same_path = dst.resolve() == src.resolve()
-    if same_destination(dst, src):
-        if not (same_path and request["action"] == "save_document" and request.get("replace_source")
-                and request.get("overwrite")):
-            raise UserError("Pro výstup vyberte jiný soubor než vstupní PDF.")
-        dst = src.resolve(strict=True)
+    if request.get("replace_source"):
+        destination = Path(request.get("replace_document") or src).resolve(strict=True)
+        if dst.resolve() != destination or request["action"] != "save_document" or not request.get("overwrite"):
+            raise UserError("Původní PDF nelze přepsat touto operací.")
+        dst = destination
         original = dst.stat()
         if ((original.st_size, original.st_mtime_ns)
                 != (request.get("source_size"), request.get("source_mtime_ns"))):
             raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
+    elif same_destination(dst, src):
+        raise UserError("Pro výstup vyberte jiný soubor než vstupní PDF.")
     if any(same_destination(dst, path) for path in protected):
         raise UserError("Jako výstup vyberte jiný soubor než vstupní PDF.")
     with tempfile.TemporaryDirectory(prefix="pdftisk-", dir=dst.parent) as folder:
@@ -927,9 +928,10 @@ def ocr_document(src, request):
                 raise UserError("OCR ve vybraných stranách nepřidalo žádný nový text. PDF se neuložilo.")
             clear_pdfx_claim(pdf)
             pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+            description = {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
         if not same_file_state(source_state, src.stat()):
             raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
-    return f"OCR přidalo text na {updated} z {len(pages)} vybraných stran.\nSlov přidáno {words}."
+    return {**description, "message": f"OCR přidalo text na {updated} z {len(pages)} vybraných stran.\nSlov přidáno {words}."}
 
 
 def subset_attributes(pdf):
@@ -1191,7 +1193,10 @@ def respond(payload, *, raster=False):
         result = dispatch(json.loads(payload), raster=raster)
         if raster and isinstance(result, dict):
             pixels = result.pop("raster", None)
-        response = {"status": "ok", "message": result} if isinstance(result, str) else {"status": "ok", "view": result}
+        if isinstance(result, str):
+            response = {"status": "ok", "message": result}
+        else:
+            response = {"status": "ok", "message": result.pop("message", ""), "view": result}
     except MergeEncryption as exc:
         response = {"status": "merge_encrypted", "message": str(exc)}
     except SignedPDF as exc:

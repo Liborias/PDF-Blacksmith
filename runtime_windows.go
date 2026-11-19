@@ -50,6 +50,7 @@ type request struct {
 	Visible         bool           `json:"visible,omitempty"`
 	Overwrite       bool           `json:"overwrite,omitempty"`
 	ReplaceSource   bool           `json:"replace_source,omitempty"`
+	ReplaceDocument string         `json:"replace_document,omitempty"`
 	SourceSize      int64          `json:"source_size,omitempty"`
 	SourceMtime     int64          `json:"source_mtime_ns,omitempty"`
 	ClearSignatures bool           `json:"clear_signatures,omitempty"`

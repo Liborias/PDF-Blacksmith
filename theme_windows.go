@@ -1,7 +1,6 @@
 package main
 
 import (
-	"path/filepath"
 	"syscall"
 	"unsafe"
 )
@@ -161,9 +160,6 @@ func (a *app) paint(hwnd uintptr) {
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
 		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
 		a.paintSidebars(dc)
-		if a.view.path != "" {
-			drawText(dc, filepath.Base(a.view.path), a.documentNameBounds, a.normalFont, mutedColor, 0x8000) // DT_END_ELLIPSIS
-		}
 	}
 	a.view.paint(dc)
 	user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
@@ -192,7 +188,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	if item.controlType != 4 { // ODT_BUTTON
 		return false
 	}
-	if a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) {
+	if a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) {
 		return true
 	}
 	bounds := item.bounds

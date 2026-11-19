@@ -164,8 +164,9 @@ func (v *documentView) launchSearch() {
 	ctx, cancel := context.WithCancel(context.Background())
 	task := &searchTask{ctx, cancel, make(chan struct{})}
 	p.task, p.pending = task, ""
-	req := searchRequest{v.path, v.password, p.query, slices.Clone(v.order)}
-	owner, original, events := v.app.window, v.original, p.events
+	path, original := v.readSource()
+	req := searchRequest{path, v.password, p.query, slices.Clone(v.order)}
+	owner, events := v.app.window, p.events
 	go func() {
 		result := runPDFSearch(ctx, req, original, func(progress searchUpdate) {
 			select {
