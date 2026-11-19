@@ -242,6 +242,7 @@ type documentView struct {
 	pageSelection                                                              []int
 	pageDrag                                                                   thumbnailDrag
 	thumbnailScale                                                             int
+	thumbnailPanelPixels                                                       int
 	continuous                                                                 bool
 	fitMode                                                                    int
 	zoom                                                                       float64
@@ -1068,6 +1069,7 @@ func (v *documentView) updatePageList() {
 func (v *documentView) updateActions() {
 	loaded := v.ready()
 	editing := loaded && !v.app.busy
+	v.app.updateMergeInputButtons()
 	for _, control := range []uintptr{v.next, v.previous, v.jump, v.pageInput, v.zoomIn, v.zoomOut, v.fit, v.pageList} {
 		setEnabled(control, loaded)
 	}

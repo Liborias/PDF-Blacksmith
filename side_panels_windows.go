@@ -1,8 +1,10 @@
 package main
 
 const (
-	toolPanelWidth   = 200
-	sidebarRailWidth = 24
+	toolPanelWidth      = 200
+	sidebarRailWidth    = 24
+	thumbnailPanelWidth = 220
+	idToggleThumbnails  = 230
 )
 
 var sidebarRailColor = paletteColor{28, 27, 32}
@@ -31,8 +33,17 @@ func (a *app) detailsTab() int {
 func (a *app) sidebarRails() (rect, rect) {
 	v := a.viewport
 	width := int32(a.scale(sidebarRailWidth))
-	return rect{v.left - width, v.top, v.left, v.bottom},
+	left := int32(0)
+	if !a.toolsCollapsed {
+		left = int32(a.scale(toolPanelWidth))
+	}
+	return rect{left, v.top, left + width, v.bottom},
 		rect{v.right, v.top, v.right + width, v.bottom}
+}
+
+func (a *app) thumbnailRail() rect {
+	v := a.viewport
+	return rect{v.left - int32(a.scale(sidebarRailWidth)), v.top, v.left, v.bottom}
 }
 
 func (a *app) layoutSidebars() {
@@ -55,6 +66,7 @@ func (a *app) layoutSidebars() {
 		y := (int(a.viewport.top+a.viewport.bottom) - d(44)) / 2
 		place(a.toolsToggle, int(leftRail.left), y, d(sidebarRailWidth), d(44))
 		place(a.detailsToggle, int(rightRail.left), y, d(sidebarRailWidth), d(44))
+		place(a.thumbnailsToggle, int(a.thumbnailRail().left), y, d(sidebarRailWidth), d(44))
 	}
 	if a.toolsCollapsed {
 		setText(a.toolsToggle, "Rozbalit panel nástrojů")
@@ -68,6 +80,13 @@ func (a *app) layoutSidebars() {
 	}
 	showControl(a.toolsToggle, !a.full)
 	showControl(a.detailsToggle, !a.full)
+	showControl(a.thumbnailsToggle, !a.full && a.view.ready())
+	if a.thumbnailsCollapsed {
+		setText(a.thumbnailsToggle, "Rozbalit panel náhledů")
+	} else {
+		setText(a.thumbnailsToggle, "Sbalit panel náhledů")
+	}
+	invalidate(a.thumbnailsToggle)
 	invalidate(a.toolsToggle)
 	invalidate(a.detailsToggle)
 
@@ -112,9 +131,14 @@ func (a *app) layoutSidebars() {
 	}
 	showControl(a.sidebarTitle, detailsVisible)
 	showControl(a.sidebar, detailsVisible)
-	if !detailsVisible {
-		showControl(a.thumbnailSidebar, false)
+	thumb := a.thumbnailArea
+	show := thumb.right > thumb.left && !a.full
+	if show {
+		width, height := int(thumb.right-thumb.left), int(thumb.bottom-thumb.top)
+		place(a.thumbnailSidebar, int(thumb.left), int(thumb.top), width, height)
+		a.view.layoutThumbnails(width, height)
 	}
+	showControl(a.thumbnailSidebar, show)
 	a.layoutPanel()
 }
 
@@ -124,6 +148,11 @@ func (a *app) paintSidebars(dc uintptr) {
 	fillColor(dc, rect{rightRail.right, rightRail.top, int32(a.width), rightRail.bottom}, panelColor)
 	for _, rail := range [...]rect{leftRail, rightRail} {
 		fillColor(dc, rail, sidebarRailColor)
+	}
+	if a.view.ready() {
+		rail := a.thumbnailRail()
+		fillColor(dc, rail, sidebarRailColor)
+		fillColor(dc, rect{rail.right - 1, rail.top, rail.right, rail.bottom}, divider)
 	}
 	fillColor(dc, rect{leftRail.right - 1, leftRail.top, leftRail.right, leftRail.bottom}, divider)
 	fillColor(dc, rect{rightRail.left, rightRail.top, rightRail.left + 1, rightRail.bottom}, divider)
@@ -141,6 +170,11 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 		arrow = "›"
 		if a.detailsCollapsed {
 			arrow = "‹"
+		}
+	case a.thumbnailsToggle:
+		arrow = "‹"
+		if a.thumbnailsCollapsed {
+			arrow = "›"
 		}
 	default:
 		return false

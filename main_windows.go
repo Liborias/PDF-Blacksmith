@@ -109,7 +109,7 @@ type app struct {
 	dpi, width, height                                 int
 	tool, mode                                         int
 	sidebar, thumbnailSidebar, controlParent           uintptr
-	detailsArea                                        rect
+	detailsArea, thumbnailArea                         rect
 	panelItems                                         map[int][]panelItem
 	panelScroll                                        map[int]int
 	sideScroll                                         *panelScrollbar
@@ -121,6 +121,7 @@ type app struct {
 	headerBrand, windowButtonStart                     int
 	documentNameBounds, documentCloseBounds            rect
 	toolsCollapsed, detailsCollapsed                   bool
+	thumbnailsCollapsed                                bool
 	full                                               bool
 	placement                                          windowPlacement
 	savedStyle                                         uintptr
@@ -137,6 +138,7 @@ type app struct {
 	readOnlyFields, primaryButtons                     map[uintptr]bool
 	view                                               *documentView
 	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
+	thumbnailsToggle                                   uintptr
 	fileHint, filePath, fileRun                        uintptr
 	exportScope, exportRange                           uintptr
 	splitScope, splitRange, splitButton, splitReport   uintptr
@@ -152,6 +154,7 @@ type app struct {
 	exportManualStart                                  int
 	export                                             exportOptions
 	lastOutput, lastPassword                           string
+	merge                                              mergePanel
 	busy                                               bool
 	waitingOverwrite                                   bool
 	pending                                            request
@@ -437,7 +440,7 @@ func (a *app) drawControl(param uintptr) bool {
 	}
 	var item buttonDraw
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), param, unsafe.Sizeof(item))
-	return a.drawPopup(&item) || a.drawButton(&item) || (a.view != nil && a.view.drawListRow(&item))
+	return a.drawPopup(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || (a.view != nil && a.view.drawListRow(&item))
 }
 
 func setText(handle uintptr, value string) {
@@ -469,6 +472,14 @@ func notice(owner uintptr, text string, flags uintptr) uintptr {
 }
 
 func (a *app) fileDialog(filter, suggestion, ext string, save bool) string {
+	paths := a.fileDialogPaths(filter, suggestion, ext, save, false)
+	if len(paths) == 0 {
+		return ""
+	}
+	return paths[0]
+}
+
+func (a *app) fileDialogPaths(filter, suggestion, ext string, save, multiple bool) []string {
 	buffer := make([]uint16, 32768)
 	copy(buffer, utf16.Encode([]rune(suggestion)))
 	filterWords := utf16.Encode([]rune(filter + "\x00\x00"))
@@ -485,6 +496,9 @@ func (a *app) fileDialog(filter, suggestion, ext string, save bool) string {
 		dialog.defExt = uintptr(unsafe.Pointer(extension))
 	} else {
 		dialog.flags |= 0x00001000
+		if multiple {
+			dialog.flags |= 0x00000200 // OFN_ALLOWMULTISELECT
+		}
 	}
 	ok, _, _ := proc.Call(uintptr(unsafe.Pointer(&dialog)))
 	runtime.KeepAlive(buffer)
@@ -495,9 +509,23 @@ func (a *app) fileDialog(filter, suggestion, ext string, save bool) string {
 		if code != 0 {
 			notice(a.window, fmt.Sprintf("Výběr souboru se nezdařil (%d).", code), 0x10)
 		}
-		return ""
+		return nil
 	}
-	return syscall.UTF16ToString(buffer)
+	first := syscall.UTF16ToString(buffer)
+	if !multiple {
+		return []string{first}
+	}
+	remaining := buffer[len(utf16.Encode([]rune(first)))+1:]
+	if len(remaining) == 0 || remaining[0] == 0 {
+		return []string{first}
+	}
+	var paths []string
+	for len(remaining) > 0 && remaining[0] != 0 {
+		name := syscall.UTF16ToString(remaining)
+		paths = append(paths, filepath.Join(first, name))
+		remaining = remaining[len(utf16.Encode([]rune(name)))+1:]
+	}
+	return paths
 }
 
 func (a *app) chooseInput(target uintptr, filter string) {
@@ -508,16 +536,22 @@ func (a *app) chooseInput(target uintptr, filter string) {
 
 const pdfFilter = "Soubory PDF (*.pdf)\x00*.pdf\x00Všechny soubory\x00*.*"
 
-func (a *app) chooseOutput(req *request, suffix string) bool {
+func (a *app) chooseOutput(req *request, suffix string, otherInputs ...string) bool {
 	defaultPath := strings.TrimSuffix(req.Input, filepath.Ext(req.Input)) + suffix + ".pdf"
 	req.Output = a.fileDialog(pdfFilter, defaultPath, "pdf", true)
 	if req.Output == "" {
 		return false
 	}
 	if info, err := os.Stat(req.Output); err == nil {
-		if original, statErr := os.Stat(req.Input); statErr == nil && os.SameFile(info, original) {
-			notice(a.window, "Vyberte jiný výstupní soubor. Pro uložení úprav do původního PDF použijte Soubor → Uložit.", 0x30)
-			return false
+		for _, input := range append([]string{req.Input}, otherInputs...) {
+			if original, statErr := os.Stat(input); statErr == nil && os.SameFile(info, original) {
+				message := "Vyberte jiný výstupní soubor. Pro uložení úprav do původního PDF použijte Soubor → Uložit."
+				if req.Action == "merge" {
+					message = "Jako výstup vyberte jiný soubor než vstupní PDF."
+				}
+				notice(a.window, message, 0x30)
+				return false
+			}
 		}
 		if notice(a.window, "Chcete přepsat tento výstupní soubor?\n\n"+req.Output, 0x134) != 6 {
 			return false

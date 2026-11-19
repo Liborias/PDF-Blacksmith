@@ -7,7 +7,7 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 3. **Normy PDF/X.** Přidat předvolby PDF/X-1a:2003, PDF/X-3:2003 a PDF/X-4 s vestavěnou kontrolou výstupního záměru ICC, písem, tiskových rámečků a průhlednosti. Úplné ověření shody podle ISO vyžaduje nezávislý preflight. [Export a vestavěná kontrola ve verzi 0.4.11](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.11)
 4. **Rozdělení PDF po stránkách.** Uložit každou vybranou stránku do vlastního PDF se jménem podle čísla strany. [Hotovo ve verzi 0.4.12](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.12)
 5. **Pořadí a náhledy stránek.** Přesunout jednu či více stran na zadanou pozici nebo přetažením náhledů. Vybrané strany lze také smazat. Přesun i smazání lze vrátit. [Hotovo ve verzi 0.4.13](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.13)
-6. **Sloučení dokumentů.** Sestavit jedno PDF z více souborů v zadaném pořadí a umožnit výběr stran z každého souboru.
+6. **Sloučení dokumentů.** Sestavit jedno PDF z více souborů v zadaném pořadí a umožnit výběr stran z každého souboru. [Hotovo ve verzi 0.4.15](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.15)
 7. **Záložky v PDF.** Zobrazit existující záložky v postranním panelu, přejít na jejich cíl a přidávat, přejmenovávat nebo upravovat vlastní záložky.
 8. **Fulltextové vyhledávání.** Prohledat textovou vrstvu dokumentu, zobrazit výsledky podle stran a zvýraznit shody v náhledu.
 9. **OCR.** Rozpoznat text na vybraných naskenovaných stranách, včetně češtiny, a přidat vyhledávatelnou textovou vrstvu při zachování vzhledu skenu.
@@ -17,4 +17,4 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 
 ## Levý panel nástrojů
 
-**Rozdělit PDF** a **Pořadí stránek** jsou v levém panelu po načtení dokumentu. Postupně sem přibudou **Nástroje výběru**, **Úprava textu**, **Poznámky**, **OCR** a **Sloučit PDF**. Každá položka dostane piktogram a otevře své nastavení v pravém panelu.
+**Sloučit PDF** je v levém panelu nástrojů dostupné i bez otevřeného dokumentu. Po načtení dokumentu jsou dostupné také **Rozdělit PDF** a **Pořadí stránek**. Společné náhledy mají vlastní sbalitelný panel mezi nástroji a dokumentem. Postupně přibudou **Nástroje výběru**, **Úprava textu**, **Poznámky** a **OCR**.

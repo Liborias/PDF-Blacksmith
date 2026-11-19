@@ -31,14 +31,27 @@ func (v *documentView) buildThumbnails() {
 }
 
 func (v *documentView) thumbnailWidth() int {
-	return v.app.scale(panelWidth) * v.thumbnailScale / 100
+	return v.thumbnailPanelPixels * v.thumbnailScale / 100
 }
 
 func (v *documentView) layoutThumbnails(width, height int) {
 	d := v.app.scale
-	place(v.thumbnailHeading, d(16), d(5), d(172), d(22))
-	place(v.thumbnailHint, width-d(125), d(5), d(108), d(22))
-	frame := rect{int32(d(16)), int32(d(31)), int32(width - d(16)), int32(height)}
+	v.thumbnailPanelPixels = width
+	margin := min(d(12), width/10)
+	top := d(31)
+	heading := "Náhledy stránek"
+	if width < d(137) {
+		heading = "Náhledy"
+	}
+	setText(v.thumbnailHeading, heading)
+	place(v.thumbnailHeading, margin, d(5), width-2*margin, d(22))
+	showHint := width >= d(130)
+	if showHint {
+		place(v.thumbnailHint, margin, d(27), width-2*margin, d(19))
+		top = d(50)
+	}
+	showControl(v.thumbnailHint, showHint)
+	frame := rect{int32(margin), int32(top), int32(width - margin), int32(height)}
 	pane := v.app.scrollPanes[v.pageList]
 	rowHeight := max(1, min(int(frame.bottom-frame.top), v.thumbnailWidth()*3/2+d(32)))
 	changed := rowHeight != pane.lineHeight

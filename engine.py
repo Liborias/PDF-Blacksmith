@@ -1,6 +1,7 @@
 """Local PDF operations for PDF Blacksmith. The Windows front end uses JSON on stdin/stdout."""
 
 from contextlib import contextmanager
+from hashlib import sha256
 import json
 import logging
 import os
@@ -26,6 +27,10 @@ class SignedPDF(UserError):
     pass
 
 
+class MergeEncryption(UserError):
+    pass
+
+
 class PlateError(UserError):
     def __init__(self, hits):
         self.pages = sorted(hits)
@@ -45,14 +50,18 @@ def open_pdf(path, password):
         raise UserError("Zadejte platné stávající heslo k PDF.") from exc
 
 
+def same_destination(dst, src):
+    return dst.resolve() == src.resolve() or (dst.exists() and dst.samefile(src))
+
+
 @contextmanager
-def output_file(src, request):
+def output_file(src, request, *, protected=()):
     dst = Path(request["output"])
     if dst.suffix.lower() != ".pdf":
         raise UserError("Výstupní soubor musí mít příponu .pdf.")
     original = None
     same_path = dst.resolve() == src.resolve()
-    if same_path or (dst.exists() and dst.samefile(src)):
+    if same_destination(dst, src):
         if not (same_path and request["action"] == "save_document" and request.get("replace_source")
                 and request.get("overwrite")):
             raise UserError("Pro výstup vyberte jiný soubor než vstupní PDF.")
@@ -61,9 +70,13 @@ def output_file(src, request):
         if ((original.st_size, original.st_mtime_ns)
                 != (request.get("source_size"), request.get("source_mtime_ns"))):
             raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
+    if any(same_destination(dst, path) for path in protected):
+        raise UserError("Jako výstup vyberte jiný soubor než vstupní PDF.")
     with tempfile.TemporaryDirectory(prefix="pdftisk-", dir=dst.parent) as folder:
         pending = Path(folder) / "vystup.pdf"
         yield pending
+        if any(same_destination(dst, path) for path in protected):
+            raise UserError("Jako výstup vyberte jiný soubor než vstupní PDF.")
         if original is not None:
             if not same_file_state(original, dst.stat()):
                 raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
@@ -955,7 +968,116 @@ def split_document(src, request):
     return f"Počet uložených souborů PDF: {len(outputs)}."
 
 
+def merge_sources(request, minimum):
+    entries = request.get("merge_inputs")
+    if (not isinstance(entries, list) or len(entries) < minimum
+            or any(not isinstance(entry, dict) or not isinstance(entry.get("path"), str)
+                   or not entry["path"] for entry in entries)):
+        raise UserError("Vyberte PDF soubory ke sloučení.")
+    return entries
+
+
+def merge_source_state(path, entry):
+    if not path.is_file():
+        raise UserError(f"Soubor {path.name} nelze otevřít.")
+    current = path.stat()
+    if "source_size" in entry and (current.st_size, current.st_mtime_ns) != (
+            entry["source_size"], entry.get("source_mtime_ns")):
+        raise UserError(f"Soubor {path.name} se změnil. Přidejte jej znovu.")
+    return current
+
+
+def inspect_merge(request):
+    result = []
+    for entry in merge_sources(request, 1):
+        path = Path(entry["path"])
+        try:
+            merge_source_state(path, entry)
+            with pikepdf.Pdf.open(path, password=entry.get("pdf_password", "")) as pdf:
+                pages = len(pdf.pages)
+                result.append({"pages": pages, "message": "" if pages else "PDF neobsahuje žádnou stranu."})
+        except pikepdf.PasswordError:
+            result.append({"message": "Zadejte platné heslo a načtěte počet stran."})
+        except UserError as exc:
+            result.append({"message": str(exc)})
+        except (OSError, pikepdf.PdfError):
+            result.append({"message": f"Soubor {path.name} se nepodařilo načíst jako PDF."})
+    return {"merge_info": result}
+
+
+def merge_intents(pdf):
+    intents = pdf.Root.get("/OutputIntents")
+    if not intents:
+        return (), None
+    if not isinstance(intents, pikepdf.Array):
+        return None, None
+    fingerprints = []
+    for intent in intents:
+        if not isinstance(intent, pikepdf.Dictionary) or not isinstance(intent.get("/DestOutputProfile"), pikepdf.Stream):
+            return None, None
+        profile = intent.DestOutputProfile.read_bytes()
+        fingerprints.append(tuple(str(intent.get(key, "")) for key in (
+            "/S", "/OutputConditionIdentifier", "/RegistryName")) + (sha256(profile).digest(),))
+    return tuple(fingerprints), intents
+
+
+def append_merge_source(target, pdf, entry):
+    count = len(pdf.pages)
+    view = entry.get("view", {})
+    order = document_order(view, count)
+    rotations = page_rotations(view.get("rotations", [0] * count), count)
+    positions = selected_pages(view, len(order)) or range(1, len(order) + 1)
+    indices = [order[position-1]-1 for position in positions]
+    first = len(target.pages)
+    target.add_pages_from(pdf, indices)
+    for position, index in enumerate(indices, first):
+        if rotations[index]:
+            target.pages[position].rotate(rotations[index], relative=True)
+
+
+def merge_documents(request):
+    entries = merge_sources(request, 2)
+    paths = [Path(entry["path"]) for entry in entries]
+    states = [merge_source_state(path, entry) for path, entry in zip(paths, entries)]
+    with output_file(paths[0], request, protected=paths) as pending, pikepdf.Pdf.new() as target:
+        version = ("1.3", 0)
+        shared_fingerprint, shared_intents, mixed = (), None, False
+        for index, (path, entry) in enumerate(zip(paths, entries)):
+            try:
+                with open_pdf(path, entry.get("pdf_password", "")) as pdf:
+                    if pdf.is_encrypted and not request.get("allow_unencrypted_merge"):
+                        raise MergeEncryption("Vstupní PDF je šifrované.")
+                    prepare_edit(pdf, request)
+                    append_merge_source(target, pdf, entry)
+                    version = max(version, (pdf.pdf_version, pdf.extension_level))
+                    fingerprint, intents = merge_intents(pdf)
+                    if index == 0:
+                        shared_fingerprint = fingerprint
+                        if intents is not None:
+                            shared_intents = target.copy_foreign(pdf.make_indirect(intents))
+                    mixed |= fingerprint is None or fingerprint != shared_fingerprint
+            except UserError as exc:
+                raise type(exc)(f"{path.name}: {exc}") from exc
+            except (OSError, pikepdf.PdfError) as exc:
+                raise UserError(f"Soubor {path.name} se nepodařilo přidat do sloučeného PDF.") from exc
+        if shared_intents is not None and not mixed:
+            target.Root.OutputIntents = shared_intents
+        count = len(target.pages)
+        target.save(pending, min_version=version, fix_metadata_version=False)
+        for path, state in zip(paths, states):
+            if not same_file_state(state, path.stat()):
+                raise UserError(f"Soubor {path.name} se během sloučení změnil.")
+    message = f"PDF bylo sloučeno. Počet stran {count}."
+    if mixed:
+        message += "\nVstupy nemají shodný vložený výstupní profil ICC."
+    return message
+
+
 def dispatch(request, *, raster=False):
+    if request.get("action") == "merge_probe":
+        return inspect_merge(request)
+    if request.get("action") == "merge":
+        return merge_documents(request)
     src = Path(request["input"])
     if not src.is_file():
         raise UserError("Vyberte existující soubor PDF.")
@@ -985,6 +1107,8 @@ def respond(payload, *, raster=False):
         if raster and isinstance(result, dict):
             pixels = result.pop("raster", None)
         response = {"status": "ok", "message": result} if isinstance(result, str) else {"status": "ok", "view": result}
+    except MergeEncryption as exc:
+        response = {"status": "merge_encrypted", "message": str(exc)}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
     except (UserError, ProfileError, ProofError, PDFXError) as exc:

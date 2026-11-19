@@ -49,6 +49,9 @@ type request struct {
 	ClearSignatures bool           `json:"clear_signatures,omitempty"`
 	Export          *exportOptions `json:"export,omitempty"`
 	View            *viewRequest   `json:"view,omitempty"`
+
+	MergeInputs           []mergeInput `json:"merge_inputs,omitempty"`
+	AllowUnencryptedMerge bool         `json:"allow_unencrypted_merge,omitempty"`
 }
 
 type viewRequest struct {
@@ -83,6 +86,7 @@ type viewResponse struct {
 	RasterHeight int                     `json:"raster_height"`
 	Plates       []plateInfo             `json:"plates"`
 	UsedPlates   []plateInfo             `json:"used_plates"`
+	MergeInfo    []mergeSourceInfo       `json:"merge_info"`
 }
 
 type response struct {

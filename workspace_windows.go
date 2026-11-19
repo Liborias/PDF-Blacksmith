@@ -76,6 +76,7 @@ var workspaceTabs = []struct {
 	{idProofTab, "Separace", true},
 	{idSignTab, "Digitální podpis", true},
 	{idSplitTab, "Rozdělit PDF", true},
+	{idMergeTab, "Sloučit PDF", false},
 	{idPageOrderTool, "Pořadí stránek", true},
 }
 
@@ -137,6 +138,7 @@ func (a *app) setupWorkspace() bool {
 
 	a.toolsToggle = a.button("Sbalit panel nástrojů", idToggleTools, 0, 0, sidebarRailWidth, 0)
 	a.detailsToggle = a.button("Sbalit panel nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
+	a.thumbnailsToggle = a.button("Sbalit panel náhledů", idToggleThumbnails, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
@@ -182,6 +184,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildFilePanel()
 	a.beginPanel(idSplitTab)
 	a.buildSplitPanel()
+	a.beginPanel(idMergeTab)
+	a.buildMergePanel()
 	a.addingTab, a.controlParent = 0, a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
@@ -343,6 +347,8 @@ func (a *app) activate(id int) {
 			return
 		}
 		a.tool, a.mode = idPageOrderTool, idPagesTab
+	case idMergeTab:
+		a.tool, a.mode = idMergeTab, idMergeTab
 	case idProofTab, idSignTab, idSplitTab:
 		if !a.documentTools {
 			return
@@ -370,6 +376,7 @@ func (a *app) layout() {
 		return
 	}
 	d := a.scale
+	a.thumbnailArea = rect{}
 	if a.full {
 		a.viewport = size
 	} else {
@@ -380,7 +387,16 @@ func (a *app) layout() {
 		if !a.detailsCollapsed {
 			right -= d(panelWidth)
 		}
-		a.viewport = rect{int32(left), int32(d(headerHeight)), int32(right), int32(max(d(headerHeight+1), a.height-d(footerHeight)))}
+		top, bottom := int32(d(headerHeight)), int32(max(d(headerHeight+1), a.height-d(footerHeight)))
+		if a.view.ready() {
+			if !a.thumbnailsCollapsed {
+				width := max(d(88), min(d(thumbnailPanelWidth), right-left-d(sidebarRailWidth+170)))
+				a.thumbnailArea = rect{int32(left), top, int32(left + width), bottom}
+				left += width
+			}
+			left += d(sidebarRailWidth)
+		}
+		a.viewport = rect{int32(left), top, int32(right), bottom}
 		a.layoutHeader()
 		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
 		a.view.layoutToolbar()
@@ -462,23 +478,10 @@ func (a *app) layoutPanel() {
 	}
 	height := a.panelContentHeight()
 	area := a.detailsArea
-	d := a.scale
 	total := max(2, int(area.bottom-area.top))
-	settingsHeight := total
-	if a.view.ready() {
-		reserve := min(total/2, d(370))
-		settingsHeight = min(d(height), total-reserve)
-	}
-	settingsHeight = max(1, settingsHeight)
 	left, top, width := int(area.left), int(area.top), int(area.right-area.left)
-	place(a.sidebar, left, top, width, settingsHeight)
-	if a.view.ready() {
-		thumbHeight := total - settingsHeight
-		place(a.thumbnailSidebar, left, top+settingsHeight, width, thumbHeight)
-		a.view.layoutThumbnails(width, thumbHeight)
-	}
-	showControl(a.thumbnailSidebar, a.view.ready())
-	available := max(1, settingsHeight*96/a.dpi)
+	place(a.sidebar, left, top, width, total)
+	available := max(1, total*96/a.dpi)
 	active := a.detailsTab()
 	offset := min(max(0, a.panelScroll[active]), max(0, height-available))
 	a.panelScroll[active] = offset
@@ -538,7 +541,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
 		fillColor(dc, bounds, panelColor)
 		if hwnd == a.thumbnailSidebar {
-			fillColor(dc, rect{right: bounds.right, bottom: 1}, divider)
+			fillColor(dc, rect{right: 1, bottom: bounds.bottom}, divider)
 		}
 		user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
 		return 0
@@ -602,13 +605,23 @@ func (a *app) openDrop(handle uintptr) {
 	if a.busy {
 		return
 	}
-	length, _, _ := proc.Call(handle, 0, 0, 0)
-	if length == 0 {
-		return
+	count := uintptr(1)
+	if a.mode == idMergeTab {
+		count, _, _ = proc.Call(handle, 0xffffffff, 0, 0)
 	}
-	buf := make([]uint16, length+1)
-	proc.Call(handle, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
-	a.openDocument(syscall.UTF16ToString(buf), "")
+	var paths []string
+	for index := range count {
+		if length, _, _ := proc.Call(handle, index, 0, 0); length > 0 {
+			buf := make([]uint16, length+1)
+			proc.Call(handle, index, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+			paths = append(paths, syscall.UTF16ToString(buf))
+		}
+	}
+	if a.mode == idMergeTab {
+		a.addMergeFiles(paths)
+	} else if len(paths) > 0 {
+		a.openDocument(paths[0], "")
+	}
 }
 
 func (a *app) openDialog() {
@@ -691,6 +704,9 @@ func (a *app) command(id, notification int) {
 	if a.view.command(id, notification) {
 		return
 	}
+	if a.mergeCommand(id, notification) {
+		return
+	}
 	if notification == 1 {
 		switch id {
 		case idExportOption:
@@ -722,7 +738,7 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab,
+	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab,
 		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.activate(id)
 	case idFileRun:
@@ -732,6 +748,11 @@ func (a *app) command(id, notification int) {
 		a.layout()
 	case idToggleDetails:
 		a.detailsCollapsed = !a.detailsCollapsed
+		a.layout()
+		a.view.schedule()
+	case idToggleThumbnails:
+		a.thumbnailsCollapsed = !a.thumbnailsCollapsed
+		a.view.endPageDrag()
 		a.layout()
 		a.view.schedule()
 	case idFullscreen:
@@ -897,6 +918,7 @@ func (a *app) updateActions() {
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton} {
 		setEnabled(button, ready)
 	}
+	a.updateMergeActions()
 	a.view.updateActions()
 }
 
@@ -908,6 +930,8 @@ func (a *app) report(message string) {
 	a.reportStatus(message)
 	var target uintptr
 	switch a.mode {
+	case idMergeTab:
+		target = a.merge.report
 	case idExportTab:
 		target = a.exportReport
 	case idSignTab:
@@ -937,7 +961,7 @@ func (a *app) beginJob(req request, status string) bool {
 	if a.busy {
 		return false
 	}
-	if !a.view.sourceUnchanged() {
+	if req.Action != "merge" && req.Action != "merge_probe" && !a.view.sourceUnchanged() {
 		a.report("Vstupní PDF se změnilo. Otevřete je znovu.")
 		return false
 	}
@@ -968,11 +992,28 @@ func (a *app) finish(result response) {
 	req := a.pending
 	a.busy = false
 	a.pending = request{}
+	if req.Action == "merge_probe" {
+		a.finishMergeProbe(result)
+		a.updateActions()
+		a.view.schedule()
+		return
+	}
+	if result.Status == "merge_encrypted" {
+		if notice(a.window, result.Message+"\n\nUložit sloučené PDF bez šifrování?", 0x134) == 6 {
+			req.AllowUnencryptedMerge = true
+			a.run(req)
+			return
+		}
+		result.Message = "Sloučení zrušeno."
+	}
 	if result.Status == "signed_pdf" {
 		message := result.Message
 		question := "Uložit kopii bez původních podpisů?"
 		if req.Action == "split" {
 			question = "Uložit vybrané strany bez původních podpisů?"
+		}
+		if req.Action == "merge" {
+			question = "Sloučit dokumenty do jednoho PDF bez původních podpisů?"
 		}
 		if req.ReplaceSource {
 			message = "Původní PDF obsahuje digitální podpis."
@@ -1017,6 +1058,9 @@ func (a *app) finish(result response) {
 			}
 			setText(a.splitReport, multiline(message))
 		}
+		if req.Action == "merge" {
+			setText(a.merge.report, multiline(message))
+		}
 	}
 	if req.Action == "sign" {
 		setText(a.certPass, "")
@@ -1034,6 +1078,10 @@ func (a *app) handleInput(msg *winMessage) bool {
 		user32.NewProc("ScreenToClient").Call(a.window, uintptr(unsafe.Pointer(&pos)))
 		if contains(a.viewport, pos.x, pos.y) {
 			a.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
+			return true
+		}
+		if contains(a.thumbnailArea, pos.x, pos.y) {
+			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
 		}
 		if !a.full && !a.detailsCollapsed && pos.x >= a.viewport.right+int32(a.scale(sidebarRailWidth)) && pos.x < int32(a.width) &&

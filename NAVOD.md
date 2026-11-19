@@ -6,9 +6,9 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
 
-Oba boční panely jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
+Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
 
-Náhledy stránek jsou společné pro všechny nástroje. Najdete je vpravo pod nastavením až k zápatí. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. V nižším okně se náhled přizpůsobí dostupné výšce. Výběr se zachová při posouvání, změně velikosti i přepnutí nástroje.
+Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a má vlastní šipku pro sbalení. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete křížkem vedle jeho názvu v horní liště nebo zkratkou **Ctrl+W**. Pokud máte neuložené změny, aplikace se před zavřením zeptá, zda je zahodit.
@@ -100,6 +100,16 @@ Po smazání stránek se při uložení přenese výstupní záměr ICC a označ
 Vlevo zvolte **Rozdělit PDF**. Vpravo vyberte všechny strany, aktuální stranu, **Vybrané náhledy** nebo vlastní rozsah, například `1, 3–5, 8`. Tlačítko **Vybrat složku a rozdělit PDF…** uloží každou vybranou stranu jako samostatné PDF, například `katalog-strana-003.pdf`.
 
 Čísla souborů odpovídají aktuálnímu pořadí stran. Přenesou se i rozpracovaná otočení a existující ochrana heslem. Původní dokument zůstává beze změny. Pokud ve složce názvy už existují, aplikace požádá o jinou složku. U podepsaného dokumentu potvrdíte vytvoření souborů bez původních podpisů.
+
+## Sloučení dokumentů
+
+Vlevo otevřete **Sloučit PDF** a pomocí **Přidat PDF soubory…** vyberte vstupy. V tomto režimu je můžete také přetáhnout do okna. Tlačítky **Nahoru** a **Dolů** nastavíte pořadí. Pro každý soubor můžete zadat čísla a rozsahy stran, například `1, 3–5`. Prázdné pole zahrne celý vstup.
+
+**Přidat otevřené PDF** převezme aktuální pořadí a otočení stran v rozpracovaném dokumentu. **Přidat výběr stran** předvyplní čísla označených náhledů. U souboru chráněného heslem zadejte heslo a klikněte na **Načíst počet stran**.
+
+**Uložit sloučené PDF…** vytvoří jeden soubor z vybraných stran. Najdete jej také přes **Soubor → Otevřít výstup**. U podepsaných vstupů aplikace vyžádá potvrzení vytvoření kopie bez původních podpisů. U šifrovaných vstupů vyžádá potvrzení uložení výsledku bez šifrování.
+
+Sloučení přenáší stránky ve zdrojových barevných prostorech. Pokud mají vstupy shodný vložený výstupní záměr ICC, přenese se do výsledku. Při rozdílu aplikace zobrazí zprávu o ICC profilu.
 
 ## Odstranění omezení heslem
 
