@@ -292,6 +292,15 @@ func (a *app) buildSignPanel() {
 }
 
 func (a *app) applyExportOptions(value exportOptions) {
+    a.export = value
+    chooseCombo(a.grayProfileCombo, defaultIndex(grayProfiles, value.GrayProfile, defaults.GrayProfile))
+    chooseCombo(a.view.convertGrayProfile, defaultIndex(grayProfiles, value.GrayProfile, defaults.GrayProfile))
+    mode := defaultIndex(colorModes, value.ColorMode, defaults.ColorMode)
+    chooseCombo(a.profiles, 1+mode)
+    chooseCombo(a.view.convertMode, mode)
+    kidx := slices.IndexFunc(a.profileChoices[4:], func(p profileChoice) bool { return p.Key == value.KProfile })
+    chooseCombo(a.kOutputProfile, max(0, kidx))
+    chooseCombo(a.view.convertKProfile, max(0, kidx))
 	indexes := []int{
 		defaultIndex(intents, value.Intent, defaults.Intent),
 		defaultIndex(blackPoints, value.BlackPoint, defaults.BlackPoint),
@@ -831,8 +840,10 @@ func (a *app) command(id, notification int) {
         a.chooseInput(a.customICC, "Barevné profily ICC nebo ICM\x00*.icc;*.icm")
     case idGrayICC:
         a.chooseInput(a.grayCustomICC, "Šedé profily ICC nebo ICM\x00*.icc;*.icm")
+        if path := getText(a.grayCustomICC); path != "" { setText(a.view.convertGrayICC, path) }
     case idProofGrayICC:
         a.chooseInput(a.view.convertGrayICC, "Šedé profily ICC nebo ICM\x00*.icc;*.icm")
+        if path := getText(a.view.convertGrayICC); path != "" { setText(a.grayCustomICC, path) }
 	case idCertBrowse:
 		a.chooseInput(a.cert, "Osobní certifikát PKCS#12\x00*.p12;*.pfx")
 	case idTrustBrowse:
