@@ -88,6 +88,13 @@ def check_ocr(folder, exe, models):
             contents.append(text)
     assert contents[0].count("NATIVE HEADING") == 1 and "VECTOR SAMPLE" in contents[0], contents
     assert "SCANNED SAMPLE" in contents[1] and contents[2] == "" and "VECTOR SAMPLE" in contents[3], contents
+    region = folder / "region.pdf"
+    dispatch({**request, "output": str(region), "view": {"pages": [1]},
+              "ocr_region": [[20, 185], [150, 185], [150, 245], [20, 245]]})
+    with pdfium.PdfDocument(region) as selected, pdfium.PdfDocument(source) as original:
+        text, bitmap = read_page(selected, 0)
+        assert "VECTOR" in text and "SAMPLE" not in text and "NATIVE HEADING" in text, text
+        assert ImageChops.difference(bitmap, read_page(original, 0)[1]).getbbox() is None
     retry = folder / "repeated.pdf"
     try:
         dispatch({**request, "input": str(output), "output": str(retry)})

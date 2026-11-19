@@ -873,22 +873,57 @@ def save_page_edits(src, request):
     view = request.get("view", {})
     password = request.get("pdf_password", "")
     with output_file(src, request) as pending, open_pdf(src, password) as pdf:
-        pages = list(pdf.pages)
-        order = document_order(view, len(pages))
-        rotations = page_rotations(view.get("rotations", [0] * len(pages)), len(pages))
         prepare_edit(pdf, request)
-        apply_bookmarks(pdf, view.get("bookmarks", []))
-        for page, angle in zip(pages, rotations):
-            if angle:
-                page.rotate(angle, relative=True)
-        if len(order) == len(pages):
-            apply_page_order(pdf, pages, order)
-            pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
-        else:
-            with (open_pdf(src, password) if pdf.is_encrypted else pikepdf.Pdf.new()) as kept:
-                copy_page_subset(pdf, kept, [number - 1 for number in order],
-                                 subset_attributes(pdf), pending, keep_document_options=True)
+        write_page_edits(pdf, src, password, pending, view)
     return "Uložena upravená kopie PDF."
+
+
+def write_page_edits(pdf, src, password, pending, view):
+    pages = list(pdf.pages)
+    order = document_order(view, len(pages))
+    rotations = page_rotations(view.get("rotations", [0] * len(pages)), len(pages))
+    apply_bookmarks(pdf, view.get("bookmarks", []))
+    for page, angle in zip(pages, rotations):
+        if angle:
+            page.rotate(angle, relative=True)
+    if len(order) == len(pages):
+        apply_page_order(pdf, pages, order)
+        pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+    else:
+        with (open_pdf(src, password) if pdf.is_encrypted else pikepdf.Pdf.new()) as kept:
+            copy_page_subset(pdf, kept, [number - 1 for number in order],
+                             subset_attributes(pdf), pending, keep_document_options=True)
+
+
+def edit_text_document(src, request):
+    from text_edit import TextError, describe_text, replace_runs
+
+    view, password = request.get("view", {}), request.get("pdf_password", "")
+    def selected(pdf):
+        number = view.get("page", 1)
+        if type(number) is not int or not 1 <= number <= len(pdf.pages):
+            raise UserError("Vyberte existující stránku PDF.")
+        return pdf.pages[number-1]
+
+    if request["action"] == "text_probe":
+        with open_pdf(src, password) as pdf:
+            return {"text_page": describe_text(selected(pdf))}
+    source_state = src.stat()
+    models = request.get("text_fonts") or Path(__file__).resolve().parent / "text-fonts"
+    with output_file(src, request) as pending:
+        with open_pdf(src, password) as pdf:
+            prepare_edit(pdf, request)
+            try:
+                replace_runs(pdf, selected(pdf), request.get("text_edit", {}), models)
+            except TextError as exc:
+                raise UserError(str(exc)) from exc
+            clear_pdfx_claim(pdf)
+            write_page_edits(pdf, src, password, pending, view)
+        with open_pdf(pending, password) as pdf:
+            description = {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
+        if not same_file_state(source_state, src.stat()):
+            raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
+    return {**description, "message": "Text byl upraven v otevřené kartě."}
 
 
 def save_document(src, request):
@@ -921,7 +956,8 @@ def ocr_document(src, request):
             try:
                 updated, words = recognize(pdf, source, pages, folder, ghostscript_path(request),
                                            run_ghostscript, stage_for_render,
-                                           request.get("ocr_language", "ces+eng"), models)
+                                           request.get("ocr_language", "ces+eng"), models,
+                                           region=request.get("ocr_region"))
             except OCRError as exc:
                 raise UserError(str(exc)) from exc
             if not updated:
@@ -1172,7 +1208,8 @@ def dispatch(request, *, raster=False):
                  "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
                  "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,
                  "edit_pages": save_page_edits, "save_document": save_document,
-                 "split": split_document, "ocr": ocr_document}.get(request.get("action"))
+                 "split": split_document, "ocr": ocr_document,
+                 "text_probe": edit_text_document, "text_edit": edit_text_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:

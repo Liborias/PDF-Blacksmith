@@ -48,8 +48,15 @@ func (a *app) printDocument() {
 		owner: a.window, flags: pdReturnDC | pdDriverCopies | pdHidePrintToFile,
 		minimum: 1, maximum: maximum, from: 1, to: maximum, copies: 1,
 	}
-	if len(v.pageSelection) == 0 {
+	selection := pageNumbers(v.pageSelection)
+	switch {
+	case len(selection) == 0:
 		dialog.flags |= pdNoSelection
+	case contiguousPages(selection) && selection[len(selection)-1] <= int(maximum):
+		dialog.flags |= pdPageNums
+		dialog.from, dialog.to = uint16(selection[0]), uint16(selection[len(selection)-1])
+	default:
+		dialog.flags |= pdSelection
 	}
 	dialog.size = uint32(unsafe.Sizeof(dialog))
 	ok, _, _ := comdlg32.NewProc("PrintDlgW").Call(uintptr(unsafe.Pointer(&dialog)))

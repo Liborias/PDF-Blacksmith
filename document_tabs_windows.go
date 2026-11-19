@@ -97,6 +97,9 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 	}
 	a.updateActions()
 	a.layout()
+	if scope, _ := a.scopeControls(); comboIndex(scope) == exportAllPages {
+		a.applyThumbnailScope()
+	}
 	v.rebuild(false)
 	if tab != nil && tab.hasAnchor && v.ready() {
 		w, h := v.viewportSize()

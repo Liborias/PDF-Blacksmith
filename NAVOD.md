@@ -8,9 +8,9 @@ V levém panelu rozbalte **Soubor** a vyberte **Otevřít soubor**. Stejné tla�
 
 Každé otevřené PDF má vlastní kartu se stránkou, přiblížením, výběrem náhledů a rozpracovanými úpravami. Mezi kartami přepnete kliknutím nebo zkratkami **Ctrl+Tab** a **Ctrl+Shift+Tab**. Pokud se všechny nevejdou do horní lišty, zobrazí se nabídka **Seznam otevřených PDF**.
 
-Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Najít v PDF**, **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šířka panelů se přizpůsobuje obsahu a dostupnému místu. Na každé straně je jedna úzká lišta. Horní ouško **Levá strana** nebo **Pravá strana** sbalí otevřené panely na dané straně a dalším kliknutím je obnoví. Ostatní ouška ovládají jednotlivé panely.
+Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Najít v PDF**, **Text**, **OCR**, **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šířka panelů se přizpůsobuje obsahu a dostupnému místu. Na každé straně je jedna úzká lišta. Horní ouško **Levá strana** nebo **Pravá strana** sbalí otevřené panely na dané straně a dalším kliknutím je obnoví. Ostatní ouška ovládají jednotlivé panely.
 
-Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a ovládá se ouškem **Náhledy**. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
+Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a ovládá se ouškem **Náhledy**. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje. V nástrojích **OCR**, **Export** a **Rozdělit PDF** ruční výběr náhledů rovnou nastaví strany. Souvislý blok vyplní rozsah, jednotlivé stránky nastaví **Vybrané náhledy**. Stejný výběr se přednastaví v dialogu **Tisk**.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Kartu zavřete jejím křížkem nebo zkratkou **Ctrl+W**. U upraveného PDF můžete změny uložit, zahodit nebo zavření zrušit. Křížek okna se při více kartách nejdřív zeptá, zda zavřít aktivní kartu, nebo všechny karty a aplikaci.
@@ -23,6 +23,14 @@ Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Pa
 Otevřete nástroj **Najít v PDF** nebo stiskněte **Ctrl+F**. Zadejte slovo či frázi a potvrďte **Enterem**. Seznam řadí shody podle aktuálního pořadí stran a u každé ukazuje krátký úryvek. Kliknutím na výsledek přejdete k nalezenému textu. **F3** přejde na další shodu, **Shift+F3** na předchozí. Vybraná shoda je vínová a ostatní jsou žluté.
 
 Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a skeny potřebuje dokument textovou vrstvu vytvořenou pomocí OCR. Aplikace spočítá všechny nalezené shody a v seznamu zobrazí prvních 2 000. Tlačítko **Vymazat** hledání zastaví a vyčistí výsledky.
+
+## Úprava textu
+
+Otevřete nástroj **Text**. Kliknutím vyberte jeden textový objekt nebo použijte režim **Odstavec**. **Obdélník** nakreslíte tažením. U **Mnohoúhelníkového lasa** klikejte na body a výběr uzavřete Enterem nebo kliknutím na první bod. Pro přesný výběr můžete dokument přiblížit.
+
+V pravém panelu upravte text, zvolte písmo Liberation Sans, Serif nebo Mono, velikost v bodech, tučné písmo, kurzívu či podtržení. Pro běžný řez vypněte tučné písmo a kurzívu. Ve výběru více objektů každý řádek odpovídá jednomu objektu a změna formátování platí pro všechny vybrané objekty. Prázdný řádek odstraní svůj objekt. Ostatní objekty zůstávají na svých pozicích a text se automaticky nepřelévá. Složitě provázanou sazbu, text uvnitř skupin a skrytou vrstvu OCR lze kopírovat.
+
+**Použít úpravu** změní text v otevřené kartě. **Vrátit úpravu** obnoví stav před poslední textovou úpravou. Finální PDF uložte přes **Soubor → Uložit** nebo **Uložit jako**. Pokud obdélník nebo laso nenajde text, **OCR výběru** může přidat textovou vrstvu ze skenu či křivek ve vyznačené oblasti. Po rozpoznání můžete oblast znovu vybrat a zkopírovat text.
 
 ## OCR skenů a textu v křivkách
 

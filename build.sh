@@ -8,7 +8,7 @@ output_path="$(realpath -m -- "${1:-PDFBlaksmith.exe}")"
 python_zip="$build_dir/python-win.zip"
 gs_installer="$build_dir/gs-win.exe"
 runtime_dir="$build_dir/runtime"
-mkdir -p -- "$runtime_dir/packages" "$runtime_dir/tessdata" "$(dirname -- "$output_path")"
+mkdir -p -- "$runtime_dir/packages" "$runtime_dir/tessdata" "$runtime_dir/text-fonts" "$(dirname -- "$output_path")"
 
 curl --fail --silent --show-error --location \
   'https://www.python.org/ftp/python/3.14.10/python-3.14.10-embed-amd64.zip' -o "$python_zip"
@@ -36,6 +36,13 @@ done
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  LICENSE
 EOF
 )
+font_bundle="$build_dir/fonts.deb"
+curl --fail --silent --show-error --location \
+  'https://deb.debian.org/debian/pool/main/f/fonts-liberation/fonts-liberation_2.1.5-3_all.deb' -o "$font_bundle"
+printf '%s  %s\n' '3d5c47480067b9615f6bf9b0eda6eefcab9d837af609827015445e8e759b5b8c' "$font_bundle" | sha256sum -c -
+ar p "$font_bundle" data.tar.xz | tar -xJ -C "$build_dir"
+cp "$build_dir"/usr/share/fonts/truetype/liberation/*.ttf "$runtime_dir/text-fonts/"
+cp "$build_dir/usr/share/doc/fonts-liberation/copyright" "$runtime_dir/text-fonts/LICENSE.txt"
 python3 package_runtime.py "$runtime_dir"
 go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -manifest app.manifest -ico assets/blaksmith.ico \
   -o rsrc_windows_amd64.syso

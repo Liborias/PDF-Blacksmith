@@ -35,3 +35,15 @@ func parseExportPages(input string, pageCount int) ([]int, error) {
 	}
 	return pages, nil
 }
+
+func pageNumbers(positions []int) []int {
+	numbers := make([]int, len(positions))
+	for i, position := range positions {
+		numbers[i] = position + 1
+	}
+	return numbers
+}
+
+func contiguousPages(sorted []int) bool {
+	return len(sorted) > 1 && sorted[len(sorted)-1]-sorted[0] == len(sorted)-1
+}

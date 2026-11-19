@@ -60,6 +60,8 @@ type request struct {
 	MergeInputs           []mergeInput `json:"merge_inputs,omitempty"`
 	AllowUnencryptedMerge bool         `json:"allow_unencrypted_merge,omitempty"`
 	OCRLanguage           string       `json:"ocr_language,omitempty"`
+	OCRRegion             []textPoint  `json:"ocr_region,omitempty"`
+	TextEdit              *textEditRequest `json:"text_edit,omitempty"`
 }
 
 type viewRequest struct {
@@ -85,6 +87,7 @@ type plateInfo struct {
 }
 
 type viewResponse struct {
+	TextPage     *textPage              `json:"text_page,omitempty"`
 	Sizes        []map[string][2]float64 `json:"sizes"`
 	Pages        int                     `json:"pages"`
 	DPI          int                     `json:"dpi"`
@@ -140,7 +143,8 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "reader_search.py", "ocr.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
+	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "reader_search.py", "ocr.py", "text_edit.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
+		filepath.Join("text-fonts", "LiberationSans-Regular.ttf"),
 		filepath.Join("tessdata", "ces.traineddata"), filepath.Join("tessdata", "eng.traineddata"),
 		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {

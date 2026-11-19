@@ -210,7 +210,8 @@ type pageEdit struct {
 	rotations        []pageRotation
 	bookmarks        []pdfBookmark
 	bookmarkSelection int
-	ocrBase          *documentContent
+	draftBase *documentContent
+	draftAction string
 }
 
 type pageRotation struct{ number, angle int }
@@ -429,6 +430,8 @@ func (v *documentView) sourceUnchanged() bool {
 func (v *documentView) resetDocument() {
 	v.generation++
 	v.resetSearch()
+	v.app.clearTextSelection()
+	v.app.resetThumbnailScopes()
 	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
 	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
 	v.zoomDeadline = time.Time{}
@@ -785,6 +788,9 @@ func contains(bounds rect, x, y int32) bool {
 
 func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	x, y := int32(int16(param)), int32(int16(param>>16))
+	if v.app.textPointer(msg, x, y) {
+		return true
+	}
 	switch msg {
 	case 0x0201:
 		if contains(v.viewport, x, y) {
@@ -1221,8 +1227,8 @@ func (v *documentView) undo() {
 	edit := v.history[index]
 	v.history[index] = pageEdit{}
 	v.history = v.history[:index]
-	if edit.ocrBase != nil {
-		v.app.undoOCR(*edit.ocrBase)
+	if edit.draftBase != nil {
+		v.app.undoDocumentDraft(*edit.draftBase, edit.draftAction)
 		return
 	}
 	if edit.bookmarks != nil {
@@ -1398,6 +1404,7 @@ func (v *documentView) paintCanvas(dc uintptr) {
 		}
 		v.paintDetails(dc, number, bounds)
 		v.paintSearchHighlights(dc, number, bounds)
+		v.app.paintTextSelection(dc, number, bounds)
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)
 	if v.app.full {

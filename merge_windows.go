@@ -226,11 +226,7 @@ func (a *app) addOpenPDFToMerge(selectionOnly bool) {
 		SourceSize: info.Size(), SourceMtime: info.ModTime().UnixNano()},
 		info: mergeSourceInfo{Pages: len(v.order)}}
 	if selectionOnly {
-		positions := make([]int, len(v.pageSelection))
-		for i, position := range v.pageSelection {
-			positions[i] = position + 1
-		}
-		entry.pageRange = pageRanges(positions)
+		entry.pageRange = pageRanges(pageNumbers(v.pageSelection))
 	}
 	m := &a.merge
 	m.active = len(m.entries)

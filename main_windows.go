@@ -167,6 +167,8 @@ type app struct {
 	lastOutput, lastPassword                           string
 	merge                                              mergePanel
 	ocr                                                ocrPanel
+	textTool textPanel
+	thumbnailScopes map[uintptr]bool
 	busy                                               bool
 	waitingOverwrite                                   bool
 	pending                                            request
@@ -192,7 +194,7 @@ func main() {
 		dpi = min(dpi, (screenWidth-24)*96/minimumWorkspaceWidth, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, bookmarksCollapsed: true,
+		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, bookmarksCollapsed: true,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
@@ -418,6 +420,11 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		}
 	case wmCommand:
 		if a.view != nil {
+			if wParam>>16&0xffff == 0x0300 { // EN_CHANGE
+				if scope, field := a.scopeControls(); field != 0 && field == lParam {
+					delete(a.thumbnailScopes, scope)
+				}
+			}
 			if wParam>>16&0xffff == 0 && a.tabCommand(int(wParam&0xffff), lParam) {
 				return 0
 			}

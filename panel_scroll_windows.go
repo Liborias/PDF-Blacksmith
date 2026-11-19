@@ -139,6 +139,11 @@ var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam
 		}
 	}
 	result, _, _ := defSubclass.Call(hwnd, uintptr(message), wParam, lParam)
+	if v != nil && hwnd == v.pageList && message == 0x0202 && wParam&(4|8) == 0 && len(v.pageSelection) == 0 {
+		if row := v.pageAt(int32(int16(lParam >> 16))); row >= 0 && row < len(v.order) {
+			v.readPageSelection()
+		}
+	}
 	if bookmarkList && message == 0x0202 { // WM_LBUTTONUP, including a click on the already selected row.
 		if index, branch := v.bookmarkAt(lParam); index >= 0 && !branch && index == v.bookmarkPanel.selected {
 			v.goToBookmark()

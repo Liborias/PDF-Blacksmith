@@ -85,6 +85,7 @@ var workspaceTabs = []struct {
 	{idFileTab, "Soubor", false},
 	{idBrowseTab, "Zobrazení", false},
 	{idSearchTab, "Najít v PDF", true},
+	{idTextTab, "Text", true},
 	{idOCRTab, "OCR", true},
 	{idProofTab, "Separace", true},
 	{idSignTab, "Digitální podpis", true},
@@ -215,6 +216,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildRecentPanel()
 	a.beginPanel(idSearchTab)
 	a.view.buildSearchPanel()
+	a.beginPanel(idTextTab)
+	a.buildTextPanel()
 	a.beginPanel(idOCRTab)
 	a.buildOCRPanel()
 	a.beginPanel(idSplitTab)
@@ -411,7 +414,7 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idMergeTab:
 		a.tool, a.mode = idMergeTab, idMergeTab
-	case idProofTab, idSignTab, idSplitTab, idSearchTab, idOCRTab:
+	case idProofTab, idSignTab, idSplitTab, idSearchTab, idOCRTab, idTextTab:
 		if !a.documentTools {
 			return
 		}
@@ -421,10 +424,16 @@ func (a *app) activate(id int) {
 	if (old == idProofTab) != (id == idProofTab) {
 		a.view.reframe()
 	}
+	if old == idTextTab && a.mode != idTextTab {
+		a.clearTextSelection()
+	}
 	if (old == idSearchTab) != (a.mode == idSearchTab) {
 		a.view.invalidateCanvas()
 	}
 	a.layout()
+	if scope, _ := a.scopeControls(); old != a.mode && (a.thumbnailScopes[scope] || comboIndex(scope) == exportAllPages) {
+		a.applyThumbnailScope()
+	}
 	if old == idPagesTab && a.mode != idPagesTab {
 		a.view.endPageDrag()
 	}
@@ -767,7 +776,7 @@ func (a *app) command(id, notification int) {
 		a.openChoice(choice)
 		return
 	}
-	if a.view.command(id, notification) {
+	if a.textCommand(id, notification) || a.view.command(id, notification) {
 		return
 	}
 	if a.mergeCommand(id, notification) {
@@ -817,16 +826,19 @@ func (a *app) command(id, notification int) {
 			setText(a.exportHint, a.selectedExportPreset().Description)
 			a.layoutPanel()
 		case idExportScope:
+			delete(a.thumbnailScopes, a.exportScope)
 			a.layoutPanel()
 			if comboIndex(a.exportScope) == exportPageRanges {
 				setFocus.Call(a.exportRange)
 			}
 		case idSplitScope:
+			delete(a.thumbnailScopes, a.splitScope)
 			a.layoutPanel()
 			if comboIndex(a.splitScope) == exportPageRanges {
 				setFocus.Call(a.splitRange)
 			}
 		case idOCRScope:
+			delete(a.thumbnailScopes, a.ocr.scope)
 			a.layoutPanel()
 			if comboIndex(a.ocr.scope) == exportPageRanges {
 				setFocus.Call(a.ocr.pageRange)
@@ -855,7 +867,7 @@ func (a *app) command(id, notification int) {
 		a.showFileMenu()
 	case idSearchTab:
 		a.showSearch()
-	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab:
+	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab, idTextTab:
 		a.activate(id)
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.runFileOption(id)
@@ -892,7 +904,7 @@ func (a *app) command(id, notification int) {
 	case idOCRRun:
 		a.startOCR()
 	case idOCRUndo:
-		if !a.busy && len(a.view.history) > 0 && a.view.history[len(a.view.history)-1].ocrBase != nil {
+		if !a.busy && a.view.lastDraftIs("ocr") {
 			a.view.undo()
 		}
 	case idReload:
@@ -1056,7 +1068,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab || a.mode == idOCRTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab || a.mode == idOCRTab || a.mode == idTextTab) {
 			if a.tool == idFileTab {
 				a.mode = idFileDetails
 			} else {
@@ -1076,8 +1088,8 @@ func (a *app) updateActions() {
 		invalidate(tab.button)
 	}
 	setEnabled(a.tabList, !a.busy)
-	history := a.view.history
-	setEnabled(a.ocr.undo, ready && len(history) > 0 && history[len(history)-1].ocrBase != nil)
+	setEnabled(a.ocr.undo, ready && a.view.lastDraftIs("ocr"))
+	a.updateTextActions()
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply, a.ocr.start} {
 		setEnabled(button, ready)
 	}
@@ -1101,6 +1113,8 @@ func (a *app) report(message string) {
 		target = a.signReport
 	case idSplitTab:
         target = a.splitReport
+	case idTextTab:
+		target = a.textTool.report
     case idOCRTab:
         target = a.ocr.report
     case idProofTab:
@@ -1169,6 +1183,15 @@ func (a *app) finish(result response) {
 		a.view.schedule()
 		return
 	}
+	if req.Action == "text_probe" {
+		a.reportStatus("")
+		a.finishTextProbe(result)
+		a.updateActions()
+		a.view.schedule()
+		a.pruneDrafts()
+		return
+	}
+	draft := req.Action == "ocr" || req.Action == "text_edit"
 	if result.Status == "merge_encrypted" {
 		if notice(a.window, result.Message+"\n\nUložit sloučené PDF bez šifrování?", 0x134) == 6 {
 			req.AllowUnencryptedMerge = true
@@ -1189,6 +1212,9 @@ func (a *app) finish(result response) {
 		if req.Action == "ocr" {
 			question = "Použít OCR v pracovní kartě bez původních podpisů?"
 		}
+		if req.Action == "text_edit" {
+			question = "Použít úpravu textu v pracovní kartě bez původních podpisů?"
+		}
 		if req.ReplaceSource {
 			message = "Původní PDF obsahuje digitální podpis."
 			question = "Přepsat původní soubor a odstranit jeho stávající podpisy?"
@@ -1201,15 +1227,15 @@ func (a *app) finish(result response) {
 		}
 		result.Message = "Uložení zrušeno."
 	}
-	if req.Action == "ocr" {
-		if result.Status == "ok" && !a.applyOCR(req, result) {
-			result = operationError("Rozpoznaný text se nepodařilo načíst do pracovní karty.")
+	if draft {
+		if result.Status == "ok" && !a.applyDocumentDraft(req, result) {
+			result = operationError("Upravené PDF se nepodařilo načíst do pracovní karty.")
 		}
 		if result.Status != "ok" {
 			a.retiredDrafts = append(a.retiredDrafts, req.Output)
 		}
 	}
-	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource && req.Action != "ocr" {
+	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource && !draft {
 		a.lastOutput, a.lastPassword = req.Output, ""
 		if req.Action == "save_document" ||
 			(req.Action == "transform" && (req.Preset == "export" ||
@@ -1229,7 +1255,7 @@ func (a *app) finish(result response) {
 		a.reportStatus("Kontrola tiskových desek dokončena.")
 	} else {
 		message := result.Message
-		if result.Status == "ok" && req.Output != "" && req.Action != "ocr" {
+		if result.Status == "ok" && req.Output != "" && !draft {
 			message += "\n" + req.Output
 		}
 		a.reportStatus(message)
@@ -1252,6 +1278,9 @@ func (a *app) finish(result response) {
 		}
 		if req.Action == "ocr" {
 			setText(a.ocr.report, multiline(message))
+		}
+		if req.Action == "text_edit" || len(req.OCRRegion) > 0 {
+			setText(a.textTool.report, multiline(message))
 		}
 	}
 	if req.Action == "sign" {
@@ -1301,6 +1330,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if msg.message != 0x0100 {
 		return false
+	}
+	if a.textKey(msg) {
+		return true
 	}
 	if msg.wParam == 0x0d && msg.window == a.view.moveTarget {
 		a.view.moveToPosition()

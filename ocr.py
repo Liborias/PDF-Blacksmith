@@ -77,7 +77,18 @@ def already_searchable(bounds, existing, along_y):
     return overlap >= 0.55*(right-left)
 
 
-def invisible_words(layer, matrix, existing):
+def in_region(bounds, polygon):
+    if not polygon:
+        return True
+    x, y = (bounds[0]+bounds[2])/2, (bounds[1]+bounds[3])/2
+    inside = False
+    for (a, b), (c, d) in zip(polygon, polygon[1:] + polygon[:1]):
+        if (b > y) != (d > y) and x < a + (y-b)*(c-a)/(d-b):
+            inside = not inside
+    return inside
+
+
+def invisible_words(layer, matrix, existing, region=None):
     """Copy only the pinned pdfocr8 text format, and force render mode 3."""
     instructions = []
     font, size, stretch, origin = None, 0, 100, None
@@ -106,7 +117,8 @@ def invisible_words(layer, matrix, existing):
                 continue
             x, y = origin
             word = (x, y, x + glyphs*size*stretch/200, y + size)
-            if not already_searchable(map_bounds(word, matrix), existing, matrix[0] == 0):
+            bounds = map_bounds(word, matrix)
+            if in_region(bounds, region) and not already_searchable(bounds, existing, matrix[0] == 0):
                 instructions.extend((([font, size], pikepdf.Operator("Tf")),
                                      ([stretch], pikepdf.Operator("Tz")),
                                      ([1, 0, 0, 1, x, y], pikepdf.Operator("Tm")),
@@ -117,9 +129,9 @@ def invisible_words(layer, matrix, existing):
     return instructions, words
 
 
-def append_text(pdf, page, layer_pdf, layer, existing):
+def append_text(pdf, page, layer_pdf, layer, existing, region=None):
     matrix = placement(page, layer)
-    instructions, words = invisible_words(layer, matrix, existing)
+    instructions, words = invisible_words(layer, matrix, existing, region)
     if not words:
         return 0
     data = b"BT\n3 Tr\n" + pikepdf.unparse_content_stream(instructions) + b"\nET\n"
@@ -136,7 +148,11 @@ def append_text(pdf, page, layer_pdf, layer, existing):
     return words
 
 
-def recognize(pdf, source, pages, folder, exe, gs, stage, language, model_dir):
+def recognize(pdf, source, pages, folder, exe, gs, stage, language, model_dir, region=None):
+    if region is not None and (len(pages) != 1 or not isinstance(region, list) or not 3 <= len(region) <= 64
+            or any(not isinstance(pair, list) or len(pair) != 2
+                   or any(type(value) not in (int, float) or not (-1e7 < value < 1e7) for value in pair) for pair in region)):
+        raise OCRError("Oblast OCR musí být uvnitř jedné stránky.")
     models = checked_models(model_dir, language)
     staged = folder / "source.pdf"
     stage(pdf, source, staged)
@@ -156,7 +172,7 @@ def recognize(pdf, source, pages, folder, exe, gs, stage, language, model_dir):
                     raise OCRError("Ghostscript nevrátil textovou vrstvu pro všechny vybrané strany.")
                 for number, layer in zip(batch, layer_pdf.pages):
                     with closing(document[number-1]) as page:
-                        added = append_text(pdf, pdf.pages[number-1], layer_pdf, layer, existing_text(page))
+                        added = append_text(pdf, pdf.pages[number-1], layer_pdf, layer, existing_text(page), region)
                     updated += bool(added)
                     words += added
             output.unlink()

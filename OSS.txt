@@ -40,3 +40,7 @@ Microsoft Visual C++ Runtime · přibalené redistribuovatelné soubory z distri
 Výstupní profily European Color Initiative (ECI)
   Aplikace stahuje uživatelem vybraný profil přímo ze zdroje ECI.
   https://www.eci.org/doku.php?id=en:downloads
+
+- Liberation Fonts 2.1.5 (SIL Open Font License 1.1)
+  https://github.com/liberation-fonts/liberation-fonts
+  Písma Liberation Sans, Serif a Mono. Licence a autorská práva jsou v text-fonts/LICENSE.txt.

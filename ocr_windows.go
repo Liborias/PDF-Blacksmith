@@ -45,23 +45,27 @@ func (a *app) startOCR() {
 	}
 	languages := [...]string{"ces+eng", "ces", "eng"}
 	req.OCRLanguage = languages[max(0, comboIndex(a.ocr.language))]
+	a.runDocumentDraft(req, "Rozpoznávám text na vybraných stranách…", a.ocr.report)
+}
+
+func (a *app) runDocumentDraft(req request, status string, report uintptr) {
 	var err error
-	req.Output, err = a.ocrDraftPath()
+	req.Output, err = a.documentDraftPath()
 	if err != nil {
-		a.report("Pracovní PDF pro OCR se nepodařilo vytvořit.\n" + err.Error())
+		a.report("Pracovní PDF se nepodařilo vytvořit.\n" + err.Error())
 		return
 	}
 	if a.view.hasPageEdits() {
 		a.view.includeEdits(&req)
 	}
-	setText(a.ocr.report, "Rozpoznávám text na vybraných stranách…")
+	setText(report, status)
 	if !a.run(req) {
 		a.retiredDrafts = append(a.retiredDrafts, req.Output)
 		a.pruneDrafts()
 	}
 }
 
-func (a *app) ocrDraftPath() (string, error) {
+func (a *app) documentDraftPath() (string, error) {
 	if a.workDir == "" {
 		root, err := os.MkdirTemp("", "pdf-blacksmith-")
 		if err != nil {
@@ -69,7 +73,7 @@ func (a *app) ocrDraftPath() (string, error) {
 		}
 		a.workDir = root
 	}
-	folder, err := os.MkdirTemp(a.workDir, "ocr-")
+	folder, err := os.MkdirTemp(a.workDir, "edit-")
 	if err != nil {
 		return "", err
 	}
@@ -80,13 +84,15 @@ func (a *app) ocrDraftPath() (string, error) {
 	return filepath.Join(folder, name), nil
 }
 
-func (a *app) applyOCR(req request, result response) bool {
+func (a *app) applyDocumentDraft(req request, result response) bool {
 	info, err := os.Stat(req.Output)
 	if err != nil || result.View == nil || len(result.View.Sizes) != len(a.view.order) {
 		return false
 	}
 	v := a.view
 	base := v.documentContent
+	scope, _ := a.scopeControls()
+	automaticScope := a.thumbnailScopes[scope]
 	w, h := v.viewportSize()
 	anchor, found := v.spread.anchor(v.scrollX+w/2, v.scrollY+h/2)
 	query := getText(v.search.input)
@@ -95,10 +101,13 @@ func (a *app) applyOCR(req request, result response) bool {
 	v.draft, v.draftInfo = req.Output, info
 	v.page, v.zoom, v.continuous, v.fitMode = base.page, base.zoom, base.continuous, base.fitMode
 	v.thumbnailScale, v.pageSelection = base.thumbnailScale, slices.Clone(base.pageSelection)
-	v.history = []pageEdit{{ocrBase: &base}}
+	v.history = []pageEdit{{draftBase: &base, draftAction: req.Action}}
 	v.resumeReader()
 	v.syncReadingControls()
 	v.applyDescription(result.View)
+	if automaticScope {
+		a.applyThumbnailScope()
+	}
 	if found {
 		v.restore(anchor, w/2, h/2)
 	}
@@ -108,8 +117,10 @@ func (a *app) applyOCR(req request, result response) bool {
 	return true
 }
 
-func (a *app) undoOCR(base documentContent) {
+func (a *app) undoDocumentDraft(base documentContent, action string) {
 	v := a.view
+	scope, _ := a.scopeControls()
+	automaticScope := a.thumbnailScopes[scope]
 	a.retiredDrafts = append(a.retiredDrafts, v.draft)
 	v.resetDocument()
 	v.documentContent = base
@@ -120,7 +131,14 @@ func (a *app) undoOCR(base documentContent) {
 	v.rebuild(false)
 	v.updateDocumentInfo()
 	v.changedViewport()
-	a.report("Poslední rozpoznávání OCR bylo vráceno.")
+	if automaticScope {
+		a.applyThumbnailScope()
+	}
+	if action == "ocr" {
+		a.report("Poslední rozpoznávání OCR bylo vráceno.")
+	} else {
+		a.report("Poslední úprava textu byla vrácena.")
+	}
 	a.pruneDrafts()
 }
 
@@ -129,8 +147,8 @@ func (a *app) retireDocumentDrafts(content documentContent) {
 		a.retiredDrafts = append(a.retiredDrafts, content.draft)
 	}
 	for _, edit := range content.history {
-		if edit.ocrBase != nil {
-			a.retireDocumentDrafts(*edit.ocrBase)
+		if edit.draftBase != nil {
+			a.retireDocumentDrafts(*edit.draftBase)
 		}
 	}
 }

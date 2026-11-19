@@ -12,16 +12,16 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 8. **Fulltextové vyhledávání.** Prohledat textovou vrstvu dokumentu, zobrazit výsledky podle stran a zvýraznit shody v náhledu. [Hotovo ve verzi 0.4.19](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.19)
 9. **OCR.** Rozpoznat skeny i text převedený na křivky na vybraných stranách či rozsazích. Přidat českou nebo anglickou textovou vrstvu při zachování původní grafiky. [Hotovo ve verzi 0.4.19](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.19)
 10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách a při zavírání nabídnout uložení změn. OCR se používá přímo v otevřené kartě a ukládá se nástrojem Soubor. [Hotovo ve verzi 0.4.20](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.20)
-11. **Dva dokumenty vedle sebe.** Umožnit zobrazení dvou PDF vedle sebe. Každý dokument má vlastní panel náhledů a vlastní výběr stránek.
-12. **Přetahování stránek mezi PDF.** Přetáhnout jeden náhled nebo více označených náhledů do druhého panelu a vložit stránky na vybrané místo v jejich pořadí.
-13. **Barvy při přenosu stránek.** Při vložení tažením se zeptat, zda mají vložené stránky zachovat svůj barevný prostor, nebo se mají převést do barevného prostoru cílového PDF. Stránky ve stupních šedi zůstanou šedé. Když převod může vést k nevratné změně nebo ztrátě vlastností, upozornit na konkrétní dopad před potvrzením.
-14. **Úpravy obsahu.** Vybrat, přesouvat, kopírovat a mazat objekty. U textu měnit písmo, velikost a řez i podtržení.
-15. **Výběr v nástroji Text.** Nabídnout výběr bloku s automatickým rozpoznáním odstavce, obdélníkový výběr a volný výběr mnohoúhelníkovým lasem.
-16. **Laso pro vektorové objekty.** Vybrat společně více vektorových objektů. Při přesunu nebo kopírování nabídnout zachování jednotlivých objektů nebo jejich seskupení do jednoho celku.
-17. **OCR vektorizovaného textu.** Pokud nástroj Text ve vybraném bloku nenajde text, nabídnout rozpoznání pomocí OCR nebo ponechání výběru ve vektorech.
+11. **Úprava textu.** Upravit samostatně umístěný text v otevřené kartě, změnit písmo, velikost, řez a podtržení. Přidat výběr odstavce, obdélníkem a lasem. Z vybrané oblasti bez textové vrstvy nabídnout OCR. [Pracovní verze 0.4.21](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.21)
+12. **Výběr stran z náhledů.** Synchronizovat výběr s nástroji, které pracují s rozsahem nebo jednotlivými stranami. [Hotovo ve verzi 0.4.21](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.21)
+13. **Dva dokumenty vedle sebe.** Umožnit zobrazení dvou PDF vedle sebe. Každý dokument má vlastní panel náhledů a vlastní výběr stránek.
+14. **Přetahování stránek mezi PDF.** Přetáhnout jeden náhled nebo více označených náhledů do druhého panelu a vložit stránky na vybrané místo v jejich pořadí.
+15. **Barvy při přenosu stránek.** Při vložení tažením se zeptat, zda mají vložené stránky zachovat svůj barevný prostor, nebo se mají převést do barevného prostoru cílového PDF. Stránky ve stupních šedi zůstanou šedé. Když převod může vést k nevratné změně nebo ztrátě vlastností, upozornit na konkrétní dopad před potvrzením.
+16. **Úpravy objektů.** Vybrat, přesouvat, kopírovat a mazat objekty v dokumentu.
+17. **Laso pro vektorové objekty.** Vybrat společně více vektorových objektů. Při přesunu nebo kopírování nabídnout zachování jednotlivých objektů nebo jejich seskupení do jednoho celku.
 18. **Přetahování objektů a textu.** Umožnit přenos mezi panely otevřených PDF i přetažení do jiných aplikací a složek. Pro externí přetažení využít export na pozadí ve stávajícím formátu a barevném profilu objektu. U vektorizovaného textu po OCR předat mimo aplikaci při kopírování nebo tažení neformátovaný text. Mezi PDF v aplikaci při kopírování nebo tažení přenést vektorovou skupinu společně s rozpoznaným textem.
 19. **Poznámky a kreslení.** Přidat poznámky, elipsy, obdélníky, volné čáry a šipky s nastavitelnou barvou a tloušťkou čáry.
 
 ## Levý panel nástrojů
 
-**Sloučit PDF** je v levém panelu nástrojů dostupné i bez otevřeného dokumentu. Po načtení dokumentu jsou dostupné také **OCR**, **Rozdělit PDF** a **Pořadí stránek**. Společné náhledy mají vlastní sbalitelný panel mezi nástroji a dokumentem. Postupně přibudou **Nástroje výběru**, **Úprava textu** a **Poznámky**.
+**Sloučit PDF** je v levém panelu nástrojů dostupné i bez otevřeného dokumentu. Po načtení dokumentu jsou dostupné také **Text**, **OCR**, **Rozdělit PDF** a **Pořadí stránek**. Společné náhledy mají vlastní sbalitelný panel mezi nástroji a dokumentem. Postupně přibudou **Nástroje výběru** a **Poznámky**.
