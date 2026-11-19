@@ -142,6 +142,8 @@ type app struct {
 	splitScope, splitRange, splitButton, splitReport   uintptr
 	exportFormat, exportHint, exportColorLabel         uintptr
 	profiles, pressProfiles, customICC, customBrowse   uintptr
+	grayProfileCombo, grayCustomICC, grayBrowse, kOutputProfile uintptr
+	proofApply uintptr
 	outline, decrypt, raster, visible                  uintptr
 	password, cert, certPass, trust                    uintptr
 	exportReport, signReport                           uintptr
