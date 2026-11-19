@@ -235,15 +235,15 @@ func (a *app) buildExportPanel() {
 	a.customICC = a.edit(16, 285, 187, false)
 	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 282, 102, 0)
 	a.exportManualStart = len(a.panelItems[idExportTab])
-    a.label("ICC profil převodu na stupně šedi", 16, 285, 298, false)
+    a.grayProfileLabel = a.label("ICC profil převodu na stupně šedi", 16, 285, 298, false)
     a.grayProfileCombo = a.combo(idGrayProfile, 16, 307, 298, []string{
         "Automaticky podle dokumentu", "Gray Gamma 2.2", "Gray Gamma 1.8", "Vlastní ICC Gray…",
     })
     chooseCombo(a.grayProfileCombo, defaultIndex(grayProfiles, a.export.GrayProfile, defaults.GrayProfile))
     a.grayCustomICC = a.edit(16, 344, 187, false)
     a.grayBrowse = a.button("Vybrat ICC…", idGrayICC, 212, 341, 102, 0)
-    a.label("Výstupní CMYK profil pro K", 16, 376, 298, false)
-    a.kOutputProfile = a.combo(idKOutputProfile, 16, 398, 298, names[4:])
+    a.kOutputLabel = a.label("Výstupní CMYK profil pro K", 16, 376, 298, false)
+    a.kOutputProfile = a.combo(idKOutputProfile, 16, 398, 298, names[4:len(names)-1])
     kIndex := slices.IndexFunc(a.profileChoices[4:], func(choice profileChoice) bool {return choice.Key == a.export.KProfile})
     chooseCombo(a.kOutputProfile, max(0, kIndex))
     a.outline = a.button("Převést text na křivky", idOutline, 16, 438, 298, bsAutoCheck)
@@ -451,11 +451,11 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 		return item, press
 	case a.customICC, a.customBrowse:
 		return item, key == "custom"
-	case a.grayProfileCombo:
+	case a.grayProfileLabel, a.grayProfileCombo:
         return item, manual && (key == "k" || key == "k_cmyk")
     case a.grayCustomICC, a.grayBrowse:
         return item, manual && (key == "k" || key == "k_cmyk") && a.export.GrayProfile == "custom"
-    case a.kOutputProfile:
+    case a.kOutputLabel, a.kOutputProfile:
         return item, manual && key == "k_cmyk"
     case a.raster:
         return item, manual && key == "k" && !a.checked(a.outline)
@@ -745,7 +745,12 @@ func (a *app) command(id, notification int) {
 				setFocus.Call(a.splitRange)
 			}
 		case idICCProfile:
-			if a.profileKey() != "" {
+            key := a.profileKey()
+            if key == "k" || key == "rich_black" || key == "k_cmyk" {
+                a.export.ColorMode = map[string]string{"k":"gray","rich_black":"rich_black","k_cmyk":"k_cmyk"}[key]
+                if err := saveExportOptions(a.export); err != nil { a.report(err.Error()) }
+            }
+            if key != "" {
 				a.setChecked(a.decrypt, false)
 			}
 			a.layoutPanel()
