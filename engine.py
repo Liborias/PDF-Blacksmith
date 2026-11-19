@@ -14,7 +14,7 @@ import pikepdf
 from print_profiles import ProfileError, attach_intent, attach_srgb, clear_pdfx_claim, get_profile, source_cmyk, source_icc
 from export_settings import export_preset, export_settings, pdfwrite_settings
 from color_conversion import (ColorConversionError, resolve_gray_icc, convert_rich_black,
-                              gray_to_explicit_k, attach_gray_output_intent)
+                              gray_to_explicit_k, attach_gray_output_intent, preserve_solid_black_for_gray)
 from pdfx import PDFXError, check_profile, finish_pdfx, pdfx_prefix
 from proof import ProofError, describe, page_box, page_proof, scan_plates, screen_page
 from reader_render import render_screen
@@ -429,6 +429,8 @@ def transform(src, request):
         modified = prepare_edit(pdf, request)
         if selection is not None:
             modified = apply_page_order(pdf, list(pdf.pages), selection) or modified
+        if gray:
+            modified = bool(preserve_solid_black_for_gray(pdf)) or modified
         pages = len(pdf.pages)
         if rich_black:
             changed = convert_rich_black(pdf)
