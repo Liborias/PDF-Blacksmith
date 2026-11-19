@@ -160,16 +160,43 @@ def code_size(font):
     return 1 if font.Subtype in (pdf.Name.Type1, pdf.Name.TrueType, pdf.Name.MMType1) else 0
 
 
+def source_widths(font, step, codes):
+    """Get advances from PDF character codes, even when they differ from Unicode."""
+    if step == 1:
+        widths = font.get("/Widths", [])
+        first = int(font.get("/FirstChar", 0))
+        return {code: float(widths[code-first]) for code in codes if 0 <= code-first < len(widths)}
+    descendant = font.DescendantFonts[0]
+    widths = {code: float(descendant.get("/DW", 1000)) for code in codes}
+    rules = iter(descendant.get("/W", []))
+    for first, values in zip(rules, rules):
+        first = int(first)
+        if isinstance(values, pdf.Array):
+            for code in codes:
+                if 0 <= code-first < len(values):
+                    widths[code] = float(values[code-first])
+        else:
+            last, width = int(values), float(next(rules))
+            for code in codes:
+                if first <= code <= last:
+                    widths[code] = width
+    return widths
+
+
 def glyph_advances(entry, style, font, glyphs, matrix):
     source, size, tracking, spacing, _ = style
     step = code_size(source)
     if not step or not glyphs or size <= 0:
         return None
-    if any(isinstance(item, pdf.String) and len(bytes(item)) % step for item in show_items(entry)):
+    strings = [bytes(item) for item in show_items(entry) if isinstance(item, pdf.String)]
+    if any(len(value) % step for value in strings):
         return None
     try:
         inverse = invert(matrix)
-    except TextError:
+        codes = {int.from_bytes(value[offset:offset+step], "big") for value in strings
+                 for offset in range(0, len(value), step)}
+        widths = source_widths(source, step, codes)
+    except (TextError, AttributeError, IndexError, TypeError, ValueError, StopIteration):
         return None
     advances, count, position, start = [], 0, 0.0, None
     for value in show_items(entry):
@@ -181,18 +208,22 @@ def glyph_advances(entry, style, font, glyphs, matrix):
             if count >= len(glyphs):
                 return None
             glyph = glyphs[count]
-            code = ord(glyph["text"])
-            if code > 0xffff or glyph["text"] == "\ufffd":
+            unicode_code = ord(glyph["text"])
+            if unicode_code > 0xffff or glyph["text"] == "\ufffd":
                 return None
-            width = c_float()
-            if not raw.FPDFFont_GetGlyphWidth(font, code, 1000, byref(width)):
-                return None
+            code = int.from_bytes(data[offset:offset+step], "big")
+            width = widths.get(code)
+            if width is None:
+                measured = c_float()
+                if not raw.FPDFFont_GetGlyphWidth(font, unicode_code, 1000, byref(measured)):
+                    return None
+                width = measured.value
             x, y = glyph["origin"]
             origin = inverse[0]*x + inverse[2]*y + inverse[4]
             start = origin if start is None else start
             if abs(origin-start-position*size/1000) > max(.08, size*.012):
                 return None
-            advance = width.value + 1000 * (tracking + (spacing if step == 1 and data[offset] == 32 else 0)) / size
+            advance = width + 1000 * (tracking + (spacing if step == 1 and code == 32 else 0)) / size
             if not isfinite(advance):
                 return None
             advances.append(advance)
@@ -325,13 +356,27 @@ def text_page(page):
 
 
 def pikepdf_operators(page):
-    return pdf.parse_content_stream(page) if "/Contents" in page.obj else []
+    if "/Contents" not in page.obj:
+        return []
+    operators = []
+    for entry in pdf.parse_content_stream(page):
+        name = str(entry.operator)
+        if name not in ("'", '"'):
+            operators.append(entry)
+            continue
+        if name == '"':
+            operators.extend((instruction("Tw", entry.operands[0]), instruction("Tc", entry.operands[1])))
+        operators.extend((instruction("T*"), instruction("Tj", entry.operands[-1])))
+    # Keep one representation for entries parsed from the PDF and expanded shorthand.
+    return [pdf.ContentStreamInstruction(*entry) if isinstance(entry, tuple) else entry for entry in operators]
 
 
 def describe_text(page):
     _, _, objects = text_page(page)
     for item in objects:
-        item["editable"] = bool(item.pop("advances"))
+        partial = bool(item.pop("advances"))
+        item["editable"] = partial or bool(item["token"])
+        item["whole_run_only"] = not partial
     return dict(objects=objects, rotation=int(page.obj.get("/Rotate", 0)) % 360,
                 boxes={key: page_box(page, attribute) for key, (attribute, _) in BOXES.items()})
 

@@ -205,10 +205,72 @@ def check_font_fallback(folder, fonts):
         assert any(str(op)=="Tr" and int(args[0])==2 for args,op in pdf.parse_content_stream(document.pages[0]))
 
 
+def catalog_fixture(path, fonts):
+    from block_fonts import block_face, embed_face
+    from text_edit import instruction
+
+    cells = ("002610699", "Armatura pod umyvadlo", "bez zdroje, chrom", "17030")
+    with pdf.Pdf.new() as document:
+        page = document.add_blank_page(page_size=(420, 340))
+        face = block_face("Liberation Sans", {}, fonts)
+        chars = sorted(set("".join(cells)))
+        name, cids = embed_face(document, page, face, chars)
+        # PDF glyph codes and advances are independent of Unicode and the
+        # font program's nominal advances. Keep the next cells dependent.
+        advances = {char: face.widths[char] + 110 for char in chars}
+        page.Resources.Font[name].DescendantFonts[0].W = pdf.Array([
+            1, pdf.Array(advances[char] for char in chars),
+        ])
+        x = (20, 80, 233, 360)
+        positioned = []
+        for i, cell in enumerate(cells):
+            positioned.append(pdf.String(b"".join(cids[char] for char in cell)))
+            if i+1 < len(cells):
+                positioned.append(sum(advances[char] for char in cell) - (x[i+1]-x[i])*1000/10)
+        page.obj.Contents = document.make_stream(pdf.unparse_content_stream([
+            instruction("g", .9), instruction("re", 0, 181, 420, 17), instruction("f"),
+            instruction("g", .77), instruction("re", 265, 181, 4, 17), instruction("f"),
+            instruction("g", 0), instruction("BT"), instruction("Tf", name, 10),
+            instruction("Td", x[0], 186), instruction("TJ", pdf.Array(positioned)),
+            instruction("TL", 20), instruction("'", pdf.String(b"".join(cids[char] for char in cells[0]))),
+            instruction("ET"),
+        ]))
+        document.save(path)
+
+
+def check_catalog(folder, fonts):
+    source, target = folder / "catalog.pdf", folder / "catalog-edited.pdf"
+    catalog_fixture(source, fonts)
+    probe = {"action": "text_probe", "input": str(source)}
+    objects = dispatch(probe)["text_page"]["objects"]
+    assert len(objects) == 2 and all(run["editable"] and not run["whole_run_only"] for run in objects), objects
+    row = objects[0]
+    phrase = "bez zdroje, chrom"
+    text = "".join(glyph["text"] for glyph in row["glyphs"])
+    start = text.index(phrase)
+    selection = [{"token": row["block_token"], "glyphs": list(range(start, start+len(phrase)))}]
+    patch = dispatch({**probe, "action": "text_background", "text_selection": selection,
+                      "view": {"region": {"zoom": 2, "x": 462, "y": 286, "width": 215, "height": 33}}})
+    pixels = bytes(patch["raster"])
+    # The gray stripe beneath the edited cell is part of the PDF artwork.
+    assert pixels[(2*215+70)*4] < pixels[(2*215+20)*4]
+    saved = dict(font="Liberation Sans", size=10, bold=True, block=dict(
+        text="Baterie s termostatem", align="left", width=125, height=40,
+        rotation=0, leading=1.2, tracking=0, origin=[233, 195], selection=selection))
+    dispatch({**probe, "action": "text_edit", "output": str(target), "text_edit": saved, "text_fonts": str(fonts)})
+    updated = dispatch({**probe, "input": str(target)})["text_page"]["objects"]
+    before_x = next(glyph["origin"] for i, glyph in enumerate(row["glyphs"]) if text[i:] == "17030")
+    after_x = next(glyph["origin"] for run in updated for i, glyph in enumerate(run["glyphs"])
+                   if "".join(g["text"] for g in run["glyphs"][i:]) == "17030")
+    assert all(abs(old-new) < .001 for old, new in zip(before_x, after_x))
+    assert any(run["text"] == "Baterie s termostatem" and run["bold"] for run in updated)
+
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
         fonts = Path(sys.argv[1]).resolve()
         check_text(Path(tmp), fonts)
         check_block(Path(tmp), fonts)
         check_font_fallback(Path(tmp), fonts)
+        check_catalog(Path(tmp), fonts)
     print("Text blocks preserve nearby glyphs and graphics, and reflow with spacing, alignment and rotation.")

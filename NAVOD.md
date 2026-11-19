@@ -36,11 +36,11 @@ Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a ske
 
 ## Úprava textu
 
-Kliknutím na text v náhledu otevřete nástroj **Text**. Pevná lišta nabízí výběr objektu, odstavce, obdélníkem nebo mnohoúhelníkovým lasem. Název každé ikony se ukáže po najetí myší. U lasa čára vede z posledního bodu ke kurzoru. Výběr uzavřete Enterem nebo kliknutím na první bod.
+Kliknutím na text v náhledu otevřete nástroj **Text** a umístíte kurzor přímo do textu na stránce. V tabulce kliknutí vybere text v dané buňce podle rozestupů mezi sloupci. Pevná lišta nabízí výběr objektu, odstavce, obdélníkem nebo mnohoúhelníkovým lasem. Název každé ikony se ukáže po najetí myší. U lasa čára vede z posledního bodu ke kurzoru. Výběr uzavřete Enterem nebo kliknutím na první bod.
 
 Obdélník a laso vybírají znaky uvnitř oblasti. **Odstavec** seskupuje znaky, slova a řádky podle jejich polohy, rozestupů a okrajů. V bloku se složené řádky spojí a mezery mezi zjištěnými odstavci se zachovají jako prázdné řádky. U složitého rozvržení můžete oblast vymezit ručně. [Princip prostorového seskupování v PDFMiner](https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html)
 
-Pište a označujte znaky přímo v rámečku na stránce. Když výběr obsahuje několik rámečků, kliknutím jeden aktivujete. Při psaní se podle obsahu mění jeho šířka i výška. Levé zarovnání drží levou hranu, pravé pravou hranu a vystředění drží střed. Pro pevnou šířku přepište hodnotu **Šířka (pt)**. Vymazáním této hodnoty obnovíte automatickou šířku.
+Pište přímo na stránce a tažením myši označte část textu. Při úpravě zůstává vidět původní pozadí stránky. Když výběr obsahuje několik rámečků, kliknutím jeden aktivujete. Při psaní se podle obsahu mění jeho šířka i výška. Levé zarovnání drží levou hranu, pravé pravou hranu a vystředění drží střed. Pro pevnou šířku přepište hodnotu **Šířka (pt)**. Vymazáním této hodnoty obnovíte automatickou šířku.
 
 V pravém panelu nastavte písmo, velikost, zarovnání, řádkování a proklad aktivního rámečku. Ikony přepínají běžný řez, tučné písmo, kurzívu a podtržení. Pokud instalované písmo TrueType nabízí jen běžný řez, aplikace může vykreslit tučné písmo a kurzívu odvozeně. Jednotlivé chybějící znaky může doplnit náhradním písmem. Pro vložení řezu dál platí jeho pravidla pro zápis do PDF.
 

@@ -23,11 +23,17 @@ type inlineTextEditor struct {
 	original              string
 	initialStyle          inlineTextStyle
 	sourceBounds, bounds  searchRect
+	firstBaseline         float64
 	leftLimit, rightLimit float64
 	fixedWidth, loading   bool
 	visible               bool
 	foreground            uintptr
 	background            uintptr
+	backdrop              *printBitmap
+	backdropRegion        screenRegion
+	backdropRequested     bool
+	capture               viewportSurface
+	serial                uint64
 	rect, pageArea, clip  rect
 	dpi, pixels           int
 	previewStyle          inlineTextStyle
@@ -72,7 +78,7 @@ func (a *app) createInlineTextEditor() {
 	e.active = -1
 	if syscall.NewLazyDLL("Msftedit.dll").Load() == nil {
 		e.handle, _, _ = createWindow.Call(0, uintptr(unsafe.Pointer(wideString("RICHEDIT50W"))), 0,
-			wsChild|wsTabstop|0x00800000|0x1000|0x0044|0x0100, 0, 0, 1, 1, a.window, idInlineText, a.instance, 0)
+			wsChild|wsTabstop|0x1000|0x0044|0x0100, 0, 0, 1, 1, a.window, idInlineText, a.instance, 0)
 	}
 	if e.handle != 0 {
 		sendMessage.Call(e.handle, 0x0459, 1|8, 0)        // EM_SETTEXTMODE, TM_PLAINTEXT | TM_MULTILEVELUNDO
@@ -80,6 +86,7 @@ func (a *app) createInlineTextEditor() {
 		sendMessage.Call(e.handle, 0x0443, 0, 0x00ffffff) // EM_SETBKGNDCOLOR
 		sendMessage.Call(e.handle, 0x0435, 0, 8000)       // EM_EXLIMITTEXT
 		e.background = 0xffffff
+		comctl32.NewProc("SetWindowSubclass").Call(e.handle, inlinePaintSubclass, 1, 0)
 	}
 }
 
@@ -134,6 +141,9 @@ func (a *app) saveInlineBefore(next func()) bool {
 func (a *app) clearInlineFrames() {
 	e := &a.textTool.inline
 	e.frames, e.active = nil, -1
+	e.backdrop, e.backdropRequested = nil, false
+	e.serial++
+	e.capture.close()
 	e.visible = false
 	if e.handle != 0 {
 		showWindow.Call(e.handle, 0)
@@ -165,9 +175,14 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 	}
 	for _, group := range groups {
 		glyphs := group.glyphs()
-		editable := len(glyphs) <= 8000
+		counts := make(map[int]int)
 		for _, glyph := range glyphs {
-			if !a.textTool.model.Objects[glyph.run].Editable {
+			counts[glyph.run]++
+		}
+		editable := len(glyphs) <= 8000
+		for run, count := range counts {
+			object := a.textTool.model.Objects[run]
+			if !object.Editable || object.WholeRunOnly && count != len(object.Glyphs) {
 				editable = false
 				break
 			}
@@ -190,7 +205,10 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	}
 	frame := &e.frames[index]
 	e.active, e.loading, e.fixedWidth, e.pixels = index, true, false, 0
+	e.backdrop, e.backdropRequested = nil, false
+	e.serial++
 	e.sourceBounds = frame.flow.bounds
+	e.firstBaseline = frame.flow.paragraphs[0][0].baseline
 	first := p.model.Objects[frame.flow.glyphs()[0].run]
 	e.foreground = paletteColor{first.Fill[0], first.Fill[1], first.Fill[2]}.win()
 	font := slices.IndexFunc(p.fonts, func(value string) bool { return strings.EqualFold(value, first.Font) })
@@ -199,7 +217,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	}
 	chooseCombo(p.font, font)
 	setText(p.original, first.Font)
-	setText(p.size, formatTextNumber(first.Size))
+	setText(p.size, formatTextNumber(first.Size*math.Hypot(first.Matrix[2], first.Matrix[3])))
 	setText(p.leading, "1,2")
 	setText(p.tracking, "0")
 	setText(p.width, formatTextNumber(max(1, e.sourceBounds[2]-e.sourceBounds[0])))
@@ -244,6 +262,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 		}
 	}
 	a.view.invalidateCanvas()
+	a.view.schedule()
 }
 
 func boolFlag(value bool) uint32 {
@@ -285,7 +304,11 @@ func (a *app) editFrameAt(pick textSelection) bool {
 func (a *app) layoutInlineEditor() {
 	p, e, v := &a.textTool, &a.textTool.inline, a.view
 	frame := a.inlineCurrent()
-	if frame == nil || e.loading || e.handle == 0 {
+	if frame == nil || !frame.editable || e.loading || e.handle == 0 {
+		if e.visible && frame != nil && !frame.editable {
+			showWindow.Call(e.handle, 0)
+			e.visible = false
+		}
 		return
 	}
 	area, source := v.textSheetAt(0, 0, p.pick.source)
@@ -313,11 +336,8 @@ func (a *app) layoutInlineEditor() {
 		desired = max(4*style.size/5, a.measureInlineWidth(style, scale))
 	}
 	left, width := inlineHorizontal(e.sourceBounds, e.leftLimit, e.rightLimit, max(1, desired), style.alignment)
-	top := e.sourceBounds[1]
-	if frame.stored == nil || e.sourceBounds == frame.flow.bounds {
-		top = max(0., top-.22*style.size)
-	}
-	padding := int32(max(2, a.scale(2)))
+	top := max(0., e.firstBaseline-.9*style.size)
+	padding := int32(max(1, a.scale(1)))
 	box := rect{area.left + int32(math.Round(left*scale)) - padding,
 		area.top + int32(math.Round(top*scale)) - padding, 0, 0}
 	box.right = box.left + int32(math.Ceil(width*scale)) + 2*padding + 2
@@ -350,8 +370,8 @@ func (a *app) layoutInlineEditor() {
 		e.rect, e.clip = box, clip
 	}
 	if !e.visible {
-		showWindow.Call(e.handle, 5)
 		e.visible = true
+		showWindow.Call(e.handle, 5)
 	}
 	if !e.fixedWidth {
 		value := formatTextNumber(math.Floor(width*100) / 100)
@@ -455,23 +475,8 @@ func (a *app) paintInlineFrames(dc uintptr, area rect) {
 	}
 	for i, frame := range e.frames {
 		if i == e.active && e.visible {
-			// Paint over the previous glyphs that would otherwise reappear when
-			// the editor shrinks. The neighboring frames are never erased.
-			if frame.editable {
-				for n, line := range frame.flow.highlightBounds() {
-					box := toPixel(line)
-					paper, _, _ := gdi32.NewProc("GetPixel").Call(dc, uintptr(box.left+1), uintptr(max(area.top, box.top-2)))
-					if paper > 0xffffff {
-						paper = 0xffffff
-					}
-					if n == 0 && paper != e.background {
-						e.background = paper
-						sendMessage.Call(e.handle, 0x0443, 0, paper)
-					}
-					fillColor(dc, box, paletteColor{uint8(paper), uint8(paper >> 8), uint8(paper >> 16)})
-				}
-			}
-			drawInlineFrame(dc, rect{e.rect.left - 1, e.rect.top - 1, e.rect.right, e.rect.bottom})
+			a.paintInlineBackdrop(dc, area, frame.flow.highlightBounds(), toPixel)
+			invalidate(e.handle)
 		} else {
 			drawInlineFrame(dc, toPixel(frame.flow.bounds))
 		}

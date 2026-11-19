@@ -1,5 +1,6 @@
 """Render screen previews in memory with the bundled PDFium library."""
 
+from contextlib import nullcontext
 import math
 
 from proof import box_options, page_box, page_options, page_size, render_dpi, screen_region, screen_target
@@ -31,7 +32,8 @@ def render_screen(pdf, src, req, password, *, thumbnail=False):
     try:
         # Release the document and its native caches before responding. The
         # open viewer must still allow the original PDF to be replaced.
-        with src.open("rb") as stream, pdfium.PdfDocument(stream, password) as doc:
+        source = nullcontext(src) if isinstance(src, bytes) else src.open("rb")
+        with source as stream, pdfium.PdfDocument(stream, password) as doc:
             if doc.get_formtype() in (raw.FORMTYPE_XFA_FULL, raw.FORMTYPE_XFA_FOREGROUND):
                 return None
             doc.init_forms()

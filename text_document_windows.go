@@ -23,6 +23,7 @@ type storedTextBlock struct {
 type textRun struct {
 	BlockToken              int `json:"block_token"`
 	Editable                bool
+	WholeRunOnly            bool `json:"whole_run_only"`
 	Font                    string
 	Family                  int
 	Text                    string
@@ -52,6 +53,7 @@ type textBlockEdit struct {
 	Height    float64          `json:"height"`
 	Leading   float64          `json:"leading"`
 	Tracking  float64          `json:"tracking"`
+	Baseline  *float64         `json:"baseline_offset,omitempty"`
 	Origin    textPoint        `json:"origin"`
 	Rotation  int              `json:"rotation"`
 	Selection []glyphSelection `json:"selection"`
@@ -187,7 +189,9 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 			} else if block := model.Objects[seed.run].Block; block != nil {
 				flow, stored = storedBlockFlow(model, glyphs, block.ID)
 			} else {
-				flow = layoutText(slices.DeleteFunc(glyphs, func(g layoutGlyph) bool { return g.run != seed.run }))
+				// One PDF show instruction can cover several columns. Pick the
+				// connected text at the pointer, including neighboring word runs.
+				flow = textLineAt(glyphs, seed)
 			}
 		}
 	}
@@ -240,7 +244,7 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 	} else if len(p.inline.frames) > 1 {
 		setText(p.report, "Klikněte do rámečku, který chcete upravit.")
 	} else if frame := a.inlineCurrent(); frame != nil && !frame.editable {
-		setText(p.report, "Z tohoto rámečku lze text vybrat a zkopírovat.")
+		setText(p.report, "Tento výběr lze zkopírovat. Zkuste vybrat celý textový objekt nebo užší oblast.")
 	}
 
 	a.updateTextActions()

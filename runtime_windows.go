@@ -63,6 +63,7 @@ type request struct {
 	OCRLanguage           string       `json:"ocr_language,omitempty"`
 	OCRRegion             []textPoint  `json:"ocr_region,omitempty"`
 	TextEdit              *textEditRequest `json:"text_edit,omitempty"`
+	TextSelection         []glyphSelection `json:"text_selection,omitempty"`
 }
 
 type viewRequest struct {

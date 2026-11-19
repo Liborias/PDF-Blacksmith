@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 from hashlib import sha256
+from io import BytesIO
 import json
 import logging
 import os
@@ -905,9 +906,27 @@ def edit_text_document(src, request):
             raise UserError("Vyberte existující stránku PDF.")
         return pdf.pages[number-1]
 
-    if request["action"] == "text_probe":
+    if request["action"] in ("text_probe", "text_background"):
         with open_pdf(src, password) as pdf:
-            return {"text_page": describe_text(selected(pdf))}
+            page = selected(pdf)
+            if request["action"] == "text_probe":
+                return {"text_page": describe_text(page)}
+            from text_block import strip_selection
+            try:
+                operators, _, _ = strip_selection(page, request.get("text_selection"))
+                with pikepdf.Pdf.new() as clean:
+                    clean.add_pages_from(pdf, [view.get("page", 1)-1], outlines="ignore")
+                    if intents := pdf.Root.get("/OutputIntents"):
+                        clean.Root.OutputIntents = clean.copy_foreign(pdf.make_indirect(intents))
+                    clean.pages[0].obj.Contents = clean.make_stream(pikepdf.unparse_content_stream(operators))
+                    buffer = BytesIO()
+                    clean.save(buffer)
+                    rendered = render_screen(clean, buffer.getvalue(), {**view, "page": 1}, "")
+            except TextError as exc:
+                raise UserError(str(exc)) from exc
+            if rendered is None:
+                raise UserError("Podklad textu se nepodařilo vykreslit.")
+            return rendered
     source_state = src.stat()
     models = request.get("text_fonts") or Path(__file__).resolve().parent / "text-fonts"
     with output_file(src, request) as pending:
@@ -1253,7 +1272,8 @@ def dispatch(request, *, raster=False):
                  "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,
                  "edit_pages": save_page_edits, "save_document": save_document,
                  "split": split_document, "ocr": ocr_document, "insert_pages": insert_document_pages,
-                 "text_probe": edit_text_document, "text_edit": edit_text_document}.get(request.get("action"))
+                 "text_probe": edit_text_document, "text_edit": edit_text_document,
+                 "text_background": edit_text_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:

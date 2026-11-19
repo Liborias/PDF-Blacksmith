@@ -206,7 +206,18 @@ func (a *app) textCommand(id, notification int) bool {
 	}
 	a.layoutInlineEditor()
 	a.view.invalidateCanvas()
+	switch id {
+	case idTextRegular, idTextBold, idTextItalic, idTextUnderline,
+		idTextAlignLeft, idTextAlignCenter, idTextAlignRight, idTextAlignJustify:
+		a.focusInlineEditor()
+	}
 	return true
+}
+
+func (a *app) focusInlineEditor() {
+	if e := &a.textTool.inline; e.visible && !a.busy {
+		setFocus.Call(e.handle)
+	}
 }
 
 func normalizedTextPoint(area rect, x, y int32) textPoint {
@@ -403,26 +414,33 @@ func (a *app) startTextEdit() {
 	a.layoutInlineEditor()
 	b := e.bounds
 	top := textPoint{b[0] / p.dim[0], b[1] / p.dim[1]}
+	baseline := e.firstBaseline - b[1]
 	block := textBlockEdit{Text: strings.ReplaceAll(strings.ReplaceAll(getText(e.handle), "\r\n", "\n"), "\r", "\n"),
 		Align: textAlignments[style.alignment], Width: b[2] - b[0], Height: p.dim[1] - b[1],
-		Leading: style.leading, Tracking: style.tracking,
+		Leading: style.leading, Tracking: style.tracking, Baseline: &baseline,
 		Origin: textPointToPDF(top, p.model.Boxes[p.pick.box], p.rotation), Rotation: p.rotation}
-	indexed := map[int]int{}
-	for _, glyph := range frame.flow.glyphs() {
-		token := p.model.Objects[glyph.run].BlockToken
-		index, found := indexed[token]
-		if !found {
-			index = len(block.Selection)
-			indexed[token] = index
-			block.Selection = append(block.Selection, glyphSelection{Token: token})
-		}
-		block.Selection[index].Glyphs = append(block.Selection[index].Glyphs, glyph.index)
-	}
+	block.Selection = a.inlineGlyphSelection(frame)
 	req := v.request("text_edit")
 	req.View.Page = p.pick.source
 	req.TextEdit = &textEditRequest{Font: style.font, Size: style.size,
 		Bold: style.bold, Italic: style.italic, Underline: style.underline, Block: block}
 	a.runDocumentDraft(req, "Upravuji text v otevřené kartě…", p.report)
+}
+
+func (a *app) inlineGlyphSelection(frame *inlineTextFrame) []glyphSelection {
+	var selection []glyphSelection
+	indexed := map[int]int{}
+	for _, glyph := range frame.flow.glyphs() {
+		token := a.textTool.model.Objects[glyph.run].BlockToken
+		index, found := indexed[token]
+		if !found {
+			index = len(selection)
+			indexed[token] = index
+			selection = append(selection, glyphSelection{Token: token})
+		}
+		selection[index].Glyphs = append(selection[index].Glyphs, glyph.index)
+	}
+	return selection
 }
 
 func (a *app) startTextOCR() {

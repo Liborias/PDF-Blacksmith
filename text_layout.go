@@ -201,6 +201,17 @@ func (flow textFlow) paragraphAt(hit layoutGlyph) textFlow {
 	return textFlow{}
 }
 
+func textLineAt(glyphs []layoutGlyph, hit layoutGlyph) textFlow {
+	for _, line := range glyphRows(glyphs) {
+		for _, glyph := range line.glyphs {
+			if glyph.run == hit.run && glyph.index == hit.index {
+				return textFlow{paragraphs: [][]textLine{{line}}, bounds: line.bounds, text: joinGlyphs(line)}
+			}
+		}
+	}
+	return textFlow{}
+}
+
 func (flow textFlow) highlightBounds() []searchRect {
 	var highlights []searchRect
 	for _, group := range flow.paragraphs {

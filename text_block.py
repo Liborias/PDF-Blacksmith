@@ -71,9 +71,10 @@ def block_commands(document, page, block, style, folder, color, group):
         raise TextError("Vyberte platné umístění a zarovnání textového bloku.")
 
     faces, assigned, advances = fonts_for_block(style, content, folder)
-    ascent = faces[0].ascent
+    ascent = numeric(block.get("baseline_offset", faces[0].ascent*size), 0, 1200,
+                     "Vyberte platné umístění textového bloku.")
     lines = list(wrap_block(content, advances, size, width, tracking))
-    if ascent*size + (len(lines)-1)*line_spacing*size + size*.22 > height or len(lines) > 256:
+    if ascent + (len(lines)-1)*line_spacing*size + size*.22 > height or len(lines) > 256:
         raise TextError("Text se nevejde na stránku. Zvětšete šířku bloku nebo zmenšete řádkování či písmo.")
     used = {char for value, _, _, _ in lines for char in value}
     matrix = {0: (1, 0, 0, 1), 90: (0, 1, -1, 0), 180: (-1, 0, 0, -1),
@@ -107,7 +108,7 @@ def block_commands(document, page, block, style, folder, color, group):
             left = max(0., (width-advance)/2)
         justify = alignment == "justify" and justification and value.count(" ") > 0
         extra = max(0., width-advance) / value.count(" ") if justify else 0.
-        baseline = -(ascent+row*line_spacing)*size
+        baseline = -(ascent+row*line_spacing*size)
         row_mark = pdf.Dictionary(PBRow=row, PBParagraph=paragraph, PBWordWrap=int(justification))
         result.extend((instruction("BDC", pdf.Name.Span, row_mark), instruction("BT"),
                        instruction("Tc", tracking), instruction("Tw", 0), instruction("Tz", 100), instruction("Ts", 0)))
@@ -163,16 +164,14 @@ def remove_glyphs(entry, step, advances, chosen):
     return instruction("TJ", pdf.Array(output))
 
 
-def replace_block(document, page, edits, font_dir):
+def strip_selection(page, selected):
     from text_edit import positions
 
-    operators, _, objects = text_page(page)
-    block = edits["block"]
-    selected = block.get("selection")
+    operators, states, objects = text_page(page)
     if not isinstance(selected, list) or not 1 <= len(selected) <= 4000:
         raise TextError("Vyberte platnou oblast textu.")
     styles = source_styles(operators, page.resources, positions(operators, page.resources, include_dependent=True))
-    indexed = {run["block_token"]: run for run in objects if run["block_token"] and run["advances"]}
+    indexed = {run["block_token"]: run for run in objects if run["block_token"]}
     replacements, discard = {}, set()
     glyph_count = 0
     for item in selected:
@@ -181,21 +180,32 @@ def replace_block(document, page, edits, font_dir):
             raise TextError("Tento úsek nelze upravit bez změny okolní sazby. Vyberte jiný úsek.")
         run = indexed[token]
         advances = run["advances"]
-        if not glyphs or any(type(index) is not int or not 0 <= index < len(advances) for index in glyphs):
+        count = len(run["glyphs"])
+        if not glyphs or any(type(index) is not int or not 0 <= index < count for index in glyphs):
             raise TextError("Výběr textu se mezitím změnil. Vyberte jej znovu.")
         chosen = set(glyphs)
         glyph_count += len(chosen)
         if glyph_count > 8000:
             raise TextError("Pro jednu úpravu vyberte nejvýš 8 000 znaků.")
-        replacements[token] = remove_glyphs(operators[token-1], code_size(styles[token][0]), advances, chosen)
-        if len(chosen) == len(advances) and has_underline(operators, token):
+        if advances:
+            replacements[token] = remove_glyphs(operators[token-1], code_size(styles[token][0]), advances, chosen)
+        elif token in states and len(chosen) == count:
+            replacements[token] = instruction("TJ", pdf.Array())
+        else:
+            raise TextError("U tohoto kódování písma vyberte celý textový objekt.")
+        if len(chosen) == count and has_underline(operators, token):
             discard.update(range(token+2, token+6))
 
-    first = next(iter(replacements))
+    original = [replacements.get(index, entry) for index, entry in enumerate(operators, 1) if index not in discard]
     group = max((run["block"]["id"] for run in objects if run["block"]), default=0) + 1
+    return original, styles[next(iter(replacements))][4], group
+
+
+def replace_block(document, page, edits, font_dir):
+    block = edits["block"]
+    original, color, group = strip_selection(page, block.get("selection"))
     if group > 2**31 - 1:
         raise TextError("Na stránce nelze vytvořit další editovatelný blok.")
-    commands = block_commands(document, page, block, edits, font_dir, styles[first][4], group)
-    original = [replacements.get(index, entry) for index, entry in enumerate(operators, 1) if index not in discard]
+    commands = block_commands(document, page, block, edits, font_dir, color, group)
     combined = [instruction("q"), *original, instruction("Q"), *commands] if commands else original
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))

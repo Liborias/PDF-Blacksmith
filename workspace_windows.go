@@ -813,6 +813,7 @@ func (a *app) command(id, notification int) {
 		case idTextFont:
 			a.layoutInlineEditor()
 			a.view.invalidateCanvas()
+			a.focusInlineEditor()
 		case idExportOption:
             a.updateExportOptions()
         case idGrayProfile:
@@ -1371,6 +1372,14 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if a.textKey(msg) || a.documentKey(msg) {
 		return true
+	}
+	if msg.wParam == 0x0d && a.mode == idTextTab && a.textTool.inline.visible && !a.busy {
+		p := &a.textTool
+		switch msg.window {
+		case p.size, p.width, p.leading, p.tracking:
+			a.focusInlineEditor()
+			return true
+		}
 	}
 	if msg.wParam == 0x0d && msg.window == a.view.moveTarget {
 		a.view.moveToPosition()

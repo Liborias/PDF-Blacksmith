@@ -231,6 +231,7 @@ type readerTask struct {
 }
 
 type readerJob struct {
+	textFrame uint64
 	readerTask
 	action string
 	result response
@@ -904,7 +905,7 @@ func (v *documentView) schedule() {
 	if !v.ready() || !v.zoomDeadline.IsZero() {
 		return
 	}
-	if v.scheduleNativeText() {
+	if v.scheduleNativeText() || (!v.secondary && v.app.scheduleInlineBackground()) {
 		return
 	}
 	_, height := v.viewportSize()
@@ -980,6 +981,10 @@ func (v *documentView) renderPage(number, pixels int, background bool) {
 func (v *documentView) launch(req request, number, pixels int, background bool, tile *screenTile) {
 	_, original := v.readSource()
 	generation := v.generation
+	var textFrame uint64
+	if req.Action == "text_background" {
+		textFrame = v.app.textTool.inline.serial
+	}
 	task := readerTask{generation, number, pixels, background, tile}
 	engine := v.engine
 	if background {
@@ -992,7 +997,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 		v.running = true
 	}
 	go func() {
-		job := readerJob{readerTask: task, action: req.Action,
+		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame,
 			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
 		if unchanged(req.Input, original) {
 			result := engine.run(req)
@@ -1042,6 +1047,11 @@ func (v *documentView) finished(job readerJob) {
 	v.running = false
 	if job.action == "text_probe" {
 		v.finishNativeText(job)
+		v.schedule()
+		return
+	}
+	if job.action == "text_background" {
+		v.app.finishInlineBackground(job)
 		v.schedule()
 		return
 	}
