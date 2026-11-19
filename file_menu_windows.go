@@ -10,6 +10,7 @@ var fileOptions = []struct {
 	label string
 }{
 	{idOpen, "Otevřít soubor"},
+	{idRecentFiles, "Nedávné"},
 	{idShowOutput, "Otevřít výstup"},
 	{idSaveDocument, "Uložit"},
 	{idSaveDocumentAs, "Uložit jako"},
@@ -23,7 +24,7 @@ func (a *app) fileOptionEnabled(option int) bool {
 		return false
 	}
 	switch option {
-	case idOpen:
+	case idOpen, idRecentFiles:
 		return true
 	case idShowOutput:
 		return a.lastOutput != ""
@@ -74,8 +75,11 @@ func (a *app) updateFileOptions() {
 	for _, option := range fileOptions {
 		setEnabled(a.detailButtons[option.id], a.fileOptionEnabled(option.id))
 	}
-	if a.detailsTab() == idFileDetails {
+	switch a.detailsTab() {
+	case idFileDetails:
 		a.updateFilePanel()
+	case idRecentFiles:
+		a.updateRecentActions()
 	}
 }
 

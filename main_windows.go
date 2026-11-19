@@ -140,6 +140,7 @@ type app struct {
 	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
 	thumbnailsToggle                                   uintptr
 	fileHint, filePath, fileRun                        uintptr
+	recent                                             recentPanel
 	exportScope, exportRange                           uintptr
 	splitScope, splitRange, splitButton, splitReport   uintptr
 	exportFormat, exportHint, exportColorLabel         uintptr
@@ -442,7 +443,8 @@ func (a *app) drawControl(param uintptr) bool {
 	}
 	var item buttonDraw
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), param, unsafe.Sizeof(item))
-	return a.drawPopup(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || (a.view != nil && a.view.drawListRow(&item))
+	return a.drawPopup(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || a.drawRecentRow(&item) ||
+		(a.view != nil && a.view.drawListRow(&item))
 }
 
 func setText(handle uintptr, value string) {

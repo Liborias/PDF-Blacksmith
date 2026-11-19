@@ -24,8 +24,12 @@ func (a *app) addDetailButton(id int, label string) {
 }
 
 func (a *app) detailsTab() int {
-	if a.tool == idFileTab && a.mode != idExportTab && a.mode != idSignTab {
-		return idFileDetails
+	if a.tool == idFileTab {
+		switch a.mode {
+		case idExportTab, idSignTab, idRecentFiles:
+		default:
+			return idFileDetails
+		}
 	}
 	return a.mode
 }

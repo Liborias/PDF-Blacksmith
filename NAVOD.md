@@ -28,6 +28,7 @@ Do souboru zapíšete změny přes **Soubor → Uložit** nebo **Uložit jako**.
 
 Volby nástroje **Soubor** zůstávají nahoře v pravém panelu. Ovládání vybrané akce se zobrazí pod nimi.
 
+- **Soubor → Nedávné** zobrazí až 10 naposledy otevřených PDF i po restartu. Vyberte dokument a stiskněte **Otevřít vybrané PDF**, Enter nebo na něj poklikejte. Pod seznamem je úplná cesta k vybranému souboru. Historie ukládá pouze cesty.
 - **Soubor → Uložit → Uložit změny** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
 - **Soubor → Uložit jako → Vybrat umístění…** nebo **Ctrl+Shift+S** uloží kopii a otevře ji jako aktuální dokument.
 - **Soubor → Tisk → Otevřít tiskový dialog…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Volba **Výběr** vytiskne označené náhledy. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.

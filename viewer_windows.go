@@ -979,6 +979,7 @@ func (v *documentView) finished(job readerJob) {
 		v.reference = v.page
 		v.markSaved()
 		v.refreshBookmarks(-1)
+		v.app.rememberRecentFile(v.path)
 		v.app.report("")
 		v.updatePageList()
 		v.rebuild(false)

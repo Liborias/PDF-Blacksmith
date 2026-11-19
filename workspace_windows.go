@@ -59,6 +59,9 @@ const (
 	idProofGrayProfile
 	idProofGrayICC
 	idProofKProfile
+	idRecentFiles
+	idRecentList
+	idRecentOpen
 )
 
 const (
@@ -196,6 +199,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildSignPanel()
 	a.beginPanel(idFileDetails)
 	a.buildFilePanel()
+	a.beginPanel(idRecentFiles)
+	a.buildRecentPanel()
 	a.beginPanel(idSplitTab)
 	a.buildSplitPanel()
 	a.beginPanel(idMergeTab)
@@ -367,11 +372,14 @@ func (a *app) activate(id int) {
 			a.mode = idOpen
 		}
 		a.tool = idFileTab
-	case idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
+	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		if !a.fileOptionEnabled(id) {
 			return
 		}
 		a.tool, a.mode = idFileTab, id
+		if id == idRecentFiles {
+			a.refreshRecentPanel()
+		}
 		if id == idFileSign {
 			a.mode = idSignTab
 		}
@@ -455,6 +463,13 @@ func (a *app) layout() {
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if tab == idRecentFiles {
+		empty := len(a.recent.files) == 0
+		if item.handle == a.recent.empty {
+			return item, empty
+		}
+		return item, !empty
+	}
 	if tab == idBookmarksTab {
 		panel := &a.view.bookmarkPanel
 		empty := len(a.view.bookmarks) == 0
@@ -776,6 +791,15 @@ func (a *app) command(id, notification int) {
 	if a.mergeCommand(id, notification) {
 		return
 	}
+	if id == idRecentList {
+		switch notification {
+		case 1: // LBN_SELCHANGE
+			a.updateRecentActions()
+		case 2: // LBN_DBLCLK
+			a.openRecentFile()
+		}
+		return
+	}
 	if notification == 1 {
 		switch id {
 		case idExportOption:
@@ -841,10 +865,12 @@ func (a *app) command(id, notification int) {
 	}
 	switch id {
 	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idBookmarksTab,
-		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
+		idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.activate(id)
 	case idFileRun:
 		a.runFileOption()
+	case idRecentOpen:
+		a.openRecentFile()
 	case idToggleTools:
 		a.toolsCollapsed = !a.toolsCollapsed
 		a.layout()
@@ -1225,6 +1251,10 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if msg.wParam == 0x0d && msg.window == a.view.moveTarget {
 		a.view.moveToPosition()
+		return true
+	}
+	if msg.wParam == 0x0d && msg.window == a.recent.list {
+		a.openRecentFile()
 		return true
 	}
 	if msg.wParam == 0x2e && msg.window == a.view.pageList && a.mode == idPagesTab {

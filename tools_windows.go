@@ -51,17 +51,17 @@ func defaultIndex[T comparable](values []T, value, fallback T) int {
 	return fallbackIndex
 }
 
-func settingsFile() (string, error) {
+func localAppFile(name string) (string, error) {
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(cache, storageName, "export-settings.json"), nil
+	return filepath.Join(cache, storageName, name), nil
 }
 
 func loadExportOptions() exportOptions {
 	options := defaults
-	path, err := settingsFile()
+	path, err := localAppFile("export-settings.json")
 	if err != nil {
 		return options
 	}
@@ -85,19 +85,23 @@ func loadExportOptions() exportOptions {
 }
 
 func saveExportOptions(options exportOptions) error {
-	path, err := settingsFile()
+	path, err := localAppFile("export-settings.json")
 	if err != nil {
 		return err
 	}
-	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	return saveLocalJSON(path, options)
+}
+
+func saveLocalJSON(path string, value any) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
-	file, err := os.CreateTemp(filepath.Dir(path), "export-settings-")
+	file, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+"-*")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(file.Name())
-	writeErr := json.NewEncoder(file).Encode(options)
+	writeErr := json.NewEncoder(file).Encode(value)
 	closeErr := file.Close()
 	if writeErr != nil {
 		return writeErr
