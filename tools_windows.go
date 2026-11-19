@@ -21,9 +21,12 @@ type exportOptions struct {
 	Compression string `json:"compression"`
 	ProofDPI    int    `json:"proof_dpi"`
 	RepairDPI   int    `json:"repair_dpi"`
+	ColorMode   string `json:"color_mode"`
+	GrayProfile string `json:"gray_profile"`
+	KProfile    string `json:"k_profile"`
 }
 
-var defaults = exportOptions{Intent: -1, BlackPoint: -1, ImageDPI: 0, Compression: "auto", ProofDPI: 150, RepairDPI: 600}
+var defaults = exportOptions{Intent: -1, BlackPoint: -1, ImageDPI: 0, Compression: "auto", ProofDPI: 150, RepairDPI: 600, ColorMode: "gray", GrayProfile: "automatic", KProfile: "fogra51"}
 var (
 	intents      = []int{-1, 0, 1, 2, 3}
 	blackPoints  = []int{-1, 1, 0}
@@ -31,6 +34,8 @@ var (
 	compressions = []string{"auto", "flate"}
 	proofDPIs    = []int{75, 150, 300}
 	repairDPIs   = []int{300, 600}
+	colorModes   = []string{"gray", "rich_black", "k_cmyk"}
+	grayProfiles = []string{"automatic", "gamma22", "gamma18", "custom"}
 )
 
 func defaultIndex[T comparable](values []T, value, fallback T) int {
@@ -71,6 +76,11 @@ func loadExportOptions() exportOptions {
 	options.Compression = compressions[defaultIndex(compressions, options.Compression, defaults.Compression)]
 	options.ProofDPI = proofDPIs[defaultIndex(proofDPIs, options.ProofDPI, defaults.ProofDPI)]
 	options.RepairDPI = repairDPIs[defaultIndex(repairDPIs, options.RepairDPI, defaults.RepairDPI)]
+	options.ColorMode = colorModes[defaultIndex(colorModes, options.ColorMode, defaults.ColorMode)]
+	options.GrayProfile = grayProfiles[defaultIndex(grayProfiles, options.GrayProfile, defaults.GrayProfile)]
+	if options.KProfile == "" {
+		options.KProfile = defaults.KProfile
+	}
 	return options
 }
 
