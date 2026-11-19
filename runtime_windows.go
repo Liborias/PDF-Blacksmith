@@ -131,7 +131,7 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "export_settings.py", "export_presets.json", "pdfx.py",
+	for _, name := range []string{"ready", "python.exe", "engine.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
 		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))
