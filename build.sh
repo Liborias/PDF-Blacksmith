@@ -8,7 +8,7 @@ output_path="$(realpath -m -- "${1:-PDFBlaksmith.exe}")"
 python_zip="$build_dir/python-win.zip"
 gs_installer="$build_dir/gs-win.exe"
 runtime_dir="$build_dir/runtime"
-mkdir -p -- "$runtime_dir/packages" "$(dirname -- "$output_path")"
+mkdir -p -- "$runtime_dir/packages" "$runtime_dir/tessdata" "$(dirname -- "$output_path")"
 
 curl --fail --silent --show-error --location \
   'https://www.python.org/ftp/python/3.14.10/python-3.14.10-embed-amd64.zip' -o "$python_zip"
@@ -24,6 +24,18 @@ printf '%s  %s\n' '52a91b8bf09298788d7a57b9206127026c23eacd75405f0a131e26dc381dc
 cp "$runtime_dir"/packages/pikepdf.libs/msvcp140-*.dll "$runtime_dir/ghostscript/bin/msvcp140.dll"
 cp "$runtime_dir"/vcruntime140*.dll "$runtime_dir/ghostscript/bin/"
 cp GO-LICENSE.txt "$runtime_dir/"
+ocr_models='https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd'
+for file in ces.traineddata eng.traineddata LICENSE; do
+  curl --fail --silent --show-error --location "$ocr_models/$file" -o "$runtime_dir/tessdata/$file"
+done
+(
+  cd "$runtime_dir/tessdata"
+  sha256sum -c <<'EOF'
+934bcaf97ef3348413263331131c9fa7f55f30db333c711929c124fb635f7e1b  ces.traineddata
+7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2  eng.traineddata
+cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  LICENSE
+EOF
+)
 python3 package_runtime.py "$runtime_dir"
 go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -manifest app.manifest -ico assets/blaksmith.ico \
   -o rsrc_windows_amd64.syso

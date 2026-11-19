@@ -9,8 +9,8 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 5. **Pořadí a náhledy stránek.** Přesunout jednu či více stran na zadanou pozici nebo přetažením náhledů. Vybrané strany lze také smazat. Přesun i smazání lze vrátit. [Hotovo ve verzi 0.4.13](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.13)
 6. **Sloučení dokumentů.** Sestavit jedno PDF z více souborů v zadaném pořadí a umožnit výběr stran z každého souboru. [Hotovo ve verzi 0.4.15](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.15)
 7. **Záložky v PDF.** Zobrazit strom záložek v postranním panelu, přejít na cílovou stranu, přidat záložku a upravit její název nebo cíl. [Hotovo ve verzi 0.4.16](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.16)
-8. **Fulltextové vyhledávání.** Prohledat textovou vrstvu dokumentu, zobrazit výsledky podle stran a zvýraznit shody v náhledu. Hotovo ve zdrojovém kódu.
-9. **OCR.** Rozpoznat text na vybraných naskenovaných stranách, včetně češtiny, a přidat vyhledávatelnou textovou vrstvu při zachování vzhledu skenu.
+8. **Fulltextové vyhledávání.** Prohledat textovou vrstvu dokumentu, zobrazit výsledky podle stran a zvýraznit shody v náhledu. [Hotovo ve verzi 0.4.19](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.19)
+9. **OCR.** Rozpoznat skeny i text převedený na křivky na vybraných stranách či rozsazích. Přidat českou nebo anglickou textovou vrstvu při zachování původní grafiky. [Hotovo ve verzi 0.4.19](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.19)
 10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách a při zavírání nabídnout uložení změn.
 11. **Dva dokumenty vedle sebe.** Umožnit zobrazení dvou PDF vedle sebe. Každý dokument má vlastní panel náhledů a vlastní výběr stránek.
 12. **Přetahování stránek mezi PDF.** Přetáhnout jeden náhled nebo více označených náhledů do druhého panelu a vložit stránky na vybrané místo v jejich pořadí.
@@ -24,4 +24,4 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 
 ## Levý panel nástrojů
 
-**Sloučit PDF** je v levém panelu nástrojů dostupné i bez otevřeného dokumentu. Po načtení dokumentu jsou dostupné také **Rozdělit PDF** a **Pořadí stránek**. Společné náhledy mají vlastní sbalitelný panel mezi nástroji a dokumentem. Postupně přibudou **Nástroje výběru**, **Úprava textu**, **Poznámky** a **OCR**.
+**Sloučit PDF** je v levém panelu nástrojů dostupné i bez otevřeného dokumentu. Po načtení dokumentu jsou dostupné také **OCR**, **Rozdělit PDF** a **Pořadí stránek**. Společné náhledy mají vlastní sbalitelný panel mezi nástroji a dokumentem. Postupně přibudou **Nástroje výběru**, **Úprava textu** a **Poznámky**.

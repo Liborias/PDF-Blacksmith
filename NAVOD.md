@@ -22,6 +22,12 @@ Otevřete nástroj **Najít v PDF** nebo stiskněte **Ctrl+F**. Zadejte slovo č
 
 Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a skeny potřebuje dokument textovou vrstvu vytvořenou pomocí OCR. Aplikace spočítá všechny nalezené shody a v seznamu zobrazí prvních 2 000. Tlačítko **Vymazat** hledání zastaví a vyčistí výsledky.
 
+## OCR skenů a textu v křivkách
+
+Otevřete nástroj **OCR** a zvolte **Všechny strany**, **Aktuální strana**, **Vybrané náhledy** nebo **Vlastní výběr**. Pro vlastní výběr zadejte například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí v aplikaci. Před rozpoznáním otočte případné strany na bok do čitelné polohy.
+
+Vyberte jazyk a klikněte na **Rozpoznat a uložit kopii…**. Čeština i angličtina jsou dostupné bez další instalace. Kopie obsahuje celý dokument. Na vybraných stranách přibude neviditelná textová vrstva a původní sken, křivky i barevné objekty zůstanou v PDF. Výsledek se otevře v aplikaci a text můžete zkontrolovat pomocí **Ctrl+F**. Pokud OCR nenajde žádný nový text, kopie se nevytvoří.
+
 ## Záložky v PDF
 
 Na pravé liště otevřete ouško **Záložky**. Strom záložek má vlastní posuvník a zobrazí se mezi dokumentem a nastavením nástroje. Kliknutím na záložku přejdete na dostupnou cílovou stránku. Z klávesnice ji otevřete Enterem. Šipka u názvu sbalí či rozbalí větev.

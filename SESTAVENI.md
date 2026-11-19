@@ -8,6 +8,8 @@ Skript ověřuje distribuci Ghostscriptu 10.08.0 a Python 3.14.10 kontrolním so
 
 Test backendu spustíte příkazem `python3 tests/smoke.py`. Cestu ke Ghostscriptu lze předat jako první argument. Nastavením `PDFBLAKSMITH_TEST_PROFILES=1` lze otestovat také export do profilů FOGRA39 a FOGRA51.
 
+`python3 tests/check_ocr.py CESTA_K_GHOSTSCRIPTU CESTA_K_TESSDATA` ověří OCR na skenu a křivkách, včetně otočené strany, zachování vzhledu a opakovaného rozpoznání. Použijte Ghostscript s výstupním zařízením `pdfocr8` a jazykovými daty `eng.traineddata`.
+
 Všechny tři předvolby PDF/X otestujete příkazem `python3 tests/check_pdfx.py CESTA_K_GS_10.08 CESTA_K_PROFILU_CMYK.icc`. Použijte tiskový profil CMYK ve verzi ICC v2, například zabudovaný testovací profil Ghostscriptu `iccprofiles/default_cmyk.icc`.
 
 `python3 tests/preview.py` ověří čtecí a tiskové vykreslení, tiskové rámečky, nastavení exportu a zachování odkazů po přesunu stránek. `proof.py` připravuje obraz náhledu a statistiky ze separací Ghostscriptu. `viewer_windows.go` načítá stránky pracovního prostoru a zobrazuje je podle aktivního panelu. `workspace_windows.go` spravuje rozložení a nástroje. Test rozložení a zoomu lze spustit i na Linuxu příkazem `go test reader_layout.go reader_layout_test.go`.

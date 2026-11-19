@@ -85,6 +85,7 @@ var workspaceTabs = []struct {
 	{idFileTab, "Soubor", false},
 	{idBrowseTab, "Zobrazení", false},
 	{idSearchTab, "Najít v PDF", true},
+	{idOCRTab, "OCR", true},
 	{idProofTab, "Separace", true},
 	{idSignTab, "Digitální podpis", true},
 	{idSplitTab, "Rozdělit PDF", true},
@@ -214,6 +215,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildRecentPanel()
 	a.beginPanel(idSearchTab)
 	a.view.buildSearchPanel()
+	a.beginPanel(idOCRTab)
+	a.buildOCRPanel()
 	a.beginPanel(idSplitTab)
 	a.buildSplitPanel()
 	a.beginPanel(idMergeTab)
@@ -408,7 +411,7 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idMergeTab:
 		a.tool, a.mode = idMergeTab, idMergeTab
-	case idProofTab, idSignTab, idSplitTab, idSearchTab:
+	case idProofTab, idSignTab, idSplitTab, idSearchTab, idOCRTab:
 		if !a.documentTools {
 			return
 		}
@@ -477,6 +480,9 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 	}
 	if item.handle == a.splitRange {
 		return item, comboIndex(a.splitScope) == exportPageRanges
+	}
+	if item.handle == a.ocr.pageRange {
+		return item, comboIndex(a.ocr.scope) == exportPageRanges
 	}
 	if tab == idProofTab {
         mode := max(0, comboIndex(a.view.convertMode))
@@ -722,6 +728,7 @@ func (a *app) closeDocument() {
 	setText(a.signReport, "")
 	setText(a.exportReport, "")
 	setText(a.splitReport, "")
+	setText(a.ocr.report, "")
 	a.reportStatus("")
 	if a.tool == idFileTab {
 		a.mode = idFileDetails
@@ -767,6 +774,9 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 	chooseCombo(a.splitScope, exportAllPages)
 	setText(a.splitRange, "")
 	setText(a.splitReport, "")
+	chooseCombo(a.ocr.scope, exportAllPages)
+	setText(a.ocr.pageRange, "")
+	setText(a.ocr.report, "")
 	a.view.open(path, password, info)
 	a.layout()
 }
@@ -840,6 +850,11 @@ func (a *app) command(id, notification int) {
 			if comboIndex(a.splitScope) == exportPageRanges {
 				setFocus.Call(a.splitRange)
 			}
+		case idOCRScope:
+			a.layoutPanel()
+			if comboIndex(a.ocr.scope) == exportPageRanges {
+				setFocus.Call(a.ocr.pageRange)
+			}
 		case idICCProfile:
             key := a.profileKey()
             if key == "k" || key == "rich_black" || key == "k_cmyk" {
@@ -864,7 +879,7 @@ func (a *app) command(id, notification int) {
 		a.showFileMenu()
 	case idSearchTab:
 		a.showSearch()
-	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab:
+	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab:
 		a.activate(id)
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.runFileOption(id)
@@ -900,6 +915,8 @@ func (a *app) command(id, notification int) {
 		a.closeDocument()
 	case idSplitRun:
 		a.splitDocument()
+	case idOCRRun:
+		a.startOCR()
 	case idReload:
 		if !a.busy && a.view.path != "" {
 			a.openDocument(a.view.path, getText(a.password))
@@ -1057,7 +1074,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab || a.mode == idOCRTab) {
 			if a.tool == idFileTab {
 				a.mode = idFileDetails
 			} else {
@@ -1072,7 +1089,7 @@ func (a *app) updateActions() {
 	}
 	ready := !a.busy && documentReady
 	setEnabled(a.documentClose, !a.busy && a.view.path != "")
-	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply} {
+	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply, a.ocr.start} {
 		setEnabled(button, ready)
 	}
 	a.updateMergeActions()
@@ -1095,6 +1112,8 @@ func (a *app) report(message string) {
 		target = a.signReport
 	case idSplitTab:
         target = a.splitReport
+    case idOCRTab:
+        target = a.ocr.report
     case idProofTab:
         target = a.view.convertReport
 	}
@@ -1188,7 +1207,7 @@ func (a *app) finish(result response) {
 	}
 	if result.Status == "ok" && req.Output != "" && !req.ReplaceSource {
 		a.lastOutput, a.lastPassword = req.Output, ""
-		if req.Action == "save_document" ||
+		if req.Action == "save_document" || req.Action == "ocr" ||
 			(req.Action == "transform" && (req.Preset == "export" ||
 				(req.Preset == "" && !req.Gray && !req.Outline && req.Profile == "" && !req.Decrypt))) {
 			a.lastPassword = req.PDFPassword
@@ -1222,6 +1241,9 @@ func (a *app) finish(result response) {
 		}
 		if req.Action == "merge" {
 			setText(a.merge.report, multiline(message))
+		}
+		if req.Action == "ocr" {
+			setText(a.ocr.report, multiline(message))
 		}
 	}
 	if req.Action == "sign" {

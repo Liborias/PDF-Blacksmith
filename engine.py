@@ -177,12 +177,14 @@ def stage_flatten_source(pdf, destination):
                 page.obj.CropBox = crop
 
 
-def run_ghostscript(exe, folder, args):
+def run_ghostscript(exe, folder, args, *, extra_env=None):
     env = os.environ.copy()
     # Ghostscript otherwise loads additional options and resources from these variables.
     for name in list(env):
         if name.upper() in {"GS_OPTIONS", "GS_LIB", "GS_FONTPATH", "GS_DEVICE"}:
             env.pop(name)
+    if extra_env:
+        env.update(extra_env)
     try:
         result = subprocess.run(
             [exe, "-P-", "-dSAFER", "-dBATCH", "-dNOPAUSE", "-dPDFSTOPONERROR", *args],
@@ -897,6 +899,39 @@ def save_document(src, request):
     return "PDF bylo uloženo."
 
 
+def ocr_document(src, request):
+    from ocr import OCRError, recognize
+
+    view = request.get("view", {})
+    password = request.get("pdf_password", "")
+    source_state = src.stat()
+    with output_file(src, request) as pending, tempfile.TemporaryDirectory(prefix="pdf-ocr-") as work:
+        folder = Path(work)
+        source = src
+        if view.keys() & {"rotations", "bookmarks", "order"}:
+            source = folder / "draft.pdf"
+            save_page_edits(src, {**request, "output": str(source), "overwrite": False})
+        with open_pdf(source, password) as pdf:
+            if not len(pdf.pages):
+                raise UserError("Vstupní PDF nemá žádné strany.")
+            prepare_edit(pdf, request)
+            pages = selected_pages(view, len(pdf.pages)) or list(range(1, len(pdf.pages)+1))
+            models = request.get("ocr_models") or Path(__file__).resolve().parent / "tessdata"
+            try:
+                updated, words = recognize(pdf, source, pages, folder, ghostscript_path(request),
+                                           run_ghostscript, stage_for_render,
+                                           request.get("ocr_language", "ces+eng"), models)
+            except OCRError as exc:
+                raise UserError(str(exc)) from exc
+            if not updated:
+                raise UserError("OCR ve vybraných stranách nepřidalo žádný nový text. PDF se neuložilo.")
+            clear_pdfx_claim(pdf)
+            pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
+        if not same_file_state(source_state, src.stat()):
+            raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
+    return f"OCR přidalo text na {updated} z {len(pages)} vybraných stran.\nSlov přidáno {words}."
+
+
 def subset_attributes(pdf):
     return {key: pdf.make_indirect(pdf.Root[key]) for key in ("/OutputIntents", "/Metadata")
             if isinstance(pdf.Root.get(key), (pikepdf.Array, pikepdf.Stream))}
@@ -1135,7 +1170,7 @@ def dispatch(request, *, raster=False):
                  "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
                  "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,
                  "edit_pages": save_page_edits, "save_document": save_document,
-                 "split": split_document}.get(request.get("action"))
+                 "split": split_document, "ocr": ocr_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:

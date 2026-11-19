@@ -161,6 +161,7 @@ type app struct {
 	export                                             exportOptions
 	lastOutput, lastPassword                           string
 	merge                                              mergePanel
+	ocr                                                ocrPanel
 	busy                                               bool
 	waitingOverwrite                                   bool
 	pending                                            request

@@ -29,6 +29,10 @@ Ghostscript 10.08.0 (AGPL-3.0) · Artifex Software
   Oficiální binární distribuce:
   https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10080/gs10080w64.exe
 
+Jazyková data Tesseract tessdata_fast (Apache-2.0)
+  Přibalené modely ces.traineddata a eng.traineddata. Licence je v tessdata/LICENSE.
+  https://github.com/tesseract-ocr/tessdata_fast/tree/87416418657359cb625c412a48b6e1d6d41c29bd
+
 Microsoft Visual C++ Runtime · přibalené redistribuovatelné soubory z distribuce
   CPython a pikepdf. Platí licenční podmínky Microsoft Visual Studio.
   https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files
