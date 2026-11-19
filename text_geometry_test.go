@@ -2,7 +2,6 @@ package main
 
 import (
 	"math"
-	"slices"
 	"testing"
 )
 
@@ -22,16 +21,23 @@ func TestTextRegionUsesDisplayedRotation(t *testing.T) {
 	}
 }
 
-func TestParagraphStaysInItsColumn(t *testing.T) {
-	bounds := []searchRect{
-		{.51, .1, .85, .13},
-		{.10, .15, .43, .18},
-		{.10, .10, .45, .13},
-		{.50, .15, .92, .18},
-		{.10, .32, .42, .35},
+func TestParagraphJoinsWordsAndStopsAtWhitespace(t *testing.T) {
+	word := func(index int, value string, x, y, width float64) layoutGlyph {
+		return layoutGlyph{run: index, text: value, bounds: searchRect{x, y - 10, x + width, y + 2}, baseline: y, em: 12}
 	}
-	if got := textParagraph(bounds, 1); !slices.Equal(got, []int{2, 1}) {
-		t.Fatalf("paragraph = %v", got)
+	glyphs := []layoutGlyph{
+		word(0, "jiný sloupec", 290, 110, 90),
+		word(1, "První", 40, 110, 28), word(2, "řádek", 73, 110, 30),
+		word(3, "pokračuje", 40, 126, 50), word(4, "tady.", 95, 126, 24),
+		word(5, "Druhý odstavec.", 40, 155, 110),
+		word(6, "navazuje", 290, 126, 65),
+	}
+	result := layoutText(glyphs).paragraphAt(glyphs[1])
+	if result.text != "První řádek pokračuje tady." {
+		t.Fatalf("paragraph = %q", result.text)
+	}
+	if all := layoutText(glyphs); len(all.paragraphs) != 3 {
+		t.Fatalf("expected three separated blocks, have %q", all.text)
 	}
 }
 

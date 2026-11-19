@@ -97,7 +97,83 @@ def check_text(folder, fonts):
         raise AssertionError("Read-only text was replaced")
 
 
+def block_fixture(path):
+    with pdf.Pdf.new() as document:
+        page = document.add_blank_page(page_size=(420, 340))
+        font = pdf.Dictionary(Type=pdf.Name.Font, Subtype=pdf.Name.Type1, BaseFont=pdf.Name.Helvetica)
+        page.obj.Resources = pdf.Dictionary(Font=pdf.Dictionary(F=font))
+        page.obj.Contents = document.make_stream(
+            b"BT /F 16 Tf 30 303 Td (Title) Tj ET\n"
+            b"BT /F 13 Tf 30 265 Td (First) Tj 31 0 Td (line) Tj 25 0 Td (continues) Tj ET\n"
+            b"BT /F 13 Tf 30 247 Td (on) Tj 17 0 Td (this) Tj 24 0 Td (line.) Tj ET\n"
+            b"BT /F 13 Tf 275 265 Td (Other column) Tj 0 -18 Td (on both rows.) Tj ET\n"
+            b"BT /F 13 Tf 30 213 Td (Separate paragraph.) Tj ET\n"
+            b"BT /F 13 Tf 30 163 Td 0.30 Tc 1.1 Tw 81 Tz [(Left editable) -15 ( words)] TJ ( Right) Tj ET\n"
+            b"q 0 1 1 0 k 250 60 80 43 re f Q\n")
+        document.save(path)
+
+
+def check_block(folder, fonts):
+    original = folder / "source-block.pdf"
+    block_fixture(original)
+    probe = dict(action="text_probe", input=str(original))
+    before = dispatch(probe)["text_page"]
+    run = find_text(before, "Left editable words")
+    outside = find_text(before, "Right")
+    phrase = "".join(item["text"] for item in run["glyphs"])
+    start = phrase.index("editable")
+    end = start + len("editable words")
+    assert run["token"] == 0 and run["editable"] and run["block_token"] > 0
+    original_bytes = original.read_bytes()
+    selection = [{"token": run["block_token"], "glyphs": list(range(start, end))}]
+    output = folder / "laid-out.pdf"
+    content = "Příliš žluťoučký kůň přeběhl silnici a vrátil se do stáje.\n\nDruhý odstavec."
+    description = {"text": content, "align": "justify", "width": 146, "height": 150,
+                   "leading": 1.5, "tracking": .35, "rotation": 0, "origin": [27, 150],
+                   "selection": selection}
+    edit = dict(font="Liberation Serif", size=12, bold=False, italic=False, underline=True, block=description)
+    request = dict(action="text_edit", input=str(original), output=str(output), text_fonts=str(fonts), text_edit=edit)
+    dispatch(request)
+    assert original.read_bytes() == original_bytes
+    after = dispatch({**probe, "input": str(output)})["text_page"]
+    with pdfium.PdfDocument(original) as a, pdfium.PdfDocument(output) as b:
+        source_text, source_image = read_page(a, 0)
+        result_text, result_image = read_page(b, 0)
+        assert "editable words" in source_text and "editable words" not in result_text and "Druhý odstavec." in result_text
+        assert "Příliš žluťoučký kůň" in result_text and "Left" in result_text and "Right" in result_text
+        assert ImageChops.difference(source_image, result_image).crop((235, 0, 420, 340)).getbbox() is None
+    assert all(abs(a-b)<.001 for a,b in zip(find_text(after, "Right")["bounds"], outside["bounds"]))
+    inserted = [run for run in after["objects"] if run["underline"]]
+    assert len(inserted) >= 4 and all(run["editable"] for run in inserted)
+    assert len({run["block"]["id"] for run in inserted}) == 1
+    assert inserted[-1]["block"]["paragraph"] == 2
+    assert inserted[0]["block"]["width"] == 146 and inserted[0]["block"]["alignment"] == 3
+    assert inserted[0]["matrix"][5] - inserted[1]["matrix"][5] == 18
+    with pdf.Pdf.open(output) as result:
+        page = result.pages[0]
+        assert not result.check_pdf_syntax()
+        assert any(str(op) == "Tc" and abs(float(args[0])-.35)<.0001 for args,op in pdf.parse_content_stream(page))
+        assert any(str(op) == "TJ" and len(args[0]) >= 5 for args,op in pdf.parse_content_stream(page))
+
+    rotated = folder / "centered.pdf"
+    spec = {**description, "text": "Zarovnání", "align": "center", "width": 150,
+            "rotation": 90, "origin": [230,90]}
+    dispatch({**request, "output": str(rotated), "text_edit": {**edit, "block": spec}})
+    written = find_text(dispatch({**probe, "input": str(rotated)})["text_page"], "Zarovnání")
+    assert tuple(written["matrix"][:4]) == (0., 1., -1., 0.)
+    assert written["matrix"][5] > 130
+
+    removed = folder / "removed.pdf"
+    entire = [{"token": run["block_token"], "glyphs": list(range(len(run["glyphs"])))}]
+    dispatch({**request, "output": str(removed), "text_edit": {**edit, "block": {
+        **description, "text": "", "selection": entire}}})
+    remaining = dispatch({**probe, "input": str(removed)})["text_page"]
+    assert all(abs(a-b)<.001 for a,b in zip(find_text(remaining, "Right")["bounds"], outside["bounds"]))
+
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
-        check_text(Path(tmp), Path(sys.argv[1]).resolve())
-    print("Text preserves other objects, page edits and outlines, including a second formatting pass.")
+        fonts = Path(sys.argv[1]).resolve()
+        check_text(Path(tmp), fonts)
+        check_block(Path(tmp), fonts)
+    print("Text blocks preserve nearby glyphs and graphics, and reflow with spacing, alignment and rotation.")

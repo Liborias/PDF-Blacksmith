@@ -34,11 +34,13 @@ Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a ske
 
 ## Úprava textu
 
-Otevřete nástroj **Text**. Kliknutím vyberte jeden textový objekt nebo použijte režim **Odstavec**. **Obdélník** nakreslíte tažením. U **Mnohoúhelníkového lasa** klikejte na body a výběr uzavřete Enterem nebo kliknutím na první bod. Pro přesný výběr můžete dokument přiblížit.
+Kliknutím na text v náhledu otevřete nástroj **Text**. Pevná lišta nabízí výběr objektu, odstavce, obdélníkem nebo mnohoúhelníkovým lasem. Název každé ikony se ukáže po najetí myší. U lasa čára vede z posledního bodu ke kurzoru. Výběr uzavřete Enterem nebo kliknutím na první bod.
 
-V pravém panelu upravte text, zvolte písmo Liberation Sans, Serif nebo Mono, velikost v bodech, tučné písmo, kurzívu či podtržení. Pro běžný řez vypněte tučné písmo a kurzívu. Ve výběru více objektů každý řádek odpovídá jednomu objektu a změna formátování platí pro všechny vybrané objekty. Prázdný řádek odstraní svůj objekt. Ostatní objekty zůstávají na svých pozicích a text se automaticky nepřelévá. Složitě provázanou sazbu, text uvnitř skupin a skrytou vrstvu OCR lze kopírovat.
+Obdélník a laso vybírají znaky uvnitř oblasti. **Odstavec** seskupuje znaky, slova a řádky podle jejich polohy, rozestupů a okrajů. V bloku se složené řádky spojí a mezery mezi zjištěnými odstavci se zachovají jako prázdné řádky. U složitého rozvržení můžete oblast vymezit ručně. [Princip prostorového seskupování v PDFMiner](https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html)
 
-**Použít úpravu** změní text v otevřené kartě. **Vrátit úpravu** obnoví stav před poslední textovou úpravou. Finální PDF uložte přes **Soubor → Uložit** nebo **Uložit jako**. Pokud obdélník nebo laso nenajde text, **OCR výběru** může přidat textovou vrstvu ze skenu či křivek ve vyznačené oblasti. Po rozpoznání můžete oblast znovu vybrat a zkopírovat text.
+Do pole **Textový blok** můžete psát a vkládat další odstavce. Vyberte písmo, velikost, šířku bloku, řádkování, proklad a zarovnání. Ikony nastavují běžný řez (Regular), tučné písmo, kurzívu a podtržení. Nastavení platí pro celý blok. V nabídce jsou přibalená písma Liberation a systémová písma TrueType z Windows. Pro zápis do PDF je zapotřebí dostupný řez s povoleným vložením pro úpravy.
+
+Ikonou **Použít úpravu** přepíšete vybraný text v otevřené kartě. Celý vysázený blok znovu vyberete kliknutím na kterýkoli jeho řádek v režimu **Textový objekt**. Blok si pamatuje svoji šířku, zarovnání, řádkování a proklad i po uložení a znovuotevření PDF. **Vrátit úpravu** obnoví předchozí stav. Upravený dokument zapíšete přes **Soubor → Uložit** nebo **Uložit jako**. Pokud zvětšíte blok, zkontrolujte jeho umístění vůči okolnímu obsahu. Text v některých skupinách, skryté vrstvě OCR nebo se složitým kódováním lze kopírovat. Pro oblast bez textové vrstvy použijte **OCR výběru**.
 
 ## OCR skenů a textu v křivkách
 

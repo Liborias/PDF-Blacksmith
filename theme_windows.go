@@ -194,7 +194,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	if item.controlType != 4 { // ODT_BUTTON
 		return false
 	}
-	if a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) {
+	if a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) || a.drawTextIcon(item) {
 		return true
 	}
 	bounds := item.bounds

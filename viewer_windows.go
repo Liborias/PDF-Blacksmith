@@ -264,6 +264,9 @@ type documentView struct {
 	secondaryBox                                                               int
 	thumbnailSidebar                                                           uintptr
 	readerError                                                                string
+	nativeText                                                                 textProbeState
+	dragStart                                                                  point
+	dragMoved                                                                  bool
 	engine, prefetchEngine                                                     *readerEngine
 	bookmarkPanel                                                              bookmarkPanel
 	search                                                                     searchPanel
@@ -437,6 +440,7 @@ func (v *documentView) resetRendering() {
 	user32.NewProc("KillTimer").Call(v.app.window, v.zoomTimer())
 	v.zoomDeadline = time.Time{}
 	v.readerError = ""
+	v.nativeText = textProbeState{}
 	if v.dragging {
 		v.dragging = false
 		user32.NewProc("ReleaseCapture").Call()
@@ -810,6 +814,10 @@ func contains(bounds rect, x, y int32) bool {
 	return x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom
 }
 
+func absTextDrag(value int32) int32 {
+	return max(value,-value)
+}
+
 func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	x, y := int32(int16(param)), int32(int16(param>>16))
 	if !v.secondary && v.app.textPointer(msg, x, y) {
@@ -825,12 +833,14 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 			}
 			if v.ready() {
 				v.dragging, v.dragX, v.dragY = true, x, y
+				v.dragStart, v.dragMoved = point{x, y}, false
 				user32.NewProc("SetCapture").Call(v.app.window)
 			}
 			return true
 		}
 	case 0x0200:
 		if v.dragging {
+			v.dragMoved = v.dragMoved || max(absTextDrag(x-v.dragStart.x), absTextDrag(y-v.dragStart.y)) > int32(v.app.scale(3))
 			v.scrollX += float64(v.dragX - x)
 			v.scrollY += float64(v.dragY - y)
 			v.dragX, v.dragY = x, y
@@ -843,6 +853,9 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 		if v.dragging {
 			v.dragging = false
 			user32.NewProc("ReleaseCapture").Call()
+			if !v.dragMoved && max(absTextDrag(x-v.dragStart.x), absTextDrag(y-v.dragStart.y)) <= int32(v.app.scale(3)) {
+				v.clickedForText(x, y)
+			}
 			return true
 		}
 	case 0x0215:
@@ -888,6 +901,9 @@ func (v *documentView) schedule() {
 		return
 	}
 	if !v.ready() || !v.zoomDeadline.IsZero() {
+		return
+	}
+	if v.scheduleNativeText() {
 		return
 	}
 	_, height := v.viewportSize()
@@ -1023,6 +1039,11 @@ func (v *documentView) finished(job readerJob) {
 		return
 	}
 	v.running = false
+	if job.action == "text_probe" {
+		v.finishNativeText(job)
+		v.schedule()
+		return
+	}
 	if job.generation != v.generation {
 		v.schedule()
 		return

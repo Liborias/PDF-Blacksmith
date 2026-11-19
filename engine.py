@@ -914,7 +914,12 @@ def edit_text_document(src, request):
         with open_pdf(src, password) as pdf:
             prepare_edit(pdf, request)
             try:
-                replace_runs(pdf, selected(pdf), request.get("text_edit", {}), models)
+                edits = request.get("text_edit", {})
+                if "block" in edits:
+                    from text_block import replace_block
+                    replace_block(pdf, selected(pdf), edits, models)
+                else:
+                    replace_runs(pdf, selected(pdf), edits, models)
             except TextError as exc:
                 raise UserError(str(exc)) from exc
             clear_pdfx_claim(pdf)

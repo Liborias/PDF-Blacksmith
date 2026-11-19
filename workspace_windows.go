@@ -1197,14 +1197,7 @@ func (a *app) finish(result response) {
 		a.view.schedule()
 		return
 	}
-	if req.Action == "text_probe" {
-		a.reportStatus("")
-		a.finishTextProbe(result)
-		a.updateActions()
-		a.view.schedule()
-		a.pruneDrafts()
-		return
-	}
+
 	draft := req.Action == "ocr" || req.Action == "text_edit"
 	if result.Status == "merge_encrypted" {
 		if notice(a.window, result.Message+"\n\nUložit sloučené PDF bez šifrování?", 0x134) == 6 {

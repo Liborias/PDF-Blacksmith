@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"slices"
 	"strconv"
@@ -11,7 +10,7 @@ import (
 
 const (
 	idTextTab = 280 + iota
-	idTextMode
+	_
 	idTextFont
 	idTextBold
 	idTextItalic
@@ -29,84 +28,85 @@ const (
 	textLasso
 )
 
-type textRun struct {
-	Token, Family           int
-	Text, Font              string
-	Size                    float64
-	Bold, Italic, Underline bool
-	Bounds                  searchRect
-}
-
-type textPage struct {
-	Objects  []textRun
-	Boxes    map[string]searchRect
-	Rotation int
-}
-
-type textReplacement struct {
-	Token int    `json:"token"`
-	Text  string `json:"text"`
-}
-
-type textEditRequest struct {
-	Family    int               `json:"family"`
-	Size      float64           `json:"size"`
-	Bold      bool              `json:"bold"`
-	Italic    bool              `json:"italic"`
-	Underline bool              `json:"underline"`
-	Runs      []textReplacement `json:"runs"`
-}
+var textAlignments = []string{"left", "center", "right", "justify"}
 
 type textSelection struct {
-	source, generation, mode int
-	point, tolerance         textPoint
-	polygon                  []textPoint
-	box                      string
+	source, generation, mode, tool int
+	point, tolerance               textPoint
+	polygon                        []textPoint
+	box                            string
+	automatic                      bool
 }
 
 type textPanel struct {
-	mode, guide, input, font, size, original, report uintptr
-	bold, italic, underline, apply, copy, undo, ocr  uintptr
-	model                                            *textPage
-	source, generation                               int
-	pick                                             textSelection
-	selected                                         []int
-	drag                                             bool
-	gesture                                          textSelection
+	guide, input, font, size, original, report               uintptr
+	width, leading, tracking                                 uintptr
+	regular, bold, italic, underline, apply, copy, undo, ocr uintptr
+	modes, alignments                                        [4]uintptr
+	mode, alignment                                          int
+	fonts                                                    []string
+	tooltip                                                  uintptr
+	tooltipNames                                             []*uint16
+	model                                                    *textPage
+	stored                                                   *storedTextBlock
+	pick, gesture                                            textSelection
+	flow                                                     textFlow
+	dim                                                      textPoint
+	rotation                                                 int
+	editable, drag, hasHover                                 bool
+	hover                                                    textPoint
 }
 
 func (a *app) buildTextPanel() {
 	p := &a.textTool
+	controls := [2]uint32{8, 4} // ICC_BAR_CLASSES includes native tooltips.
+	comctl32.NewProc("InitCommonControlsEx").Call(uintptr(unsafe.Pointer(&controls)))
 	a.label("Výběr textu", 16, 16, 298, true)
-	p.mode = a.combo(idTextMode, 16, 42, 298, []string{"Textový objekt", "Odstavec", "Obdélník", "Mnohoúhelníkové laso"})
-	p.guide = a.add("STATIC", "", 0, 16, 81, 298, 40, 0, 0, a.normalFont)
-	a.label("Vybraný text", 16, 127, 298, true)
-	p.input = a.add("EDIT", "", 0, 16, 153, 298, 96, wsTabstop|0x0044|0x1000|esReadonly, 0, a.normalFont)
+	for i, name := range []string{"Textový objekt", "Odstavec", "Obdélník", "Mnohoúhelníkové laso"} {
+		p.modes[i] = a.textIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
+	}
+	p.guide = a.add("STATIC", "", 0, 16, 82, 298, 39, 0, 0, a.normalFont)
+	a.label("Textový blok", 16, 123, 298, true)
+	p.input = a.add("EDIT", "", 0, 16, 148, 298, 110, wsTabstop|0x0044|0x1000|esReadonly, 0, a.normalFont)
 	sendMessage.Call(p.input, 0x00d3, 3, uintptr(a.scale(6))|uintptr(a.scale(6))<<16)
-	p.original = a.add("STATIC", "", 0, 16, 258, 298, 21, 0x4000, 0, a.normalFont)
-	a.label("Písmo", 16, 287, 205, false)
-	a.label("Velikost (pt)", 236, 287, 78, false)
-	p.font = a.combo(idTextFont, 16, 310, 210, []string{"Liberation Sans", "Liberation Serif", "Liberation Mono"})
-	p.size = a.edit(236, 310, 78, false)
-	p.bold = a.button("Tučné", idTextBold, 16, 350, 90, bsAutoCheck)
-	p.italic = a.button("Kurzíva", idTextItalic, 110, 350, 90, bsAutoCheck)
-	p.underline = a.button("Podtržené", idTextUnderline, 204, 350, 110, bsAutoCheck)
-	p.apply = a.button("Použít úpravu", idTextApply, 16, 393, 145, 0)
-	a.primaryButtons[p.apply] = true
-	p.copy = a.button("Kopírovat text", idTextCopy, 169, 393, 145, 0)
-	p.undo = a.button("Vrátit úpravu", idTextUndo, 16, 433, 145, 0)
-	p.ocr = a.button("OCR výběru", idTextOCR, 169, 433, 145, 0)
-	p.report = a.readout(16, 481, 298, 82)
+	p.original = a.add("STATIC", "", 0, 16, 265, 298, 21, 0x4000, 0, a.normalFont)
+	a.label("Písmo", 16, 289, 205, false)
+	a.label("Velikost (pt)", 236, 289, 78, false)
+	p.fonts = a.installedTextFonts()
+	p.font = a.combo(idTextFont, 16, 311, 210, p.fonts)
+	p.size = a.edit(236, 311, 78, false)
+	p.regular = a.textIconButton("Běžný řez (Regular)", idTextRegular, 16, 350, 32)
+	p.bold = a.textIconButton("Tučné", idTextBold, 52, 350, 32)
+	p.italic = a.textIconButton("Kurzíva", idTextItalic, 88, 350, 32)
+	p.underline = a.textIconButton("Podtržené", idTextUnderline, 124, 350, 32)
+	for i, name := range []string{"Zarovnat vlevo", "Zarovnat na střed", "Zarovnat vpravo", "Zarovnat do bloku"} {
+		p.alignments[i] = a.textIconButton(name, idTextAlignLeft+i, 174+i*36, 350, 32)
+	}
+	a.label("Šířka (pt)", 16, 394, 93, false)
+	a.label("Řádkování (×)", 118, 394, 94, false)
+	a.label("Proklad (pt)", 220, 394, 94, false)
+	p.width = a.edit(16, 416, 94, false)
+	p.leading = a.edit(118, 416, 94, false)
+	p.tracking = a.edit(220, 416, 94, false)
+	p.apply = a.textIconButton("Použít úpravu", idTextApply, 16, 457, 34)
+	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 56, 457, 34)
+	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 96, 457, 34)
+	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 136, 457, 34)
+	p.report = a.readout(16, 500, 298, 82)
 	a.textGuide()
 }
 
 func (a *app) textGuide() {
-	setText(a.textTool.guide, [...]string{
+	p := &a.textTool
+	setText(p.guide, [...]string{
 		"Klikněte na text v dokumentu.",
 		"Klikněte do odstavce, který chcete vybrat.",
 		"Tažením vyznačte oblast na stránce.",
-		"Klikáním přidávejte body. Výběr dokončíte klávesou Enter nebo kliknutím na první bod.",
-	}[max(0, comboIndex(a.textTool.mode))])
+		"Klikáním přidávejte body. Dokončete Enterem nebo kliknutím na první bod.",
+	}[p.mode])
+	for i, h := range p.modes {
+		a.setChecked(h, i == p.mode)
+	}
 }
 
 func (v *documentView) lastDraftIs(action string) bool {
@@ -122,15 +122,16 @@ func (a *app) clearTextSelection() {
 		p.drag = false
 		user32.NewProc("ReleaseCapture").Call()
 	}
-	p.model, p.selected = nil, nil
-	p.pick, p.gesture = textSelection{}, textSelection{}
-	setText(p.input, "")
-	setText(p.original, "")
-	setText(p.size, "")
+	p.model, p.flow, p.editable, p.hasHover = nil, textFlow{}, false, false
+	p.pick, p.gesture, p.stored = textSelection{}, textSelection{}, nil
+	a.view.nativeText.next = textSelection{}
+	a.view.nativeText.flight = textSelection{}
+	for _, control := range []uintptr{p.input, p.original, p.size, p.width, p.leading, p.tracking, p.report} {
+		setText(control, "")
+	}
 	for _, option := range []uintptr{p.bold, p.italic, p.underline} {
 		a.setChecked(option, false)
 	}
-	setText(p.report, "")
 	a.updateTextActions()
 	a.view.invalidateCanvas()
 }
@@ -140,57 +141,68 @@ func (a *app) updateTextActions() {
 	if p.input == 0 {
 		return
 	}
-	valid := a.view.ready() && p.pick.generation == a.view.generation && p.pick.source != 0
-	hasText := valid && p.model != nil && len(p.selected) > 0
-	editable := hasText && len(p.selected) <= 64
-	for _, index := range p.selected {
-		if p.model.Objects[index].Token == 0 {
-			editable = false
-			break
-		}
-	}
 	ready := !a.busy && a.view.ready()
-	for _, h := range []uintptr{p.apply, p.font, p.size, p.bold, p.italic, p.underline} {
-		setEnabled(h, ready && editable)
+	valid := ready && p.pick.generation == a.view.generation && p.pick.source != 0
+	hasText := valid && p.flow.text != ""
+	edit := hasText && p.editable
+	for _, h := range []uintptr{p.apply, p.font, p.size, p.width, p.leading, p.tracking, p.regular, p.bold, p.italic, p.underline} {
+		setEnabled(h, edit)
 	}
+	for _, h := range p.modes {
+		setEnabled(h, ready)
+	}
+	for i, h := range p.alignments {
+		setEnabled(h, edit)
+		a.setChecked(h, i == p.alignment && edit)
+	}
+	a.setChecked(p.regular, edit && !a.checked(p.bold) && !a.checked(p.italic))
 	readonly := uintptr(1)
-	if ready && editable {
+	if edit {
 		readonly = 0
 	}
 	sendMessage.Call(p.input, 0x00cf, readonly, 0) // EM_SETREADONLY
-	setEnabled(p.copy, ready && hasText)
-	setEnabled(p.ocr, ready && valid && p.model != nil && !hasText && len(p.pick.polygon) >= 3)
+	setEnabled(p.copy, hasText)
+	setEnabled(p.ocr, valid && p.model != nil && !hasText && len(p.pick.polygon) >= 3)
 	setEnabled(p.undo, ready && a.view.lastDraftIs("text_edit"))
-	setEnabled(p.mode, ready)
 }
 
 func (a *app) textCommand(id, notification int) bool {
-	p := &a.textTool
-	if id == idTextMode && notification == 1 {
-		a.clearTextSelection()
-		a.textGuide()
-		return true
-	}
 	if notification != 0 || a.mode != idTextTab {
 		return false
 	}
-	switch id {
-	case idTextBold, idTextItalic, idTextUnderline:
-		control := map[int]uintptr{idTextBold: p.bold, idTextItalic: p.italic, idTextUnderline: p.underline}[id]
-		a.setChecked(control, !a.checked(control))
-	case idTextApply:
-		a.startTextEdit()
-	case idTextCopy:
-		sendMessage.Call(p.input, 0x00b1, 0, ^uintptr(0)) // EM_SETSEL
-		sendMessage.Call(p.input, 0x0301, 0, 0)           // WM_COPY
-	case idTextUndo:
-		if !a.busy && a.view.lastDraftIs("text_edit") {
-			a.view.undo()
-		}
-	case idTextOCR:
-		a.startTextOCR()
+	p := &a.textTool
+	switch {
+	case id >= idTextSelectObject && id <= idTextSelectLasso:
+		p.mode = id - idTextSelectObject
+		a.clearTextSelection()
+		a.textGuide()
+	case id >= idTextAlignLeft && id <= idTextAlignJustify:
+		p.alignment = id - idTextAlignLeft
+		a.updateTextActions()
 	default:
-		return false
+		switch id {
+		case idTextRegular:
+			a.setChecked(p.bold, false)
+			a.setChecked(p.italic, false)
+			a.updateTextActions()
+		case idTextBold, idTextItalic, idTextUnderline:
+			control := map[int]uintptr{idTextBold: p.bold, idTextItalic: p.italic, idTextUnderline: p.underline}[id]
+			a.setChecked(control, !a.checked(control))
+			a.updateTextActions()
+		case idTextApply:
+			a.startTextEdit()
+		case idTextCopy:
+			sendMessage.Call(p.input, 0x00b1, 0, ^uintptr(0)) // EM_SETSEL
+			sendMessage.Call(p.input, 0x0301, 0, 0)           // WM_COPY
+		case idTextUndo:
+			if !a.busy && a.view.lastDraftIs("text_edit") {
+				a.view.undo()
+			}
+		case idTextOCR:
+			a.startTextOCR()
+		default:
+			return false
+		}
 	}
 	return true
 }
@@ -202,17 +214,30 @@ func normalizedTextPoint(area rect, x, y int32) textPoint {
 	}
 }
 
-func (a *app) textSheetAt(x, y int32, source int) (rect, int) {
-	v := a.view
+func (v *documentView) textSheetAt(x, y int32, source int) (rect, int) {
 	_, h := v.viewportSize()
 	for _, page := range v.spread.visible(v.scrollY, h) {
 		number := v.order[page.index]
 		area := v.pageBounds(page)
-		if number == source || (source == 0 && contains(area, x, y)) {
+		if number == source || source == 0 && contains(area, x, y) {
 			return area, number
 		}
 	}
 	return rect{}, 0
+}
+
+func (v *documentView) textAt(x, y int32) textSelection {
+	if !contains(v.viewport, x, y) {
+		return textSelection{}
+	}
+	area, source := v.textSheetAt(x, y, 0)
+	if source == 0 {
+		return textSelection{}
+	}
+	padding := float64(v.app.scale(3))
+	return textSelection{source: source, generation: v.generation, tool: v.app.mode, mode: v.app.textTool.mode,
+		point: normalizedTextPoint(area, x, y), tolerance: textPoint{padding / float64(area.right-area.left),
+			padding / float64(area.bottom-area.top)}, box: v.box()}
 }
 
 func (a *app) textPointer(msg uint32, x, y int32) bool {
@@ -224,39 +249,38 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 		}
 		return false
 	}
+	if msg == 0x02a3 && p.hasHover { // WM_MOUSELEAVE
+		p.hasHover = false
+		v.invalidateCanvas()
+	}
 	if a.mode != idTextTab || a.busy || !v.ready() || a.full {
 		return false
 	}
 	switch msg {
 	case 0x0201: // WM_LBUTTONDOWN
-		if !contains(v.viewport, x, y) {
+		pick := v.textAt(x, y)
+		if pick.source == 0 {
 			return false
 		}
 		setFocus.Call(a.window)
-		area, source := a.textSheetAt(x, y, 0)
-		if source == 0 {
-			return false
-		}
-		pos := normalizedTextPoint(area, x, y)
-		padding := float64(a.scale(5))
-		tolerance := textPoint{padding / float64(area.right-area.left), padding / float64(area.bottom-area.top)}
-		pick := textSelection{source: source, generation: v.generation, mode: comboIndex(p.mode), point: pos, tolerance: tolerance, box: v.box()}
 		switch pick.mode {
 		case textRectangle:
-			pick.polygon = rectangleSelection(pos, pos)
+			pick.polygon = rectangleSelection(pick.point, pick.point)
 			p.drag, p.gesture = true, pick
 			user32.NewProc("SetCapture").Call(a.window)
 			v.invalidateCanvas()
 		case textLasso:
 			gesture := &p.gesture
-			if gesture.source != source || gesture.generation != v.generation || gesture.mode != textLasso {
+			if gesture.source != pick.source || gesture.generation != v.generation || gesture.mode != textLasso {
 				p.gesture = pick
 			}
-			if len(gesture.polygon) >= 3 && math.Abs(pos[0]-gesture.polygon[0][0]) <= tolerance[0]*2 &&
-				math.Abs(pos[1]-gesture.polygon[0][1]) <= tolerance[1]*2 {
+			tolerance, pos := pick.tolerance, pick.point
+			if len(gesture.polygon) >= 3 && math.Abs(pos[0]-gesture.polygon[0][0]) <= tolerance[0]*3 &&
+				math.Abs(pos[1]-gesture.polygon[0][1]) <= tolerance[1]*3 {
 				a.completeTextGesture()
 			} else if len(gesture.polygon) < 64 {
 				gesture.polygon = append(gesture.polygon, pos)
+				p.hasHover = false
 				v.invalidateCanvas()
 			}
 		default:
@@ -266,7 +290,7 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 	case 0x0200, 0x0202: // WM_MOUSEMOVE, WM_LBUTTONUP
 		if p.drag {
 			pick := &p.gesture
-			area, source := a.textSheetAt(x, y, pick.source)
+			area, source := v.textSheetAt(x, y, pick.source)
 			if source != 0 {
 				pick.polygon = rectangleSelection(pick.point, normalizedTextPoint(area, x, y))
 			}
@@ -275,7 +299,8 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 				user32.NewProc("ReleaseCapture").Call()
 				if source != 0 {
 					end := pick.polygon[2]
-					if math.Abs(end[0]-pick.point[0]) < pick.tolerance[0] || math.Abs(end[1]-pick.point[1]) < pick.tolerance[1] {
+					if math.Abs(end[0]-pick.point[0]) < pick.tolerance[0] ||
+						math.Abs(end[1]-pick.point[1]) < pick.tolerance[1] {
 						pick.polygon = nil
 					}
 					a.completeTextGesture()
@@ -284,6 +309,28 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 				}
 			}
 			v.invalidateCanvas()
+			return true
+		}
+		if msg == 0x0200 && p.mode == textLasso && len(p.gesture.polygon) > 0 {
+			area, source := v.textSheetAt(x, y, p.gesture.source)
+			show := source != 0 && contains(v.viewport, x, y)
+			hover := textPoint{}
+			if show {
+				hover = normalizedTextPoint(area, x, y)
+			}
+			if show && !p.hasHover {
+				track := struct {
+					size, flags uint32
+					window      uintptr
+					hover       uint32
+				}{flags: 2, window: a.window}
+				track.size = uint32(unsafe.Sizeof(track))
+				user32.NewProc("TrackMouseEvent").Call(uintptr(unsafe.Pointer(&track)))
+			}
+			if show != p.hasHover || hover != p.hover {
+				p.hasHover, p.hover = show, hover
+				v.invalidateCanvas()
+			}
 			return true
 		}
 	}
@@ -308,141 +355,73 @@ func (a *app) textKey(msg *winMessage) bool {
 
 func (a *app) completeTextGesture() {
 	p := &a.textTool
-	selection := p.gesture
-	p.gesture = textSelection{}
-	a.selectText(selection)
+	pick := p.gesture
+	p.gesture, p.hasHover = textSelection{}, false
+	a.selectText(pick)
 }
 
-func (a *app) selectText(selection textSelection) {
+func (a *app) selectText(pick textSelection) {
 	p := &a.textTool
-	p.pick, p.selected = selection, nil
+	p.model, p.pick, p.flow, p.editable = nil, pick, textFlow{}, false
 	setText(p.input, "")
 	setText(p.original, "")
 	setText(p.report, "")
-	a.view.invalidateCanvas()
-	if p.model != nil && p.source == selection.source && p.generation == selection.generation {
-		a.matchTextSelection()
-		return
-	}
-	p.model = nil
-	req := a.view.request("text_probe")
-	req.View.Page = selection.source
-	if a.run(req) {
-		setText(p.report, "Načítám textovou vrstvu stránky…")
-	}
-}
-
-func (a *app) finishTextProbe(result response) {
-	p := &a.textTool
-	if p.pick.source == 0 || p.pick.generation != a.view.generation || a.mode != idTextTab {
-		return
-	}
-	if result.Status != "ok" || result.View == nil || result.View.TextPage == nil {
-		a.report(result.Message)
-		return
-	}
-	p.model, p.source, p.generation = result.View.TextPage, p.pick.source, p.pick.generation
-	a.matchTextSelection()
-}
-
-func (a *app) textBounds() []searchRect {
-	p := &a.textTool
-	bounds := make([]searchRect, len(p.model.Objects))
-	box := p.model.Boxes[p.pick.box]
-	rotation := p.model.Rotation + a.view.rotations[p.pick.source-1]
-	for i, run := range p.model.Objects {
-		bounds[i], _ = searchDisplayRect(run.Bounds, box, rotation)
-	}
-	return bounds
-}
-
-func (a *app) matchTextSelection() {
-	p := &a.textTool
-	bounds := a.textBounds()
-	if len(p.pick.polygon) >= 3 {
-		for i, b := range bounds {
-			if b[2] > b[0] && b[3] > b[1] &&
-				pointInTextRegion(textPoint{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}, p.pick.polygon) {
-				p.selected = append(p.selected, i)
-			}
-		}
-		sortTextSelection(p.selected, bounds)
-	} else if first := textHit(bounds, p.pick.point, p.pick.tolerance); first >= 0 {
-		p.selected = []int{first}
-		if p.pick.mode == textBlock {
-			p.selected = textParagraph(bounds, first)
-		}
-	}
-	message := "V místě kliknutí nebyl nalezen text. Pro OCR vyznačte oblast obdélníkem nebo lasem."
-	setText(p.size, "")
-	if len(p.selected) == 0 {
-		if len(p.pick.polygon) >= 3 {
-			message = "Oblast neobsahuje textovou vrstvu. Tlačítkem OCR výběru můžete rozpoznat sken nebo křivky."
-		}
-	} else {
-		first := p.model.Objects[p.selected[0]]
-		values := make([]string, 0, len(p.selected))
-		editable := len(p.selected) <= 64
-		for _, index := range p.selected {
-			run := p.model.Objects[index]
-			values = append(values, run.Text)
-			editable = editable && run.Token > 0
-		}
-		setText(p.input, multiline(strings.Join(values, "\n")))
-		setText(p.original, fmt.Sprintf("Původní písmo  %s", first.Font))
-		setText(p.size, strings.ReplaceAll(strconv.FormatFloat(first.Size, 'f', 2, 64), ".", ","))
-		chooseCombo(p.font, first.Family)
-		a.setChecked(p.bold, first.Bold)
-		a.setChecked(p.italic, first.Italic)
-		a.setChecked(p.underline, first.Underline)
-		switch {
-		case !editable && len(p.selected) > 64:
-			message = "Pro úpravu vyberte nejvýš 64 textových objektů."
-		case !editable:
-			message = "Výběr lze kopírovat. Obsahuje text ve skupině, souvislé sazbě nebo ve vrstvě OCR."
-		case len(p.selected) > 1:
-			message = "Každý řádek odpovídá jednomu objektu. Formátování se použije na celý výběr."
-		default:
-			message = ""
-		}
-	}
-	setText(p.report, multiline(message))
 	a.updateTextActions()
 	a.view.invalidateCanvas()
+	a.view.requestNativeText(pick)
+}
+
+func formatTextNumber(value float64) string {
+	return strings.ReplaceAll(strconv.FormatFloat(value, 'f', 2, 64), ".", ",")
+}
+
+func readTextNumber(control uintptr, low, high float64) (float64, bool) {
+	value, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimSpace(getText(control)), ",", "."), 64)
+	return value, err == nil && value >= low && value <= high
 }
 
 func (a *app) startTextEdit() {
 	p, v := &a.textTool, a.view
-	if a.busy || p.model == nil || p.pick.generation != v.generation || len(p.selected) == 0 || len(p.selected) > 64 {
+	if a.busy || !p.editable || p.model == nil || p.pick.generation != v.generation {
 		return
 	}
-	size, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimSpace(getText(p.size)), ",", "."), 64)
-	if err != nil || math.IsNaN(size) || size < 1 || size > 600 {
-		a.report("Zadejte velikost písma od 1 do 600 bodů.")
+	size, ok1 := readTextNumber(p.size, 1, 600)
+	box := p.model.Boxes[p.pick.box]
+	top := textPoint{p.flow.bounds[0] / p.dim[0], max(0., p.flow.bounds[1]-.3*size) / p.dim[1]}
+	if p.stored != nil {
+		top = pdfPointToText(p.stored.Origin, box, p.rotation)
+	}
+	width, ok2 := readTextNumber(p.width, 1, p.dim[0]*(1-top[0])+.003)
+	leading, ok3 := readTextNumber(p.leading, .7, 5)
+	tracking, ok4 := readTextNumber(p.tracking, -size*.18, 72)
+	if !ok1 || !ok2 || !ok3 || !ok4 {
+		a.report("Zkontrolujte velikost písma, šířku na stránce, řádkování 0,7–5 a proklad.")
 		return
 	}
-	values := strings.Split(strings.ReplaceAll(getText(p.input), "\r\n", "\n"), "\n")
-	if len(values) != len(p.selected) {
-		a.report("Ponechte stejný počet řádků. Smazáním textu na řádku odstraníte příslušný objekt.")
-		return
-	}
-	edit := &textEditRequest{Family: comboIndex(p.font), Size: size,
-		Bold: a.checked(p.bold), Italic: a.checked(p.italic), Underline: a.checked(p.underline)}
-	for i, index := range p.selected {
-		token := p.model.Objects[index].Token
-		if token <= 0 {
-			return
+	block := textBlockEdit{Text: strings.ReplaceAll(getText(p.input), "\r\n", "\n"),
+		Align: textAlignments[p.alignment], Width: width, Height: p.dim[1] * (1 - top[1]), Leading: leading, Tracking: tracking,
+		Origin: textPointToPDF(top, box, p.rotation), Rotation: p.rotation}
+	indexed := map[int]int{}
+	for _, glyph := range p.flow.glyphs() {
+		token := p.model.Objects[glyph.run].BlockToken
+		index, found := indexed[token]
+		if !found {
+			index = len(block.Selection)
+			indexed[token] = index
+			block.Selection = append(block.Selection, glyphSelection{Token: token})
 		}
-		edit.Runs = append(edit.Runs, textReplacement{token, values[i]})
+		block.Selection[index].Glyphs = append(block.Selection[index].Glyphs, glyph.index)
 	}
 	req := v.request("text_edit")
-	req.View.Page, req.TextEdit = p.pick.source, edit
+	req.View.Page = p.pick.source
+	req.TextEdit = &textEditRequest{Font: p.fonts[max(0, comboIndex(p.font))], Size: size,
+		Bold: a.checked(p.bold), Italic: a.checked(p.italic), Underline: a.checked(p.underline), Block: block}
 	a.runDocumentDraft(req, "Upravuji text v otevřené kartě…", p.report)
 }
 
 func (a *app) startTextOCR() {
 	p, v := &a.textTool, a.view
-	if a.busy || p.model == nil || p.pick.generation != v.generation || len(p.selected) != 0 || len(p.pick.polygon) < 3 {
+	if a.busy || p.model == nil || p.pick.generation != v.generation || p.flow.text != "" || len(p.pick.polygon) < 3 {
 		return
 	}
 	position := slices.Index(v.order, p.pick.source)
@@ -450,58 +429,68 @@ func (a *app) startTextOCR() {
 		return
 	}
 	box := p.model.Boxes[p.pick.box]
-	rotation := p.model.Rotation + v.rotations[p.pick.source-1]
 	req := v.request("ocr")
 	req.View.Pages = []int{position + 1}
 	req.OCRLanguage = [...]string{"ces+eng", "ces", "eng"}[max(0, comboIndex(a.ocr.language))]
 	for _, point := range p.pick.polygon {
-		req.OCRRegion = append(req.OCRRegion, textPointToPDF(point, box, rotation))
+		req.OCRRegion = append(req.OCRRegion, textPointToPDF(point, box, p.rotation))
 	}
 	a.runDocumentDraft(req, "Rozpoznávám vybranou oblast…", p.report)
 }
 
 func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	p := &a.textTool
-	if a.mode != idTextTab || a.full ||
-		(p.pick.source != source && p.gesture.source != source) {
+	if a.mode != idTextTab || a.full || (p.pick.source != source && p.gesture.source != source) {
 		return
 	}
-	pen, _, _ := gdi32.NewProc("CreatePen").Call(0, uintptr(max(1, a.scale(2))), paletteColor{174, 53, 94}.win())
-	old, _, _ := gdi32.NewProc("SelectObject").Call(dc, pen)
+	color := paletteColor{174, 53, 94}
+	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), color.win())
+	old, _, _ := gdiSelect.Call(dc, pen)
 	if p.pick.source == source && p.pick.generation == a.view.generation {
 		drawTextOutline(dc, area, p.pick.polygon, true)
-		if p.model != nil && len(p.selected) != 0 {
-			for _, index := range p.selected {
-				run := p.model.Objects[index]
-				if b, ok := searchDisplayRect(run.Bounds, p.model.Boxes[p.pick.box], p.model.Rotation+a.view.rotations[source-1]); ok {
-					drawTextOutline(dc, area, rectangleSelection(textPoint{b[0], b[1]}, textPoint{b[2], b[3]}), true)
-				}
+		if p.dim[0] > 0 && p.dim[1] > 0 {
+			for _, b := range p.flow.highlightBounds() {
+				drawTextOutline(dc, area, rectangleSelection(textPoint{b[0] / p.dim[0], b[1] / p.dim[1]},
+					textPoint{b[2] / p.dim[0], b[3] / p.dim[1]}), true)
 			}
 		}
 	}
 	if p.gesture.source == source && p.gesture.generation == a.view.generation {
-		drawTextOutline(dc, area, p.gesture.polygon, p.gesture.mode == textRectangle)
+		polygon := p.gesture.polygon
+		if p.gesture.mode == textLasso {
+			if p.hasHover {
+				drawTextOutline(dc, area, append(slices.Clone(polygon), p.hover), false)
+			} else {
+				drawTextOutline(dc, area, polygon, false)
+			}
+			n := int32(max(2, a.scale(2)))
+			for _, vertex := range polygon {
+				pos := screenTextPoint(area, vertex)
+				fillColor(dc, rect{pos.x - n, pos.y - n, pos.x + n + 1, pos.y + n + 1}, color)
+			}
+		} else {
+			drawTextOutline(dc, area, polygon, true)
+		}
 	}
-	gdi32.NewProc("SelectObject").Call(dc, old)
-	gdi32.NewProc("DeleteObject").Call(pen)
+	gdiSelect.Call(dc, old)
+	gdiDelete.Call(pen)
+}
+
+func screenTextPoint(area rect, pos textPoint) point {
+	return point{area.left + int32(pos[0]*float64(area.right-area.left)),
+		area.top + int32(pos[1]*float64(area.bottom-area.top))}
 }
 
 func drawTextOutline(dc uintptr, area rect, polygon []textPoint, closed bool) {
-	if len(polygon) == 0 {
+	if len(polygon) < 2 {
 		return
 	}
 	vertices := make([]point, 0, len(polygon)+1)
 	for _, pos := range polygon {
-		vertices = append(vertices, point{area.left + int32(pos[0]*float64(area.right-area.left)),
-			area.top + int32(pos[1]*float64(area.bottom-area.top))})
+		vertices = append(vertices, screenTextPoint(area, pos))
 	}
 	if closed {
 		vertices = append(vertices, vertices[0])
-	}
-	if len(vertices) == 1 {
-		position := vertices[0]
-		fillColor(dc, rect{position.x - 3, position.y - 3, position.x + 4, position.y + 4}, paletteColor{174, 53, 94})
-		return
 	}
 	gdi32.NewProc("Polyline").Call(dc, uintptr(unsafe.Pointer(&vertices[0])), uintptr(len(vertices)))
 }

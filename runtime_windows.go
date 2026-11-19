@@ -143,8 +143,9 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "reader_search.py", "ocr.py", "text_edit.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
+	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "reader_search.py", "ocr.py", "text_edit.py", "text_block.py", "system_fonts.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
 		filepath.Join("text-fonts", "LiberationSans-Regular.ttf"),
+		filepath.Join("packages", "fontTools", "ttLib", "__init__.py"),
 		filepath.Join("tessdata", "ces.traineddata"), filepath.Join("tessdata", "eng.traineddata"),
 		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
