@@ -185,6 +185,11 @@ def gray_to_explicit_k(pdf):
             if "/DecodeParms" in img:
                 del img["/DecodeParms"]
             image_count += 1
+    # PDF's implicit initial paint is DeviceGray black. Set both defaults
+    # explicitly on each page so black text without a paint operator is CMYK.
+    # Form XObjects intentionally inherit the (now explicit) caller state.
+    for page in pdf.pages:
+        page.contents_add(b"0 0 0 1 k 0 0 0 1 K\n", prepend=True)
     return vector_count, image_count
 
 
