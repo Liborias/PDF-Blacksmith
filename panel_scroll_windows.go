@@ -125,10 +125,11 @@ type scrollPane struct {
 }
 
 var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
-	v := window.view
-	if v != nil && hwnd == v.pageList && v.pageListMouse(message, wParam, lParam) {
+	thumbs := window.thumbnailView(hwnd)
+	if thumbs != nil && thumbs.pageListMouse(message, wParam, lParam) {
 		return 0
 	}
+	v := window.view
 	bookmarkList := v != nil && hwnd == v.bookmarkPanel.list && v.ready()
 	if bookmarkList && (message == 0x0201 || message == 0x0203) { // WM_LBUTTONDOWN, WM_LBUTTONDBLCLK
 		if index, branch := v.bookmarkAt(lParam); branch {
@@ -139,9 +140,9 @@ var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam
 		}
 	}
 	result, _, _ := defSubclass.Call(hwnd, uintptr(message), wParam, lParam)
-	if v != nil && hwnd == v.pageList && message == 0x0202 && wParam&(4|8) == 0 && len(v.pageSelection) == 0 {
-		if row := v.pageAt(int32(int16(lParam >> 16))); row >= 0 && row < len(v.order) {
-			v.readPageSelection()
+	if thumbs != nil && message == 0x0202 && wParam&(4|8) == 0 && len(thumbs.pageSelection) == 0 {
+		if row := thumbs.pageAt(int32(int16(lParam >> 16))); row >= 0 && row < len(thumbs.order) {
+			thumbs.readPageSelection()
 		}
 	}
 	if bookmarkList && message == 0x0202 { // WM_LBUTTONUP, including a click on the already selected row.
@@ -206,8 +207,8 @@ func (pane *scrollPane) syncScrollbar() {
 	total, visible, position := pane.lines()
 	old := pane.bar.position
 	pane.bar.update(total, visible, position, true)
-	if v := window.view; v != nil && pane.handle == v.pageList && old != pane.bar.position {
-		postMessage.Call(window.window, wmThumbnailUpdate, 0, 0)
+	if v := window.thumbnailView(pane.handle); v != nil && old != pane.bar.position {
+		postMessage.Call(window.window, wmThumbnailUpdate, v.readerMessageSource(), 0)
 	}
 }
 
@@ -282,11 +283,14 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
 	} else if delta < 0 {
 		rows = min(-1, rows)
 	}
-	thumbs := a.scrollPanes[a.view.pageList]
 	parent, _, _ := user32.NewProc("GetParent").Call(hover)
-	if hood := a.thumbnailSidebar; hover == hood || parent == hood {
+	for _, v := range []*documentView{a.view, a.comparison.view} {
+		if v == nil || (hover != v.thumbnailSidebar && parent != v.thumbnailSidebar) {
+			continue
+		}
+		thumbs := a.scrollPanes[v.pageList]
 		if ctrl {
-			a.view.zoomThumbnails(screen, delta)
+			v.zoomThumbnails(screen, delta)
 		} else {
 			thumbs.bar.setPosition(thumbs.bar.position - thumbnailWheelSteps(delta))
 		}

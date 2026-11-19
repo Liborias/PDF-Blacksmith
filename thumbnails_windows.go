@@ -94,7 +94,7 @@ func (v *documentView) zoomThumbnails(screen point, delta int) {
 	}
 	v.thumbnailScale = scale
 	var bounds rect
-	getClientRect.Call(v.app.thumbnailSidebar, uintptr(unsafe.Pointer(&bounds)))
+	getClientRect.Call(v.thumbnailSidebar, uintptr(unsafe.Pointer(&bounds)))
 	v.layoutThumbnails(int(bounds.right), int(bounds.bottom))
 	pane.bar.setPosition(row - y/pane.lineHeight)
 	v.schedule()
@@ -221,7 +221,7 @@ func (v *documentView) pageListBounds() rect {
 	getClientRect.Call(v.pageList, uintptr(unsafe.Pointer(&bounds)))
 	var sidebar rect
 	var origin point
-	user32.NewProc("GetWindowRect").Call(v.app.thumbnailSidebar, uintptr(unsafe.Pointer(&sidebar)))
+	user32.NewProc("GetWindowRect").Call(v.thumbnailSidebar, uintptr(unsafe.Pointer(&sidebar)))
 	user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&origin)))
 	bounds.top = max(bounds.top, sidebar.top-origin.y)
 	bounds.bottom = min(bounds.bottom, sidebar.bottom-origin.y)
@@ -235,6 +235,9 @@ func (v *documentView) pageAt(y int32) int {
 }
 
 func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
+	if v.secondary {
+		return false
+	}
 	xy := point{int32(int16(position)), int32(int16(position >> 16))}
 	drag := &v.pageDrag
 	switch msg {

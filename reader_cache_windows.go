@@ -15,12 +15,27 @@ type memoryStatus struct {
 	totalVirtual, availableVirtual, availableExtended              uint64
 }
 
+func (v *documentView) cachedBytes() int64 {
+	return v.reading.bytes + v.printPreview.bytes + v.detailBytes + v.canvas.bytes() + v.thumbnails.bytes
+}
+
 func (v *documentView) updateCacheLimit() {
 	status := memoryStatus{length: uint32(unsafe.Sizeof(memoryStatus{}))}
 	v.cacheLimit = 0
 	if ok, _, _ := globalMemoryStatus.Call(uintptr(unsafe.Pointer(&status))); ok != 0 {
-		v.cacheLimit = readerCacheLimit(int64(min(status.availablePhysical, status.availableCommit)),
-			v.reading.bytes+v.printPreview.bytes+v.detailBytes+v.canvas.bytes()+v.thumbnails.bytes)
+		cached := v.cachedBytes()
+		comparing := v.app.comparison.tabs[0] != nil
+		if comparing {
+			other := v.app.comparison.view
+			if v.secondary {
+				other = v.app.view
+			}
+			cached += other.cachedBytes()
+		}
+		v.cacheLimit = readerCacheLimit(int64(min(status.availablePhysical, status.availableCommit)), cached)
+		if comparing {
+			v.cacheLimit /= 2
+		}
 	}
 }
 

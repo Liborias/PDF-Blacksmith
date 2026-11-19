@@ -166,6 +166,7 @@ type app struct {
 	export                                             exportOptions
 	lastOutput, lastPassword                           string
 	merge                                              mergePanel
+	comparison                                         documentComparison
 	ocr                                                ocrPanel
 	textTool textPanel
 	thumbnailScopes map[uintptr]bool
@@ -194,7 +195,7 @@ func main() {
 		dpi = min(dpi, (screenWidth-24)*96/minimumWorkspaceWidth, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, bookmarksCollapsed: true,
+		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idFileTab, mode: idFileDetails, bookmarksCollapsed: true,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
@@ -210,6 +211,7 @@ func main() {
 	}
 	defer window.cleanupDrafts()
 	defer window.view.closeReaders()
+	defer window.comparison.view.closeReaders()
 	defer func() {
 		if task := window.view.search.task; task != nil {
 			task.cancel()
@@ -374,7 +376,7 @@ func multiline(value string) string {
 
 func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	a := window
-	if a.view != nil && a.view.pointer(msg, lParam) {
+	if a.view != nil && a.pointer(msg, lParam) {
 		return 0
 	}
 	switch msg {
@@ -435,7 +437,11 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.finish(<-a.results)
 		return 0
 	case wmReaderFinished:
-		a.view.finished(<-a.view.jobs)
+		v := a.view
+		if wParam != 0 {
+			v = a.comparison.view
+		}
+		v.finished(<-v.jobs)
 		a.pruneDrafts()
 		return 0
 	case wmSearchUpdate:
@@ -443,15 +449,26 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.pruneDrafts()
 		return 0
 	case wmThumbnailUpdate:
-		a.view.schedule()
+		v := a.view
+		if wParam != 0 {
+			v = a.comparison.view
+		}
+		v.schedule()
 		return 0
 	case 0x0113: // WM_TIMER
 		if wParam == readerZoomTimer && a.view != nil {
 			a.view.finishZoom()
 			return 0
 		}
+		if wParam == readerComparisonZoomTimer && a.comparison.view != nil {
+			a.comparison.view.finishZoom()
+			return 0
+		}
 		if wParam == readerMemoryTimer && a.view.path != "" {
 			a.view.refreshCache()
+			if a.comparisonVisible() {
+				a.comparison.view.refreshCache()
+			}
 			return 0
 		}
 	case 0x0233: // WM_DROPFILES
@@ -463,6 +480,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmDestroy:
 		if a.view != nil {
 			a.view.canvas.close()
+		}
+		if a.comparison.view != nil {
+			a.comparison.view.canvas.close()
 		}
 		a.disposeTheme()
 		quitMessage.Call(0)
@@ -479,7 +499,8 @@ func (a *app) drawControl(param uintptr) bool {
 	var item buttonDraw
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), param, unsafe.Sizeof(item))
 	return a.drawPopup(&item) || a.drawFileMenuButton(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || a.drawRecentRow(&item) ||
-		(a.view != nil && (a.view.drawSearchRow(&item) || a.view.drawListRow(&item)))
+		(a.view != nil && (a.view.drawSearchRow(&item) || a.view.drawListRow(&item))) ||
+		(a.comparison.view != nil && a.comparison.view.drawListRow(&item))
 }
 
 func setText(handle uintptr, value string) {

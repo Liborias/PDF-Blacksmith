@@ -4,7 +4,7 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 ## Otevření a čtení PDF
 
-V levém panelu rozbalte **Soubor** a vyberte **Otevřít soubor**. Stejné tlačítko najdete vpravo v nastavení nástroje **Soubor**. Dialog můžete otevřít i zkratkou **Ctrl+O** nebo PDF přetáhnout do okna.
+Po spuštění je aktivní nástroj **Soubor**. V levém panelu ho rozbalte a vyberte **Otevřít soubor**. Stejné tlačítko najdete vpravo v nastavení nástroje **Soubor**. Dialog můžete otevřít i zkratkou **Ctrl+O** nebo PDF přetáhnout do okna.
 
 Každé otevřené PDF má vlastní kartu se stránkou, přiblížením, výběrem náhledů a rozpracovanými úpravami. Mezi kartami přepnete kliknutím nebo zkratkami **Ctrl+Tab** a **Ctrl+Shift+Tab**. Pokud se všechny nevejdou do horní lišty, zobrazí se nabídka **Seznam otevřených PDF**.
 
@@ -17,6 +17,14 @@ Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Pa
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Při listování a zoomu se předchozí obraz vymění najednou, jakmile je nový náhled hotový. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Zobrazení → Náhled → Zobrazit na celou obrazovku** nebo **F11** otevře samotné PDF přes celou obrazovku. **Esc** obnoví předchozí rozložení panelů.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v **Zobrazení → Náhled** a použijte **Načíst znovu s heslem**.
+
+## Dvě PDF vedle sebe
+
+Otevřete alespoň dvě PDF a zvolte **Zobrazení → Náhled → Zobrazit vedle sebe…**. Aktuální PDF se zobrazí vlevo. Vpravo se otevře druhý dokument. Pokud je otevřeno více karet, vyberte dokument z nabídky.
+
+V každém panelu můžete samostatně listovat, přibližovat **Ctrl + kolečkem** a označovat stránky v náhledech. Tlačítko **Náhledy** podél názvu souboru sbalí nebo rozbalí náhledy daného panelu. Klikněte na název PDF nad stránkou nebo na jeho kartu v záhlaví, pokud s ním chcete pracovat pomocí nástrojů vlevo. Název aktivního dokumentu je zvýrazněný vínově.
+
+**Zobrazení → Náhled → Ukončit zobrazení vedle sebe** vrátí náhled jednoho dokumentu a obě karty zůstanou otevřené. Přepnutí na kartu mimo dvojici nebo zavření jedné z porovnávaných karet ukončí společné zobrazení. **F11** zobrazí aktivní PDF na celé obrazovce, **Esc** obnoví dvojici.
 
 ## Vyhledávání v PDF
 

@@ -172,15 +172,21 @@ func (v *documentView) finishDetail(job readerJob) {
 	if slices.Contains(v.visibleDetails, tile) {
 		if job.result.Status == "changed" {
 			v.invalidSource = true
-			v.app.updateActions()
-			v.app.report(job.result.Message)
+			if v.secondary {
+				v.showComparisonReaderError(job.result.Message)
+			} else {
+				v.app.updateActions()
+				v.app.report(job.result.Message)
+			}
 		} else if job.frame.image != nil {
 			v.detailFrames[tile] = detailFrame{job.frame.image, v.detailClock}
 			v.detailBytes += int64(len(job.frame.image.pixels))
 			v.trimCaches()
 		} else {
 			v.failedDetails[tile] = true
-			v.app.report(job.result.Message)
+			if !v.secondary {
+				v.app.report(job.result.Message)
+			}
 		}
 		v.invalidateCanvas()
 	}

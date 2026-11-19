@@ -138,5 +138,8 @@ func (v *documentView) paintLoading(dc uintptr) {
 	} else if v.invalidSource {
 		message = "Vstupní PDF se změnilo. Otevřete je znovu."
 	}
+	if v.readerError != "" {
+		message = v.readerError
+	}
 	drawText(dc, message, v.viewport, v.app.titleFont, mutedColor, 1)
 }

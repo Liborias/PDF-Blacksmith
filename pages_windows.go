@@ -118,10 +118,12 @@ func (v *documentView) readPageSelection() {
 			v.pageSelection = selected
 		}
 	}
-	v.app.applyThumbnailScope()
+	if !v.secondary {
+		v.app.applyThumbnailScope()
+	}
 	if index != v.page {
 		v.gotoPage(index, false)
-	} else {
+	} else if !v.secondary {
 		v.updateActions()
 	}
 }

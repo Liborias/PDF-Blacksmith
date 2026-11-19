@@ -19,7 +19,7 @@ type documentTab struct {
 	anchor                                   readingAnchor
 	hasAnchor                                bool
 	branches                                 map[int]bool
-	selection                                int
+	selection, thumbnailTop                  int
 	query, status, documentInfo              string
 }
 
@@ -33,6 +33,9 @@ type documentClose struct {
 func (a *app) contentOf(tab *documentTab) *documentContent {
 	if tab == a.activeTab {
 		return &a.view.documentContent
+	}
+	if tab == a.comparison.tab {
+		return &a.comparison.view.documentContent
 	}
 	return &tab.content
 }
@@ -53,8 +56,7 @@ func (a *app) storeActiveTab() {
 		tab.content = v.documentContent
 		tab.tool, tab.mode = a.tool, a.mode
 		tab.screenBox, tab.proofBox, tab.profile = comboIndex(v.screenBox), comboIndex(v.proofBox), comboIndex(v.proof)
-		w, h := v.viewportSize()
-		tab.anchor, tab.hasAnchor = v.spread.anchor(v.scrollX+w/2, v.scrollY+h/2)
+		v.storeReadingPosition(tab)
 		tab.branches, tab.selection = v.bookmarkPanel.collapsed, v.bookmarkPanel.selected
 		tab.query, tab.status, tab.documentInfo = getText(v.search.input), getText(a.status), getText(v.documentInfo)
 	}
@@ -65,12 +67,17 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 		return
 	}
 	a.storeActiveTab()
+	if a.comparisonKeeps(tab) {
+		a.setComparisonTab(nil)
+	} else if a.comparison.tabs[0] != nil {
+		a.endComparison()
+	}
 	a.activeTab = tab
 	v := a.view
 	v.resetDocument()
 	a.clearDocumentControls()
 	if tab == nil {
-		a.tool, a.mode = idBrowseTab, idBrowseTab
+		a.tool, a.mode = idFileTab, idFileDetails
 		setText(a.window, appName)
 		a.reportStatus("")
 	} else {
@@ -101,10 +108,7 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 		a.applyThumbnailScope()
 	}
 	v.rebuild(false)
-	if tab != nil && tab.hasAnchor && v.ready() {
-		w, h := v.viewportSize()
-		v.restore(tab.anchor, w/2, h/2)
-	}
+	v.restoreReadingPosition(tab)
 	v.updateDocumentInfo()
 	v.changedViewport()
 	setFocus.Call(a.window)
@@ -131,9 +135,6 @@ func (a *app) addDocumentTab(path, password string, info os.FileInfo) {
 	content := emptyDocument()
 	content.path, content.password, content.original, content.describing = path, password, info, true
 	tab := &documentTab{content: content, tool: idBrowseTab, mode: idBrowseTab, selection: -1, status: "Načítám dokument…"}
-	if a.tool == idFileTab {
-		tab.tool, tab.mode = idFileTab, idFileDetails
-	}
 	tab.button = a.button(filepath.Base(path), idSelectDocumentTab, 0, 0, 1, 0x04000000)
 	tab.close = a.button("Zavřít PDF", idClosePDF, 0, 0, 1, 0x04000000)
 	a.tabs = append(a.tabs, tab)
@@ -257,6 +258,9 @@ func (a *app) removeDocumentTab(tab *documentTab) {
 	if index < 0 {
 		return
 	}
+	if a.comparisonKeeps(tab) {
+		a.endComparison()
+	}
 	a.retireDocumentDrafts(*a.contentOf(tab))
 	a.tabs = slices.Delete(a.tabs, index, index+1)
 	destroyWindow.Call(tab.button)
@@ -268,7 +272,7 @@ func (a *app) removeDocumentTab(tab *documentTab) {
 		} else {
 			a.view.resetDocument()
 			a.clearDocumentControls()
-			a.tool, a.mode = idBrowseTab, idBrowseTab
+			a.tool, a.mode = idFileTab, idFileDetails
 			setText(a.window, appName)
 			a.reportStatus("")
 			a.updateActions()

@@ -188,19 +188,21 @@ func (a *app) setupWorkspace() bool {
 	a.addDetailButton(idPagesTab, "Stránky")
 
 	a.view = newDocumentView(a)
+	a.view.thumbnailSidebar = a.thumbnailSidebar
 	a.view.buildToolbar()
 	a.beginPanel(idBrowseTab)
 	a.button("Zobrazit na celou obrazovku · F11", idFullscreen, 16, 16, 298, 0)
-	a.label("Režim zobrazení", 16, 66, 298, true)
-	a.view.flow = a.combo(idReaderFlow, 16, 88, 298, []string{"Souvisle", "Po stránkách"})
+	a.comparison.button = a.button("Zobrazit vedle sebe…", idCompareOpen, 16, 56, 298, 0)
+	a.label("Režim zobrazení", 16, 106, 298, true)
+	a.view.flow = a.combo(idReaderFlow, 16, 128, 298, []string{"Souvisle", "Po stránkách"})
 	chooseCombo(a.view.flow, 1)
-	a.label("Rámeček PDF v náhledu", 16, 131, 298, false)
-	a.view.screenBox = a.combo(idReaderScreenBox, 16, 153, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
-	a.view.documentInfo = a.readout(16, 198, 298, 82)
-	a.label("Heslo k otevření PDF", 16, 302, 298, false)
-	a.password = a.edit(16, 325, 298, true)
-	a.button("Načíst znovu s heslem", idReload, 16, 363, 298, 0)
-	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 414, 298, false)
+	a.label("Rámeček PDF v náhledu", 16, 171, 298, false)
+	a.view.screenBox = a.combo(idReaderScreenBox, 16, 193, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
+	a.view.documentInfo = a.readout(16, 238, 298, 82)
+	a.label("Heslo k otevření PDF", 16, 342, 298, false)
+	a.password = a.edit(16, 365, 298, true)
+	a.button("Načíst znovu s heslem", idReload, 16, 403, 298, 0)
+	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 454, 298, false)
 
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
@@ -229,6 +231,9 @@ func (a *app) setupWorkspace() bool {
 	a.controlParent = a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
+	if !a.buildComparison(className) {
+		return false
+	}
 	a.layout()
 	a.updateActions()
 	return true
@@ -470,8 +475,9 @@ func (a *app) layout() {
 	}
 	a.layoutDocumentTabs()
 	a.view.showToolbar(chrome)
+	active := a.layoutComparison()
 	a.layoutSidebars()
-	a.view.resize(a.viewport)
+	a.view.resize(active)
 	invalidate(a.window)
 }
 
@@ -630,7 +636,8 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		} else {
 			fillColor(dc, bounds, panelColor)
 		}
-		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar {
+		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar ||
+			(a.comparison.view != nil && hwnd == a.comparison.view.thumbnailSidebar) {
 			fillColor(dc, rect{right: 1, bottom: bounds.bottom}, divider)
 		}
 		user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
@@ -644,6 +651,12 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmCtlColorEdit, wmCtlColorList, wmCtlColorText:
 		return a.colorControl(msg, wParam, lParam)
 	case wmCommand:
+		if v := a.comparison.view; v != nil && hwnd == v.thumbnailSidebar && lParam == v.pageList {
+			if wParam>>16&0xffff == 1 { // LBN_SELCHANGE
+				v.readPageSelection()
+			}
+			return 0
+		}
 		a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 		return 0
 	case 0x020a: // WM_MOUSEWHEEL
@@ -776,7 +789,7 @@ func (a *app) command(id, notification int) {
 		a.openChoice(choice)
 		return
 	}
-	if a.textCommand(id, notification) || a.view.command(id, notification) {
+	if a.comparisonCommand(id, notification) || a.textCommand(id, notification) || a.view.command(id, notification) {
 		return
 	}
 	if a.mergeCommand(id, notification) {
@@ -1095,6 +1108,7 @@ func (a *app) updateActions() {
 	}
 	a.updateMergeActions()
 	a.view.updateActions()
+	a.updateComparisonNavigation()
 }
 
 func (a *app) reportStatus(message string) {
@@ -1159,7 +1173,7 @@ func (a *app) beginJob(req request, status string) bool {
 func (a *app) startOverwrite() {
 	// Ghostscript and PDFium may still have the original open. Wait for all readers to
 	// finish before replacing the file on Windows.
-	if a.waitingOverwrite && !a.view.running && a.view.prefetch.page == 0 && a.view.search.task == nil {
+	if a.waitingOverwrite && !a.view.hasRenderJobs() && !a.comparison.view.hasRenderJobs() && a.view.search.task == nil {
 		a.waitingOverwrite = false
 		req := a.pending
 		a.launchJob(func() response { return runOperation(req) })
@@ -1314,11 +1328,15 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.message == 0x020a { // WM_MOUSEWHEEL
 		pos := point{int32(int16(msg.lParam)), int32(int16(msg.lParam >> 16))}
 		user32.NewProc("ScreenToClient").Call(a.window, uintptr(unsafe.Pointer(&pos)))
-		if contains(a.viewport, pos.x, pos.y) {
+		if a.comparisonVisible() && contains(a.comparison.view.viewport, pos.x, pos.y) {
+			a.comparison.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
+			return true
+		}
+		if contains(a.view.viewport, pos.x, pos.y) {
 			a.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
 			return true
 		}
-		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.bookmarkArea, pos.x, pos.y) {
+		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.comparison.thumbnailArea, pos.x, pos.y) || contains(a.bookmarkArea, pos.x, pos.y) {
 			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
 		}
@@ -1415,6 +1433,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 		}
 	}
 	if msg.window == a.window || a.full {
+		if a.comparisonVisible() && a.comparison.canvasFocused {
+			return a.comparison.view.key(msg.wParam)
+		}
 		return a.view.key(msg.wParam)
 	}
 	return false

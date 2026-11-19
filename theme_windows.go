@@ -161,6 +161,12 @@ func (a *app) paint(hwnd uintptr) {
 		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
 		a.paintSidebars(dc)
 	}
+	if a.comparisonVisible() {
+		fillColor(dc, a.viewport, canvasColor)
+		mid := (a.viewport.left + a.viewport.right) / 2
+		fillColor(dc, rect{mid - 1, a.viewport.top, mid + 1, a.viewport.bottom}, divider)
+		a.comparison.view.paint(dc)
+	}
 	a.view.paint(dc)
 	user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
 }
@@ -239,7 +245,11 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		}
 		rounded(item.dc, bounds, a.scale(5), body, edge)
 		if !a.drawToolIconLabel(item, foreground) {
-			drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, 1)
+			align := uintptr(1)
+			if id == idCompareTitleLeft || id == idCompareTitleRight {
+				align |= 0x8000 // DT_END_ELLIPSIS
+			}
+			drawText(item.dc, getText(item.handle), bounds, a.labelFont, foreground, align)
 		}
 	}
 	if item.state&16 != 0 {

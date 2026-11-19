@@ -43,9 +43,10 @@ const (
 )
 
 const (
-	wmReaderFinished = 0x8002
-	readerZoomTimer  = 2
-	zoomSettleDelay  = 65 * time.Millisecond
+	wmReaderFinished          = 0x8002
+	readerZoomTimer           = 2
+	readerComparisonZoomTimer = 3
+	zoomSettleDelay           = 65 * time.Millisecond
 )
 
 type printBitmap struct {
@@ -259,6 +260,10 @@ func emptyDocument() documentContent {
 type documentView struct {
 	documentContent
 	app                                                                        *app
+	secondary                                                                  bool
+	secondaryBox                                                               int
+	thumbnailSidebar                                                           uintptr
+	readerError                                                                string
 	engine, prefetchEngine                                                     *readerEngine
 	bookmarkPanel                                                              bookmarkPanel
 	search                                                                     searchPanel
@@ -427,28 +432,40 @@ func (v *documentView) sourceUnchanged() bool {
 	return unchanged(path, info)
 }
 
-func (v *documentView) resetDocument() {
+func (v *documentView) resetRendering() {
 	v.generation++
-	v.resetSearch()
-	v.app.clearTextSelection()
-	v.app.resetThumbnailScopes()
-	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
-	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
+	user32.NewProc("KillTimer").Call(v.app.window, v.zoomTimer())
 	v.zoomDeadline = time.Time{}
-	released := v.reading.bytes + v.printPreview.bytes + v.detailBytes + v.thumbnails.bytes
+	v.readerError = ""
+	if v.dragging {
+		v.dragging = false
+		user32.NewProc("ReleaseCapture").Call()
+	}
+	released := v.cachedBytes()
 	v.canvas.close()
 	v.reading.clear()
 	v.printPreview.clear()
 	v.thumbnails.clear()
-	v.pageSelection = nil
 	v.endPageDrag()
 	v.clearDetails()
 	v.closeReaders()
+	v.prefetchFailed = make(map[int]bool)
+	v.wheelRemainder = 0
+	if released >= 32<<20 {
+		go debug.FreeOSMemory()
+	}
+}
+
+func (v *documentView) resetDocument() {
+	v.resetSearch()
+	v.app.clearTextSelection()
+	v.app.resetThumbnailScopes()
+	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
+	v.resetRendering()
 	v.documentContent = emptyDocument()
 	v.bookmarkPanel.collapsed = nil
 	v.refreshBookmarks(-1)
-	v.scrollX, v.scrollY, v.wheelRemainder = 0, 0, 0
-	v.prefetchFailed = make(map[int]bool)
+	v.scrollX, v.scrollY = 0, 0
 	v.clearPlateView()
 	chooseCombo(v.fit, 0)
 	chooseCombo(v.flow, 1)
@@ -456,9 +473,6 @@ func (v *documentView) resetDocument() {
 	setText(v.scanReport, "")
 	v.rebuild(false)
 	v.updatePageList()
-	if released >= 32<<20 {
-		go debug.FreeOSMemory()
-	}
 }
 
 func (v *documentView) closeReaders() {
@@ -492,7 +506,7 @@ func (v *documentView) resumeReader() {
 	user32.NewProc("SetTimer").Call(v.app.window, readerMemoryTimer, 3000, 0)
 }
 
-func (v *documentView) proofMode() bool { return v.app.mode == idProofTab }
+func (v *documentView) proofMode() bool { return !v.secondary && v.app.mode == idProofTab }
 
 func (v *documentView) box() string {
 	if v.proofMode() {
@@ -500,6 +514,9 @@ func (v *documentView) box() string {
 		return boxes[max(0, comboIndex(v.proofBox))]
 	}
 	boxes := [...]string{"crop", "media", "trim", "bleed"}
+	if v.secondary {
+		return boxes[v.secondaryBox]
+	}
 	return boxes[max(0, comboIndex(v.screenBox))]
 }
 
@@ -717,18 +734,25 @@ func (v *documentView) zoomAt(delta, x, y float64) {
 	v.buildLayout()
 	v.restore(anchor, x, y)
 	v.updatePageFromCenter()
-	if timer, _, _ := user32.NewProc("SetTimer").Call(v.app.window, readerZoomTimer,
+	if timer, _, _ := user32.NewProc("SetTimer").Call(v.app.window, v.zoomTimer(),
 		uintptr(zoomSettleDelay/time.Millisecond), 0); timer != 0 {
 		v.zoomDeadline = time.Now().Add(zoomSettleDelay)
 	}
 	v.changedViewport()
 }
 
+func (v *documentView) zoomTimer() uintptr {
+	if v.secondary {
+		return readerComparisonZoomTimer
+	}
+	return readerZoomTimer
+}
+
 func (v *documentView) finishZoom() {
 	if !v.zoomDeadline.IsZero() && time.Now().Before(v.zoomDeadline) {
 		return
 	}
-	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
+	user32.NewProc("KillTimer").Call(v.app.window, v.zoomTimer())
 	v.zoomDeadline = time.Time{}
 	v.schedule()
 }
@@ -788,7 +812,7 @@ func contains(bounds rect, x, y int32) bool {
 
 func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	x, y := int32(int16(param)), int32(int16(param>>16))
-	if v.app.textPointer(msg, x, y) {
+	if !v.secondary && v.app.textPointer(msg, x, y) {
 		return true
 	}
 	switch msg {
@@ -828,8 +852,13 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 }
 
 func (v *documentView) changedViewport() {
-	v.syncProofPanel()
-	v.updateActions()
+	if v.secondary {
+		v.syncPageListSelection()
+	} else {
+		v.syncProofPanel()
+		v.updateActions()
+	}
+	v.app.updateComparisonNavigation()
 	v.syncDetails()
 	v.invalidateCanvas()
 	v.schedule()
@@ -851,7 +880,7 @@ func (v *documentView) schedule() {
 		v.app.startOverwrite()
 		return
 	}
-	if v.running || v.path == "" || v.invalidSource {
+	if v.running || v.path == "" || v.invalidSource || (v.secondary && !v.app.comparisonVisible()) {
 		return
 	}
 	if v.describing {
@@ -887,7 +916,7 @@ func (v *documentView) schedule() {
 		}
 	}
 	if !v.app.busy && v.prefetch.page == 0 {
-		if !v.scheduleThumbnails() && !proof {
+		if !v.scheduleThumbnails() && !proof && !v.secondary {
 			v.schedulePrefetch()
 		}
 	}
@@ -973,8 +1002,19 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 			view.Image = nil
 		}
 		v.jobs <- job
-		postMessage.Call(v.app.window, wmReaderFinished, 0, 0)
+		postMessage.Call(v.app.window, wmReaderFinished, v.readerMessageSource(), 0)
 	}()
+}
+
+func (v *documentView) hasRenderJobs() bool {
+	return v.running || v.prefetch.page != 0
+}
+
+func (v *documentView) readerMessageSource() uintptr {
+	if v.secondary {
+		return 1
+	}
+	return 0
 }
 
 func (v *documentView) finished(job readerJob) {
@@ -997,29 +1037,45 @@ func (v *documentView) finished(job readerJob) {
 		if job.page != 0 {
 			v.activeCache().failed[job.page] = true
 		}
-		if job.page == 0 {
+		if job.page == 0 && !v.secondary {
 			setText(v.documentInfo, multiline(job.result.Message))
 			if !v.app.full {
 				v.app.activate(idBrowseTab)
 			}
 		}
-		v.app.report(job.result.Message)
+		if v.secondary {
+			if job.page == 0 || v.invalidSource {
+				v.showComparisonReaderError(job.result.Message)
+			}
+		} else {
+			v.app.report(job.result.Message)
+		}
 	} else if job.action == "describe" {
 		data := job.result.View
 		v.describing = false
 		if data == nil || len(data.Sizes) == 0 {
-			v.app.report("Rozměry stránek nelze načíst.")
+			if v.secondary {
+				v.showComparisonReaderError("Rozměry stránek nelze načíst.")
+			} else {
+				v.app.report("Rozměry stránek nelze načíst.")
+			}
 			return
 		}
 		v.applyDescription(data)
 		v.app.rememberRecentFile(v.path)
-		v.app.report("")
+		if v.secondary {
+			v.app.layoutComparisonThumbnails(v.app.comparison.thumbnailArea)
+		} else {
+			v.app.report("")
+		}
 	} else if job.frame.image != nil {
 		v.activeCache().store(job.page, job.frame)
 		v.trimCaches()
 	}
-	v.updateDocumentInfo()
-	v.app.updateActions()
+	if !v.secondary {
+		v.updateDocumentInfo()
+		v.app.updateActions()
+	}
 	v.changedViewport()
 }
 
@@ -1032,7 +1088,9 @@ func (v *documentView) applyDescription(data *viewResponse) {
 	v.page = min(v.page, len(v.order)-1)
 	v.reference = v.page
 	v.markSaved()
-	v.refreshBookmarks(-1)
+	if !v.secondary {
+		v.refreshBookmarks(-1)
+	}
 	v.updatePageList()
 	v.rebuild(false)
 }
@@ -1044,8 +1102,13 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 		switch {
 		case job.result.Status == "changed":
 			v.invalidSource = true
-			v.app.report(job.result.Message)
-			v.app.updateActions()
+			if v.secondary {
+				v.showComparisonReaderError(job.result.Message)
+				v.changedViewport()
+			} else {
+				v.app.report(job.result.Message)
+				v.app.updateActions()
+			}
 		case job.action == "thumbnail":
 			if job.frame.image == nil {
 				v.thumbnails.failed[job.page] = true
@@ -1078,6 +1141,9 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 }
 
 func (v *documentView) updateDocumentInfo() {
+	if v.secondary {
+		return
+	}
 	if !v.ready() {
 		return
 	}
@@ -1368,6 +1434,8 @@ func (v *documentView) paintCanvas(dc uintptr) {
 		text := "Otevřít PDF"
 		if v.describing {
 			text = "Načítám dokument…"
+		} else if v.readerError != "" {
+			text = v.readerError
 		}
 		if v.app.full {
 			text += "   ·   Esc zpět"
@@ -1403,8 +1471,10 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
 		}
 		v.paintDetails(dc, number, bounds)
-		v.paintSearchHighlights(dc, number, bounds)
-		v.app.paintTextSelection(dc, number, bounds)
+		if !v.secondary {
+			v.paintSearchHighlights(dc, number, bounds)
+			v.app.paintTextSelection(dc, number, bounds)
+		}
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)
 	if v.app.full {

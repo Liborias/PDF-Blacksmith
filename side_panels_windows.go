@@ -55,7 +55,7 @@ func (a *app) layoutDocumentPanels() {
 		left += a.toolsWidth
 	}
 	rail := d(sidebarRailWidth)
-	thumbOpen, bookOpen := a.view.ready() && !a.thumbnailsCollapsed, a.view.ready() && !a.bookmarksCollapsed
+	thumbOpen, bookOpen := a.view.ready() && !a.thumbnailsCollapsed && !a.comparisonVisible(), a.view.ready() && !a.bookmarksCollapsed
 	reserved := 0
 	if thumbOpen {
 		reserved += d(70)
@@ -150,7 +150,7 @@ func (a *app) layoutSidebars() {
 	showControl(a.rightPanelsToggle, !a.full)
 	showControl(a.toolsToggle, !a.full)
 	showControl(a.detailsToggle, !a.full)
-	showControl(a.thumbnailsToggle, !a.full && a.view.ready())
+	showControl(a.thumbnailsToggle, !a.full && a.view.ready() && !a.comparisonVisible())
 	showControl(a.bookmarksToggle, !a.full && a.view.ready())
 	for _, tab := range [...]uintptr{a.leftPanelsToggle, a.toolsToggle, a.thumbnailsToggle, a.rightPanelsToggle, a.detailsToggle, a.bookmarksToggle} {
 		invalidate(tab)
@@ -292,12 +292,17 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 
 func (a *app) sideCollapsed(left bool) bool {
 	if left {
-		return a.toolsCollapsed && (a.thumbnailsCollapsed || !a.view.ready())
+		return a.toolsCollapsed && (a.thumbnailsCollapsed || !a.view.ready() || a.comparisonVisible())
 	}
 	return a.detailsCollapsed && (a.bookmarksCollapsed || !a.view.ready())
 }
 
 func (a *app) togglePanelSide(left bool) {
+	if left && a.comparisonVisible() {
+		a.toolsCollapsed = !a.toolsCollapsed
+		a.layout()
+		return
+	}
 	primary, auxiliary, previous := &a.detailsCollapsed, &a.bookmarksCollapsed, &a.rightPanelsOpen
 	if left {
 		primary, auxiliary, previous = &a.toolsCollapsed, &a.thumbnailsCollapsed, &a.leftPanelsOpen

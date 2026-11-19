@@ -155,7 +155,7 @@ func (a *app) retireDocumentDrafts(content documentContent) {
 }
 
 func (a *app) pruneDrafts() {
-	if a.busy || a.view.running || a.view.prefetch.page != 0 || a.view.search.task != nil {
+	if a.busy || a.view.hasRenderJobs() || a.comparison.view.hasRenderJobs() || a.view.search.task != nil {
 		return
 	}
 	a.retiredDrafts = slices.DeleteFunc(a.retiredDrafts, func(path string) bool {
