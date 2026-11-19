@@ -131,6 +131,7 @@ func (a *app) undoDocumentDraft(base documentContent, action string) {
 	v.rebuild(false)
 	v.updateDocumentInfo()
 	v.changedViewport()
+	a.updateActions()
 	if automaticScope {
 		a.applyThumbnailScope()
 	}
