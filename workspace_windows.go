@@ -741,6 +741,7 @@ func (a *app) command(id, notification int) {
             a.updateExportOptions()
         case idGrayProfile:
             a.updateExportOptions()
+            chooseCombo(a.view.convertGrayProfile, max(0, comboIndex(a.grayProfileCombo)))
             a.layoutPanel()
         case idProofColorMode:
             a.export.ColorMode = colorModes[max(0, comboIndex(a.view.convertMode))]
@@ -762,6 +763,7 @@ func (a *app) command(id, notification int) {
         case idKOutputProfile:
             key := a.profileChoices[4+max(0, comboIndex(a.kOutputProfile))].Key
             a.export.KProfile = key
+            chooseCombo(a.view.convertKProfile, max(0, comboIndex(a.kOutputProfile)))
             if err := saveExportOptions(a.export); err != nil { a.report(err.Error()) }
             a.layoutPanel()
 		case idExportPreset:
@@ -781,6 +783,7 @@ func (a *app) command(id, notification int) {
             key := a.profileKey()
             if key == "k" || key == "rich_black" || key == "k_cmyk" {
                 a.export.ColorMode = map[string]string{"k":"gray","rich_black":"rich_black","k_cmyk":"k_cmyk"}[key]
+                chooseCombo(a.view.convertMode, max(0, comboIndex(a.profiles)-1))
                 if err := saveExportOptions(a.export); err != nil { a.report(err.Error()) }
             }
             if key != "" {
