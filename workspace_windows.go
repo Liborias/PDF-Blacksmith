@@ -55,6 +55,10 @@ const (
 	idGrayProfile
 	idKOutputProfile
 	idProofApply
+	idProofColorMode
+	idProofGrayProfile
+	idProofGrayICC
+	idProofKProfile
 )
 
 const (
@@ -434,9 +438,21 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 			item.y = 60
 		}
 	}
-	if tab != idExportTab {
-		return item, true
-	}
+	if tab == idProofTab {
+        mode := max(0, comboIndex(a.view.convertMode))
+        switch item.handle {
+        case a.view.convertGrayLabel, a.view.convertGrayProfile:
+            return item, mode != 1
+        case a.view.convertGrayICC, a.view.convertGrayBrowse:
+            return item, mode != 1 && comboIndex(a.view.convertGrayProfile) == 3
+        case a.view.convertKLabel, a.view.convertKProfile:
+            return item, mode == 2
+        }
+        return item, true
+    }
+    if tab != idExportTab {
+        return item, true
+    }
 	preset := a.selectedExportPreset()
 	manual, press := preset.Key == "", preset.Profile != ""
 	key := a.profileKey()
@@ -726,6 +742,23 @@ func (a *app) command(id, notification int) {
         case idGrayProfile:
             a.updateExportOptions()
             a.layoutPanel()
+        case idProofColorMode:
+            a.export.ColorMode = colorModes[max(0, comboIndex(a.view.convertMode))]
+            chooseCombo(a.profiles, 1+max(0, comboIndex(a.view.convertMode)))
+            _ = saveExportOptions(a.export)
+            a.layoutPanel()
+        case idProofGrayProfile:
+            a.export.GrayProfile = grayProfiles[max(0, comboIndex(a.view.convertGrayProfile))]
+            chooseCombo(a.grayProfileCombo, max(0, comboIndex(a.view.convertGrayProfile)))
+            _ = saveExportOptions(a.export)
+            a.layoutPanel()
+        case idProofKProfile:
+            idx := max(0, comboIndex(a.view.convertKProfile))
+            if idx < len(a.profileChoices)-5 {
+                a.export.KProfile = a.profileChoices[4+idx].Key
+                chooseCombo(a.kOutputProfile, idx)
+                _ = saveExportOptions(a.export)
+            }
         case idKOutputProfile:
             key := a.profileChoices[4+max(0, comboIndex(a.kOutputProfile))].Key
             a.export.KProfile = key
@@ -795,6 +828,8 @@ func (a *app) command(id, notification int) {
         a.chooseInput(a.customICC, "Barevné profily ICC nebo ICM\x00*.icc;*.icm")
     case idGrayICC:
         a.chooseInput(a.grayCustomICC, "Šedé profily ICC nebo ICM\x00*.icc;*.icm")
+    case idProofGrayICC:
+        a.chooseInput(a.view.convertGrayICC, "Šedé profily ICC nebo ICM\x00*.icc;*.icm")
 	case idCertBrowse:
 		a.chooseInput(a.cert, "Osobní certifikát PKCS#12\x00*.p12;*.pfx")
 	case idTrustBrowse:
@@ -821,7 +856,7 @@ func (a *app) command(id, notification int) {
 	case idResetExportOptions:
 		a.applyExportOptions(defaults)
 		a.updateExportOptions()
-	case idRun, idSign, idVerify:
+	case idRun, idSign, idVerify, idProofApply:
 		a.startAction(id)
 	}
 }
@@ -853,8 +888,16 @@ func (a *app) startAction(id int) {
 	req := a.view.request("")
 	var suffix string
 	switch id {
-	case idRun:
-		req.Action = "transform"
+    case idProofApply:
+        req.Action, req.OpenResult = "transform", true
+        req.ColorMode = colorModes[max(0, comboIndex(a.view.convertMode))]
+        req.Gray = req.ColorMode == "gray"
+        req.GrayProfile = grayProfiles[max(0, comboIndex(a.view.convertGrayProfile))]
+        req.GrayCustomICC = strings.Trim(strings.TrimSpace(getText(a.view.convertGrayICC)), "\"")
+        req.KProfile = a.export.KProfile
+        suffix = map[string]string{"gray":"-Gray", "rich_black":"-cista-cerna", "k_cmyk":"-K-CMYK"}[req.ColorMode]
+    case idRun:
+        req.Action = "transform"
 		preset := a.selectedExportPreset()
 		req.Preset = preset.Key
 		if !a.selectPages(&req, a.exportScope, a.exportRange) {
@@ -947,7 +990,7 @@ func (a *app) updateActions() {
 	}
 	ready := !a.busy && documentReady
 	setEnabled(a.documentClose, !a.busy && a.view.path != "")
-	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton} {
+	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply} {
 		setEnabled(button, ready)
 	}
 	a.view.updateActions()
@@ -966,7 +1009,9 @@ func (a *app) report(message string) {
 	case idSignTab:
 		target = a.signReport
 	case idSplitTab:
-		target = a.splitReport
+        target = a.splitReport
+    case idProofTab:
+        target = a.view.convertReport
 	}
 	if target != 0 {
 		setText(target, multiline(message))
@@ -1046,9 +1091,9 @@ func (a *app) finish(result response) {
 			a.lastPassword = req.PDFPassword
 		}
 	}
-	if result.Status == "ok" && req.Action == "save_document" {
-		a.reopenSaved(req)
-	}
+	if result.Status == "ok" && (req.Action == "save_document" || req.OpenResult) {
+        a.reopenSaved(req)
+    }
 	if result.Status == "ok" && req.Action == "scan" && result.View != nil {
 		a.view.showScan(result.View)
 		a.reportStatus("Kontrola tiskových desek dokončena.")
@@ -1062,8 +1107,10 @@ func (a *app) finish(result response) {
 			setText(a.signReport, multiline(message))
 		}
 		if req.Action == "transform" {
-			setText(a.exportReport, multiline(message))
-		}
+            target := a.exportReport
+            if req.OpenResult { target = a.view.convertReport }
+            setText(target, multiline(message))
+        }
 		if req.Action == "split" {
 			if result.Status == "ok" {
 				message += "\n" + req.OutputDir
