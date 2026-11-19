@@ -274,7 +274,7 @@ type documentView struct {
 	flow, screenBox, proofBox, proof, list, pageList, documentInfo             uintptr
 	outputInfo, sample, scanReport, all, none                                  uintptr
     convertMode, convertGrayProfile, convertGrayICC, convertGrayBrowse        uintptr
-    convertKProfile, convertGrayLabel, convertKLabel                          uintptr
+    convertKProfile, convertGrayLabel, convertKLabel, convertReport            uintptr
 	thumbnailHeading, thumbnailHint, scanSelection                             uintptr
 	left, right, back, ahead, undoButton, save                                 uintptr
 	moveLabel, moveTarget, moveButton, deleteButton                            uintptr
@@ -363,6 +363,7 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
     chooseCombo(v.convertKProfile, max(index, 0))
     a.proofApply = a.button("Použít převod a otevřít kopii…", idProofApply, 16, 1000, 298, 0)
     a.primaryButtons[a.proofApply] = true
+    v.convertReport = a.readout(16, 1047, 298, 112)
 }
 
 func (v *documentView) ready() bool { return len(v.order) > 0 && !v.invalidSource }
