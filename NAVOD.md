@@ -4,11 +4,11 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 ## Otevření a čtení PDF
 
-V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
+V levém panelu rozbalte **Soubor** a vyberte **Otevřít soubor**. Stejné tlačítko najdete vpravo v nastavení nástroje **Soubor**. Dialog můžete otevřít i zkratkou **Ctrl+O** nebo PDF přetáhnout do okna.
 
-Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF**, **Pořadí stránek** a **Záložky**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
+Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Na každé straně je jedna úzká lišta. Pojmenovaným ouškem na ní příslušný panel samostatně sbalíte nebo rozbalíte.
 
-Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a má vlastní šipku pro sbalení. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
+Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a ovládá se ouškem **Náhledy**. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
 
 - PDF se otevře v režimu **Po stránkách**. Kolečko posouvá zvětšenou stránku a na jejím okraji přejde na sousední stránku. V **Zobrazení → Náhled** lze přepnout na **Souvisle** a posouvat dokument plynule.
 - Běžné náhledy stránek se načítají na pozadí podle volné paměti. Počet načtených stran je v **Zobrazení → Náhled**. Dokument zavřete křížkem vedle jeho názvu v horní liště nebo zkratkou **Ctrl+W**. Pokud máte neuložené změny, aplikace se před zavřením zeptá, zda je zahodit.
@@ -18,7 +18,7 @@ Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Pa
 
 ## Záložky v PDF
 
-Vlevo vyberte **Záložky**. V pravém panelu se zobrazí strom záložek otevřeného PDF. Dvojklik nebo **Přejít na stranu** přejde na dostupnou cílovou stránku. Tlačítko vedle něj sbalí či rozbalí vybranou větev.
+Na pravé liště otevřete ouško **Záložky**. Strom záložek má vlastní posuvník a zobrazí se mezi dokumentem a nastavením nástroje. Kliknutím na záložku přejdete na dostupnou cílovou stránku. Z klávesnice ji otevřete Enterem. Šipka u názvu sbalí či rozbalí větev.
 
 Tlačítkem **Nová záložka…** vytvoříte záložku pro aktuální stranu. Název a cílovou stranu můžete změnit i u existující záložky. Změnu potvrďte tlačítkem **Použít úpravu**. Číslo cíle odpovídá aktuálnímu pořadí stran. **Vrátit změnu** obnoví stav před poslední úpravou.
 
@@ -26,12 +26,12 @@ Do souboru zapíšete změny přes **Soubor → Uložit** nebo **Uložit jako**.
 
 ## Uložení a tisk
 
-Volby nástroje **Soubor** zůstávají nahoře v pravém panelu. Ovládání vybrané akce se zobrazí pod nimi.
+Stejné volby najdete v rozbalovací nabídce **Soubor** vlevo i nahoře v panelu nastavení vpravo. **Nedávné**, **Export** a **Podepsaná kopie** zobrazí své volby pod tlačítky vpravo.
 
 - **Soubor → Nedávné** zobrazí až 10 naposledy otevřených PDF i po restartu. Vyberte dokument a stiskněte **Otevřít vybrané PDF**, Enter nebo na něj poklikejte. Pod seznamem je úplná cesta k vybranému souboru. Historie ukládá pouze cesty.
-- **Soubor → Uložit → Uložit změny** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
-- **Soubor → Uložit jako → Vybrat umístění…** nebo **Ctrl+Shift+S** uloží kopii a otevře ji jako aktuální dokument.
-- **Soubor → Tisk → Otevřít tiskový dialog…** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Volba **Výběr** vytiskne označené náhledy. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
+- **Soubor → Uložit** nebo **Ctrl+S** uloží změny do původního PDF po potvrzení přepsání. U podepsaného PDF aplikace vyžádá i potvrzení odstranění stávajících podpisů.
+- **Soubor → Uložit jako** nebo **Ctrl+Shift+S** otevře dialog pro uložení kopie. Uložená kopie se otevře jako aktuální dokument.
+- **Soubor → Tisk** nebo **Ctrl+P** otevře systémový dialog. V něm vyberte tiskárnu, rozsah stran a počet kopií. Volba **Výběr** vytiskne označené náhledy. Aplikace přizpůsobí stránky tisknutelné ploše a vykreslí je pro tisk v RGB s rozlišením až 300 dpi.
 - **Soubor → Podepsaná kopie** otevře nastavení digitálního podpisu pod volbami souboru.
 
 ## Příprava pro tisk
@@ -40,7 +40,7 @@ Volby nástroje **Soubor** zůstávají nahoře v pravém panelu. Ovládání vy
 2. V nabídce **Předvolba PDF** vyberte účel výstupu. **Vlastní nastavení** zpřístupní ruční výběr barev, převod na desku K i převod textu na křivky.
 3. V nabídce **Strany k exportu** vyberte celý dokument, aktuální stranu, **Vybrané náhledy** nebo **Vlastní výběr**. Do pole můžete napsat jednotlivá čísla i rozsahy, například `1, 3–5, 8`. Čísla odpovídají aktuálnímu pořadí stran v aplikaci.
 4. U předvolby pro tiskárnu vyberte profil ICC. Ve **Vlastním nastavení** zvolte požadovaný barevný výstup a případně převod textu na křivky. Text v naskenované bitmapě zůstává součástí bitmapy.
-5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte přes **Soubor → Otevřít výstup → Otevřít tento výstup**.
+5. Zvolte **Uložit exportované PDF…** a vyberte výstupní soubor. Uložený výstup zobrazíte přes **Soubor → Otevřít výstup**.
 
 ### Předvolby PDF
 

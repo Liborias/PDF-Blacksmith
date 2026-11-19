@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	idBookmarksTab = 240 + iota
+	idToggleBookmarks = 240 + iota
 	idBookmarkList
-	idBookmarkGo
+	_
 	idBookmarkBranch
 	idBookmarkNew
 	idBookmarkCurrent
@@ -32,7 +32,8 @@ type bookmarkChange struct {
 }
 
 type bookmarkPanel struct {
-	list, goTo, branch, add, empty      uintptr
+	heading, list, branch, add, empty   uintptr
+	titleLabel, targetLabel             uintptr
 	title, target, current, apply, undo uintptr
 	rows                                []int
 	collapsed                           map[int]bool
@@ -43,22 +44,78 @@ type bookmarkPanel struct {
 func (v *documentView) buildBookmarkPanel() {
 	a, panel := v.app, &v.bookmarkPanel
 	panel.selected = -1
-	panel.add = a.button("Nová záložka…", idBookmarkNew, 16, 16, 298, 0)
+	panel.heading = a.label("Záložky", 0, 0, 1, true)
+	panel.add = a.button("Nová záložka…", idBookmarkNew, 0, 0, 1, 0)
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100
-	panel.list = a.add("LISTBOX", "Strom záložek", idBookmarkList, 16, 58, 298, 240, wsTabstop|listStyle, 0, a.normalFont)
+	panel.list = a.add("LISTBOX", "Strom záložek", idBookmarkList, 0, 0, 1, 1, wsTabstop|listStyle, 0, a.normalFont)
 	sendMessage.Call(panel.list, 0x01a0, 0, uintptr(a.scale(24))) // LB_SETITEMHEIGHT
 	a.addScrollPane(panel.list, a.scale(24), true)
-	panel.empty = a.label("Dokument zatím nemá záložky.", 16, 61, 298, false)
-	panel.goTo = a.button("Přejít na stranu", idBookmarkGo, 16, 305, 145, 0)
-	panel.branch = a.button("Sbalit větev", idBookmarkBranch, 169, 305, 145, 0)
-	a.label("Název záložky", 16, 347, 298, true)
-	panel.title = a.edit(16, 372, 298, false)
-	a.label("Cílová strana", 16, 410, 298, true)
-	panel.target = a.edit(16, 435, 145, false)
-	panel.current = a.button("Aktuální strana", idBookmarkCurrent, 169, 433, 145, 0)
-	panel.apply = a.button("Použít úpravu", idBookmarkApply, 16, 478, 145, 0)
-	panel.undo = a.button("Vrátit změnu", idBookmarkUndo, 169, 478, 145, 0)
+	panel.empty = a.label("Dokument zatím nemá záložky.", 0, 0, 1, false)
+	panel.branch = a.button("Sbalit větev", idBookmarkBranch, 0, 0, 1, 0)
+	panel.titleLabel = a.label("Název záložky", 0, 0, 1, true)
+	panel.title = a.edit(0, 0, 1, false)
+	panel.targetLabel = a.label("Cílová strana", 0, 0, 1, true)
+	panel.target = a.edit(0, 0, 1, false)
+	panel.current = a.button("Aktuální strana", idBookmarkCurrent, 0, 0, 1, 0)
+	panel.apply = a.button("Použít úpravu", idBookmarkApply, 0, 0, 1, 0)
+	panel.undo = a.button("Vrátit změnu", idBookmarkUndo, 0, 0, 1, 0)
+	for _, control := range [...]uintptr{panel.heading, panel.empty, panel.titleLabel, panel.targetLabel} {
+		a.panelLabels[control] = true
+	}
+	for _, control := range [...]uintptr{panel.add, panel.branch, panel.current, panel.apply, panel.undo} {
+		a.panelButtons[control] = true
+	}
 	a.primaryButtons[panel.apply] = true
+}
+
+func (v *documentView) layoutBookmarkPanel() {
+	a, panel := v.app, &v.bookmarkPanel
+	area := a.bookmarkArea
+	width, height := int(area.right-area.left), int(area.bottom-area.top)
+	pane := a.scrollPanes[panel.list]
+	if width <= 0 || !v.ready() || a.full {
+		pane.arrange(rect{}, false)
+		showControl(a.bookmarkSidebar, false)
+		return
+	}
+	place(a.bookmarkSidebar, int(area.left), int(area.top), width, height)
+	d := a.scale
+	margin := min(d(12), width/10)
+	available := width - 2*margin
+	compact := available < d(192)
+	formHeight := d(198)
+	if compact {
+		formHeight = d(269)
+	}
+	formTop := max(d(104), height-formHeight)
+	place(panel.heading, margin, d(8), available, d(22))
+	place(panel.add, margin, d(34), available, d(32))
+	empty := len(v.bookmarks) == 0
+	place(panel.empty, margin, d(75), available, d(56))
+	showControl(panel.empty, empty)
+	pane.arrange(rect{int32(margin), int32(d(74)), int32(width - margin), int32(formTop - d(7))}, !empty)
+	place(panel.branch, margin, formTop, available, d(32))
+	showControl(panel.branch, !empty)
+	place(panel.titleLabel, margin, formTop+d(39), available, d(22))
+	place(panel.title, margin, formTop+d(61), available, d(28))
+	place(panel.targetLabel, margin, formTop+d(96), available, d(22))
+	if compact {
+		setText(panel.add, "Přidat záložku")
+		place(panel.target, margin, formTop+d(118), available, d(28))
+		place(panel.current, margin, formTop+d(151), available, d(32))
+		place(panel.apply, margin, formTop+d(190), available, d(32))
+		place(panel.undo, margin, formTop+d(228), available, d(32))
+	} else {
+		setText(panel.add, "Nová záložka…")
+		half := (available - d(8)) / 2
+		place(panel.target, margin, formTop+d(120), available-d(119), d(28))
+		place(panel.current, width-margin-d(111), formTop+d(118), d(111), d(32))
+		place(panel.apply, margin, formTop+d(157), half, d(32))
+		place(panel.undo, width-margin-half, formTop+d(157), half, d(32))
+	}
+	showControl(a.bookmarkSidebar, true)
+	// Moving siblings during resize can leave copied pixels in the owner-drawn list.
+	user32.NewProc("RedrawWindow").Call(a.bookmarkSidebar, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
 }
 
 func (v *documentView) bookmarkChanges() []bookmarkChange {
@@ -88,7 +145,6 @@ func (v *documentView) updateBookmarkActions() {
 	editing := ready && (selected || panel.creating)
 	setEnabled(panel.add, ready)
 	setEnabled(panel.list, v.ready())
-	setEnabled(panel.goTo, selected && v.ready() && slices.Contains(v.order, v.bookmarks[panel.selected].Page))
 	setEnabled(panel.branch, selected && v.bookmarkHasChildren(panel.selected))
 	for _, control := range []uintptr{panel.title, panel.target, panel.current, panel.apply} {
 		setEnabled(control, editing)
@@ -147,6 +203,7 @@ func (v *documentView) refreshBookmarks(selected int) {
 		selected = -1
 	}
 	v.showBookmark(selected)
+	v.layoutBookmarkPanel()
 }
 
 func bookmarkTitle(item pdfBookmark) string {
@@ -173,14 +230,19 @@ func (v *documentView) drawBookmarkRow(item *buttonDraw) bool {
 		color = selectionColor
 	}
 	d := v.app.scale
-	bounds.left += int32(d(7 + min(bookmark.Depth, 12)*13))
+	bounds.left += int32(v.bookmarkIndent(bookmark, int(bounds.right-bounds.left)))
 	if v.bookmarkHasChildren(index) {
-		indicator := "▾"
+		x, y := bounds.left+int32(d(6)), (bounds.top+bounds.bottom)/2
+		long, short := int32(max(2, d(4))), int32(max(1, d(2)))
+		chevron := [...]point{{x - long, y - short}, {x, y + short}, {x + long, y - short}}
 		if panel.collapsed[index] {
-			indicator = "▸"
+			chevron = [...]point{{x - short, y - long}, {x + short, y}, {x - short, y + long}}
 		}
-		marker := rect{bounds.left, bounds.top, bounds.left + int32(d(15)), bounds.bottom}
-		drawText(item.dc, indicator, marker, v.app.normalFont, color, 0)
+		pen, _, _ := gdiPen.Call(0, 1, color.win())
+		old, _, _ := gdiSelect.Call(item.dc, pen)
+		gdi32.NewProc("Polyline").Call(item.dc, uintptr(unsafe.Pointer(&chevron[0])), uintptr(len(chevron)))
+		gdiSelect.Call(item.dc, old)
+		gdiDelete.Call(pen)
 	}
 	bounds.left += int32(d(17))
 	bounds.right -= int32(d(6))
@@ -189,6 +251,45 @@ func (v *documentView) drawBookmarkRow(item *buttonDraw) bool {
 		v.app.drawFocus(item.dc, item.bounds)
 	}
 	return true
+}
+
+func (v *documentView) bookmarkIndent(bookmark pdfBookmark, width int) int {
+	d := v.app.scale
+	return min(d(7+min(bookmark.Depth, 12)*13), max(d(7), width-d(66)))
+}
+
+func (v *documentView) bookmarkAt(location uintptr) (int, bool) {
+	panel := &v.bookmarkPanel
+	row, _, _ := sendMessage.Call(panel.list, 0x01a9, 0, location) // LB_ITEMFROMPOINT
+	if row>>16 != 0 || row >= uintptr(len(panel.rows)) {
+		return -1, false
+	}
+	var bounds rect
+	sendMessage.Call(panel.list, 0x0198, row, uintptr(unsafe.Pointer(&bounds))) // LB_GETITEMRECT
+	x, y := int32(int16(location)), int32(int16(location>>16))
+	if !contains(bounds, x, y) {
+		return -1, false
+	}
+	index := panel.rows[row]
+	indent := int(bounds.left) + v.bookmarkIndent(v.bookmarks[index], int(bounds.right-bounds.left))
+	return index, v.bookmarkHasChildren(index) && int(x) >= indent && int(x) < indent+v.app.scale(17)
+}
+
+func (v *documentView) toggleBookmarkBranch(index int) {
+	panel := &v.bookmarkPanel
+	top, _, _ := sendMessage.Call(panel.list, 0x018e, 0, 0) // LB_GETTOPINDEX
+	first := index
+	if top < uintptr(len(panel.rows)) {
+		first = panel.rows[top]
+	}
+	if panel.collapsed == nil {
+		panel.collapsed = make(map[int]bool)
+	}
+	panel.collapsed[index] = !panel.collapsed[index]
+	v.refreshBookmarks(panel.selected)
+	if row := slices.Index(panel.rows, first); row >= 0 {
+		sendMessage.Call(panel.list, 0x0197, uintptr(row), 0) // LB_SETTOPINDEX
+	}
 }
 
 func (v *documentView) goToBookmark() {
@@ -210,7 +311,6 @@ func (v *documentView) startBookmark() {
 	v.updateBookmarkActions()
 	setFocus.Call(panel.title)
 	sendMessage.Call(panel.title, 0x00b1, 0, ^uintptr(0)) // EM_SETSEL
-	v.app.revealFocusedControl()
 }
 
 func (v *documentView) editBookmark() {
@@ -255,7 +355,6 @@ func (v *documentView) editBookmark() {
 	}
 	v.bookmarks = updated
 	v.refreshBookmarks(index)
-	v.app.layoutPanel()
 	v.app.updateActions()
 }
 
@@ -274,21 +373,13 @@ func (v *documentView) bookmarkCommand(id, notification int) bool {
 		}
 		return true
 	}
-	if id == idBookmarkGo || (id == idBookmarkList && notification == 2) { // LBN_DBLCLK
-		v.goToBookmark()
-		return true
-	}
 	if notification != 0 || v.app.busy {
 		return true
 	}
 	switch id {
 	case idBookmarkBranch:
 		if v.bookmarkHasChildren(panel.selected) {
-			if panel.collapsed == nil {
-				panel.collapsed = make(map[int]bool)
-			}
-			panel.collapsed[panel.selected] = !panel.collapsed[panel.selected]
-			v.refreshBookmarks(panel.selected)
+			v.toggleBookmarkBranch(panel.selected)
 		}
 	case idBookmarkNew:
 		v.startBookmark()

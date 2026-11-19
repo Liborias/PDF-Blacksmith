@@ -108,8 +108,8 @@ type app struct {
 	window, instance, normalFont, titleFont, labelFont uintptr
 	dpi, width, height                                 int
 	tool, mode                                         int
-	sidebar, thumbnailSidebar, controlParent           uintptr
-	detailsArea, thumbnailArea                         rect
+	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent uintptr
+	detailsArea, thumbnailArea, bookmarkArea             rect
 	panelItems                                         map[int][]panelItem
 	panelScroll                                        map[int]int
 	sideScroll                                         *panelScrollbar
@@ -121,7 +121,7 @@ type app struct {
 	headerBrand, windowButtonStart                     int
 	documentNameBounds, documentCloseBounds            rect
 	toolsCollapsed, detailsCollapsed                   bool
-	thumbnailsCollapsed                                bool
+	thumbnailsCollapsed, bookmarksCollapsed            bool
 	full                                               bool
 	placement                                          windowPlacement
 	savedStyle                                         uintptr
@@ -138,8 +138,7 @@ type app struct {
 	readOnlyFields, primaryButtons                     map[uintptr]bool
 	view                                               *documentView
 	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
-	thumbnailsToggle                                   uintptr
-	fileHint, filePath, fileRun                        uintptr
+	thumbnailsToggle, bookmarksToggle, railFont        uintptr
 	recent                                             recentPanel
 	exportScope, exportRange                           uintptr
 	splitScope, splitRange, splitButton, splitReport   uintptr
@@ -180,10 +179,10 @@ func main() {
 	screenWidth, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
 	screenHeight, _, _ := user32.NewProc("GetSystemMetrics").Call(1)
 	if screenWidth > 100 && screenHeight > 100 {
-		dpi = min(dpi, (screenWidth-24)*96/850, (screenHeight-72)*96/550)
+		dpi = min(dpi, (screenWidth-24)*96/minimumWorkspaceWidth, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab,
+		instance: instance, dpi: int(dpi), tool: idBrowseTab, mode: idBrowseTab, bookmarksCollapsed: true,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
@@ -231,9 +230,13 @@ func (a *app) scale(value int) int {
 }
 
 func (a *app) font(size, weight int) uintptr {
+	return a.orientedFont(size, weight, 0)
+}
+
+func (a *app) orientedFont(size, weight, angle int) uintptr {
 	height := -a.scale(size)
 	font, _, _ := gdi32.NewProc("CreateFontW").Call(
-		uintptr(height), 0, 0, 0, uintptr(weight), 0, 0, 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(wideString("Segoe UI"))),
+		uintptr(height), 0, uintptr(angle), uintptr(angle), uintptr(weight), 0, 0, 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(wideString("Segoe UI"))),
 	)
 	return font
 }

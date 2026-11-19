@@ -1,10 +1,15 @@
 package main
 
+import "unsafe"
+
 const (
-	toolPanelWidth      = 200
-	sidebarRailWidth    = 24
-	thumbnailPanelWidth = 220
-	idToggleThumbnails  = 230
+	toolPanelWidth        = 200
+	sidebarRailWidth      = 28
+	thumbnailPanelWidth   = 220
+	bookmarkPanelWidth    = 236
+	minimumWorkspaceWidth = 1000
+	minimumDocumentWidth  = 176
+	idToggleThumbnails    = 230
 )
 
 var sidebarRailColor = paletteColor{28, 27, 32}
@@ -37,17 +42,40 @@ func (a *app) detailsTab() int {
 func (a *app) sidebarRails() (rect, rect) {
 	v := a.viewport
 	width := int32(a.scale(sidebarRailWidth))
-	left := int32(0)
-	if !a.toolsCollapsed {
-		left = int32(a.scale(toolPanelWidth))
-	}
-	return rect{left, v.top, left + width, v.bottom},
+	return rect{v.left - width, v.top, v.left, v.bottom},
 		rect{v.right, v.top, v.right + width, v.bottom}
 }
 
-func (a *app) thumbnailRail() rect {
-	v := a.viewport
-	return rect{v.left - int32(a.scale(sidebarRailWidth)), v.top, v.left, v.bottom}
+func (a *app) layoutDocumentPanels() {
+	d := a.scale
+	left, right := 0, a.width
+	if !a.toolsCollapsed {
+		left += d(toolPanelWidth)
+	}
+	if !a.detailsCollapsed {
+		right -= d(panelWidth)
+	}
+	top, bottom := int32(d(headerHeight)), int32(max(d(headerHeight+1), a.height-d(footerHeight)))
+	rail := d(sidebarRailWidth)
+	if a.view.ready() {
+		room := max(0, right-left-2*rail-d(minimumDocumentWidth))
+		if !a.thumbnailsCollapsed {
+			width := min(d(thumbnailPanelWidth), room)
+			if !a.bookmarksCollapsed {
+				// Keep room for the bookmark editor on narrow windows.
+				width = min(width, room/2, max(d(70), room-d(145)))
+			}
+			a.thumbnailArea = rect{int32(left), top, int32(left + width), bottom}
+			left += width
+			room -= width
+		}
+		if !a.bookmarksCollapsed {
+			width := min(d(bookmarkPanelWidth), room)
+			a.bookmarkArea = rect{int32(right - width), top, int32(right), bottom}
+			right -= width
+		}
+	}
+	a.viewport = rect{int32(left + rail), top, int32(right - rail), bottom}
 }
 
 func (a *app) layoutSidebars() {
@@ -67,34 +95,21 @@ func (a *app) layoutSidebars() {
 	}
 	leftRail, rightRail := a.sidebarRails()
 	if !a.full {
-		y := (int(a.viewport.top+a.viewport.bottom) - d(44)) / 2
-		place(a.toolsToggle, int(leftRail.left), y, d(sidebarRailWidth), d(44))
-		place(a.detailsToggle, int(rightRail.left), y, d(sidebarRailWidth), d(44))
-		place(a.thumbnailsToggle, int(a.thumbnailRail().left), y, d(sidebarRailWidth), d(44))
-	}
-	if a.toolsCollapsed {
-		setText(a.toolsToggle, "Rozbalit panel nástrojů")
-	} else {
-		setText(a.toolsToggle, "Sbalit panel nástrojů")
-	}
-	if a.detailsCollapsed {
-		setText(a.detailsToggle, "Rozbalit panel nastavení")
-	} else {
-		setText(a.detailsToggle, "Sbalit panel nastavení")
+		y := int(a.viewport.top) + d(10)
+		place(a.toolsToggle, int(leftRail.left), y, d(sidebarRailWidth), d(88))
+		place(a.detailsToggle, int(rightRail.left), y, d(sidebarRailWidth), d(88))
+		place(a.thumbnailsToggle, int(leftRail.left), y+d(94), d(sidebarRailWidth), d(88))
+		place(a.bookmarksToggle, int(rightRail.left), y+d(94), d(sidebarRailWidth), d(88))
 	}
 	showControl(a.toolsToggle, !a.full)
 	showControl(a.detailsToggle, !a.full)
 	showControl(a.thumbnailsToggle, !a.full && a.view.ready())
-	if a.thumbnailsCollapsed {
-		setText(a.thumbnailsToggle, "Rozbalit panel náhledů")
-	} else {
-		setText(a.thumbnailsToggle, "Sbalit panel náhledů")
+	showControl(a.bookmarksToggle, !a.full && a.view.ready())
+	for _, tab := range [...]uintptr{a.toolsToggle, a.detailsToggle, a.thumbnailsToggle, a.bookmarksToggle} {
+		invalidate(tab)
 	}
-	invalidate(a.thumbnailsToggle)
-	invalidate(a.toolsToggle)
-	invalidate(a.detailsToggle)
 
-	x, top := int(rightRail.right), int(a.viewport.top)
+	x, top := a.width-d(panelWidth), int(a.viewport.top)
 	fileOptionsVisible := detailsVisible && a.tool == idFileTab
 	viewOptionsVisible := detailsVisible && a.tool == idBrowseTab
 	for index, option := range fileOptions {
@@ -143,6 +158,7 @@ func (a *app) layoutSidebars() {
 		a.view.layoutThumbnails(width, height)
 	}
 	showControl(a.thumbnailSidebar, show)
+	a.view.layoutBookmarkPanel()
 	a.layoutPanel()
 }
 
@@ -153,46 +169,55 @@ func (a *app) paintSidebars(dc uintptr) {
 	for _, rail := range [...]rect{leftRail, rightRail} {
 		fillColor(dc, rail, sidebarRailColor)
 	}
-	if a.view.ready() {
-		rail := a.thumbnailRail()
-		fillColor(dc, rail, sidebarRailColor)
-		fillColor(dc, rect{rail.right - 1, rail.top, rail.right, rail.bottom}, divider)
-	}
 	fillColor(dc, rect{leftRail.right - 1, leftRail.top, leftRail.right, leftRail.bottom}, divider)
 	fillColor(dc, rect{rightRail.left, rightRail.top, rightRail.left + 1, rightRail.bottom}, divider)
 }
 
 func (a *app) drawPanelToggle(item *buttonDraw) bool {
-	var arrow string
+	var collapsed, onLeft bool
 	switch item.handle {
 	case a.toolsToggle:
-		arrow = "‹"
-		if a.toolsCollapsed {
-			arrow = "›"
-		}
+		collapsed, onLeft = a.toolsCollapsed, true
 	case a.detailsToggle:
-		arrow = "›"
-		if a.detailsCollapsed {
-			arrow = "‹"
-		}
+		collapsed = a.detailsCollapsed
 	case a.thumbnailsToggle:
-		arrow = "‹"
-		if a.thumbnailsCollapsed {
-			arrow = "›"
-		}
+		collapsed, onLeft = a.thumbnailsCollapsed, true
+	case a.bookmarksToggle:
+		collapsed = a.bookmarksCollapsed
 	default:
 		return false
 	}
+	arrow := "›"
+	if onLeft != collapsed {
+		arrow = "‹"
+	}
 	fillColor(item.dc, item.bounds, sidebarRailColor)
 	bounds := item.bounds
-	bounds.left += 2
-	bounds.right -= 2
-	buttonColor := paletteColor{47, 43, 50}
+	d := a.scale
+	bounds.left += int32(d(2))
+	bounds.right -= int32(d(2))
+	buttonColor, foreground := sidebarRailColor, selectionColor
+	if collapsed {
+		buttonColor, foreground = paletteColor{47, 43, 50}, textColor
+	}
 	if item.state&1 != 0 {
 		buttonColor = divider
 	}
-	rounded(item.dc, bounds, a.scale(5), buttonColor, divider)
-	drawText(item.dc, arrow, bounds, a.titleFont, textColor, 1)
+	rounded(item.dc, bounds, d(5), buttonColor, divider)
+	arrowBounds := rect{bounds.left, bounds.top + int32(d(1)), bounds.right, bounds.top + int32(d(18))}
+	drawText(item.dc, arrow, arrowBounds, a.normalFont, foreground, 1)
+	caption := wideString(getText(item.handle))
+	length, _, _ := getTextLen.Call(item.handle)
+	font, _, _ := gdiSelect.Call(item.dc, a.railFont)
+	align := gdi32.NewProc("SetTextAlign")
+	previous, _, _ := align.Call(item.dc, 30) // TA_CENTER | TA_BASELINE
+	gdiTextColor.Call(item.dc, foreground.win())
+	gdiBkMode.Call(item.dc, 1)
+	x := (bounds.left+bounds.right)/2 + int32(d(5))
+	y := (arrowBounds.bottom + bounds.bottom) / 2
+	gdi32.NewProc("TextOutW").Call(item.dc, uintptr(x), uintptr(y), uintptr(unsafe.Pointer(caption)), length)
+	align.Call(item.dc, previous)
+	gdiSelect.Call(item.dc, font)
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, bounds)
 	}

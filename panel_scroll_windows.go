@@ -125,10 +125,25 @@ type scrollPane struct {
 }
 
 var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
-	if v := window.view; v != nil && hwnd == v.pageList && v.pageListMouse(message, wParam, lParam) {
+	v := window.view
+	if v != nil && hwnd == v.pageList && v.pageListMouse(message, wParam, lParam) {
 		return 0
 	}
+	bookmarkList := v != nil && hwnd == v.bookmarkPanel.list && v.ready()
+	if bookmarkList && (message == 0x0201 || message == 0x0203) { // WM_LBUTTONDOWN, WM_LBUTTONDBLCLK
+		if index, branch := v.bookmarkAt(lParam); branch {
+			if message == 0x0201 {
+				v.toggleBookmarkBranch(index)
+			}
+			return 0
+		}
+	}
 	result, _, _ := defSubclass.Call(hwnd, uintptr(message), wParam, lParam)
+	if bookmarkList && message == 0x0202 { // WM_LBUTTONUP, including a click on the already selected row.
+		if index, branch := v.bookmarkAt(lParam); index >= 0 && !branch && index == v.bookmarkPanel.selected {
+			v.goToBookmark()
+		}
+	}
 	if pane := window.scrollPanes[hwnd]; pane != nil {
 		switch message {
 		case 0x000c: // WM_SETTEXT
@@ -270,6 +285,14 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
 		} else {
 			thumbs.bar.setPosition(thumbs.bar.position - thumbnailWheelSteps(delta))
 		}
+		return
+	}
+	if hood := a.bookmarkSidebar; hover == hood || parent == hood {
+		bar := a.scrollPanes[a.view.bookmarkPanel.list].bar
+		bar.setPosition(bar.position - rows)
+		return
+	}
+	if a.detailsCollapsed {
 		return
 	}
 	bar := a.scrollbars[hover]

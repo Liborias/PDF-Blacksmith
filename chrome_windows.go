@@ -105,9 +105,6 @@ var toolIcons = map[int][][]point{
 	},
 	idPagesTab:      pagesIcon,
 	idPageOrderTool: pagesIcon,
-	idBookmarksTab: {
-		{{4, 2}, {14, 2}, {14, 16}, {9, 12}, {4, 16}, {4, 2}},
-	},
 	idProofTab: {
 		{{1, 5}, {9, 1}, {17, 5}, {9, 9}, {1, 5}},
 		{{1, 9}, {9, 13}, {17, 9}},
@@ -162,6 +159,10 @@ func (a *app) drawToolIconLabel(item *buttonDraw, color paletteColor) bool {
 	gdiDelete.Call(pen)
 	bounds.left = left + size + int32(a.scale(7))
 	bounds.right -= int32(a.scale(5))
+	if int(item.controlID) == idFileTab {
+		a.arrow(item.dc, int(bounds.right)-a.scale(8), int(bounds.top+bounds.bottom)/2, color)
+		bounds.right -= int32(a.scale(20))
+	}
 	drawText(item.dc, getText(item.handle), bounds, a.labelFont, color, 0x8000)
 	return true
 }

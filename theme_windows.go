@@ -239,7 +239,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 }
 
 func (a *app) disposeTheme() {
-	for _, object := range []uintptr{a.canvasBrush, a.panelBrush, a.inputBrush, a.normalFont, a.titleFont, a.labelFont} {
+	for _, object := range []uintptr{a.canvasBrush, a.panelBrush, a.inputBrush, a.normalFont, a.titleFont, a.labelFont, a.railFont} {
 		if object != 0 {
 			gdiDelete.Call(object)
 		}

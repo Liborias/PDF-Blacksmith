@@ -1184,7 +1184,6 @@ func (v *documentView) undo() {
 	if edit.bookmarks != nil {
 		v.bookmarks = edit.bookmarks
 		v.refreshBookmarks(edit.bookmarkSelection)
-		v.app.layoutPanel()
 		v.app.updateActions()
 		return
 	}

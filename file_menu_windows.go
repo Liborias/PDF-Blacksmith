@@ -42,60 +42,44 @@ func (a *app) activeFileOption() int {
 	return a.mode
 }
 
-func (a *app) buildFilePanel() {
-	a.fileHint = a.add("STATIC", "", 0, 16, 16, 298, 44, 0x80, 0, a.normalFont)
-	a.filePath = a.readout(16, 65, 298, 54)
-	a.fileRun = a.button("", idFileRun, 16, 134, 298, 0)
-	a.primaryButtons[a.fileRun] = true
-}
-
-func (a *app) updateFilePanel() {
-	path := a.view.path
-	var hint, command string
-	switch a.mode {
-	case idOpen:
-		hint, command = "PDF můžete také přetáhnout do okna aplikace.", "Vybrat soubor PDF…"
-	case idShowOutput:
-		hint, command = "Poslední uložený výstup", "Otevřít tento výstup"
-		path = a.lastOutput
-	case idSaveDocument:
-		hint, command = "Úpravy se uloží do otevřeného PDF po potvrzení přepsání.", "Uložit změny"
-	case idSaveDocumentAs:
-		hint, command = "Vyberte název a umístění kopie otevřeného PDF.", "Vybrat umístění…"
-	case idPrintDocument:
-		hint, command = "V tiskovém dialogu vyberte tiskárnu, rozsah stran a počet kopií.", "Otevřít tiskový dialog…"
+func (a *app) showFileMenu() {
+	a.activate(idFileTab)
+	items := make([]popupItem, 0, len(fileOptions))
+	for _, option := range fileOptions {
+		items = append(items, popupItem{
+			label: option.label, command: option.id,
+			checked: a.activeFileOption() == option.id, disabled: !a.fileOptionEnabled(option.id),
+		})
 	}
-	setText(a.fileHint, hint)
-	setText(a.filePath, path)
-	setText(a.fileRun, command)
-	setEnabled(a.fileRun, a.fileOptionEnabled(a.mode))
+	if index := a.trackPopup(a.toolButtons[idFileTab], toolPanelWidth, items); index >= 0 {
+		a.runFileOption(items[index].command)
+	}
 }
 
 func (a *app) updateFileOptions() {
 	for _, option := range fileOptions {
 		setEnabled(a.detailButtons[option.id], a.fileOptionEnabled(option.id))
 	}
-	switch a.detailsTab() {
-	case idFileDetails:
-		a.updateFilePanel()
-	case idRecentFiles:
+	if a.detailsTab() == idRecentFiles {
 		a.updateRecentActions()
 	}
 }
 
-func (a *app) runFileOption() {
-	if a.tool != idFileTab || !a.fileOptionEnabled(a.mode) {
+func (a *app) runFileOption(option int) {
+	if a.tool != idFileTab || !a.fileOptionEnabled(option) {
 		return
 	}
-	switch a.mode {
+	switch option {
 	case idOpen:
 		a.openDialog()
 	case idShowOutput:
 		a.openDocument(a.lastOutput, a.lastPassword)
 	case idSaveDocument, idSaveDocumentAs:
-		a.saveDocument(a.mode == idSaveDocumentAs)
+		a.saveDocument(option == idSaveDocumentAs)
 	case idPrintDocument:
 		a.printDocument()
+	case idRecentFiles, idExportTab, idFileSign:
+		a.activate(option)
 	}
 }
 

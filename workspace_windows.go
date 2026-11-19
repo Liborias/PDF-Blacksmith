@@ -45,7 +45,7 @@ const (
 	idPressICC
 	idToggleDetails
 	idFileSign
-	idFileRun
+	_
 	idFileDetails
 	idSplitTab
 	idSplitScope
@@ -89,7 +89,6 @@ var workspaceTabs = []struct {
 	{idSplitTab, "Rozdělit PDF", true},
 	{idMergeTab, "Sloučit PDF", false},
 	{idPageOrderTool, "Pořadí stránek", true},
-	{idBookmarksTab, "Záložky", true},
 }
 
 var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr", "Vybrané náhledy"}
@@ -130,7 +129,9 @@ func (a *app) setupWorkspace() bool {
 		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	a.thumbnailSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
-	if a.sidebar == 0 || a.thumbnailSidebar == 0 {
+	a.bookmarkSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
+		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 {
 		return false
 	}
 	a.sideScroll = a.addPanelScrollbar(a.sidebar, func(offset int) {
@@ -153,9 +154,11 @@ func (a *app) setupWorkspace() bool {
 		return false
 	}
 
-	a.toolsToggle = a.button("Sbalit panel nástrojů", idToggleTools, 0, 0, sidebarRailWidth, 0)
-	a.detailsToggle = a.button("Sbalit panel nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
-	a.thumbnailsToggle = a.button("Sbalit panel náhledů", idToggleThumbnails, 0, 0, sidebarRailWidth, 0)
+	a.railFont = a.orientedFont(14, 600, 900)
+	a.toolsToggle = a.button("Nástroje", idToggleTools, 0, 0, sidebarRailWidth, 0)
+	a.detailsToggle = a.button("Nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
+	a.thumbnailsToggle = a.button("Náhledy", idToggleThumbnails, 0, 0, sidebarRailWidth, 0)
+	a.bookmarksToggle = a.button("Záložky", idToggleBookmarks, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
@@ -198,16 +201,16 @@ func (a *app) setupWorkspace() bool {
 	a.beginPanel(idSignTab)
 	a.buildSignPanel()
 	a.beginPanel(idFileDetails)
-	a.buildFilePanel()
+	a.label("PDF můžete také přetáhnout do okna.", 16, 16, 298, false)
 	a.beginPanel(idRecentFiles)
 	a.buildRecentPanel()
 	a.beginPanel(idSplitTab)
 	a.buildSplitPanel()
 	a.beginPanel(idMergeTab)
 	a.buildMergePanel()
-	a.beginPanel(idBookmarksTab)
+	a.addingTab, a.controlParent = 0, a.bookmarkSidebar
 	a.view.buildBookmarkPanel()
-	a.addingTab, a.controlParent = 0, a.thumbnailSidebar
+	a.controlParent = a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
 	a.layout()
@@ -369,10 +372,10 @@ func (a *app) activate(id int) {
 	switch id {
 	case idFileTab:
 		if a.tool != idFileTab {
-			a.mode = idOpen
+			a.mode = idFileDetails
 		}
 		a.tool = idFileTab
-	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
+	case idRecentFiles, idExportTab, idFileSign:
 		if !a.fileOptionEnabled(id) {
 			return
 		}
@@ -395,7 +398,7 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idMergeTab:
 		a.tool, a.mode = idMergeTab, idMergeTab
-	case idProofTab, idSignTab, idSplitTab, idBookmarksTab:
+	case idProofTab, idSignTab, idSplitTab:
 		if !a.documentTools {
 			return
 		}
@@ -422,27 +425,11 @@ func (a *app) layout() {
 		return
 	}
 	d := a.scale
-	a.thumbnailArea = rect{}
+	a.thumbnailArea, a.bookmarkArea = rect{}, rect{}
 	if a.full {
 		a.viewport = size
 	} else {
-		left, right := d(sidebarRailWidth), a.width-d(sidebarRailWidth)
-		if !a.toolsCollapsed {
-			left += d(toolPanelWidth)
-		}
-		if !a.detailsCollapsed {
-			right -= d(panelWidth)
-		}
-		top, bottom := int32(d(headerHeight)), int32(max(d(headerHeight+1), a.height-d(footerHeight)))
-		if a.view.ready() {
-			if !a.thumbnailsCollapsed {
-				width := max(d(88), min(d(thumbnailPanelWidth), right-left-d(sidebarRailWidth+170)))
-				a.thumbnailArea = rect{int32(left), top, int32(left + width), bottom}
-				left += width
-			}
-			left += d(sidebarRailWidth)
-		}
-		a.viewport = rect{int32(left), top, int32(right), bottom}
+		a.layoutDocumentPanels()
 		a.layoutHeader()
 		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
 		a.view.layoutToolbar()
@@ -470,29 +457,8 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 		}
 		return item, !empty
 	}
-	if tab == idBookmarksTab {
-		panel := &a.view.bookmarkPanel
-		empty := len(a.view.bookmarks) == 0
-		switch item.handle {
-		case panel.empty:
-			return item, empty
-		case panel.list, panel.goTo, panel.branch:
-			return item, !empty
-		}
-		if empty && item.y > 300 {
-			item.y -= 245
-		}
-	}
 	if item.handle == a.splitRange {
 		return item, comboIndex(a.splitScope) == exportPageRanges
-	}
-	if tab == idFileDetails && a.mode == idOpen {
-		if item.handle == a.filePath {
-			return item, false
-		}
-		if item.handle == a.fileRun {
-			item.y = 60
-		}
 	}
 	if tab == idProofTab {
         mode := max(0, comboIndex(a.view.convertMode))
@@ -624,7 +590,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&bounds)))
 		dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
 		fillColor(dc, bounds, panelColor)
-		if hwnd == a.thumbnailSidebar {
+		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar {
 			fillColor(dc, rect{right: 1, bottom: bounds.bottom}, divider)
 		}
 		user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
@@ -651,7 +617,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 func (a *app) minimumSize(pointer uintptr) {
 	var info minMaxInfo
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&info)), pointer, unsafe.Sizeof(info))
-	info.minimumTrack = point{int32(a.scale(850)), int32(a.scale(545))}
+	info.minimumTrack = point{int32(a.scale(minimumWorkspaceWidth)), int32(a.scale(545))}
 	copyDrawItem.Call(pointer, uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info))
 }
 
@@ -733,7 +699,7 @@ func (a *app) closeDocument() {
 	setText(a.splitReport, "")
 	a.reportStatus("")
 	if a.tool == idFileTab {
-		a.mode = idOpen
+		a.mode = idFileDetails
 	} else {
 		a.tool, a.mode = idBrowseTab, idBrowseTab
 	}
@@ -759,7 +725,7 @@ func (a *app) openDocument(path, password string) {
 		return
 	}
 	if a.tool == idFileTab {
-		a.mode = idOpen
+		a.mode = idFileDetails
 	} else {
 		a.tool, a.mode = idBrowseTab, idBrowseTab
 	}
@@ -864,11 +830,12 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idBookmarksTab,
-		idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
+	case idFileTab:
+		a.showFileMenu()
+	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab:
 		a.activate(id)
-	case idFileRun:
-		a.runFileOption()
+	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
+		a.runFileOption(id)
 	case idRecentOpen:
 		a.openRecentFile()
 	case idToggleTools:
@@ -881,6 +848,10 @@ func (a *app) command(id, notification int) {
 	case idToggleThumbnails:
 		a.thumbnailsCollapsed = !a.thumbnailsCollapsed
 		a.view.endPageDrag()
+		a.layout()
+		a.view.schedule()
+	case idToggleBookmarks:
+		a.bookmarksCollapsed = !a.bookmarksCollapsed
 		a.layout()
 		a.view.schedule()
 	case idFullscreen:
@@ -1052,9 +1023,9 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idBookmarksTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab) {
 			if a.tool == idFileTab {
-				a.mode = idOpen
+				a.mode = idFileDetails
 			} else {
 				a.tool, a.mode = idBrowseTab, idBrowseTab
 			}
@@ -1236,11 +1207,11 @@ func (a *app) handleInput(msg *winMessage) bool {
 			a.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
 			return true
 		}
-		if contains(a.thumbnailArea, pos.x, pos.y) {
+		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.bookmarkArea, pos.x, pos.y) {
 			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
 		}
-		if !a.full && !a.detailsCollapsed && pos.x >= a.viewport.right+int32(a.scale(sidebarRailWidth)) && pos.x < int32(a.width) &&
+		if !a.full && !a.detailsCollapsed && pos.x >= a.detailsArea.left && pos.x < int32(a.width) &&
 			pos.y >= a.viewport.top && pos.y < a.viewport.bottom {
 			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
@@ -1255,6 +1226,10 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if msg.wParam == 0x0d && msg.window == a.recent.list {
 		a.openRecentFile()
+		return true
+	}
+	if msg.wParam == 0x0d && msg.window == a.view.bookmarkPanel.list {
+		a.view.goToBookmark()
 		return true
 	}
 	if msg.wParam == 0x2e && msg.window == a.view.pageList && a.mode == idPagesTab {
