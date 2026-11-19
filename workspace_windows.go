@@ -51,6 +51,10 @@ const (
 	idSplitScope
 	idSplitRun
 	idPageOrderTool
+	idGrayICC
+	idGrayProfile
+	idKOutputProfile
+	idProofApply
 )
 
 const (
@@ -129,7 +133,12 @@ func (a *app) setupWorkspace() bool {
 	if json.Unmarshal(printCatalog, &catalog) != nil {
 		return false
 	}
-	a.profileChoices = append([]profileChoice{{"", "Zachovat barvy"}, {"k", "Stupně šedi · pouze deska K"}}, catalog...)
+	a.profileChoices = append([]profileChoice{
+        {"", "Zachovat barvy"},
+        {"k", "Stupně šedi · DeviceGray"},
+        {"rich_black", "Složená černá → K100"},
+        {"k_cmyk", "Pouze K · explicitní CMYK"},
+    }, catalog...)
 	a.profileChoices = append(a.profileChoices, profileChoice{"custom", "Vlastní výstupní profil ICC"})
 	if json.Unmarshal(exportCatalog, &a.exportPresets) != nil || len(a.exportPresets) == 0 {
 		return false
@@ -214,11 +223,11 @@ func (a *app) buildExportPanel() {
 		names = append(names, p.Name)
 	}
 	a.profiles = a.combo(idICCProfile, 16, 251, 298, names)
-	chooseCombo(a.profiles, 1)
-	a.pressProfiles = a.combo(idPressICC, 16, 251, 298, names[2:])
+	chooseCombo(a.profiles, 1+defaultIndex(colorModes, a.export.ColorMode, defaults.ColorMode))
+    a.pressProfiles = a.combo(idPressICC, 16, 251, 298, names[4:])
 	for _, preset := range a.exportPresets {
 		if preset.Profile != "" {
-			index := slices.IndexFunc(a.profileChoices[2:], func(choice profileChoice) bool { return choice.Key == preset.Profile })
+			index := slices.IndexFunc(a.profileChoices[4:], func(choice profileChoice) bool { return choice.Key == preset.Profile })
 			chooseCombo(a.pressProfiles, index)
 			break
 		}
@@ -226,11 +235,22 @@ func (a *app) buildExportPanel() {
 	a.customICC = a.edit(16, 285, 187, false)
 	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 282, 102, 0)
 	a.exportManualStart = len(a.panelItems[idExportTab])
-	a.outline = a.button("Převést text na křivky", idOutline, 16, 318, 298, bsAutoCheck)
-	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 348, 298, bsAutoCheck)
-	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 378, 298, bsAutoCheck)
-	a.exportReport = a.readout(16, 418, 298, 105)
-	a.label("Parametry exportu", 16, 544, 298, true)
+    a.label("ICC profil převodu na stupně šedi", 16, 285, 298, false)
+    a.grayProfileCombo = a.combo(idGrayProfile, 16, 307, 298, []string{
+        "Automaticky podle dokumentu", "Gray Gamma 2.2", "Gray Gamma 1.8", "Vlastní ICC Gray…",
+    })
+    chooseCombo(a.grayProfileCombo, defaultIndex(grayProfiles, a.export.GrayProfile, defaults.GrayProfile))
+    a.grayCustomICC = a.edit(16, 344, 187, false)
+    a.grayBrowse = a.button("Vybrat ICC…", idGrayICC, 212, 341, 102, 0)
+    a.label("Výstupní CMYK profil pro K", 16, 376, 298, false)
+    a.kOutputProfile = a.combo(idKOutputProfile, 16, 398, 298, names[4:])
+    kIndex := slices.IndexFunc(a.profileChoices[4:], func(choice profileChoice) bool {return choice.Key == a.export.KProfile})
+    chooseCombo(a.kOutputProfile, max(0, kIndex))
+    a.outline = a.button("Převést text na křivky", idOutline, 16, 438, 298, bsAutoCheck)
+	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 470, 298, bsAutoCheck)
+	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 502, 298, bsAutoCheck)
+	a.exportReport = a.readout(16, 542, 298, 105)
+	a.label("Parametry exportu", 16, 661, 298, true)
 	labels := []string{"Záměr reprodukce", "Černý bod", "Obrázky", "Komprese", "Kontrola desek", "Oprava K"}
 	choices := [][]string{
 		{"Podle PDF", "Perceptuální", "Relativní", "Saturace", "Absolutní"},
@@ -242,11 +262,11 @@ func (a *app) buildExportPanel() {
 	}
 	for index, label := range labels {
 		x := 16 + (index%2)*153
-		y := 579 + (index/2)*63
+		y := 696 + (index/2)*63
 		a.label(label, x, y, 145, false)
 		a.exportOptionControls[index] = a.combo(idExportOption, x, y+21, 145, choices[index])
 	}
-	a.button("Obnovit výchozí parametry", idResetExportOptions, 16, 774, 298, 0)
+	a.button("Obnovit výchozí parametry", idResetExportOptions, 16, 892, 298, 0)
 	a.applyExportOptions(a.export)
 }
 
@@ -283,11 +303,13 @@ func (a *app) applyExportOptions(value exportOptions) {
 
 func (a *app) updateExportOptions() {
 	c := a.exportOptionControls
-	a.export = exportOptions{
-		intents[max(0, comboIndex(c[0]))], blackPoints[max(0, comboIndex(c[1]))],
-		imageDPIs[max(0, comboIndex(c[2]))], compressions[max(0, comboIndex(c[3]))],
-		proofDPIs[max(0, comboIndex(c[4]))], repairDPIs[max(0, comboIndex(c[5]))],
-	}
+	a.export.Intent = intents[max(0, comboIndex(c[0]))]
+    a.export.BlackPoint = blackPoints[max(0, comboIndex(c[1]))]
+    a.export.ImageDPI = imageDPIs[max(0, comboIndex(c[2]))]
+    a.export.Compression = compressions[max(0, comboIndex(c[3]))]
+    a.export.ProofDPI = proofDPIs[max(0, comboIndex(c[4]))]
+    a.export.RepairDPI = repairDPIs[max(0, comboIndex(c[5]))]
+    a.export.GrayProfile = grayProfiles[max(0, comboIndex(a.grayProfileCombo))]
 	if err := saveExportOptions(a.export); err != nil {
 		a.report("Předvolby nelze uložit. " + err.Error())
 	}
@@ -308,7 +330,7 @@ func (a *app) profileKey() string {
 		if preset.Profile == "" {
 			return ""
 		}
-		control, choices = a.pressProfiles, choices[2:]
+		control, choices = a.pressProfiles, choices[4:]
 	}
 	index := comboIndex(control)
 	if index < 0 || index >= len(choices) {
@@ -429,8 +451,14 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 		return item, press
 	case a.customICC, a.customBrowse:
 		return item, key == "custom"
-	case a.raster:
-		return item, manual && key == "k" && !a.checked(a.outline)
+	case a.grayProfileCombo:
+        return item, manual && (key == "k" || key == "k_cmyk")
+    case a.grayCustomICC, a.grayBrowse:
+        return item, manual && (key == "k" || key == "k_cmyk") && a.export.GrayProfile == "custom"
+    case a.kOutputProfile:
+        return item, manual && key == "k_cmyk"
+    case a.raster:
+        return item, manual && key == "k" && !a.checked(a.outline)
 	case a.exportReport:
 		switch {
 		case press && key == "custom":
@@ -694,7 +722,15 @@ func (a *app) command(id, notification int) {
 	if notification == 1 {
 		switch id {
 		case idExportOption:
-			a.updateExportOptions()
+            a.updateExportOptions()
+        case idGrayProfile:
+            a.updateExportOptions()
+            a.layoutPanel()
+        case idKOutputProfile:
+            key := a.profileChoices[4+max(0, comboIndex(a.kOutputProfile))].Key
+            a.export.KProfile = key
+            if err := saveExportOptions(a.export); err != nil { a.report(err.Error()) }
+            a.layoutPanel()
 		case idExportPreset:
 			setText(a.exportHint, a.selectedExportPreset().Description)
 			a.layoutPanel()
@@ -751,7 +787,9 @@ func (a *app) command(id, notification int) {
 			a.openDocument(a.view.path, getText(a.password))
 		}
 	case idICCBrowse:
-		a.chooseInput(a.customICC, "Barevné profily ICC nebo ICM\x00*.icc;*.icm")
+        a.chooseInput(a.customICC, "Barevné profily ICC nebo ICM\x00*.icc;*.icm")
+    case idGrayICC:
+        a.chooseInput(a.grayCustomICC, "Šedé profily ICC nebo ICM\x00*.icc;*.icm")
 	case idCertBrowse:
 		a.chooseInput(a.cert, "Osobní certifikát PKCS#12\x00*.p12;*.pfx")
 	case idTrustBrowse:
@@ -818,14 +856,20 @@ func (a *app) startAction(id int) {
 			return
 		}
 		key := a.profileKey()
-		if req.Preset == "" {
-			req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
-			req.Gray = key == "k"
-			req.AllowRaster = req.Gray && !req.Outline && a.checked(a.raster)
-		}
-		if !req.Gray {
-			req.Profile = key
-		}
+        if req.Preset == "" {
+            req.Outline, req.Decrypt = a.checked(a.outline), a.checked(a.decrypt)
+            req.Gray = key == "k"
+            req.ColorMode = map[string]string{"k":"gray", "rich_black":"rich_black", "k_cmyk":"k_cmyk"}[key]
+            req.GrayProfile = a.export.GrayProfile
+            req.GrayCustomICC = strings.Trim(strings.TrimSpace(getText(a.grayCustomICC)), "\"")
+            req.KProfile = a.export.KProfile
+            req.AllowRaster = req.Gray && !req.Outline && a.checked(a.raster)
+            if key != "k" && key != "rich_black" && key != "k_cmyk" {
+                req.Profile = key
+            }
+        } else {
+            req.Profile = key
+        }
 		if req.Profile == "custom" {
 			req.CustomICC = strings.Trim(strings.TrimSpace(getText(a.customICC)), "\"")
 			if info, err := os.Stat(req.CustomICC); err != nil || !info.Mode().IsRegular() {
@@ -840,8 +884,12 @@ func (a *app) startAction(id int) {
 		switch {
 		case req.Preset != "":
 			suffix = preset.Suffix
-		case req.Gray:
-			suffix = "-K"
+		case req.ColorMode == "gray":
+            suffix = "-Gray"
+        case req.ColorMode == "rich_black":
+            suffix = "-cista-cerna"
+        case req.ColorMode == "k_cmyk":
+            suffix = "-K-CMYK"
 		case key != "":
 			suffix = "-" + key
 		case req.Decrypt:
