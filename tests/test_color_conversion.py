@@ -59,8 +59,11 @@ class ColorConversionTests(unittest.TestCase):
         with document(b"0 g 0.5 G") as pdf:
             vectors, images = gray_to_explicit_k(pdf)
             self.assertEqual((vectors, images), (2, 0))
-            self.assertEqual(operations(pdf)[0], ([0, 0, 0, 1], "k"))
-            self.assertEqual(operations(pdf)[1], ([0, 0, 0, 0.5], "K"))
+            ops = operations(pdf)
+            self.assertEqual(ops[0], ([0, 0, 0, 1], "k"))  # explicit initial fill
+            self.assertEqual(ops[1], ([0, 0, 0, 1], "K"))  # explicit initial stroke
+            self.assertEqual(ops[-2], ([0, 0, 0, 1], "k"))
+            self.assertEqual(ops[-1], ([0, 0, 0, 0.5], "K"))
 
     def test_non_gray_paint_is_refused(self):
         with document(b"0.5 0 0 rg") as pdf:
