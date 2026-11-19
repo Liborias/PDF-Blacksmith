@@ -107,6 +107,7 @@ type profileChoice struct {
 type app struct {
 	window, instance, normalFont, titleFont, labelFont uintptr
 	dpi, width, height                                 int
+	toolsWidth, settingsWidth                          int
 	tool, mode                                         int
 	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent uintptr
 	detailsArea, thumbnailArea, bookmarkArea             rect
@@ -122,6 +123,7 @@ type app struct {
 	documentNameBounds, documentCloseBounds            rect
 	toolsCollapsed, detailsCollapsed                   bool
 	thumbnailsCollapsed, bookmarksCollapsed            bool
+	leftPanelsOpen, rightPanelsOpen                     [2]bool
 	full                                               bool
 	placement                                          windowPlacement
 	savedStyle                                         uintptr
@@ -134,11 +136,13 @@ type app struct {
 	choiceCommands                                     map[int]*choiceControl
 	popup                                              []popupItem
 	popupWidth                                         int
+	fileMenu                                           fileMenu
 	options, checkedOptions, panelLabels, panelButtons map[uintptr]bool
 	readOnlyFields, primaryButtons                     map[uintptr]bool
 	view                                               *documentView
 	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
 	thumbnailsToggle, bookmarksToggle, railFont        uintptr
+	leftPanelsToggle, rightPanelsToggle                 uintptr
 	recent                                             recentPanel
 	exportScope, exportRange                           uintptr
 	splitScope, splitRange, splitButton, splitReport   uintptr
@@ -197,6 +201,12 @@ func main() {
 		return
 	}
 	defer window.view.closeReaders()
+	defer func() {
+		if task := window.view.search.task; task != nil {
+			task.cancel()
+			<-task.done
+		}
+	}()
 	showWindow.Call(window.window, 3) // SW_SHOWMAXIMIZED retains the normal window placement.
 	setFocus.Call(window.toolButtons[idFileTab])
 	if len(os.Args) > 1 {
@@ -368,6 +378,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return 0
 	case 0x0086: // WM_NCACTIVATE
 		return 1
+	case 0x0006: // WM_ACTIVATE
+		if wParam&0xffff == 0 {
+			a.hideFileMenu(false)
+		}
 	case 0x002c: // WM_MEASUREITEM
 		if a.measurePopup(lParam) {
 			return 1
@@ -405,6 +419,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return 0
 	case wmReaderFinished:
 		a.view.finished(<-a.view.jobs)
+		return 0
+	case wmSearchUpdate:
+		a.view.receiveSearch(<-a.view.search.events)
 		return 0
 	case wmThumbnailUpdate:
 		a.view.schedule()
@@ -446,8 +463,8 @@ func (a *app) drawControl(param uintptr) bool {
 	}
 	var item buttonDraw
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), param, unsafe.Sizeof(item))
-	return a.drawPopup(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || a.drawRecentRow(&item) ||
-		(a.view != nil && a.view.drawListRow(&item))
+	return a.drawPopup(&item) || a.drawFileMenuButton(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || a.drawRecentRow(&item) ||
+		(a.view != nil && (a.view.drawSearchRow(&item) || a.view.drawListRow(&item)))
 }
 
 func setText(handle uintptr, value string) {

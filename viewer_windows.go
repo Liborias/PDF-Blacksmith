@@ -245,6 +245,7 @@ type documentView struct {
 	history                                                                    []pageEdit
 	bookmarks, savedBookmarks                                                  []pdfBookmark
 	bookmarkPanel                                                              bookmarkPanel
+	search                                                                     searchPanel
 	page, reference                                                            int
 	pageSelection                                                              []int
 	pageDrag                                                                   thumbnailDrag
@@ -401,6 +402,7 @@ func (v *documentView) sourceUnchanged() bool { return unchanged(v.path, v.origi
 
 func (v *documentView) resetDocument() {
 	v.generation++
+	v.resetSearch()
 	user32.NewProc("KillTimer").Call(v.app.window, readerMemoryTimer)
 	user32.NewProc("KillTimer").Call(v.app.window, readerZoomTimer)
 	v.zoomDeadline = time.Time{}
@@ -614,6 +616,10 @@ func (v *documentView) centerPage(atEnd bool) {
 }
 
 func (v *documentView) gotoPage(index int, atEnd bool) {
+	v.gotoPageAt(index, atEnd, nil)
+}
+
+func (v *documentView) gotoPageAt(index int, atEnd bool, anchor *readingAnchor) {
 	if index < 0 || index >= len(v.order) {
 		return
 	}
@@ -622,7 +628,12 @@ func (v *documentView) gotoPage(index int, atEnd bool) {
 		v.reference = index
 		v.buildLayout()
 	}
-	v.centerPage(atEnd)
+	if anchor == nil {
+		v.centerPage(atEnd)
+	} else {
+		width, height := v.viewportSize()
+		v.restore(*anchor, width/2, height/2)
+	}
 	v.changedViewport()
 }
 
@@ -1110,6 +1121,7 @@ func (v *documentView) updateActions() {
 	editing := loaded && !v.app.busy
 	v.app.updateMergeInputButtons()
 	v.updateBookmarkActions()
+	v.updateSearchActions()
 	for _, control := range []uintptr{v.next, v.previous, v.jump, v.pageInput, v.zoomIn, v.zoomOut, v.fit, v.pageList} {
 		setEnabled(control, loaded)
 	}
@@ -1197,7 +1209,7 @@ func (v *documentView) undo() {
 }
 
 func (v *documentView) command(id, notification int) bool {
-	if v.bookmarkCommand(id, notification) {
+	if v.bookmarkCommand(id, notification) || v.searchCommand(id, notification) {
 		return true
 	}
 	if notification == 1 {
@@ -1353,6 +1365,7 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
 		}
 		v.paintDetails(dc, number, bounds)
+		v.paintSearchHighlights(dc, number, bounds)
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)
 	if v.app.full {

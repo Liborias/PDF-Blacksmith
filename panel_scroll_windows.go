@@ -244,8 +244,8 @@ func (pane *scrollPane) scrollTo(position int) {
 
 func (a *app) layoutScrollPane(pane *scrollPane, item panelItem, offset int, shown bool) {
 	d := a.scale
-	left, top := int32(d(item.x)), int32(d(item.y-offset))
-	pane.arrange(rect{left, top, left + int32(d(item.width)), top + int32(d(item.height))}, shown)
+	left, top := int32(item.x), int32(d(item.y-offset))
+	pane.arrange(rect{left, top, left + int32(item.width), top + int32(d(item.height))}, shown)
 }
 
 func (pane *scrollPane) arrange(frame rect, shown bool) {

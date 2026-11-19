@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
@@ -137,7 +138,7 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
+	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "reader_search.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
 		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))
@@ -187,11 +188,15 @@ func extractEntry(entry *zip.File, destination string) error {
 }
 
 func engineCommand(args ...string) (*exec.Cmd, error) {
+	return engineCommandContext(context.Background(), args...)
+}
+
+func engineCommandContext(ctx context.Context, args ...string) (*exec.Cmd, error) {
 	dir, err := appRuntime()
 	if err != nil {
 		return nil, fmt.Errorf("Součásti aplikace se nepodařilo rozbalit.\n%w", err)
 	}
-	cmd := exec.Command(filepath.Join(dir, "python.exe"),
+	cmd := exec.CommandContext(ctx, filepath.Join(dir, "python.exe"),
 		append([]string{"-B", "-I", "-X", "utf8", filepath.Join(dir, "engine.py")}, args...)...)
 	cmd.Dir = dir
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}

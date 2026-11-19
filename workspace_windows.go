@@ -84,6 +84,7 @@ var workspaceTabs = []struct {
 }{
 	{idFileTab, "Soubor", false},
 	{idBrowseTab, "Zobrazení", false},
+	{idSearchTab, "Najít v PDF", true},
 	{idProofTab, "Separace", true},
 	{idSignTab, "Digitální podpis", true},
 	{idSplitTab, "Rozdělit PDF", true},
@@ -128,7 +129,7 @@ func (a *app) setupWorkspace() bool {
 	a.sidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	a.thumbnailSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
-		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+		wsChild|0x02000000|0x04000000, 0, 0, 1, 1, a.window, 0, a.instance, 0) // Clip the File menu above it.
 	a.bookmarkSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 {
@@ -159,15 +160,22 @@ func (a *app) setupWorkspace() bool {
 	a.detailsToggle = a.button("Nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
 	a.thumbnailsToggle = a.button("Náhledy", idToggleThumbnails, 0, 0, sidebarRailWidth, 0)
 	a.bookmarksToggle = a.button("Záložky", idToggleBookmarks, 0, 0, sidebarRailWidth, 0)
+	a.leftPanelsToggle = a.button("Levá strana", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
+	a.rightPanelsToggle = a.button("Pravá strana", idToggleRightPanels, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
 	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
 	a.documentClose = a.button("Zavřít PDF", idClosePDF, 0, 0, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
+	a.toolsWidth = a.scale(168)
 	for _, tab := range workspaceTabs {
-		handle := a.button(tab.name, tab.id, 0, 0, toolPanelWidth-20, 0)
+		a.toolsWidth = max(a.toolsWidth, a.captionWidth(tab.name, a.labelFont)+a.scale(64))
+		handle := a.button(tab.name, tab.id, 0, 0, 1, 0x04000000) // WS_CLIPSIBLINGS
 		a.toolButtons[tab.id] = handle
 		a.panelButtons[handle] = true
+	}
+	if !a.buildFileMenu(className) {
+		return false
 	}
 	a.sidebarTitle = a.label("", 0, 0, 298, true)
 	a.panelLabels[a.sidebarTitle] = true
@@ -204,6 +212,8 @@ func (a *app) setupWorkspace() bool {
 	a.label("PDF můžete také přetáhnout do okna.", 16, 16, 298, false)
 	a.beginPanel(idRecentFiles)
 	a.buildRecentPanel()
+	a.beginPanel(idSearchTab)
+	a.view.buildSearchPanel()
 	a.beginPanel(idSplitTab)
 	a.buildSplitPanel()
 	a.beginPanel(idMergeTab)
@@ -398,7 +408,7 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idMergeTab:
 		a.tool, a.mode = idMergeTab, idMergeTab
-	case idProofTab, idSignTab, idSplitTab:
+	case idProofTab, idSignTab, idSplitTab, idSearchTab:
 		if !a.documentTools {
 			return
 		}
@@ -408,6 +418,9 @@ func (a *app) activate(id int) {
 	if (old == idProofTab) != (id == idProofTab) {
 		a.view.reframe()
 	}
+	if (old == idSearchTab) != (a.mode == idSearchTab) {
+		a.view.invalidateCanvas()
+	}
 	a.layout()
 	if old == idPagesTab && a.mode != idPagesTab {
 		a.view.endPageDrag()
@@ -416,6 +429,7 @@ func (a *app) activate(id int) {
 }
 
 func (a *app) layout() {
+	a.hideFileMenu(false)
 	var size rect
 	if ok, _, _ := getClientRect.Call(a.window, uintptr(unsafe.Pointer(&size))); ok == 0 {
 		return
@@ -450,6 +464,10 @@ func (a *app) layout() {
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if item.handle == a.view.search.list {
+		item.height = max(100, int(a.detailsArea.bottom-a.detailsArea.top)*96/a.dpi-item.y-18)
+		return item, true
+	}
 	if tab == idRecentFiles {
 		empty := len(a.recent.files) == 0
 		if item.handle == a.recent.empty {
@@ -543,14 +561,14 @@ func (a *app) layoutPanel() {
 		for index, item := range items {
 			show := tab == active
 			if show {
-				item, show = a.panelItemLayout(tab, index, item)
+				item, show = a.settingsItem(tab, index, item)
 			}
 			if pane := a.scrollPanes[item.handle]; pane != nil {
 				a.layoutScrollPane(pane, item, offset, show)
 				continue
 			}
 			if show {
-				place(item.handle, a.scale(item.x), a.scale(item.y-offset), a.scale(item.width), a.scale(item.height))
+				place(item.handle, item.x, a.scale(item.y-offset), item.width, a.scale(item.height))
 			}
 			showControl(item.handle, show)
 		}
@@ -589,7 +607,14 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		var bounds rect
 		getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&bounds)))
 		dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
-		fillColor(dc, bounds, panelColor)
+		if hwnd == a.fileMenu.handle {
+			outline := bounds
+			outline.top -= int32(a.scale(9))
+			rounded(dc, outline, a.scale(9), panelColor, scrollTrackColor)
+			fillColor(dc, rect{right: bounds.right, bottom: 1}, scrollTrackColor)
+		} else {
+			fillColor(dc, bounds, panelColor)
+		}
 		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar {
 			fillColor(dc, rect{right: 1, bottom: bounds.bottom}, divider)
 		}
@@ -747,6 +772,11 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 }
 
 func (a *app) command(id, notification int) {
+	if index := id - idFileMenuFirst; index >= 0 && index < len(fileOptions) && notification == 0 {
+		a.hideFileMenu(true)
+		a.runFileOption(fileOptions[index].id)
+		return
+	}
 	if choice := a.choiceCommands[id]; choice != nil && notification == 0 {
 		a.openChoice(choice)
 		return
@@ -832,6 +862,8 @@ func (a *app) command(id, notification int) {
 	switch id {
 	case idFileTab:
 		a.showFileMenu()
+	case idSearchTab:
+		a.showSearch()
 	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab:
 		a.activate(id)
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
@@ -850,6 +882,8 @@ func (a *app) command(id, notification int) {
 		a.view.endPageDrag()
 		a.layout()
 		a.view.schedule()
+	case idToggleLeftPanels, idToggleRightPanels:
+		a.togglePanelSide(id == idToggleLeftPanels)
 	case idToggleBookmarks:
 		a.bookmarksCollapsed = !a.bookmarksCollapsed
 		a.layout()
@@ -1023,7 +1057,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab) {
 			if a.tool == idFileTab {
 				a.mode = idFileDetails
 			} else {
@@ -1073,6 +1107,7 @@ func (a *app) run(req request) {
 	if req.ReplaceSource {
 		if a.beginJob(req, "Ukládám dokument…") {
 			a.waitingOverwrite = true
+			a.view.cancelSearch()
 			a.startOverwrite()
 		}
 		return
@@ -1097,9 +1132,9 @@ func (a *app) beginJob(req request, status string) bool {
 }
 
 func (a *app) startOverwrite() {
-	// Ghostscript may still have the original open. Wait for both readers to
+	// Ghostscript and PDFium may still have the original open. Wait for all readers to
 	// finish before replacing the file on Windows.
-	if a.waitingOverwrite && !a.view.running && a.view.prefetch.page == 0 {
+	if a.waitingOverwrite && !a.view.running && a.view.prefetch.page == 0 && a.view.search.task == nil {
 		a.waitingOverwrite = false
 		req := a.pending
 		a.launchJob(func() response { return runOperation(req) })
@@ -1200,6 +1235,9 @@ func (a *app) finish(result response) {
 }
 
 func (a *app) handleInput(msg *winMessage) bool {
+	if a.fileMenuInput(msg) {
+		return true
+	}
 	if msg.message == 0x020a { // WM_MOUSEWHEEL
 		pos := point{int32(int16(msg.lParam)), int32(int16(msg.lParam >> 16))}
 		user32.NewProc("ScreenToClient").Call(a.window, uintptr(unsafe.Pointer(&pos)))
@@ -1232,6 +1270,17 @@ func (a *app) handleInput(msg *winMessage) bool {
 		a.view.goToBookmark()
 		return true
 	}
+	if msg.wParam == 0x0d && a.mode == idSearchTab {
+		p := &a.view.search
+		switch msg.window {
+		case p.input:
+			a.view.queueSearch(getText(p.input))
+			return true
+		case p.list:
+			a.view.jumpToSearch(p.selected())
+			return true
+		}
+	}
 	if msg.wParam == 0x2e && msg.window == a.view.pageList && a.mode == idPagesTab {
 		a.view.deleteSelectedPages()
 		return true
@@ -1246,6 +1295,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 		case 'O':
 			a.openDialog()
 			return true
+		case 'F':
+			a.showSearch()
+			return true
 		case 'W':
 			a.closeDocument()
 			return true
@@ -1259,6 +1311,16 @@ func (a *app) handleInput(msg *winMessage) bool {
 		}
 	}
 	switch msg.wParam {
+	case 0x72: // F3
+		if a.mode == idSearchTab {
+			shift, _, _ := user32.NewProc("GetKeyState").Call(0x10)
+			step := 1
+			if shift&0x8000 != 0 {
+				step = -1
+			}
+			a.view.stepSearch(step)
+			return true
+		}
 	case 0x7a: // F11
 		a.toggleFullscreen()
 		return true

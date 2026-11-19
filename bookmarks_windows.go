@@ -38,6 +38,7 @@ type bookmarkPanel struct {
 	rows                                []int
 	collapsed                           map[int]bool
 	selected                            int
+	widest                              int
 	creating                            bool
 }
 
@@ -118,6 +119,10 @@ func (v *documentView) layoutBookmarkPanel() {
 	user32.NewProc("RedrawWindow").Call(a.bookmarkSidebar, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
 }
 
+func (v *documentView) preferredBookmarkWidth() int {
+	return min(v.app.scale(330), max(v.app.scale(216), v.bookmarkPanel.widest+v.app.scale(44)))
+}
+
 func (v *documentView) bookmarkChanges() []bookmarkChange {
 	var changes []bookmarkChange
 	for index, item := range v.bookmarks {
@@ -175,6 +180,8 @@ func (v *documentView) showBookmark(index int) {
 
 func (v *documentView) refreshBookmarks(selected int) {
 	panel := &v.bookmarkPanel
+	oldWidth := v.preferredBookmarkWidth()
+	panel.widest = 0
 	panel.rows = panel.rows[:0]
 	sendMessage.Call(panel.list, 0x000b, 0, 0) // WM_SETREDRAW
 	sendMessage.Call(panel.list, 0x0184, 0, 0) // LB_RESETCONTENT
@@ -188,7 +195,12 @@ func (v *documentView) refreshBookmarks(selected int) {
 			skippedDepth = item.Depth
 		}
 		panel.rows = append(panel.rows, index)
-		sendMessage.Call(panel.list, 0x0180, 0, uintptr(unsafe.Pointer(wideString(bookmarkTitle(item)))))
+		title := bookmarkTitle(item)
+		if panel.widest < v.app.scale(286) {
+			width := v.app.captionWidth(title, v.app.normalFont) + v.app.scale(min(item.Depth, 12)*13)
+			panel.widest = max(panel.widest, width)
+		}
+		sendMessage.Call(panel.list, 0x0180, 0, uintptr(unsafe.Pointer(wideString(title))))
 	}
 	row := slices.Index(panel.rows, selected)
 	sendMessage.Call(panel.list, 0x0186, uintptr(row), 0) // LB_SETCURSEL
@@ -203,7 +215,11 @@ func (v *documentView) refreshBookmarks(selected int) {
 		selected = -1
 	}
 	v.showBookmark(selected)
-	v.layoutBookmarkPanel()
+	if a := v.app; v.ready() && !a.full && !a.bookmarksCollapsed && a.bookmarkArea.right > a.bookmarkArea.left && oldWidth != v.preferredBookmarkWidth() {
+		a.layout()
+	} else {
+		v.layoutBookmarkPanel()
+	}
 }
 
 func bookmarkTitle(item pdfBookmark) string {

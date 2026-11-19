@@ -143,6 +143,9 @@ func (v *documentView) changePageOrder(order, selection []int, page int) {
 		v.showBookmark(v.bookmarkPanel.selected)
 	}
 	v.updatePageList()
+	if v.search.query != "" {
+		v.queueSearch(v.search.query)
+	}
 	v.rebuild(false)
 	setText(v.scanReport, "")
 	v.updateDocumentInfo()

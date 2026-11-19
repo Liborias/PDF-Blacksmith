@@ -120,6 +120,20 @@ func drawText(dc uintptr, text string, bounds rect, font uintptr, color paletteC
 	gdiSelect.Call(dc, old)
 }
 
+func (a *app) captionWidth(text string, font uintptr) int {
+	dc, _, _ := user32.NewProc("GetDC").Call(a.window)
+	if dc == 0 {
+		return 0
+	}
+	old, _, _ := gdiSelect.Call(dc, font)
+	var bounds rect
+	winDrawText.Call(dc, uintptr(unsafe.Pointer(wideString(text))), ^uintptr(0), uintptr(unsafe.Pointer(&bounds)),
+		0x0c20) // DT_CALCRECT | DT_NOPREFIX | DT_SINGLELINE
+	gdiSelect.Call(dc, old)
+	user32.NewProc("ReleaseDC").Call(a.window, dc)
+	return int(bounds.right)
+}
+
 func (a *app) area(left, top, right, bottom int) rect {
 	return rect{int32(a.scale(left)), int32(a.scale(top)), int32(a.scale(right)), int32(a.scale(bottom))}
 }

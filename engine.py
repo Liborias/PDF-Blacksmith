@@ -1173,11 +1173,37 @@ def respond(payload, *, raster=False):
     return json.dumps(response, ensure_ascii=True), pixels
 
 
+def search_responses(payload):
+    try:
+        from reader_search import search_pdf
+
+        request = json.loads(payload)
+        source = Path(request["input"])
+        password = request.get("pdf_password", "")
+        query = " ".join(request["query"].split())
+        if not query or len(query) > 256 or "\x00" in query:
+            raise UserError("Zadejte hledaný text o délce nejvýše 256 znaků.")
+        with open_pdf(source, password) as pdf:
+            order = request["order"]
+            if not order or any(type(number) is not int or not 1 <= number <= len(pdf.pages) for number in order):
+                raise UserError("Hledání vyžaduje platné stránky otevřeného PDF.")
+            yield from search_pdf(pdf, source, password, order, query)
+    except UserError as exc:
+        yield dict(status="error", message=str(exc))
+    except Exception as exc:
+        yield dict(status="error", message=f"PDF se nepodařilo prohledat ({type(exc).__name__}).\n{str(exc)[:1200]}")
+
+
 def main():
     logging.disable(logging.CRITICAL)
     args = sys.argv[1:]
     raster = args == ["--reader-stream"]
     source, output = sys.stdin.buffer, sys.stdout.buffer
+    if args == ["--search"]:
+        for result in search_responses(source.read()):
+            output.write(json.dumps(result, ensure_ascii=True).encode("ascii") + b"\n")
+            output.flush()
+        return
     for line in source if raster or args == ["--stream"] else (source.read(),):
         header, pixels = respond(line, raster=raster)
         output.write(header.encode("ascii") + b"\n")

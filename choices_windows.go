@@ -17,7 +17,6 @@ type menuMeasure struct {
 type popupItem struct {
 	label, shortcut              string
 	checked, disabled, separator bool
-	command                      int
 }
 
 func (a *app) combo(id, x, y, width int, names []string) uintptr {
@@ -96,8 +95,12 @@ func (a *app) openChoice(choice *choiceControl) {
 		items[index] = popupItem{label: name, checked: index == choice.index}
 	}
 	if index := a.trackPopup(choice.handle, 302, items); index >= 0 && index != choice.index {
+		width := a.preferredSettingsWidth()
 		chooseCombo(choice.handle, index)
 		a.command(choice.notification, 1)
+		if width != a.preferredSettingsWidth() {
+			a.layout()
+		}
 	}
 }
 
@@ -149,17 +152,20 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 	if item.controlType != 1 || item.itemData == 0 || item.itemData > uintptr(len(a.popup)) {
 		return false
 	}
-	entry := a.popup[item.itemData-1]
-	bounds := item.bounds
+	a.paintPopupEntry(item.dc, item.bounds, a.popup[item.itemData-1], item.state&1 != 0)
+	return true
+}
+
+func (a *app) paintPopupEntry(dc uintptr, bounds rect, entry popupItem, highlighted bool) {
 	color := panelColor
-	if item.state&1 != 0 && !entry.disabled && !entry.separator {
+	if highlighted && !entry.disabled && !entry.separator {
 		color = divider
 	}
-	fillColor(item.dc, bounds, color)
+	fillColor(dc, bounds, color)
 	if entry.separator {
 		y := (bounds.top + bounds.bottom) / 2
-		fillColor(item.dc, rect{bounds.left + int32(a.scale(10)), y, bounds.right - int32(a.scale(10)), y + 1}, divider)
-		return true
+		fillColor(dc, rect{bounds.left + int32(a.scale(10)), y, bounds.right - int32(a.scale(10)), y + 1}, divider)
+		return
 	}
 	foreground := textColor
 	if entry.checked {
@@ -170,7 +176,7 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 	}
 	if entry.checked {
 		box := rect{bounds.left + 5, bounds.top + 5, bounds.left + 23, bounds.bottom - 5}
-		drawCheck(item.dc, box, foreground)
+		drawCheck(dc, box, foreground)
 	}
 	bounds.left += int32(a.scale(30))
 	bounds.right -= int32(a.scale(7))
@@ -179,9 +185,8 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 		if entry.disabled {
 			shortcutColor = foreground
 		}
-		drawText(item.dc, entry.shortcut, bounds, a.normalFont, shortcutColor, 2)
+		drawText(dc, entry.shortcut, bounds, a.normalFont, shortcutColor, 2)
 		bounds.right -= int32(a.scale(112))
 	}
-	drawText(item.dc, entry.label, bounds, a.normalFont, foreground, 0x8000)
-	return true
+	drawText(dc, entry.label, bounds, a.normalFont, foreground, 0x8000)
 }

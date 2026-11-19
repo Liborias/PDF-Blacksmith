@@ -6,7 +6,7 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu rozbalte **Soubor** a vyberte **Otevřít soubor**. Stejné tlačítko najdete vpravo v nastavení nástroje **Soubor**. Dialog můžete otevřít i zkratkou **Ctrl+O** nebo PDF přetáhnout do okna.
 
-Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Na každé straně je jedna úzká lišta. Pojmenovaným ouškem na ní příslušný panel samostatně sbalíte nebo rozbalíte.
+Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Najít v PDF**, **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šířka panelů se přizpůsobuje obsahu a dostupnému místu. Na každé straně je jedna úzká lišta. Horní ouško **Levá strana** nebo **Pravá strana** sbalí otevřené panely na dané straně a dalším kliknutím je obnoví. Ostatní ouška ovládají jednotlivé panely.
 
 Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a ovládá se ouškem **Náhledy**. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
 
@@ -15,6 +15,12 @@ Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Pa
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Při listování a zoomu se předchozí obraz vymění najednou, jakmile je nový náhled hotový. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Zobrazení → Náhled → Zobrazit na celou obrazovku** nebo **F11** otevře samotné PDF přes celou obrazovku. **Esc** obnoví předchozí rozložení panelů.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v **Zobrazení → Náhled** a použijte **Načíst znovu s heslem**.
+
+## Vyhledávání v PDF
+
+Otevřete nástroj **Najít v PDF** nebo stiskněte **Ctrl+F**. Zadejte slovo či frázi a potvrďte **Enterem**. Seznam řadí shody podle aktuálního pořadí stran a u každé ukazuje krátký úryvek. Kliknutím na výsledek přejdete k nalezenému textu. **F3** přejde na další shodu, **Shift+F3** na předchozí. Vybraná shoda je vínová a ostatní jsou žluté.
+
+Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a skeny potřebuje dokument textovou vrstvu vytvořenou pomocí OCR. Aplikace spočítá všechny nalezené shody a v seznamu zobrazí prvních 2 000. Tlačítko **Vymazat** hledání zastaví a vyčistí výsledky.
 
 ## Záložky v PDF
 
