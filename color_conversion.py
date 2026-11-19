@@ -122,6 +122,17 @@ def convert_rich_black(pdf, threshold=0.999):
     return sum(_replace_instructions(pdf, obj, replacement) for obj in _walk_streams(pdf))
 
 
+def preserve_solid_black_for_gray(pdf):
+    """Keep source CMYK K=100% text and vector artwork completely black."""
+    def replacement(args, operator):
+        if operator not in ("k", "K") or len(args) != 4:
+            return None
+        if float(args[3]) >= 0.999:
+            return ([0], pikepdf.Operator("g" if operator == "k" else "G"))
+        return None
+    return sum(_replace_instructions(pdf, obj, replacement) for obj in _walk_streams(pdf))
+
+
 def gray_to_explicit_k(pdf):
     """Convert grayscale vector operators and 8-bit grayscale images to DeviceCMYK.
 
