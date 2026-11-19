@@ -1066,6 +1066,9 @@ func (v *documentView) finished(job readerJob) {
 	if job.result.Status != "ok" {
 		v.describing = false
 		v.invalidSource = job.result.Status == "changed"
+		if v.invalidSource {
+			v.endPageDrag()
+		}
 		if job.page != 0 {
 			v.activeCache().failed[job.page] = true
 		}
@@ -1103,6 +1106,9 @@ func (v *documentView) finished(job readerJob) {
 	} else if job.frame.image != nil {
 		v.activeCache().store(job.page, job.frame)
 		v.trimCaches()
+		if job.action == "screen" && job.page == v.draggedPage() && v.thumbnails.frames[job.page].image == nil {
+			v.showPageDragPreview()
+		}
 	}
 	if !v.secondary {
 		v.updateDocumentInfo()
@@ -1134,6 +1140,7 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 		switch {
 		case job.result.Status == "changed":
 			v.invalidSource = true
+			v.endPageDrag()
 			if v.secondary {
 				v.showComparisonReaderError(job.result.Message)
 				v.changedViewport()
@@ -1148,12 +1155,18 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 				v.thumbnails.store(job.page, job.frame)
 				v.trimThumbnails(v.thumbnailBudget())
 				invalidate(v.pageList)
+				if job.page == v.draggedPage() {
+					v.showPageDragPreview()
+				}
 			}
 		case job.frame.image == nil:
 			v.prefetchFailed[job.page] = true
 		case v.reading.frames[job.page].image == nil &&
 			v.reading.bytes+v.printPreview.bytes+v.detailBytes+v.canvas.bytes()+v.thumbnails.bytes+int64(len(job.frame.image.pixels)) <= v.cacheLimit:
 			v.reading.store(job.page, job.frame)
+			if job.page == v.draggedPage() && v.thumbnails.frames[job.page].image == nil {
+				v.showPageDragPreview()
+			}
 			v.syncDetails()
 			v.updateDocumentInfo()
 			_, height := v.viewportSize()

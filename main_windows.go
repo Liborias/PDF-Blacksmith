@@ -393,6 +393,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case 0x0006: // WM_ACTIVATE
 		if wParam&0xffff == 0 {
 			a.hideFileMenu(false)
+			a.cancelPageDrag()
 		}
 	case 0x002c: // WM_MEASUREITEM
 		if a.measurePopup(lParam) {
@@ -480,6 +481,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.closeWindow()
 		return 0
 	case wmDestroy:
+		a.cancelPageDrag()
 		a.clearInlineFrames()
 		if a.view != nil {
 			a.view.canvas.close()

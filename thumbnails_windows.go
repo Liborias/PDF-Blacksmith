@@ -15,6 +15,7 @@ type thumbnailDrag struct {
 	start, current              point
 	page, boundary              int
 	target                      *documentView
+	preview                     dragPreview
 	pressed, moving, overDelete bool
 }
 
@@ -154,7 +155,11 @@ func (v *documentView) scheduleThumbnails() bool {
 	if budget < estimate {
 		return false
 	}
-	for _, number := range v.order[first:last] {
+	numbers := v.order[first:last]
+	if number := v.draggedPage(); number != 0 && number != numbers[0] {
+		numbers = append([]int{number}, numbers...)
+	}
+	for _, number := range numbers {
 		if v.thumbnails.frames[number].pixels >= pixels || v.thumbnails.failed[number] {
 			continue
 		}
@@ -270,9 +275,12 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 					v.selectOnlyPage(drag.page)
 				}
 				drag.moving = true
+				v.showPageDragPreview()
+				v.schedule()
 				user32.NewProc("SetTimer").Call(v.pageList, thumbnailDragTimer, 160, 0)
 			}
 			if drag.moving {
+				drag.preview.move(v.thumbnailScreenPoint())
 				v.updatePageDrop()
 			}
 			return true
@@ -318,10 +326,70 @@ func (v *documentView) pageListMouse(msg uint32, keys, position uintptr) bool {
 	return false
 }
 
+func (v *documentView) draggedPage() int {
+	if drag := &v.pageDrag; drag.moving && drag.page < len(v.order) {
+		return v.order[drag.page]
+	}
+	return 0
+}
+
+func (v *documentView) showPageDragPreview() {
+	number := v.draggedPage()
+	if number == 0 {
+		return
+	}
+	d, drag := v.app.scale, &v.pageDrag
+	image := v.thumbnails.frames[number].image
+	if image == nil && v.box() == "crop" {
+		image = v.reading.frames[number].image
+	}
+	size := v.pageDimensions(number, "crop")
+	if image != nil {
+		size = pageSize{float64(image.width), float64(image.height)}
+	}
+	pictureW, pictureH := d(88), d(112)
+	if size.width > 0 && size.height > 0 {
+		fit := min(float64(pictureW)/size.width, float64(pictureH)/size.height)
+		pictureW, pictureH = max(1, int(size.width*fit)), max(1, int(size.height*fit))
+	}
+	padding := d(5)
+	width, height := max(d(38), pictureW)+2*padding, max(d(38), pictureH)+2*padding
+	count := len(v.selectedPagePositions())
+	drag.preview.show(v.app.window, v.thumbnailScreenPoint(), point{int32(width), int32(height)}, int32(d(13)), int32(d(7)), func(dc uintptr) {
+		bounds := rect{right: int32(width), bottom: int32(height)}
+		fillColor(dc, bounds, panelColor)
+		rounded(dc, bounds, d(7), panelColor, divider)
+		x, y := (width-pictureW)/2, (height-pictureH)/2
+		if image != nil {
+			gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
+			drawBitmap(dc, image, x, y, pictureW, pictureH)
+		} else {
+			paper := rect{int32(x), int32(y), int32(x + pictureW), int32(y + pictureH)}
+			fillColor(dc, paper, paletteColor{235, 234, 232})
+			drawText(dc, strconv.Itoa(drag.page+1), paper, v.app.labelFont, canvasColor, 1)
+		}
+		if count > 1 {
+			label := strconv.Itoa(count)
+			w := v.app.captionWidth(label, v.app.labelFont) + d(14)
+			right, bottom := width-d(2), height-d(2)
+			badge := rect{int32(max(2, right-w)), int32(bottom - d(22)), int32(right), int32(bottom)}
+			burgundy := paletteColor{133, 42, 75}
+			rounded(dc, badge, d(7), burgundy, burgundy)
+			drawText(dc, label, badge, v.app.labelFont, textColor, 1)
+		}
+	})
+}
+
+func (v *documentView) thumbnailScreenPoint() point {
+	xy := v.pageDrag.current
+	user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&xy)))
+	return xy
+}
+
 func (v *documentView) thumbnailPoint(target *documentView) point {
 	xy := v.pageDrag.current
 	if target != v {
-		user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&xy)))
+		xy = v.thumbnailScreenPoint()
 		user32.NewProc("ScreenToClient").Call(target.pageList, uintptr(unsafe.Pointer(&xy)))
 	}
 	return xy
@@ -351,8 +419,7 @@ func (v *documentView) updatePageDrop() {
 		break
 	}
 	if drag.target == nil && canReorder && !a.detailsCollapsed && !a.full {
-		screen := drag.current
-		user32.NewProc("ClientToScreen").Call(v.pageList, uintptr(unsafe.Pointer(&screen)))
+		screen := v.thumbnailScreenPoint()
 		hover, _, _ := user32.NewProc("WindowFromPoint").Call(uintptr(uint32(screen.x)) | uintptr(uint32(screen.y))<<32)
 		drag.overDelete = hover == v.deleteButton && len(v.selectedPagePositions()) < len(v.order)
 	}
@@ -374,6 +441,7 @@ func (v *documentView) endPageDrag() {
 		return
 	}
 	target, overDelete := v.pageDrag.target, v.pageDrag.overDelete
+	v.pageDrag.preview.close()
 	v.pageDrag = thumbnailDrag{}
 	user32.NewProc("KillTimer").Call(v.pageList, thumbnailDragTimer)
 	if capture, _, _ := user32.NewProc("GetCapture").Call(); capture == v.pageList {
@@ -385,4 +453,15 @@ func (v *documentView) endPageDrag() {
 	if overDelete {
 		invalidate(v.deleteButton)
 	}
+}
+
+func (a *app) cancelPageDrag() bool {
+	cancelled := false
+	for _, v := range [...]*documentView{a.view, a.comparison.view} {
+		if v != nil && v.pageDrag.pressed {
+			v.endPageDrag()
+			cancelled = true
+		}
+	}
+	return cancelled
 }

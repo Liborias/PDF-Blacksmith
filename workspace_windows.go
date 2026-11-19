@@ -1376,6 +1376,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.message != 0x0100 {
 		return false
 	}
+	if msg.wParam == 0x1b && a.cancelPageDrag() {
+		return true
+	}
 	if a.textKey(msg) || a.documentKey(msg) {
 		return true
 	}
@@ -1412,11 +1415,6 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if msg.wParam == 0x2e && msg.window == a.view.pageList && a.mode == idPagesTab {
 		a.view.deleteSelectedPages()
-		return true
-	}
-	if msg.wParam == 0x1b && (a.view.pageDrag.pressed || a.comparison.view.pageDrag.pressed) {
-		a.view.endPageDrag()
-		a.comparison.view.endPageDrag()
 		return true
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)
