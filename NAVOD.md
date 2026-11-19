@@ -6,7 +6,7 @@ Spusťte `PDFBlaksmith.exe` na 64bitových Windows 10 nebo 11. PDFium, Ghostscri
 
 V levém panelu zvolte **Soubor**. Vpravo vyberte **Otevřít soubor** a tlačítko **Vybrat soubor PDF…**. Stejný dialog otevřete zkratkou **Ctrl+O**. PDF můžete také přetáhnout do okna.
 
-Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF** a **Pořadí stránek**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
+Panel nástrojů a nastavení jsou při spuštění otevřené. Nástroj vyberete vlevo, jeho nastavení se zobrazí vpravo. **Sloučit PDF** je dostupné hned po spuštění. Po načtení PDF se vlevo objeví také **Separace**, **Digitální podpis**, **Rozdělit PDF**, **Pořadí stránek** a **Záložky**. Šipka na hraně každého panelu ho samostatně sbalí na úzkou lištu nebo znovu rozbalí.
 
 Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Panel je společný pro všechny nástroje a má vlastní šipku pro sbalení. Kliknutím vyberete stránku, **Ctrl** přidává jednotlivé stránky a **Shift** vybírá souvislý rozsah. Kolečko seznam posouvá a **Ctrl + kolečko** mění velikost náhledů v rozsahu 10–60 % šířky panelu. Výběr se zachová při posouvání, změně velikosti, sbalení panelu i přepnutí nástroje.
 
@@ -15,6 +15,14 @@ Náhledy stránek jsou ve vlastním panelu vlevo mezi nástroji a dokumentem. Pa
 - **Ctrl + kolečko** zvětšuje nebo zmenšuje zobrazení kolem bodu pod kurzorem. Běžný náhled při větším přiblížení vykreslí viditelné výřezy z původních křivek a písem PDF v rozlišení obrazovky. Při listování a zoomu se předchozí obraz vymění najednou, jakmile je nový náhled hotový. Přiblížený výřez posunete tažením. Dolní lišta nabízí přechod na stránku, přizpůsobení celé stránky a přizpůsobení šířce.
 - Okno se při spuštění maximalizuje. Tlačítkem vpravo nahoře nebo dvojklikem na volnou část záhlaví obnovíte jeho běžnou velikost. **Zobrazení → Náhled → Zobrazit na celou obrazovku** nebo **F11** otevře samotné PDF přes celou obrazovku. **Esc** obnoví předchozí rozložení panelů.
 - Pokud PDF vyžaduje heslo k otevření, zadejte je v **Zobrazení → Náhled** a použijte **Načíst znovu s heslem**.
+
+## Záložky v PDF
+
+Vlevo vyberte **Záložky**. V pravém panelu se zobrazí strom záložek otevřeného PDF. Dvojklik nebo **Přejít na stranu** přejde na dostupnou cílovou stránku. Tlačítko vedle něj sbalí či rozbalí vybranou větev.
+
+Tlačítkem **Nová záložka…** vytvoříte záložku pro aktuální stranu. Název a cílovou stranu můžete změnit i u existující záložky. Změnu potvrďte tlačítkem **Použít úpravu**. Číslo cíle odpovídá aktuálnímu pořadí stran. **Vrátit změnu** obnoví stav před poslední úpravou.
+
+Do souboru zapíšete změny přes **Soubor → Uložit** nebo **Uložit jako**. Záložky jsou součástí standardního stromu PDF `/Outlines` podle ISO 32000. Přejmenováním záložky se zachová její původní nastavení odkazu. Při změně cíle se záložka nastaví na celou vybranou stranu.
 
 ## Uložení a tisk
 

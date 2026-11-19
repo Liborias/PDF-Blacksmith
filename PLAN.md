@@ -8,12 +8,19 @@ Export má nejvyšší prioritu. Každý další krok začíná po odsouhlasení
 4. **Rozdělení PDF po stránkách.** Uložit každou vybranou stránku do vlastního PDF se jménem podle čísla strany. [Hotovo ve verzi 0.4.12](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.12)
 5. **Pořadí a náhledy stránek.** Přesunout jednu či více stran na zadanou pozici nebo přetažením náhledů. Vybrané strany lze také smazat. Přesun i smazání lze vrátit. [Hotovo ve verzi 0.4.13](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.13)
 6. **Sloučení dokumentů.** Sestavit jedno PDF z více souborů v zadaném pořadí a umožnit výběr stran z každého souboru. [Hotovo ve verzi 0.4.15](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.15)
-7. **Záložky v PDF.** Zobrazit existující záložky v postranním panelu, přejít na jejich cíl a přidávat, přejmenovávat nebo upravovat vlastní záložky.
+7. **Záložky v PDF.** Zobrazit strom záložek v postranním panelu, přejít na cílovou stranu, přidat záložku a upravit její název nebo cíl. [Hotovo ve verzi 0.4.16](https://github.com/Liborias/PDF-Blacksmith/releases/tag/v0.4.16)
 8. **Fulltextové vyhledávání.** Prohledat textovou vrstvu dokumentu, zobrazit výsledky podle stran a zvýraznit shody v náhledu.
 9. **OCR.** Rozpoznat text na vybraných naskenovaných stranách, včetně češtiny, a přidat vyhledávatelnou textovou vrstvu při zachování vzhledu skenu.
-10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách, kopírovat mezi nimi, při zavírání nabídnout uložení změn a umožnit zobrazení dvou dokumentů vedle sebe.
-11. **Úpravy obsahu.** Vybrat, přesouvat, kopírovat a mazat objekty. U textu měnit písmo, velikost a řez i podtržení.
-12. **Poznámky a kreslení.** Přidat poznámky, elipsy, obdélníky, volné čáry a šipky s nastavitelnou barvou a tloušťkou čáry.
+10. **Více otevřených dokumentů.** Otevřít PDF ve vlastních kartách a při zavírání nabídnout uložení změn.
+11. **Dva dokumenty vedle sebe.** Umožnit zobrazení dvou PDF vedle sebe. Každý dokument má vlastní panel náhledů a vlastní výběr stránek.
+12. **Přetahování stránek mezi PDF.** Přetáhnout jeden náhled nebo více označených náhledů do druhého panelu a vložit stránky na vybrané místo v jejich pořadí.
+13. **Barvy při přenosu stránek.** Při vložení tažením se zeptat, zda mají vložené stránky zachovat svůj barevný prostor, nebo se mají převést do barevného prostoru cílového PDF. Stránky ve stupních šedi zůstanou šedé. Když převod může vést k nevratné změně nebo ztrátě vlastností, upozornit na konkrétní dopad před potvrzením.
+14. **Úpravy obsahu.** Vybrat, přesouvat, kopírovat a mazat objekty. U textu měnit písmo, velikost a řez i podtržení.
+15. **Výběr v nástroji Text.** Nabídnout výběr bloku s automatickým rozpoznáním odstavce, obdélníkový výběr a volný výběr mnohoúhelníkovým lasem.
+16. **Laso pro vektorové objekty.** Vybrat společně více vektorových objektů. Při přesunu nebo kopírování nabídnout zachování jednotlivých objektů nebo jejich seskupení do jednoho celku.
+17. **OCR vektorizovaného textu.** Pokud nástroj Text ve vybraném bloku nenajde text, nabídnout rozpoznání pomocí OCR nebo ponechání výběru ve vektorech.
+18. **Přetahování objektů a textu.** Umožnit přenos mezi panely otevřených PDF i přetažení do jiných aplikací a složek. Pro externí přetažení využít export na pozadí ve stávajícím formátu a barevném profilu objektu. U vektorizovaného textu po OCR předat mimo aplikaci při kopírování nebo tažení neformátovaný text. Mezi PDF v aplikaci při kopírování nebo tažení přenést vektorovou skupinu společně s rozpoznaným textem.
+19. **Poznámky a kreslení.** Přidat poznámky, elipsy, obdélníky, volné čáry a šipky s nastavitelnou barvou a tloušťkou čáry.
 
 ## Levý panel nástrojů
 

@@ -86,6 +86,7 @@ var workspaceTabs = []struct {
 	{idSplitTab, "Rozdělit PDF", true},
 	{idMergeTab, "Sloučit PDF", false},
 	{idPageOrderTool, "Pořadí stránek", true},
+	{idBookmarksTab, "Záložky", true},
 }
 
 var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr", "Vybrané náhledy"}
@@ -199,6 +200,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildSplitPanel()
 	a.beginPanel(idMergeTab)
 	a.buildMergePanel()
+	a.beginPanel(idBookmarksTab)
+	a.view.buildBookmarkPanel()
 	a.addingTab, a.controlParent = 0, a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
@@ -384,7 +387,7 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idMergeTab:
 		a.tool, a.mode = idMergeTab, idMergeTab
-	case idProofTab, idSignTab, idSplitTab:
+	case idProofTab, idSignTab, idSplitTab, idBookmarksTab:
 		if !a.documentTools {
 			return
 		}
@@ -452,6 +455,19 @@ func (a *app) layout() {
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if tab == idBookmarksTab {
+		panel := &a.view.bookmarkPanel
+		empty := len(a.view.bookmarks) == 0
+		switch item.handle {
+		case panel.empty:
+			return item, empty
+		case panel.list, panel.goTo, panel.branch:
+			return item, !empty
+		}
+		if empty && item.y > 300 {
+			item.y -= 245
+		}
+	}
 	if item.handle == a.splitRange {
 		return item, comboIndex(a.splitScope) == exportPageRanges
 	}
@@ -687,7 +703,7 @@ func (a *app) openDialog() {
 }
 
 func (a *app) mayReplaceDocument() bool {
-	return !a.view.changed() || notice(a.window, "Zahodit neuložené změny stránek?", 0x134) == 6
+	return !a.view.changed() || notice(a.window, "Zahodit neuložené úpravy PDF?", 0x134) == 6
 }
 
 func (a *app) closeDocument() {
@@ -824,7 +840,7 @@ func (a *app) command(id, notification int) {
 		return
 	}
 	switch id {
-	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab,
+	case idFileTab, idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idBookmarksTab,
 		idOpen, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.activate(id)
 	case idFileRun:
@@ -1010,7 +1026,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idBookmarksTab) {
 			if a.tool == idFileTab {
 				a.mode = idOpen
 			} else {

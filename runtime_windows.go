@@ -60,16 +60,17 @@ type request struct {
 }
 
 type viewRequest struct {
-	Pixels       int           `json:"pixels,omitempty"`
-	Page         int           `json:"page,omitempty"`
-	Rotation     int           `json:"rotation,omitempty"`
-	Box          string        `json:"box,omitempty"`
-	Region       *screenRegion `json:"region,omitempty"`
-	Pages        []int         `json:"pages,omitempty"`
-	ProofProfile string        `json:"proof_profile,omitempty"`
-	HidePlates   []string      `json:"hide_plates,omitempty"`
-	Order        []int         `json:"order,omitempty"`
-	Rotations    []int         `json:"rotations,omitempty"`
+	Pixels       int              `json:"pixels,omitempty"`
+	Page         int              `json:"page,omitempty"`
+	Rotation     int              `json:"rotation,omitempty"`
+	Box          string           `json:"box,omitempty"`
+	Region       *screenRegion    `json:"region,omitempty"`
+	Pages        []int            `json:"pages,omitempty"`
+	ProofProfile string           `json:"proof_profile,omitempty"`
+	HidePlates   []string         `json:"hide_plates,omitempty"`
+	Order        []int            `json:"order,omitempty"`
+	Rotations    []int            `json:"rotations,omitempty"`
+	Bookmarks    []bookmarkChange `json:"bookmarks,omitempty"`
 }
 
 type plateInfo struct {
@@ -92,6 +93,7 @@ type viewResponse struct {
 	Plates       []plateInfo             `json:"plates"`
 	UsedPlates   []plateInfo             `json:"used_plates"`
 	MergeInfo    []mergeSourceInfo       `json:"merge_info"`
+	Bookmarks    []pdfBookmark           `json:"bookmarks"`
 }
 
 type response struct {
@@ -135,7 +137,7 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
+	for _, name := range []string{"ready", "python.exe", "engine.py", "bookmarks.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
 		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))

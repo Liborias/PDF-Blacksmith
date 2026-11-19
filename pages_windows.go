@@ -139,6 +139,9 @@ func (v *documentView) changePageOrder(order, selection []int, page int) {
 	v.generation++
 	v.order, v.pageSelection = order, selection
 	v.page, v.reference = page, page
+	if v.bookmarkPanel.selected >= 0 {
+		v.showBookmark(v.bookmarkPanel.selected)
+	}
 	v.updatePageList()
 	v.rebuild(false)
 	setText(v.scanReport, "")

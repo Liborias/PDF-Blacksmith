@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 import pikepdf
+from bookmarks import BookmarkError, apply_bookmarks, describe_bookmarks
 from print_profiles import ProfileError, attach_intent, attach_srgb, clear_pdfx_claim, get_profile, source_cmyk, source_icc
 from export_settings import export_preset, export_settings, pdfwrite_settings
 from color_conversion import (ColorConversionError, resolve_gray_icc, convert_rich_black,
@@ -848,7 +849,7 @@ def inspect_document(src, request, *, raster=False):
         if not len(pdf.pages):
             raise UserError("Vstupní PDF nemá žádné strany.")
         if action == "describe":
-            return describe(pdf)
+            return {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
         if action in ("screen", "thumbnail") and raster:
             rendered = render_screen(pdf, src, view, password, thumbnail=action == "thumbnail")
             if rendered is not None:
@@ -871,8 +872,9 @@ def save_page_edits(src, request):
     with output_file(src, request) as pending, open_pdf(src, password) as pdf:
         pages = list(pdf.pages)
         order = document_order(view, len(pages))
-        rotations = page_rotations(view.get("rotations", []), len(pages))
+        rotations = page_rotations(view.get("rotations", [0] * len(pages)), len(pages))
         prepare_edit(pdf, request)
+        apply_bookmarks(pdf, view.get("bookmarks", []))
         for page, angle in zip(pages, rotations):
             if angle:
                 page.rotate(angle, relative=True)
@@ -887,7 +889,7 @@ def save_page_edits(src, request):
 
 
 def save_document(src, request):
-    if "rotations" in request.get("view", {}):
+    if request.get("view", {}).keys() & {"rotations", "bookmarks"}:
         save_page_edits(src, request)
     else:
         with output_file(src, request) as pending:
@@ -1000,6 +1002,7 @@ def split_document(src, request):
                 raise UserError(f"Soubor {target.name} už existuje. Vyberte jinou složku.")
 
         prepare_edit(pdf, request)
+        apply_bookmarks(pdf, view.get("bookmarks", []))
         attributes = subset_attributes(pdf)
         with tempfile.TemporaryDirectory(prefix="pdftisk-", dir=destination) as folder:
             staged = []
@@ -1075,6 +1078,7 @@ def append_merge_source(target, pdf, entry):
     positions = selected_pages(view, len(order)) or range(1, len(order) + 1)
     indices = [order[position-1]-1 for position in positions]
     first = len(target.pages)
+    apply_bookmarks(pdf, view.get("bookmarks", []))
     target.add_pages_from(pdf, indices)
     for position, index in enumerate(indices, first):
         if rotations[index]:
@@ -1137,7 +1141,7 @@ def dispatch(request, *, raster=False):
     if operation is inspect_document:
         return inspect_document(src, request, raster=raster)
     view = request.get("view", {})
-    if request["action"] in ("transform", "sign") and "rotations" in view:
+    if request["action"] in ("transform", "sign") and view.keys() & {"rotations", "bookmarks"}:
         # Keep draft edits in the same transaction as export or signing.
         with tempfile.TemporaryDirectory(prefix="pdf-draft-") as folder, output_file(src, request) as pending:
             draft = Path(folder) / "draft.pdf"
@@ -1157,7 +1161,7 @@ def respond(payload, *, raster=False):
         response = {"status": "merge_encrypted", "message": str(exc)}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
-    except (UserError, ProfileError, ProofError, PDFXError, ColorConversionError) as exc:
+    except (UserError, ProfileError, ProofError, PDFXError, ColorConversionError, BookmarkError) as exc:
         response = {"status": "error", "message": str(exc)}
     except FileExistsError:
         response = {"status": "error", "message": "Cílový soubor už existuje. Vyberte nový název."}

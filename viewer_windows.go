@@ -119,6 +119,9 @@ func plateRow(plate plateInfo) string {
 }
 
 func (v *documentView) drawListRow(item *buttonDraw) bool {
+	if v.drawBookmarkRow(item) {
+		return true
+	}
 	if item.controlType != 2 || (item.handle != v.list && item.handle != v.pageList) { // ODT_LISTBOX
 		return false
 	}
@@ -205,6 +208,8 @@ type pageEdit struct {
 	page             int
 	order, selection []int
 	rotations        []pageRotation
+	bookmarks        []pdfBookmark
+	bookmarkSelection int
 }
 
 type pageRotation struct{ number, angle int }
@@ -238,6 +243,8 @@ type documentView struct {
 	intent                                                                     string
 	order, rotations, savedOrder, savedRotations                               []int
 	history                                                                    []pageEdit
+	bookmarks, savedBookmarks                                                  []pdfBookmark
+	bookmarkPanel                                                              bookmarkPanel
 	page, reference                                                            int
 	pageSelection                                                              []int
 	pageDrag                                                                   thumbnailDrag
@@ -370,15 +377,18 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 func (v *documentView) ready() bool { return len(v.order) > 0 && !v.invalidSource }
 
 func (v *documentView) changed() bool {
-	return !slices.Equal(v.order, v.savedOrder) || !slices.Equal(v.rotations, v.savedRotations)
+	return !slices.Equal(v.order, v.savedOrder) || !slices.Equal(v.rotations, v.savedRotations) ||
+		!slices.Equal(v.bookmarks, v.savedBookmarks)
 }
 
 func (v *documentView) markSaved() {
 	v.savedOrder, v.savedRotations = slices.Clone(v.order), slices.Clone(v.rotations)
+	v.savedBookmarks = slices.Clone(v.bookmarks)
 }
 
 func (v *documentView) includeEdits(req *request) {
 	req.View.Order, req.View.Rotations = slices.Clone(v.order), slices.Clone(v.rotations)
+	req.View.Bookmarks = v.bookmarkChanges()
 }
 
 func unchanged(path string, original os.FileInfo) bool {
@@ -405,6 +415,9 @@ func (v *documentView) resetDocument() {
 	v.closeReaders()
 	v.path, v.password, v.original = "", "", nil
 	v.sizes, v.order, v.rotations, v.savedOrder, v.savedRotations, v.history = nil, nil, nil, nil, nil, nil
+	v.bookmarks, v.savedBookmarks = nil, nil
+	v.bookmarkPanel.collapsed = nil
+	v.refreshBookmarks(-1)
 	v.intent = ""
 	v.page, v.reference, v.fitMode = 0, 0, 1
 	v.scrollX, v.scrollY, v.wheelRemainder = 0, 0, 0
@@ -956,6 +969,7 @@ func (v *documentView) finished(job readerJob) {
 			return
 		}
 		v.sizes, v.intent = data.Sizes, data.OutputIntent
+		v.bookmarks = data.Bookmarks
 		v.order = make([]int, len(v.sizes))
 		v.rotations = make([]int, len(v.sizes))
 		for i := range v.order {
@@ -964,6 +978,7 @@ func (v *documentView) finished(job readerJob) {
 		v.page = min(v.page, len(v.order)-1)
 		v.reference = v.page
 		v.markSaved()
+		v.refreshBookmarks(-1)
 		v.app.report("")
 		v.updatePageList()
 		v.rebuild(false)
@@ -1093,6 +1108,7 @@ func (v *documentView) updateActions() {
 	loaded := v.ready()
 	editing := loaded && !v.app.busy
 	v.app.updateMergeInputButtons()
+	v.updateBookmarkActions()
 	for _, control := range []uintptr{v.next, v.previous, v.jump, v.pageInput, v.zoomIn, v.zoomOut, v.fit, v.pageList} {
 		setEnabled(control, loaded)
 	}
@@ -1164,6 +1180,13 @@ func (v *documentView) undo() {
 	edit := v.history[index]
 	v.history[index] = pageEdit{}
 	v.history = v.history[:index]
+	if edit.bookmarks != nil {
+		v.bookmarks = edit.bookmarks
+		v.refreshBookmarks(edit.bookmarkSelection)
+		v.app.layoutPanel()
+		v.app.updateActions()
+		return
+	}
 	if edit.order == nil {
 		v.page, v.reference = edit.page, edit.page
 		v.applyRotations(edit.rotations)
@@ -1174,6 +1197,9 @@ func (v *documentView) undo() {
 }
 
 func (v *documentView) command(id, notification int) bool {
+	if v.bookmarkCommand(id, notification) {
+		return true
+	}
 	if notification == 1 {
 		switch id {
 		case idReaderFlow:

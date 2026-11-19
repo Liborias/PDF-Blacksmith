@@ -105,6 +105,9 @@ var toolIcons = map[int][][]point{
 	},
 	idPagesTab:      pagesIcon,
 	idPageOrderTool: pagesIcon,
+	idBookmarksTab: {
+		{{4, 2}, {14, 2}, {14, 16}, {9, 12}, {4, 16}, {4, 2}},
+	},
 	idProofTab: {
 		{{1, 5}, {9, 1}, {17, 5}, {9, 9}, {1, 5}},
 		{{1, 9}, {9, 13}, {17, 9}},
