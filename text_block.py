@@ -73,7 +73,7 @@ def rich_lines(glyphs, width, wrap):
 
 
 def rich_block_commands(document, page, block, content, folder, size, width, height,
-                        leading, alignment, origin, angle, color, group, palette):
+                        leading, alignment, origin, angle, color, group, palette, embedded):
     ranges = block.get("runs")
     if not isinstance(ranges, list) or not 1 <= len(ranges) <= len(content):
         raise TextError("Textový blok obsahuje neplatné formátování.")
@@ -104,7 +104,8 @@ def rich_block_commands(document, page, block, content, folder, size, width, hei
     fonts = {}
     for key, chars in style_keys.items():
         family, bold, italic = key
-        faces, assigned, advances = fonts_for_block(dict(font=family, bold=bold, italic=italic), "".join(chars), folder)
+        faces, assigned, advances = fonts_for_block(dict(font=family, bold=bold, italic=italic), "".join(chars),
+                                                  folder, embedded.get(family))
         references = {}
         for index, face in enumerate(faces):
             used = sorted(char for char in chars if assigned.get(char) == index)
@@ -198,7 +199,7 @@ def rich_block_commands(document, page, block, content, folder, size, width, hei
     return [*result, instruction("EMC"), instruction("Q")]
 
 
-def block_commands(document, page, block, style, folder, color, group, palette=None):
+def block_commands(document, page, block, style, folder, color, group, palette=None, embedded=None):
     content = block.get("text")
     if not isinstance(content, str) or len(content) > 8000 or any(
             ord(char) > 0xffff or (ord(char) < 32 and char not in "\t\n") for char in content):
@@ -218,7 +219,7 @@ def block_commands(document, page, block, style, folder, color, group, palette=N
 
     if block.get("runs") is not None:
         return rich_block_commands(document, page, block, content, folder, size, width, height,
-                                   line_spacing, alignment, origin, angle, color, group, palette or {})
+                                   line_spacing, alignment, origin, angle, color, group, palette or {}, embedded or {})
 
     faces, assigned, advances = fonts_for_block(style, content, folder)
     ascent = numeric(block.get("baseline_offset", faces[0].ascent*size), 0, 1200,
@@ -314,15 +315,16 @@ def remove_glyphs(entry, step, advances, chosen):
     return instruction("TJ", pdf.Array(output))
 
 
-def strip_selection(document, page, selected, *, palette=None):
-    from text_edit import source_objects, text_tree
+def strip_selection(document, page, selected, *, palette=None, embedded=None, requested=()):
+    from embedded_fonts import embedded_truetype, unicode_codes
+    from text_edit import source_objects, source_stretch, text_tree
 
     _, sources = text_tree(page)
     objects = source_objects(page, sources)
     if not isinstance(selected, list) or not 1 <= len(selected) <= 4000:
         raise TextError("Vyberte platnou oblast textu.")
     indexed = {run["block_token"]: run for run in objects if run["block_token"]}
-    replacements, discard = {}, set()
+    replacements, discard, examined = {}, set(), set()
     glyph_count = 0
     for item in selected:
         token, glyphs = item.get("token"), item.get("glyphs")
@@ -330,6 +332,15 @@ def strip_selection(document, page, selected, *, palette=None):
             raise TextError("Tento úsek nelze upravit bez změny okolní sazby. Vyberte jiný úsek.")
         run = indexed[token]
         operators, index, style, independent, _, root = sources[token]
+        source = style[0]
+        if embedded is not None and requested and source is not None:
+            key = source.objgen, source_stretch(run["matrix"])
+            if key not in examined:
+                examined.add(key)
+                if face := embedded_truetype(source, unicode_codes(source), key[1]):
+                    alias, _, data = face
+                    if alias in requested:
+                        embedded[alias] = data
         paint = style[4]
         if not root and any(str(op.operator) == "cs" and op.operands[0] not in (
                 pdf.Name.DeviceGray, pdf.Name.DeviceRGB, pdf.Name.DeviceCMYK) for op in paint):
@@ -348,7 +359,8 @@ def strip_selection(document, page, selected, *, palette=None):
         if glyph_count > 8000:
             raise TextError("Pro jednu úpravu vyberte nejvýš 8 000 znaků.")
         if advances:
-            replacements[token] = remove_glyphs(operators[index-1], code_size(style[0]), advances, chosen)
+            raw_glyphs = {run["glyph_indices"][glyph] for glyph in chosen}
+            replacements[token] = remove_glyphs(operators[index-1], code_size(style[0]), advances, raw_glyphs)
         elif independent and len(chosen) == count:
             replacements[token] = instruction("TJ", pdf.Array())
         else:
@@ -363,10 +375,13 @@ def strip_selection(document, page, selected, *, palette=None):
 
 def replace_block(document, page, edits, font_dir):
     block = edits["block"]
-    palette = {}
-    original, color, group = strip_selection(document, page, block.get("selection"), palette=palette)
+    palette, embedded = {}, {}
+    requested = {run.get("font") for run in block.get("runs", []) if isinstance(run.get("font"), str)
+                 and re.fullmatch(r"PB[0-9a-f]{16}", run["font"])}
+    original, color, group = strip_selection(document, page, block.get("selection"), palette=palette,
+                                             embedded=embedded, requested=requested)
     if group > 2**31 - 1:
         raise TextError("Na stránce nelze vytvořit další editovatelný blok.")
-    commands = block_commands(document, page, block, edits, font_dir, color, group, palette)
+    commands = block_commands(document, page, block, edits, font_dir, color, group, palette, embedded)
     combined = [instruction("q"), *original, instruction("Q"), *commands] if commands else original
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))

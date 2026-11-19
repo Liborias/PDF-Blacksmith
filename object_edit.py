@@ -98,9 +98,75 @@ def marked_draws(page, operators, candidates):
     return buffer.getvalue()
 
 
+def path_outline(operators, draw, bounds):
+    """Sample the painted contour in page coordinates for crossing selections."""
+    entries = operators[draw.first:draw.end]
+    if len(entries) > 128:
+        return None
+    a, b, c, d, x, y = draw.matrix
+
+    def transformed(point):
+        u, v = point
+        return a*u+c*v+x, b*u+d*v+y
+
+    contours, current, pen = [], [], (0., 0.)
+    paint = str(entries[-1].operator)
+    close = paint not in {"S", "s"}
+
+    def end_path():
+        if len(current) > 1:
+            if close:
+                current.append(current[0])
+            contours.append([transformed(point) for point in current])
+
+    for entry in entries[:-1]:
+        name = str(entry.operator)
+        values = tuple(map(float, entry.operands))
+        if name == "m":
+            end_path()
+            pen = values
+            current = [pen]
+        elif name == "re":
+            end_path()
+            u, v, w, h = values
+            pen = (u, v)
+            current = [pen, (u+w, v), (u+w, v+h), (u, v+h), pen]
+        elif name == "l":
+            pen = values
+            current.append(pen)
+        elif name == "h" and current:
+            pen = current[0]
+            current.append(pen)
+        elif name in {"c", "v", "y"}:
+            start, goal = pen, values[-2:]
+            first = start if name == "v" else values[:2]
+            second = goal if name == "y" else values[-4:-2]
+            for step in range(1, 13):
+                t = step / 12
+                r = 1-t
+                current.append(tuple(r**3*start[i] + 3*r*r*t*first[i] + 3*r*t*t*second[i] + t**3*goal[i]
+                                     for i in range(2)))
+            pen = goal
+        if len(current) > 320:
+            return None
+    if paint in {"s", "b", "b*"} and current:
+        current.append(current[0])
+    end_path()
+    points = [point for line in contours for point in line]
+    if not points or len(points) > 320 or not all(isfinite(value) for point in points for value in point):
+        return None
+    xs, ys = zip(*points)
+    margin = (max(0., min(xs)-bounds[0], bounds[2]-max(xs)),
+              max(0., min(ys)-bounds[1], bounds[3]-max(ys)))
+    axis_aligned_rectangle = (len(entries) == 2 and str(entries[0].operator) == "re"
+                              and close and (a == d == 0 or b == c == 0))
+    return {"contours": contours, "margin": margin, "rectangle": axis_aligned_rectangle}
+
+
 def describe_objects(page, operators, candidates):
     objects = []
-    identified = {candidate.token: candidate.kind for candidate in candidates}
+    identified = {candidate.token: candidate for candidate in candidates}
+    outline_budget = 32000
     with pdfium.PdfDocument(marked_draws(page, operators, candidates)) as probe, closing(probe[0]) as native:
         for item in native.get_objects(max_depth=1):
             token = integer_marks(item, ("PBObjectDraw",)).get("PBObjectDraw")
@@ -111,7 +177,17 @@ def describe_objects(page, operators, candidates):
                 x0, y0, x1, y1 = bounds
                 if x0 == x1 or y0 == y1:
                     bounds = (x0-.25, y0-.25, x1+.25, y1+.25)
-                objects.append({"token": token, "kind": identified[token], "bounds": bounds})
+                draw = identified[token]
+                obj = {"token": token, "kind": draw.kind, "bounds": bounds}
+                if draw.kind == "path" and outline_budget > 0:
+                    try:
+                        outline = path_outline(operators, draw, bounds)
+                    except (ArithmeticError, TypeError, ValueError):
+                        outline = None
+                    if outline:
+                        obj["outline"] = outline
+                        outline_budget -= sum(map(len, outline["contours"]))
+                objects.append(obj)
     return {"objects": objects, "rotation": int(page.obj.get("/Rotate", 0)) % 360,
             "boxes": {key: page_box(page, box) for key, (box, _) in BOXES.items()},
             "unit": float(page.obj.get("/UserUnit", 1))}

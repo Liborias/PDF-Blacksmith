@@ -24,7 +24,7 @@ type textRun struct {
 	BlockToken              int `json:"block_token"`
 	Editable                bool
 	WholeRunOnly            bool `json:"whole_run_only"`
-	Font                    string
+	Font, Face              string
 	Family                  int
 	Text                    string
 	Block                   *storedTextBlock
@@ -37,6 +37,7 @@ type textRun struct {
 
 type textPage struct {
 	Objects  []textRun
+	Fonts    map[string]documentFont
 	Boxes    map[string]searchRect
 	Rotation int
 }
@@ -143,6 +144,9 @@ func (v *documentView) finishNativeText(job readerJob) {
 		pick, p.next = p.next, textSelection{}
 	}
 	if job.result.Status != "ok" || job.result.View == nil || job.result.View.TextPage == nil {
+		if pick.automatic && !pick.region() {
+			v.requestObjects(pick)
+		}
 		if !pick.automatic && v.app.mode == idTextTab {
 			v.app.report(job.result.Message)
 		}
@@ -152,22 +156,6 @@ func (v *documentView) finishNativeText(job readerJob) {
 	v.app.matchTextSelection(v, p.model, pick)
 }
 
-func (v *documentView) clickedForText(x, y int32) {
-	a := v.app
-	if a.mode == idObjectsTab {
-		return
-	}
-	if a.busy || a.full || !v.ready() || (a.mode == idTextTab && (!v.secondary || a.textTool.gesture.source != 0)) {
-		return
-	}
-	pick := v.textAt(x, y)
-	if pick.source == 0 {
-		return
-	}
-	pick.mode, pick.automatic = textObject, true
-	v.requestNativeText(pick)
-}
-
 func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSelection) {
 	if pick.tool != a.mode || pick.generation != v.generation {
 		return
@@ -175,10 +163,17 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 	glyphs, dim, rotation := v.nativeTextGeometry(model, pick)
 	var flow textFlow
 	var stored *storedTextBlock
-	if len(pick.polygon) >= 3 {
+	if pick.region() && dim[0] > 0 && dim[1] > 0 {
+		var selection searchRect
+		if pick.mode == textRectangle {
+			selection = rectangleBetween(pick.polygon[0], pick.polygon[2])
+		}
 		selected := slices.DeleteFunc(glyphs, func(g layoutGlyph) bool {
-			b := g.bounds
-			return !pointInTextRegion(textPoint{(b[0] + b[2]) / (2 * dim[0]), (b[1] + b[3]) / (2 * dim[1])}, pick.polygon)
+			b := searchRect{g.bounds[0] / dim[0], g.bounds[1] / dim[1], g.bounds[2] / dim[0], g.bounds[3] / dim[1]}
+			if pick.mode == textRectangle {
+				return !rectangleSelects(selection, b, pick.crossing())
+			}
+			return !pointInTextRegion(textPoint{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}, pick.polygon)
 		})
 		flow = layoutText(selected)
 	} else {
@@ -194,11 +189,7 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 			if block := run.Block; block != nil {
 				flow, stored = storedBlockFlow(model, glyphs, block.ID)
 			} else if pick.mode == textBlock {
-				flow = layoutText(glyphs).paragraphAt(seed)
-			} else if run.Editable && run.WholeRunOnly {
-				flow = layoutText(slices.DeleteFunc(glyphs, func(glyph layoutGlyph) bool {
-					return glyph.run != seed.run
-				}))
+				flow = paragraphOrCellAt(glyphs, seed, pick.paragraphRequested)
 			} else {
 				// One PDF show instruction can cover several columns. Pick the
 				// connected text at the pointer, including neighboring word runs.
@@ -206,42 +197,45 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 			}
 		}
 	}
+	p := &a.textTool
 	if pick.automatic {
 		if flow.text == "" || a.busy {
+			if !a.busy && !pick.region() {
+				v.requestObjects(pick)
+			}
 			return
 		}
-		oldBox := pick.box
-		raw := textPointToPDF(pick.point, model.Boxes[oldBox], rotation)
-		if v.secondary {
-			tab := a.comparison.tab
-			if a.saveInlineBefore(func() {
-				if a.comparisonVisible() && a.comparison.tab == tab {
-					a.matchTextSelection(v, model, pick)
-				}
-			}) {
-				return
-			}
-			a.selectDocumentTab(tab)
-			if a.activeTab != tab {
-				return
-			}
-			v = a.view
+		oldBox, oldTool := pick.box, a.mode
+		var activated bool
+		pick, activated = a.activateSelection(v, pick, idTextTab, model.Boxes, rotation)
+		if !activated {
+			return
 		}
-		a.activate(idTextTab)
-		a.textTool.mode = textObject
-		a.textGuide()
-		pick.tool, pick.generation, pick.box = idTextTab, v.generation, v.box()
-		pick.point = pdfPointToText(raw, model.Boxes[pick.box], rotation)
+		v = a.view
+		if oldTool != idTextTab || pick.mode == textBlock {
+			if oldTool != idTextTab {
+				p.explicitParagraph = false
+			}
+			p.mode = pick.mode
+			a.textGuide()
+		}
 		v.nativeText.model, v.nativeText.source, v.nativeText.generation = model, pick.source, pick.generation
-		// Refit in the box of the active view if the previous tool displayed a print box.
 		if oldBox != pick.box {
-			// A generation change affects drawing and page framing, the source is the same PDF page.
 			pick.automatic = false
 			a.matchTextSelection(v, model, pick)
 			return
 		}
 	}
-	p := &a.textTool
+	if pick.change != replaceSelection {
+		var previous []layoutGlyph
+		if p.model == model && p.pick.source == pick.source && p.pick.generation == pick.generation && p.pick.box == pick.box {
+			previous = p.flow.glyphs()
+		}
+		glyphs := combineSelection(previous, flow.glyphs(), pick.change, func(g layoutGlyph) [2]int {
+			return [2]int{g.run, g.index}
+		})
+		flow, stored = layoutText(glyphs), nil
+	}
 	p.model, p.pick, p.flow, p.dim, p.rotation = model, pick, flow, dim, rotation
 	setText(p.original, "")
 	setText(p.report, "")

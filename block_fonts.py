@@ -23,11 +23,13 @@ class BlockFace:
     fake_italic: bool
 
 
-def block_face(family, style, folder):
+def block_face(family, style, folder, font_data=None):
     bundled = ("Liberation Sans", "Liberation Serif", "Liberation Mono")
     bold, italic = bool(style.get("bold")), bool(style.get("italic"))
     try:
-        if family in bundled:
+        if font_data is not None:
+            data = font_data
+        elif family in bundled:
             variant = ("Bold" if bold else "") + ("Italic" if italic else "") or "Regular"
             data = (Path(folder) / f"{FAMILIES[bundled.index(family)]}-{variant}.ttf").read_bytes()
         elif sys.platform == "win32":
@@ -55,14 +57,14 @@ def block_face(family, style, folder):
         raise TextError("Zvolené písmo se nepodařilo načíst.") from exc
 
 
-def fonts_for_block(style, content, folder):
+def fonts_for_block(style, content, folder, font_data=None):
     bundled = ("Liberation Sans", "Liberation Serif", "Liberation Mono")
     family = style.get("font", "")
     if not isinstance(family, str) or len(family)>63 or "\0" in family:
         raise TextError("Vyberte dostupné písmo.")
     if not family:
         family = bundled[style.get("family", 0)]
-    faces = [block_face(family,style,folder)]
+    faces = [block_face(family,style,folder,font_data)]
     needed={char for char in content if not char.isspace()}
     needed.add(" ")
     assigned={char:0 for char in needed if char in faces[0].cmap}

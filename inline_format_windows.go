@@ -2,7 +2,6 @@ package main
 
 import (
 	"math"
-	"slices"
 	"strings"
 	"syscall"
 	"unicode/utf16"
@@ -50,14 +49,11 @@ func (a *app) initialInlineContent(frame *inlineTextFrame) (string, []inlineText
 	p := &a.textTool
 	var content strings.Builder
 	var runs []inlineTextRun
-	offset := 0
-	appendText := func(value string, index int) {
-		source := p.model.Objects[index]
-		font := slices.IndexFunc(p.fonts, func(name string) bool { return strings.EqualFold(name, source.Font) })
-		if font < 0 {
-			font = min(max(source.Family, 0), len(bundledTextFonts)-1)
-		}
-		style := inlineTextRun{Font: p.fonts[font],
+	p.inline.glyphPositions = nil
+	offset, row := 0, 0
+	appendText := func(value string, glyph layoutGlyph) {
+		source := p.model.Objects[glyph.run]
+		style := inlineTextRun{Font: a.inlineFontForRun(source),
 			Size:  max(1, math.Round(source.Size*math.Hypot(source.Matrix[2], source.Matrix[3])*20)/20),
 			Color: uint32(paletteColor{source.Fill[0], source.Fill[1], source.Fill[2]}.win()),
 			Bold:  source.Bold, Italic: source.Italic, Underline: source.Underline}
@@ -67,17 +63,22 @@ func (a *app) initialInlineContent(frame *inlineTextFrame) (string, []inlineText
 		content.WriteString(value)
 		length := len(utf16.Encode([]rune(value)))
 		runs = appendInlineRun(runs, style, offset, offset+length)
+		if value != "\n" {
+			p.inline.glyphPositions = append(p.inline.glyphPositions,
+				inlineGlyphPosition{start: offset, end: offset + length, line: row, bounds: glyph.bounds})
+		}
 		offset += length
 	}
-	previous := -1
+	previous := layoutGlyph{run: -1}
 	for _, group := range frame.flow.paragraphs {
 		for _, line := range group {
-			if previous >= 0 {
+			if previous.run >= 0 {
 				appendText("\n", previous)
+				row++
 			}
-			writeGlyphLine(line, func(value string, index int) {
-				appendText(value, index)
-				previous = index
+			writeGlyphLine(line, func(value string, glyph layoutGlyph) {
+				appendText(value, glyph)
+				previous = glyph
 			})
 		}
 	}

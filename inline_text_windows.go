@@ -40,6 +40,11 @@ type inlineTextEditor struct {
 	previewStyle          inlineTextStyle
 	layoutPosted          bool
 	textPixels            float64
+	fontHandles           map[string]uintptr
+	glyphPositions        []inlineGlyphPosition
+	pristine, caretHidden bool
+	mouseSelecting        bool
+	mouseAnchor           int
 }
 
 type inlineTextStyle struct {
@@ -100,7 +105,7 @@ func (a *app) inlineStyle() inlineTextStyle {
 	leading, _ := readTextNumber(p.leading, .7, 5)
 	tracking, _ := readTextNumber(p.tracking, -72, 72)
 	width, _ := readTextNumber(p.width, 1, 20000)
-	return inlineTextStyle{p.fonts[max(0, comboIndex(p.font))], size, leading, tracking, width, p.alignment,
+	return inlineTextStyle{p.fontKeys[max(0, comboIndex(p.font))], size, leading, tracking, width, p.alignment,
 		a.checked(p.bold), a.checked(p.italic), a.checked(p.underline)}
 }
 
@@ -146,13 +151,15 @@ func (a *app) clearInlineFrames() {
 	e.backdrop, e.backdropRequested = nil, false
 	e.serial++
 	e.capture.close()
-	e.visible = false
+	e.visible, e.pristine, e.mouseSelecting = false, false, false
+	e.glyphPositions = nil
 	if e.handle != 0 {
 		showWindow.Call(e.handle, 0)
 	}
 
 	e.previewStyle = inlineTextStyle{}
 	e.rect, e.clip = rect{}, rect{}
+	a.clearInlineFonts()
 }
 
 func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textSelection) {
@@ -162,8 +169,17 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 		return
 	}
 	groups := []textFlow{flow}
-	if len(pick.polygon) >= 3 && len(flow.paragraphs) > 1 {
-		groups = inlineTextColumns(flow)
+	if len(flow.paragraphs) > 1 {
+		switch {
+		case pick.change != replaceSelection:
+			groups = make([]textFlow, 0, len(flow.paragraphs))
+			for _, paragraph := range flow.paragraphs {
+				section := (textFlow{paragraphs: [][]textLine{paragraph}}).glyphs()
+				groups = append(groups, layoutText(section))
+			}
+		case pick.region():
+			groups = inlineTextColumns(flow)
+		}
 	}
 	for _, group := range groups {
 		glyphs := group.glyphs()
@@ -183,7 +199,7 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 	}
 	for i, frame := range e.frames {
 		if frame.editable {
-			a.focusInlineFrame(i, pick.point, len(pick.polygon) == 0)
+			a.focusInlineFrame(i, pick.point, !pick.region() && pick.mode != textBlock && pick.change == replaceSelection)
 			return
 		}
 	}
@@ -240,12 +256,14 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	e.firstBaseline = frame.flow.paragraphs[0][0].baseline
 	first := p.model.Objects[frame.flow.glyphs()[0].run]
 	e.foreground = paletteColor{first.Fill[0], first.Fill[1], first.Fill[2]}.win()
-	font := slices.IndexFunc(p.fonts, func(value string) bool { return strings.EqualFold(value, first.Font) })
-	if font < 0 {
-		font = min(max(first.Family, 0), len(bundledTextFonts)-1)
+	a.loadInlineFonts(frame)
+	font := a.inlineFontForRun(first)
+	chooseCombo(p.font, max(0, slices.Index(p.fontKeys, font)))
+	original := p.fontNames[font]
+	if original == "" {
+		original = first.Font
 	}
-	chooseCombo(p.font, font)
-	setText(p.original, first.Font)
+	setText(p.original, original)
 	setText(p.size, formatTextNumber(first.Size*math.Hypot(first.Matrix[2], first.Matrix[3])))
 	leading := 1.2
 	if lines := frame.flow.paragraphs[0]; len(lines) >= 2 {
@@ -297,16 +315,13 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	a.layoutInlineEditor()
 	if e.visible {
 		setFocus.Call(e.handle)
-		if !useCaret && len(p.pick.polygon) >= 3 {
+		if !useCaret && (p.pick.region() || p.pick.mode == textBlock || p.pick.change != replaceSelection) {
 			selectInline(e.handle, 0, -1)
 		}
 		if useCaret {
 			at := screenTextPoint(e.pageArea, caret)
-			local := point{at.x - e.rect.left, at.y - e.rect.top}
-			i, _, _ := sendMessage.Call(e.handle, 0x00d7, 0, uintptr(unsafe.Pointer(&local))) // EM_CHARFROMPOS
-			if int32(i) >= 0 {
-				sendMessage.Call(e.handle, 0x00b1, i, i)
-			}
+			index := a.originalInlinePosition(at.x, at.y)
+			selectInline(e.handle, index, index)
 		}
 	}
 	a.view.invalidateCanvas()
@@ -368,6 +383,7 @@ func (a *app) layoutInlineEditor() {
 		return
 	}
 	e.pageArea = area
+	e.pristine = !a.inlineDirty()
 	scale := float64(area.right-area.left) / p.dim[0]
 	style := a.inlineStyle()
 	if style.size <= 0 || style.leading <= 0 || e.fixedWidth && style.width <= 0 {
@@ -385,7 +401,7 @@ func (a *app) layoutInlineEditor() {
 		desired = max(e.sourceBounds[2]-e.sourceBounds[0], a.measureInlineWidth(style, scale))
 	}
 	left, width := inlineHorizontal(e.sourceBounds, e.leftLimit, e.rightLimit, max(1, desired), style.alignment)
-	top := max(0., e.firstBaseline-.9*e.initialStyle.size)
+	top := max(0., min(e.sourceBounds[1], e.firstBaseline-.9*e.initialStyle.size))
 	padding := int32(max(1, a.scale(1)))
 	box := rect{area.left + int32(math.Round(left*scale)) - padding,
 		area.top + int32(math.Round(top*scale)) - padding, 0, 0}
@@ -399,6 +415,7 @@ func (a *app) layoutInlineEditor() {
 	lines, _, _ := sendMessage.Call(e.handle, 0x00ba, 0, 0) // EM_GETLINECOUNT
 	lines = max(lines, uintptr(strings.Count(a.inlineValue(), "\n")+1))
 	wantedHeight := int32(math.Ceil((1.25+float64(max(1, int(lines))-1)*style.leading)*float64(px))) + padding*2 + 4
+	wantedHeight = max(wantedHeight, int32(math.Ceil((e.sourceBounds[3]-top)*scale))+padding*3)
 	box.bottom = min(area.bottom+1, box.top+wantedHeight)
 	e.bounds = searchRect{left, top, left + width, min(p.dim[1], top+float64(wantedHeight)/scale)}
 	clip := intersectInlineRect(box, intersectInlineRect(v.viewport, area))
@@ -492,7 +509,9 @@ func (a *app) paintInlineFrames(dc uintptr, area rect) {
 	}
 	for i, frame := range e.frames {
 		if i == e.active && e.visible {
-			a.paintInlineBackdrop(dc, area, frame.flow.highlightBounds(), toPixel)
+			if !e.pristine {
+				a.paintInlineBackdrop(dc, area, frame.flow.highlightBounds(), toPixel)
+			}
 			invalidate(e.handle)
 		} else {
 			for _, bounds := range frame.flow.highlightBounds() {

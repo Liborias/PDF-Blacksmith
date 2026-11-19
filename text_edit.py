@@ -1,16 +1,19 @@
 """Read text with PDFium and replace positioned runs in PDF content streams."""
 
+from base64 import b64encode
 from collections import Counter
 from contextlib import closing
 from ctypes import byref, c_double, c_float, c_int, c_ubyte, c_uint, c_ushort, c_void_p, cast
 from io import BytesIO
-from math import isfinite
+from math import hypot, isfinite
 from pathlib import Path
+import re
 
 import pikepdf as pdf
 import pypdfium2 as pdfium
 
 from proof import BOXES, page_box
+from embedded_fonts import embedded_truetype, unicode_codes
 
 
 raw = pdfium.raw
@@ -183,7 +186,7 @@ def source_widths(font, step, codes):
     return widths
 
 
-def glyph_advances(entry, style, font, glyphs, matrix):
+def glyph_advances(entry, style, font, glyphs, matrix, code_text):
     source, size, tracking, spacing, _ = style
     step = code_size(source)
     if not step or not glyphs or size <= 0:
@@ -198,38 +201,42 @@ def glyph_advances(entry, style, font, glyphs, matrix):
         widths = source_widths(source, step, codes)
     except (TextError, AttributeError, IndexError, TypeError, ValueError, StopIteration):
         return None
-    advances, count, position, start = [], 0, 0.0, None
+    advances, indices, count, position, start = [], [], 0, 0.0, None
     for value in show_items(entry):
         if not isinstance(value, pdf.String):
             position -= float(value)
             continue
         data = bytes(value)
         for offset in range(0, len(data), step):
-            if count >= len(glyphs):
-                return None
-            glyph = glyphs[count]
-            unicode_code = ord(glyph["text"])
-            if unicode_code > 0xffff or glyph["text"] == "\ufffd":
-                return None
             code = int.from_bytes(data[offset:offset+step], "big")
             width = widths.get(code)
+            text = code_text.get(code, "")
+            glyph = glyphs[count] if count < len(glyphs) else None
+            x, y = glyph["origin"] if glyph else (0, 0)
+            origin = inverse[0]*x + inverse[2]*y + inverse[4]
+            if start is None and glyph:
+                start = origin-position*size/1000
+            delta = origin-start-position*size/1000 if start is not None else 0
+            tolerance = max(.08, size*.012)
+            if glyph and abs(delta) <= tolerance:
+                indices.append(len(advances))
+                count += 1
+            elif not (text.isspace() or step == 1 and code == 32) or glyph and delta < -tolerance:
+                return None
             if width is None:
+                if glyph is None:
+                    return None
                 measured = c_float()
-                if not raw.FPDFFont_GetGlyphWidth(font, unicode_code, 1000, byref(measured)):
+                if not raw.FPDFFont_GetGlyphWidth(font, ord(glyph["text"]), 1000, byref(measured)):
                     return None
                 width = measured.value
-            x, y = glyph["origin"]
-            origin = inverse[0]*x + inverse[2]*y + inverse[4]
-            start = origin if start is None else start
-            if abs(origin-start-position*size/1000) > max(.08, size*.012):
-                return None
             advance = width + 1000 * (tracking + (spacing if step == 1 and code == 32 else 0)) / size
             if not isfinite(advance):
                 return None
             advances.append(advance)
             position += advance
-            count += 1
-    return advances if count == len(glyphs) else None
+    return (advances, indices) if count == len(glyphs) else None
+
 
 def integer_marks(text, names):
     result = {}
@@ -348,7 +355,13 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
     return output, sources
 
 
-def source_objects(page, sources):
+def source_stretch(matrix):
+    vertical = hypot(matrix[2], matrix[3])
+    horizontal = hypot(matrix[0], matrix[1])
+    return round(max(.25, min(4., horizontal/vertical)), 4) if vertical > .0001 else 1.
+
+
+def source_objects(page, sources, *, font_catalog=None):
     """Tag a private one-page probe so text objects map to exact operators."""
     buffer = BytesIO()
     with pdf.Pdf.new() as probe:
@@ -359,7 +372,7 @@ def source_objects(page, sources):
         # Probe every text object on the sheet, even outside the displayed crop.
         sample.obj.CropBox = sample.mediabox
         probe.save(buffer)
-    objects = []
+    objects, code_maps, embedded = [], {}, {}
     with pdfium.PdfDocument(buffer.getvalue()) as probe, closing(probe[0]) as native, closing(native.get_textpage()) as layer:
         native_objects = list(native.get_objects(filter=[raw.FPDF_PAGEOBJ_TEXT], textpage=layer))
         glyphs = {}
@@ -368,6 +381,8 @@ def source_objects(page, sources):
             if not handle or raw.FPDFText_IsGenerated(layer, index) != 0:
                 continue
             code = raw.FPDFText_GetUnicode(layer, index)
+            if code == 2:  # PDFium uses STX for a discretionary hyphen at a line break.
+                code = ord("-")
             if not 0 < code <= 0x10ffff or 0xd800 <= code <= 0xdfff:
                 continue
             x, y = c_double(), c_double()
@@ -406,13 +421,31 @@ def source_objects(page, sources):
                 word in generic for word in ("times", "serif", "georgia")) and "sans" not in generic else 0
             size = text.get_font_size()
             matrix = text.get_matrix().get()
-            advance, whole, root = [], False, False
+            advance, glyph_indices, whole, root = [], [], False, False
+            face = ""
             operator_list, index = (), 0
             if token:
                 operator_list, index, style, whole, outer, root = sources[token]
                 if not root:
                     matrix = compose(outer, matrix)
-                advance = glyph_advances(operator_list[index-1], style, font, characters, matrix) or []
+                source = style[0]
+                if source is not None:
+                    if re.fullmatch(r"PB[0-9a-f]{16}", name):
+                        name = str(source.get("/BaseFont", name)).lstrip("/")
+                    key = source.objgen
+                    if key not in code_maps:
+                        code_maps[key] = unicode_codes(source) if "/ToUnicode" in source else {}
+                    codes = code_maps[key]
+                    advance, glyph_indices = glyph_advances(operator_list[index-1], style, font, characters,
+                                                             matrix, codes) or ([], [])
+                    if font_catalog is not None and len(font_catalog) < 16:
+                        stretch = source_stretch(matrix)
+                        font_key = key, stretch
+                        if font_key not in embedded:
+                            embedded[font_key] = embedded_truetype(source, codes, stretch)
+                        if embedded[font_key] is not None:
+                            face, display, data = embedded[font_key]
+                            font_catalog.setdefault(face, {"name": display, "data": b64encode(data).decode("ascii")})
             block = stored_block(text)
             bold = font.get_weight() >= 600 or "bold" in generic
             italic = any(word in font.get_base_name().casefold() for word in ("italic", "oblique"))
@@ -421,7 +454,8 @@ def source_objects(page, sources):
                 italic = italic if block["italic"] is None else bool(block["italic"])
             red, green, blue, alpha = c_uint(), c_uint(), c_uint(), c_uint()
             raw.FPDFPageObj_GetFillColor(text, byref(red), byref(green), byref(blue), byref(alpha))
-            objects.append(dict(token=token if whole and root else 0, block_token=token, advances=advance, whole=whole,
+            objects.append(dict(token=token if whole and root else 0, block_token=token, advances=advance, glyph_indices=glyph_indices,
+                                face=face, whole=whole,
                                 glyphs=characters, block=block, text=value, bounds=bounds, matrix=matrix, font=name, family=family,
                                 fill=[red.value, green.value, blue.value],
                                 size=size, bold=bold, italic=italic,
@@ -432,6 +466,7 @@ def source_objects(page, sources):
             item["token"] = item["block_token"] = 0
             item["whole"] = False
             item["advances"] = []
+            item["glyph_indices"] = []
     return objects
 
 
@@ -458,12 +493,15 @@ def pikepdf_operators(page):
 
 
 def describe_text(page):
-    _, _, objects = text_page(page)
+    _, sources = text_tree(page)
+    fonts = {}
+    objects = source_objects(page, sources, font_catalog=fonts)
     for item in objects:
+        item.pop("glyph_indices", None)
         partial = bool(item.pop("advances"))
         item["editable"] = item.pop("whole") or partial
         item["whole_run_only"] = not partial
-    return dict(objects=objects, rotation=int(page.obj.get("/Rotate", 0)) % 360,
+    return dict(objects=objects, fonts=fonts, rotation=int(page.obj.get("/Rotate", 0)) % 360,
                 boxes={key: page_box(page, attribute) for key, (attribute, _) in BOXES.items()})
 
 

@@ -15,6 +15,28 @@ func inlineEditProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintp
 	a := window
 	if a != nil {
 		e := &a.textTool.inline
+		if message == 0x0008 { // WM_KILLFOCUS
+			e.caretHidden = false
+			if e.visible && !a.textSettingsFocus(wParam) && wParam != 0 {
+				postMessage.Call(a.window, wmInlineCommit, uintptr(e.serial), 0)
+			}
+		}
+		if e.visible && (message == 0x0207 || message == 0x0203 ||
+			message == 0x0201 && canvasSelectionChange() != replaceSelection) {
+			x, y := int32(int16(lParam))+e.rect.left, int32(int16(lParam>>16))+e.rect.top
+			if message == 0x0207 {
+				if a.view.middleSelection(message, x, y) {
+					return 0
+				}
+			} else {
+				a.view.selectionClick(x, y, message == 0x0203)
+				return 0
+			}
+		}
+		if e.visible && a.originalInlineMouse(message, int32(int16(lParam))+e.rect.left,
+			int32(int16(lParam>>16))+e.rect.top) {
+			return 0
+		}
 		surface := &a.view.canvas
 		if message == wmPaint && e.visible && surface.complete {
 			clip := e.clip
@@ -26,6 +48,15 @@ func inlineEditProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintp
 					x, y := clip.left-e.rect.left, clip.top-e.rect.top
 					copySurface.Call(dc, uintptr(x), uintptr(y), uintptr(width), uintptr(height), surface.dc,
 						uintptr(clip.left-a.view.viewport.left), uintptr(clip.top-a.view.viewport.top), 0x00cc0020)
+					if e.pristine {
+						a.paintOriginalInline(dc)
+						user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
+						return 0
+					}
+					if e.caretHidden {
+						user32.NewProc("ShowCaret").Call(hwnd)
+						e.caretHidden = false
+					}
 					key := e.background
 					fillColor(e.capture.dc, rect{right: width, bottom: height},
 						paletteColor{uint8(key), uint8(key >> 8), uint8(key >> 16)})

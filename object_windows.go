@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"unsafe"
 )
@@ -28,9 +27,16 @@ type objectEditRequest struct {
 }
 
 type pdfObject struct {
-	Token  int
-	Kind   string
-	Bounds searchRect
+	Token   int
+	Kind    string
+	Bounds  searchRect
+	Outline *objectOutline
+}
+
+type objectOutline struct {
+	Contours  [][]textPoint
+	Margin    textPoint
+	Rectangle bool
 }
 
 type objectPage struct {
@@ -45,13 +51,15 @@ type objectEditor struct {
 	page                                       *objectPage
 	source                                     int
 	pick                                       textSelection
-	probe                                      bool
+	pressPick                                  textSelection
+	dragReady                                  bool
 	selected                                   pdfObject
 	items                                      []pdfObject
 	mode                                       int
 	modes                                      [3]uintptr
 	polygon                                    []textPoint
 	defining                                   bool
+	regionPick                                 textSelection
 	serial                                     uint64
 	snapshot, snapshotComplete                 bool
 	image                                      *printBitmap
@@ -101,7 +109,7 @@ func (a *app) updateObjectActions() {
 func (a *app) clearObjectSelection() {
 	e := &a.objects
 	a.cancelObjectGesture()
-	e.page, e.source, e.pick, e.probe = nil, 0, textSelection{}, false
+	e.page, e.source, e.pick = nil, 0, textSelection{}
 	e.resetSelection()
 	e.defining, e.polygon = false, nil
 	e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
@@ -113,7 +121,8 @@ func (a *app) clearObjectSelection() {
 
 func (e *objectEditor) endGesture() {
 	e.preview.close()
-	e.pressed, e.moving, e.delta = false, false, textPoint{}
+	e.pressed, e.moving, e.dragReady, e.delta = false, false, false, textPoint{}
+	e.pressPick = textSelection{}
 }
 
 func (a *app) cancelObjectGesture() {
@@ -146,32 +155,18 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 	}
 	switch msg {
 	case 0x0201:
-		space, _, _ := user32.NewProc("GetKeyState").Call(0x20)
 		pick := v.textAt(x, y)
-		if space&0x8000 != 0 || pick.source == 0 {
+		if keyDown(0x20) || pick.source == 0 {
 			return false
 		}
-		keepGroup := len(e.items) > 1 && e.source == pick.source && e.selectionContains(pick, v)
-		if !keepGroup {
-			e.resetSelection()
-		}
-		e.pick, e.start, e.cursor, e.pressed = pick, point{x, y}, point{x, y}, true
+		e.pressPick, e.start, e.cursor, e.pressed = pick, point{x, y}, point{x, y}, true
 		setFocus.Call(a.window)
 		user32.NewProc("SetCapture").Call(a.window)
-		if keepGroup {
-			// Keep the group intact while the pointer becomes the drag origin.
-		} else if e.page != nil && e.source == pick.source {
-			a.pickObject()
-		} else {
-			setText(e.info, "Zjišťuji objekty na stránce…")
-			v.schedule()
-		}
-		a.updateObjectActions()
-		v.invalidateCanvas()
 		return true
 	case 0x0200:
 		if e.pressed {
 			e.cursor = point{x, y}
+			v.prepareObjectDrag()
 			a.moveObjectPreview()
 			return true
 		}
@@ -180,10 +175,13 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 			e.cursor = point{x, y}
 			a.moveObjectPreview()
 			delta, moved := e.delta, e.moving
+			click := max(absTextDrag(x-e.start.x), absTextDrag(y-e.start.y)) <= int32(a.scale(4))
 			target := v.textAt(x, y)
 			a.cancelObjectGesture()
 			if moved && target.source == e.pick.source && math.Hypot(delta[0], delta[1]) > .01 {
 				a.runObjectEdit(e.pick.source, objectEditRequest{Operation: "move", Token: e.selected.Token, Tokens: e.tokens(), Delta: delta})
+			} else if click {
+				v.selectionClick(x, y, false)
 			}
 			return true
 		}
@@ -191,43 +189,19 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 	return false
 }
 
-func (a *app) pickObject() {
-	v, e := a.view, &a.objects
-	rotation := e.rotation(v)
-	box := e.page.Boxes[e.pick.box]
-	if len(e.pick.polygon) >= 3 {
-		for _, item := range e.page.Objects {
-			b := item.Bounds
-			center := pdfPointToText(textPoint{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}, box, rotation)
-			if pointInTextRegion(center, e.pick.polygon) {
-				e.items = append(e.items, item)
-			}
-		}
-		if len(e.items) > 0 {
-			e.selected = e.items[0]
-			setText(e.info, fmt.Sprintf("Vybrané objekty: %d", len(e.items)))
-		}
+func (v *documentView) prepareObjectDrag() {
+	e := &v.app.objects
+	if e.dragReady || e.pressPick.source == 0 || e.pressPick.change != replaceSelection ||
+		max(absTextDrag(e.start.x-e.cursor.x), absTextDrag(e.start.y-e.cursor.y)) <= int32(v.app.scale(4)) {
+		return
+	}
+	e.dragReady = true
+	pick := e.pressPick
+	if e.selectionContains(pick, v) {
+		e.pick = pick
 	} else {
-		p := textPointToPDF(e.pick.point, box, rotation)
-		tolerance := max(e.pick.tolerance[0], e.pick.tolerance[1]) * min(box[2]-box[0], box[3]-box[1])
-		for i := len(e.page.Objects) - 1; i >= 0; i-- {
-			obj := e.page.Objects[i]
-			b := obj.Bounds
-			if p[0] >= b[0]-tolerance && p[0] <= b[2]+tolerance && p[1] >= b[1]-tolerance && p[1] <= b[3]+tolerance {
-				e.selected, e.items = obj, []pdfObject{obj}
-				label := map[string]string{"path": "Vektorový tvar", "image": "Obrázek", "form": "Skupina PDF"}[obj.Kind]
-				setText(e.info, label)
-				break
-			}
-		}
+		v.requestObjects(pick)
 	}
-	if e.selected.Token == 0 {
-		setText(e.info, "Na tomto místě není upravitelný objekt.")
-	}
-	a.updateObjectActions()
-	v.invalidateCanvas()
-	a.moveObjectPreview()
-	v.schedule()
 }
 
 func (e *objectEditor) rotation(v *documentView) int {
@@ -235,16 +209,20 @@ func (e *objectEditor) rotation(v *documentView) int {
 }
 
 func (v *documentView) scheduleObjects() bool {
-	a, e := v.app, &v.app.objects
+	a, e, state := v.app, &v.app.objects, &v.objectProbe
+	if state.next.source != 0 && !a.busy {
+		pick := state.next
+		state.next = textSelection{}
+		if pick.generation == v.generation && pick.tool == a.mode {
+			state.flight = pick
+			req := v.request("object_probe")
+			req.View.Page = pick.source
+			v.launch(req, 0, 0, false, nil)
+			return true
+		}
+	}
 	if v.secondary || a.mode != idObjectsTab || a.busy || e.pick.source == 0 || e.pick.generation != v.generation {
 		return false
-	}
-	if (e.page == nil || e.source != e.pick.source) && !e.probe {
-		e.probe = true
-		req := v.request("object_probe")
-		req.View.Page = e.pick.source
-		v.launch(req, 0, 0, false, nil)
-		return true
 	}
 	if e.selected.Token != 0 && !e.snapshot {
 		e.snapshot = true
@@ -257,26 +235,37 @@ func (v *documentView) scheduleObjects() bool {
 	return false
 }
 
-func (a *app) finishObjects(job readerJob) {
-	e, v := &a.objects, a.view
-	if job.generation != v.generation || a.mode != idObjectsTab || e.pick.source == 0 {
+func (v *documentView) finishObjects(job readerJob) {
+	a, e := v.app, &v.app.objects
+	if job.generation != v.generation {
 		return
 	}
 	if job.action == "object_probe" {
-		e.probe = false
-		if job.objectPage != e.pick.source {
+		state := &v.objectProbe
+		pick := state.flight
+		state.flight = textSelection{}
+		if pick.source != job.objectPage || pick.generation != v.generation {
 			return
+		}
+		if state.next.source != 0 {
+			if state.next.source != pick.source || state.next.generation != pick.generation {
+				return
+			}
+			pick, state.next = state.next, textSelection{}
 		}
 		if job.result.Status != "ok" || job.result.View == nil || job.result.View.ObjectPage == nil {
-			setText(e.info, "Objekty na této straně nelze vybrat.")
-			e.pick = textSelection{}
+			if pick.automatic && pick.region() {
+				v.requestNativeText(pick)
+			} else if a.mode == idObjectsTab {
+				setText(e.info, "Objekty na této straně nelze vybrat.")
+			}
 			return
 		}
-		e.page, e.source = job.result.View.ObjectPage, job.objectPage
-		a.pickObject()
+		state.model, state.source, state.generation = job.result.View.ObjectPage, pick.source, v.generation
+		v.matchObjectSelection(state.model, pick)
 		return
 	}
-	if job.objectPage != e.pick.source || job.objectSerial != e.serial {
+	if v.secondary || a.mode != idObjectsTab || job.objectPage != e.pick.source || job.objectSerial != e.serial {
 		return
 	}
 	e.snapshot, e.snapshotComplete = true, true
@@ -293,7 +282,7 @@ func (a *app) finishObjects(job readerJob) {
 
 func (a *app) moveObjectPreview() {
 	e, v := &a.objects, a.view
-	if !e.pressed || e.selected.Token == 0 || max(absTextDrag(e.start.x-e.cursor.x), absTextDrag(e.start.y-e.cursor.y)) <= int32(a.scale(4)) && !e.moving {
+	if !e.pressed || !e.dragReady || e.selected.Token == 0 || e.pick.source != e.pressPick.source || max(absTextDrag(e.start.x-e.cursor.x), absTextDrag(e.start.y-e.cursor.y)) <= int32(a.scale(4)) && !e.moving {
 		return
 	}
 	area, source := v.textSheetAt(0, 0, e.pick.source)
@@ -348,7 +337,7 @@ func (a *app) paintObjectSelection(dc uintptr, source int, area rect) {
 	if a.mode != idObjectsTab || a.full {
 		return
 	}
-	if e.defining && e.pick.source == source {
+	if e.defining && e.regionPick.source == source {
 		a.paintObjectRegion(dc, area)
 	}
 	if e.selected.Token == 0 || e.source != source {

@@ -312,6 +312,46 @@ def check_rich_text_in_shared_form(folder, fonts):
     assert all(run["block"] and run["editable"] for run in (first, second, heading))
 
 
+
+def check_embedded_subset(folder, fonts):
+    from io import BytesIO
+    from fontTools.ttLib import TTFont
+
+    source, target = folder / "subset-catalog.pdf", folder / "subset-edited.pdf"
+    catalog_fixture(source, fonts)
+    with pdf.Pdf.open(source, allow_overwriting_input=True) as document:
+        page = document.pages[0]
+        font = next(iter(page.Resources.Font.items()))[1]
+        file = font.DescendantFonts[0].FontDescriptor.FontFile2
+        with TTFont(BytesIO(file.read_bytes())) as face:
+            for table in ("OS/2", "name", "post"):
+                del face[table]
+            data = BytesIO()
+            face.save(data)
+        file.write(data.getvalue())
+        document.save(source)
+
+    probe = dict(action="text_probe", input=str(source))
+    description = dispatch(probe)["text_page"]
+    row = next(run for run in description["objects"] if "002610699" in run["text"] and len(run["glyphs"]) > 30)
+    assert row["face"] in description["fonts"], description["fonts"]
+    before = "".join(glyph["text"] for glyph in row["glyphs"])
+    cell = before.index("bez zdroje, chrom")
+    value = "bez zdroje"
+    run = dict(font=row["face"], color=0, size=10, tracking=0, start=0, end=len(value))
+    block = dict(text=value, runs=[run], width=125, height=80, align="left", rotation=0, origin=[233, 195],
+                 baseline_offset=9, leading=1.2, tracking=0,
+                 selection=[dict(token=row["block_token"], glyphs=list(range(cell, cell+len("bez zdroje, chrom"))))])
+    dispatch({**probe, "action": "text_edit", "output": str(target), "text_fonts": str(fonts),
+              "text_edit": dict(size=10, block=block)})
+    changed = dispatch({**probe, "input": str(target)})["text_page"]
+    saved = find_text(changed, value)
+    assert saved["font"] == "LiberationSans" and saved["face"] in changed["fonts"]
+    after = next(glyph["origin"] for run in changed["objects"] for index, glyph in enumerate(run["glyphs"])
+                 if "".join(g["text"] for g in run["glyphs"][index:]) == "17030")
+    assert all(abs(x-y) < .001 for x, y in zip(after, row["glyphs"][before.index("17030")]["origin"]))
+
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
         fonts = Path(sys.argv[1]).resolve()
@@ -320,4 +360,5 @@ if __name__ == "__main__":
         check_font_fallback(Path(tmp), fonts)
         check_catalog(Path(tmp), fonts)
         check_rich_text_in_shared_form(Path(tmp), fonts)
+        check_embedded_subset(Path(tmp), fonts)
     print("Text blocks preserve nearby glyphs and graphics, and reflow with spacing, alignment and rotation.")

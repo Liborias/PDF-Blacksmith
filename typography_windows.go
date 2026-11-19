@@ -76,7 +76,7 @@ func (a *app) syncInlineControls() {
 	e.loading = true
 	defer func() { e.loading = false }()
 	if format.mask&inlineFace != 0 {
-		for i, name := range p.fonts {
+		for i, name := range p.fontKeys {
 			if name == syscall.UTF16ToString(format.face[:]) {
 				chooseCombo(p.font, i)
 				break

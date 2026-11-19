@@ -278,7 +278,7 @@ func (a *app) create() bool {
 	name := wideString("PDFBlaksmithWindow")
 	icon, _, _ := user32.NewProc("LoadIconW").Call(a.instance, appIconID)
 	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, 32512)
-	class := windowClass{instance: a.instance, icon: icon, smallIcon: icon, cursor: cursor,
+	class := windowClass{style: 8, instance: a.instance, icon: icon, smallIcon: icon, cursor: cursor,
 		className: uintptr(unsafe.Pointer(name)), windowProc: syscall.NewCallback(wndProc)}
 	class.size = uint32(unsafe.Sizeof(class))
 	if ok, _, _ := registerClass.Call(uintptr(unsafe.Pointer(&class))); ok == 0 {
@@ -400,6 +400,8 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			a.hideFileMenu(false)
 			a.cancelPageDrag()
 			a.cancelObjectGesture()
+			a.view.cancelMiddleSelection()
+			a.comparison.view.cancelMiddleSelection()
 		}
 	case 0x002c: // WM_MEASUREITEM
 		if a.measurePopup(lParam) {
@@ -450,9 +452,13 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			})(*(*unsafe.Pointer)(unsafe.Pointer(&lParam)))
 			if notice.from == a.textTool.inline.handle && notice.code == 0x0702 {
 				a.syncInlineControls()
+				invalidate(a.textTool.inline.handle)
 				return 0
 			}
 		}
+	case wmInlineCommit:
+		a.commitInlineOnBlur(wParam)
+		return 0
 	case wmInlineLayout:
 		a.finishInlineLayout(wParam)
 		return 0

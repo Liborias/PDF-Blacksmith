@@ -268,6 +268,8 @@ type documentView struct {
 	thumbnailSidebar                                                           uintptr
 	readerError                                                                string
 	nativeText                                                                 textProbeState
+	objectProbe                                                                objectProbeState
+	marquee                                                                    textSelection
 	dragStart                                                                  point
 	dragMoved                                                                  bool
 	engine, prefetchEngine                                                     *readerEngine
@@ -447,6 +449,8 @@ func (v *documentView) resetRendering() {
 	v.zoomDeadline = time.Time{}
 	v.readerError = ""
 	v.nativeText = textProbeState{}
+	v.objectProbe = objectProbeState{}
+	v.cancelMiddleSelection()
 	if v.dragging {
 		v.dragging = false
 		user32.NewProc("ReleaseCapture").Call()
@@ -829,6 +833,13 @@ func absTextDrag(value int32) int32 {
 
 func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	x, y := int32(int16(param)), int32(int16(param>>16))
+	if v.middleSelection(msg, x, y) {
+		return true
+	}
+	if msg == 0x0203 && contains(v.viewport, x, y) && v.app.textTool.gesture.source == 0 {
+		v.selectionClick(x, y, true)
+		return true
+	}
 	if !v.secondary && (v.objectPointer(msg, x, y) || v.app.textPointer(msg, x, y)) {
 		return true
 	}
@@ -863,7 +874,7 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 			v.dragging = false
 			user32.NewProc("ReleaseCapture").Call()
 			if !v.dragMoved && max(absTextDrag(x-v.dragStart.x), absTextDrag(y-v.dragStart.y)) <= int32(v.app.scale(3)) {
-				v.clickedForText(x, y)
+				v.selectionClick(x, y, false)
 			}
 			return true
 		}
@@ -1063,7 +1074,7 @@ func (v *documentView) finished(job readerJob) {
 	}
 	v.running = false
 	if job.action == "object_probe" || job.action == "object_snapshot" {
-		v.app.finishObjects(job)
+		v.finishObjects(job)
 		v.schedule()
 		return
 	}
@@ -1548,6 +1559,9 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			v.paintSearchHighlights(dc, number, bounds)
 			v.app.paintTextSelection(dc, number, bounds)
 			v.app.paintObjectSelection(dc, number, bounds)
+		}
+		if v.marquee.source == number {
+			v.app.drawSelectionRegion(dc, bounds, v.marquee)
 		}
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)

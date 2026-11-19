@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"slices"
 	"unsafe"
 )
 
@@ -29,10 +28,6 @@ var fileOptions = []fileOption{
 	{idFileSign, "Podepsaná kopie"},
 	{idPrintDocument, "Tisk"},
 }
-
-var fileDetailOptions = slices.DeleteFunc(slices.Clone(fileOptions), func(option fileOption) bool {
-	return option.id == idRecentFiles
-})
 
 func (a *app) fileOptionEnabled(option int) bool {
 	if a.busy {
@@ -181,15 +176,6 @@ func (a *app) drawFileMenuButton(item *buttonDraw) bool {
 		label: option.label, checked: option.id == a.activeFileOption(), disabled: !a.fileOptionEnabled(option.id),
 	}, item.state&(1|16|64) != 0)
 	return true
-}
-
-func (a *app) updateFileOptions() {
-	for _, option := range fileDetailOptions {
-		setEnabled(a.detailButtons[option.id], a.fileOptionEnabled(option.id))
-	}
-	if a.detailsTab() == idFileDetails {
-		a.updateRecentActions()
-	}
 }
 
 func (a *app) runFileOption(option int) {

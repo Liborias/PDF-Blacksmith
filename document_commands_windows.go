@@ -168,7 +168,7 @@ func (a *app) trackDocumentContext(v *documentView, pos point, editing bool) {
 	if editing {
 		groups = [][]documentCommand{
 			{docUndo, docRedo}, {docCut, docCopy, docPaste, docDelete, docSelectAll},
-			{docBold, docItalic, docUnderline}, {docAlignLeft, docAlignCenter, docAlignRight, docAlignJustify}, {docApplyText},
+			{docBold, docItalic, docUnderline}, {docAlignLeft, docAlignCenter, docAlignRight, docAlignJustify},
 		}
 	} else if v == a.view && a.mode == idObjectsTab {
 		groups[0] = []documentCommand{docUndo, docCopy, docPaste, docDuplicate, docDelete}
@@ -351,8 +351,7 @@ func (a *app) copyTextSelection() {
 		return
 	}
 	value := a.textTool.flow.text
-	if a.inlineCurrent() != nil {
-		e := &a.textTool.inline
+	if e := &a.textTool.inline; a.inlineCurrent() != nil && (len(e.frames) == 1 || a.inlineDirty()) {
 		var start, end int32
 		sendMessage.Call(e.handle, 0x00b0, uintptr(unsafe.Pointer(&start)), uintptr(unsafe.Pointer(&end)))
 		if start != end {
@@ -361,6 +360,10 @@ func (a *app) copyTextSelection() {
 		}
 		value = getText(e.handle)
 	}
+	a.copyClipboardText(value)
+}
+
+func (a *app) copyClipboardText(value string) {
 	data := syscall.StringToUTF16(multiline(value))
 	bytes := uintptr(len(data) * 2)
 	memory, _, _ := kernel32.NewProc("GlobalAlloc").Call(2, bytes)

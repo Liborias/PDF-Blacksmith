@@ -67,3 +67,75 @@ func pdfPointToText(p textPoint, box searchRect, rotation int) textPoint {
 	}
 	return textPoint{x, y}
 }
+
+type selectionChange uint8
+
+const (
+	replaceSelection selectionChange = iota
+	addSelection
+	toggleSelection
+	subtractSelection
+)
+
+func combineSelection[T any, K comparable](current, picked []T, change selectionChange, key func(T) K) []T {
+	if change == replaceSelection {
+		return picked
+	}
+	previous := make(map[K]bool, len(current))
+	hits := make(map[K]bool, len(picked))
+	for _, entry := range picked {
+		hits[key(entry)] = true
+	}
+	result := make([]T, 0, len(current)+len(picked))
+	for _, entry := range current {
+		id := key(entry)
+		previous[id] = true
+		if change == addSelection || !hits[id] {
+			result = append(result, entry)
+		}
+	}
+	if change != subtractSelection {
+		for _, entry := range picked {
+			if !previous[key(entry)] {
+				result = append(result, entry)
+			}
+		}
+	}
+	return result
+}
+
+func rectangleBetween(first, last textPoint) searchRect {
+	return searchRect{min(first[0], last[0]), min(first[1], last[1]), max(first[0], last[0]), max(first[1], last[1])}
+}
+
+func boundsContain(outer, inner searchRect) bool {
+	return outer[0] <= inner[0] && outer[1] <= inner[1] && outer[2] >= inner[2] && outer[3] >= inner[3]
+}
+
+func rectangleSelects(selection, bounds searchRect, crossing bool) bool {
+	if !crossing {
+		return boundsContain(selection, bounds)
+	}
+	return selection[0] <= bounds[2] && selection[2] >= bounds[0] &&
+		selection[1] <= bounds[3] && selection[3] >= bounds[1]
+}
+
+func rectangleTouchesSegment(box searchRect, a, b textPoint) bool {
+	first, last := 0., 1.
+	for axis := range 2 {
+		delta := b[axis] - a[axis]
+		if delta == 0 {
+			if a[axis] < box[axis] || a[axis] > box[axis+2] {
+				return false
+			}
+			continue
+		}
+		lo := (box[axis] - a[axis]) / delta
+		hi := (box[axis+2] - a[axis]) / delta
+		first, last = max(first, min(lo, hi)), min(last, max(lo, hi))
+		if first > last {
+			return false
+		}
+	}
+	return true
+}

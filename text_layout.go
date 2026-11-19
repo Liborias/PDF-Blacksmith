@@ -155,10 +155,10 @@ func joinGlyphs(line textLine) string {
 	return writeGlyphLine(line, nil)
 }
 
-func writeGlyphLine(line textLine, span func(string, int)) string {
+func writeGlyphLine(line textLine, span func(string, layoutGlyph)) string {
 	var result strings.Builder
 	right := math.Inf(-1)
-	spaced := true
+	var pendingSpace *layoutGlyph
 	previous := layoutGlyph{run: -1}
 	for _, glyph := range line.glyphs {
 		value := glyph.text
@@ -168,24 +168,31 @@ func writeGlyphLine(line textLine, span func(string, int)) string {
 		if glyph.run == previous.run && glyph.index == previous.index+1 {
 			threshold = max(threshold, line.em*.32)
 		}
-		if !spaced && (isSpace || gap > threshold || glyph.run == previous.run && glyph.index > previous.index+1) {
-			result.WriteByte(' ')
-			if span != nil {
-				span(" ", previous.run)
+		if result.Len() != 0 && pendingSpace == nil &&
+			(isSpace || gap > threshold || glyph.run == previous.run && glyph.index > previous.index+1) {
+			space := previous
+			if isSpace {
+				space = glyph
 			}
-			spaced = true
+			pendingSpace = &space
 		}
 		if !isSpace {
+			if pendingSpace != nil {
+				result.WriteByte(' ')
+				if span != nil {
+					span(" ", *pendingSpace)
+				}
+				pendingSpace = nil
+			}
 			result.WriteString(value)
 			if span != nil {
-				span(value, glyph.run)
+				span(value, glyph)
 			}
-			spaced = false
 		}
 		right = max(right, glyph.bounds[2])
 		previous = glyph
 	}
-	return strings.TrimSpace(result.String())
+	return result.String()
 }
 
 func (flow textFlow) glyphs() []layoutGlyph {
@@ -230,4 +237,19 @@ func (flow textFlow) highlightBounds() []searchRect {
 		}
 	}
 	return highlights
+}
+
+func paragraphOrCellAt(glyphs []layoutGlyph, hit layoutGlyph, requested bool) textFlow {
+	if !requested {
+		sameRow := 0
+		for _, line := range glyphRows(slices.Clone(glyphs)) {
+			if math.Abs(line.baseline-hit.baseline) <= max(.8, hit.em*.29) {
+				sameRow++
+			}
+		}
+		if sameRow >= 3 {
+			return textLineAt(glyphs, hit)
+		}
+	}
+	return layoutText(glyphs).paragraphAt(hit)
 }

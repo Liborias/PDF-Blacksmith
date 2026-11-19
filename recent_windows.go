@@ -17,9 +17,9 @@ const (
 )
 
 type recentPanel struct {
-	files                                  []string
-	expanded                               bool
-	empty, heading, more, list, path, open uintptr
+	files                      []string
+	expanded                   bool
+	empty, heading, more, list uintptr
 }
 
 func (p *recentPanel) visibleCount() int {
@@ -98,8 +98,6 @@ func (a *app) buildRecentPanel() {
 	p.list = a.add("LISTBOX", "Nedávno otevřené soubory PDF", idRecentList, 16, 49, 298, 120, wsTabstop|listStyle, 0, a.normalFont)
 	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(recentRowHeight))) // LB_SETITEMHEIGHT
 	a.addScrollPane(p.list, a.scale(recentRowHeight), true)
-	p.path = a.readout(16, 0, 298, 48)
-	p.open = a.button("Otevřít vybrané PDF", idRecentOpen, 16, 0, 298, 0)
 	a.refreshRecentPanel()
 }
 
@@ -162,19 +160,10 @@ func (a *app) recentItemLayout(item panelItem) (panelItem, bool) {
 		return item, len(p.files) > recentFilePreview
 	case p.empty:
 		return item, len(p.files) == 0
-	case p.list, p.path, p.open:
-		// Keep room below the list for the selected path and the open action.
-		available := int(a.detailsArea.bottom-a.detailsArea.top)*96/a.dpi - 155
-		rows := min(p.visibleCount(), max(3, available/recentRowHeight))
-		height := rows * recentRowHeight
-		switch item.handle {
-		case p.list:
-			item.height = height
-		case p.path:
-			item.y = 55 + height
-		case p.open:
-			item.y = 109 + height
-		}
+	case p.list:
+		available := int(a.detailsArea.bottom-a.detailsArea.top)*96/a.dpi - item.y - 18
+		rows := min(p.visibleCount(), max(1, available/recentRowHeight))
+		item.height = rows * recentRowHeight
 		return item, rows > 0
 	}
 	return item, true
@@ -190,10 +179,7 @@ func (p *recentPanel) selectedPath() string {
 
 func (a *app) updateRecentActions() {
 	p := &a.recent
-	path := p.selectedPath()
-	setText(p.path, path)
 	setEnabled(p.list, !a.busy)
-	setEnabled(p.open, !a.busy && path != "")
 	setEnabled(p.more, !a.busy)
 	label := "Zobrazit více"
 	if p.expanded {
@@ -229,6 +215,56 @@ func (a *app) drawRecentRow(item *buttonDraw) bool {
 	drawText(item.dc, filepath.Base(p.files[item.itemID]), bounds, a.normalFont, color, 0x8000)
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, item.bounds)
+	}
+	return true
+}
+
+func (a *app) recentContextInput(msg *winMessage) bool {
+	p := &a.recent
+	if msg.window != p.list || a.detailsTab() != idFileDetails || a.busy {
+		return false
+	}
+	var pos point
+	switch {
+	case msg.message == 0x0205: // WM_RBUTTONUP
+		pos = point{int32(int16(msg.lParam)), int32(int16(msg.lParam >> 16))}
+		row, _, _ := sendMessage.Call(p.list, 0x01a9, 0, msg.lParam) // LB_ITEMFROMPOINT
+		if row >= uintptr(p.visibleCount()) {
+			return true
+		}
+		var bounds rect
+		sendMessage.Call(p.list, 0x0198, row, uintptr(unsafe.Pointer(&bounds)))
+		if !contains(bounds, pos.x, pos.y) {
+			return true
+		}
+		setFocus.Call(p.list)
+		sendMessage.Call(p.list, 0x0186, row, 0) // LB_SETCURSEL
+	case msg.message == 0x0100 && (msg.wParam == 0x5d || msg.wParam == 0x79 && keyDown(0x10)):
+		row, _, _ := sendMessage.Call(p.list, 0x0188, 0, 0)
+		if row >= uintptr(p.visibleCount()) {
+			return true
+		}
+		var bounds rect
+		sendMessage.Call(p.list, 0x0198, row, uintptr(unsafe.Pointer(&bounds)))
+		pos = point{bounds.left + int32(a.scale(10)), bounds.bottom}
+	default:
+		return false
+	}
+	path := p.selectedPath()
+	user32.NewProc("ClientToScreen").Call(p.list, uintptr(unsafe.Pointer(&pos)))
+	options := []popupItem{{label: "Otevřít"}, {label: "Otevřít umístění souboru"}, {label: "Kopírovat cestu"}}
+	switch a.trackPopupAt(pos, 238, options) {
+	case 0:
+		a.openDocument(path, "")
+	case 1:
+		directory := filepath.Dir(path)
+		result, _, _ := shell32.NewProc("ShellExecuteW").Call(a.window, uintptr(unsafe.Pointer(wideString("open"))),
+			uintptr(unsafe.Pointer(wideString(directory))), 0, 0, 1)
+		if result <= 32 {
+			a.reportStatus("Umístění souboru se nepodařilo otevřít.")
+		}
+	case 2:
+		a.copyClipboardText(path)
 	}
 	return true
 }

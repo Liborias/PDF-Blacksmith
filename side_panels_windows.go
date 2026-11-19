@@ -158,16 +158,7 @@ func (a *app) layoutSidebars() {
 
 	x, top := a.width-a.settingsWidth, int(a.viewport.top)
 	gridWidth := d(145) + max(0, a.settingsWidth-d(panelWidth))/2
-	fileOptionsVisible := detailsVisible && a.tool == idFileTab
 	viewOptionsVisible := detailsVisible && a.tool == idBrowseTab
-	for index, option := range fileDetailOptions {
-		button := a.detailButtons[option.id]
-		if fileOptionsVisible {
-			place(button, x+d(16)+(index%2)*(gridWidth+d(8)), top+d(39+(index/2)*35), gridWidth, d(30))
-		}
-		showControl(button, fileOptionsVisible)
-		invalidate(button)
-	}
 	for index, id := range [...]int{idBrowseTab, idPagesTab} {
 		button := a.detailButtons[id]
 		if viewOptionsVisible {
@@ -186,17 +177,14 @@ func (a *app) layoutSidebars() {
 		place(a.sidebarTitle, x+d(16), top+d(9), a.settingsWidth-d(52), d(22))
 		detailY := top + d(38)
 		switch {
-		case fileOptionsVisible:
-			detailY = top + d(41+35*((len(fileDetailOptions)+1)/2))
+		case a.detailsTab() == idFileDetails:
+			detailY = top
 		case viewOptionsVisible:
 			detailY = top + d(76)
 		}
 		a.detailsArea = rect{int32(x), int32(detailY), int32(a.width), a.viewport.bottom}
-		if fileOptionsVisible {
-			a.updateFileOptions()
-		}
 	}
-	showControl(a.sidebarTitle, detailsVisible)
+	showControl(a.sidebarTitle, detailsVisible && a.detailsTab() != idFileDetails)
 	showControl(a.sidebar, detailsVisible)
 	thumb := a.thumbnailArea
 	show := thumb.right > thumb.left && !a.full

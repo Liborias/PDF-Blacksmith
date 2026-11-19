@@ -15,7 +15,7 @@ const (
 	idTextBold
 	idTextItalic
 	idTextUnderline
-	idTextApply
+	_
 	idTextCopy
 	idTextUndo
 	idTextOCR
@@ -35,28 +35,30 @@ type textSelection struct {
 	point, tolerance               textPoint
 	polygon                        []textPoint
 	box                            string
-	automatic                      bool
+	automatic, paragraphRequested  bool
+	change                         selectionChange
 }
 
 type textPanel struct {
-	guide, font, size, original, report                      uintptr
-	width, leading, tracking                                 uintptr
-	regular, bold, italic, underline, apply, copy, undo, ocr uintptr
-	modes, alignments                                        [4]uintptr
-	typography                                               [6]uintptr
-	mode, alignment                                          int
-	fonts                                                    []string
-	tooltip                                                  uintptr
-	tooltipNames                                             []*uint16
-	model                                                    *textPage
-	pick, gesture                                            textSelection
-	flow                                                     textFlow
-	dim                                                      textPoint
-	rotation                                                 int
-	drag, hasHover                                           bool
-	hover                                                    textPoint
-	inline                                                   inlineTextEditor
-	afterEdit                                                func()
+	guide, font, size, original, report               uintptr
+	width, leading, tracking                          uintptr
+	regular, bold, italic, underline, copy, undo, ocr uintptr
+	modes, alignments                                 [4]uintptr
+	typography                                        [6]uintptr
+	mode, alignment                                   int
+	fonts, fontKeys                                   []string
+	fontNames                                         map[string]string
+	tooltip                                           uintptr
+	tooltipNames                                      []*uint16
+	model                                             *textPage
+	pick, gesture                                     textSelection
+	flow                                              textFlow
+	dim                                               textPoint
+	rotation                                          int
+	explicitParagraph, drag, hasHover                 bool
+	hover                                             textPoint
+	inline                                            inlineTextEditor
+	afterEdit                                         func()
 }
 
 func (a *app) buildTextPanel() {
@@ -72,6 +74,7 @@ func (a *app) buildTextPanel() {
 	a.label("Písmo", 16, 161, 205, false)
 	a.label("Velikost (pt)", 236, 161, 78, false)
 	p.fonts = a.installedTextFonts()
+	p.fontKeys = p.fonts
 	p.font = a.combo(idTextFont, 16, 183, 210, p.fonts)
 	p.size = a.edit(236, 183, 54, false)
 	p.typography[0] = a.textIconButton("Zmenšit na předchozí typografickou velikost", idTextSmaller, 180, 128, 32)
@@ -99,10 +102,9 @@ func (a *app) buildTextPanel() {
 		a.addTextTooltip(control, descriptions[i])
 		p.typography[i+3] = a.textIconButton(descriptions[i], idTextWidths+i, 87+i*102, 288, 23)
 	}
-	p.apply = a.textIconButton("Použít úpravu", idTextApply, 16, 329, 34)
-	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 56, 329, 34)
-	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 96, 329, 34)
-	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 136, 329, 34)
+	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 16, 329, 34)
+	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 56, 329, 34)
+	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 96, 329, 34)
 	p.report = a.readout(16, 372, 298, 82)
 	a.textGuide()
 }
@@ -161,7 +163,7 @@ func (a *app) updateTextActions() {
 	if p.inline.handle != 0 {
 		sendMessage.Call(p.inline.handle, 0x00cf, uintptr(boolFlag(!edit)), 0)
 	}
-	for _, h := range []uintptr{p.apply, p.font, p.size, p.width, p.leading, p.tracking, p.regular, p.bold, p.italic, p.underline} {
+	for _, h := range []uintptr{p.font, p.size, p.width, p.leading, p.tracking, p.regular, p.bold, p.italic, p.underline} {
 		setEnabled(h, edit)
 	}
 	for _, h := range p.typography {
@@ -203,6 +205,7 @@ func (a *app) textCommand(id, notification int) bool {
 			return true
 		}
 		p.mode = id - idTextSelectObject
+		p.explicitParagraph = p.mode == textBlock
 		a.clearTextSelection()
 		a.textGuide()
 	case id >= idTextAlignLeft && id <= idTextAlignJustify:
@@ -218,8 +221,6 @@ func (a *app) textCommand(id, notification int) bool {
 			control := map[int]uintptr{idTextBold: p.bold, idTextItalic: p.italic, idTextUnderline: p.underline}[id]
 			a.setChecked(control, !a.checked(control))
 			a.updateTextActions()
-		case idTextApply:
-			a.startTextEdit()
 		case idTextCopy:
 			a.copyTextSelection()
 		case idTextUndo:
@@ -289,7 +290,7 @@ func (v *documentView) textAt(x, y int32) textSelection {
 	}
 	padding := float64(v.app.scale(3))
 	return textSelection{source: source, generation: v.generation, tool: v.app.mode, mode: v.app.textTool.mode,
-		point: normalizedTextPoint(area, x, y), tolerance: textPoint{padding / float64(area.right-area.left),
+		change: canvasSelectionChange(), point: normalizedTextPoint(area, x, y), tolerance: textPoint{padding / float64(area.right-area.left),
 			padding / float64(area.bottom-area.top)}, box: v.box()}
 }
 
@@ -315,10 +316,7 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 		if pick.source == 0 {
 			return false
 		}
-		if a.editFrameAt(pick) {
-			return true
-		}
-		if a.saveInlineBefore(a.resumeTextPick(pick)) {
+		if pick.change == replaceSelection && (pick.mode == textObject || pick.mode == textBlock) && a.editFrameAt(pick) {
 			return true
 		}
 		setFocus.Call(a.window)
@@ -343,7 +341,7 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 				v.invalidateCanvas()
 			}
 		default:
-			a.selectText(pick)
+			v.selectionClick(x, y, p.explicitParagraph)
 		}
 		return true
 	case 0x0200, 0x0202: // WM_MOUSEMOVE, WM_LBUTTONUP
@@ -360,7 +358,7 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 					end := pick.polygon[2]
 					if math.Abs(end[0]-pick.point[0]) < pick.tolerance[0] ||
 						math.Abs(end[1]-pick.point[1]) < pick.tolerance[1] {
-						pick.polygon = nil
+						pick.polygon, pick.automatic = nil, true
 					}
 					a.completeTextGesture()
 				} else {
@@ -402,7 +400,9 @@ func (a *app) textKey(msg *winMessage) bool {
 	}
 	p := &a.textTool
 	if msg.wParam == 0x1b && (p.gesture.source != 0 || p.pick.source != 0) {
-		a.clearTextSelection()
+		if !a.saveInlineBefore(a.clearTextSelection) {
+			a.clearTextSelection()
+		}
 		return true
 	}
 	if msg.wParam == 0x0d && msg.window == a.window && p.gesture.mode == textLasso && len(p.gesture.polygon) >= 3 {
@@ -420,14 +420,7 @@ func (a *app) completeTextGesture() {
 }
 
 func (a *app) selectText(pick textSelection) {
-	p := &a.textTool
-	p.model, p.pick, p.flow = nil, pick, textFlow{}
-	a.clearInlineFrames()
-	setText(p.original, "")
-	setText(p.report, "")
-	a.updateTextActions()
-	a.view.invalidateCanvas()
-	a.view.requestNativeText(pick)
+	a.view.dispatchCanvasSelection(pick, false)
 }
 
 func formatTextNumber(value float64) string {
@@ -468,7 +461,15 @@ func (a *app) startTextEdit() {
 			for _, line := range group {
 				left := 0.
 				if style.alignment == e.initialStyle.alignment && style.alignment == 0 {
-					left = line.bounds[0] - b[0]
+					first := line.glyphs[0]
+					for _, glyph := range line.glyphs {
+						if strings.TrimSpace(glyph.text) != "" {
+							first = glyph
+							break
+						}
+					}
+					origin := p.model.Objects[first.run].Glyphs[first.index].Origin
+					left = pdfPointToText(origin, p.model.Boxes[p.pick.box], p.rotation)[0]*p.dim[0] - b[0]
 				}
 				block.Lines = append(block.Lines, textPoint{left, line.baseline - b[1]})
 			}
@@ -527,7 +528,7 @@ func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	old, _, _ := gdiSelect.Call(dc, pen)
 	if p.pick.source == source && p.pick.generation == a.view.generation {
 		if p.flow.text == "" {
-			drawTextOutline(dc, area, p.pick.polygon, true)
+			a.drawSelectionRegion(dc, area, p.pick)
 		}
 		a.paintInlineFrames(dc, area)
 	}
@@ -545,7 +546,7 @@ func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 				fillColor(dc, rect{pos.x - n, pos.y - n, pos.x + n + 1, pos.y + n + 1}, color)
 			}
 		} else {
-			drawTextOutline(dc, area, polygon, true)
+			a.drawSelectionRegion(dc, area, p.gesture)
 		}
 	}
 	gdiSelect.Call(dc, old)

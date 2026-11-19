@@ -63,7 +63,6 @@ const (
 	idProofKProfile
 	idRecentFiles
 	idRecentList
-	idRecentOpen
 	idRecentMore
 )
 
@@ -185,9 +184,6 @@ func (a *app) setupWorkspace() bool {
 	}
 	a.sidebarTitle = a.label("", 0, 0, 298, true)
 	a.panelLabels[a.sidebarTitle] = true
-	for _, option := range fileDetailOptions {
-		a.addDetailButton(option.id, option.label)
-	}
 	a.addDetailButton(idBrowseTab, "Náhled")
 	a.addDetailButton(idPagesTab, "Stránky")
 
@@ -829,8 +825,6 @@ func (a *app) command(id, notification int) {
 	}
 	if id == idRecentList {
 		switch notification {
-		case 1: // LBN_SELCHANGE
-			a.updateRecentActions()
 		case 2: // LBN_DBLCLK
 			a.openRecentFile()
 		}
@@ -916,8 +910,6 @@ func (a *app) command(id, notification int) {
 		a.activate(id)
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.runFileOption(id)
-	case idRecentOpen:
-		a.openRecentFile()
 	case idRecentMore:
 		a.toggleRecentFiles()
 	case idToggleTools:
@@ -1125,9 +1117,7 @@ func (a *app) updateActions() {
 		a.layout()
 	}
 	setEnabled(a.detailButtons[idPagesTab], documentReady)
-	if a.tool == idFileTab {
-		a.updateFileOptions()
-	}
+	a.updateRecentActions()
 	ready := !a.busy && documentReady
 	for _, tab := range a.tabs {
 		setEnabled(tab.button, !a.busy)
@@ -1394,7 +1384,7 @@ func (a *app) finish(result response) {
 }
 
 func (a *app) handleInput(msg *winMessage) bool {
-	if a.fileMenuInput(msg) || a.documentMouseContext(msg) {
+	if a.fileMenuInput(msg) || a.recentContextInput(msg) || a.documentMouseContext(msg) {
 		return true
 	}
 	if msg.message == 0x020a { // WM_MOUSEWHEEL
@@ -1421,7 +1411,8 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.message != 0x0100 {
 		return false
 	}
-	if msg.wParam == 0x1b && a.cancelPageDrag() {
+	if msg.wParam == 0x1b && (a.view.cancelMiddleSelection() ||
+		a.comparison.view.cancelMiddleSelection() || a.cancelPageDrag()) {
 		return true
 	}
 	if a.objectKey(msg) || a.textKey(msg) || a.documentKey(msg) {
