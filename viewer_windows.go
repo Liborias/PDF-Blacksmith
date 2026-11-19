@@ -870,6 +870,7 @@ func (v *documentView) changedViewport() {
 	} else {
 		v.syncProofPanel()
 		v.updateActions()
+		v.app.layoutInlineEditor()
 	}
 	v.app.updateComparisonNavigation()
 	v.syncDetails()

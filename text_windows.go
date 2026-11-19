@@ -39,7 +39,7 @@ type textSelection struct {
 }
 
 type textPanel struct {
-	guide, input, font, size, original, report               uintptr
+	guide, font, size, original, report                      uintptr
 	width, leading, tracking                                 uintptr
 	regular, bold, italic, underline, apply, copy, undo, ocr uintptr
 	modes, alignments                                        [4]uintptr
@@ -48,13 +48,14 @@ type textPanel struct {
 	tooltip                                                  uintptr
 	tooltipNames                                             []*uint16
 	model                                                    *textPage
-	stored                                                   *storedTextBlock
 	pick, gesture                                            textSelection
 	flow                                                     textFlow
 	dim                                                      textPoint
 	rotation                                                 int
-	editable, drag, hasHover                                 bool
+	drag, hasHover                                           bool
 	hover                                                    textPoint
+	inline                                                   inlineTextEditor
+	afterEdit                                                func()
 }
 
 func (a *app) buildTextPanel() {
@@ -66,42 +67,39 @@ func (a *app) buildTextPanel() {
 		p.modes[i] = a.textIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
 	}
 	p.guide = a.add("STATIC", "", 0, 16, 82, 298, 39, 0, 0, a.normalFont)
-	a.label("Textový blok", 16, 123, 298, true)
-	p.input = a.add("EDIT", "", 0, 16, 148, 298, 110, wsTabstop|0x0044|0x1000|esReadonly, 0, a.normalFont)
-	sendMessage.Call(p.input, 0x00d3, 3, uintptr(a.scale(6))|uintptr(a.scale(6))<<16)
-	p.original = a.add("STATIC", "", 0, 16, 265, 298, 21, 0x4000, 0, a.normalFont)
-	a.label("Písmo", 16, 289, 205, false)
-	a.label("Velikost (pt)", 236, 289, 78, false)
+	p.original = a.add("STATIC", "", 0, 16, 137, 298, 21, 0x4000, 0, a.normalFont)
+	a.label("Písmo", 16, 161, 205, false)
+	a.label("Velikost (pt)", 236, 161, 78, false)
 	p.fonts = a.installedTextFonts()
-	p.font = a.combo(idTextFont, 16, 311, 210, p.fonts)
-	p.size = a.edit(236, 311, 78, false)
-	p.regular = a.textIconButton("Běžný řez (Regular)", idTextRegular, 16, 350, 32)
-	p.bold = a.textIconButton("Tučné", idTextBold, 52, 350, 32)
-	p.italic = a.textIconButton("Kurzíva", idTextItalic, 88, 350, 32)
-	p.underline = a.textIconButton("Podtržené", idTextUnderline, 124, 350, 32)
+	p.font = a.combo(idTextFont, 16, 183, 210, p.fonts)
+	p.size = a.edit(236, 183, 78, false)
+	p.regular = a.textIconButton("Běžný řez (Regular)", idTextRegular, 16, 222, 32)
+	p.bold = a.textIconButton("Tučné", idTextBold, 52, 222, 32)
+	p.italic = a.textIconButton("Kurzíva", idTextItalic, 88, 222, 32)
+	p.underline = a.textIconButton("Podtržené", idTextUnderline, 124, 222, 32)
 	for i, name := range []string{"Zarovnat vlevo", "Zarovnat na střed", "Zarovnat vpravo", "Zarovnat do bloku"} {
-		p.alignments[i] = a.textIconButton(name, idTextAlignLeft+i, 174+i*36, 350, 32)
+		p.alignments[i] = a.textIconButton(name, idTextAlignLeft+i, 174+i*36, 222, 32)
 	}
-	a.label("Šířka (pt)", 16, 394, 93, false)
-	a.label("Řádkování (×)", 118, 394, 94, false)
-	a.label("Proklad (pt)", 220, 394, 94, false)
-	p.width = a.edit(16, 416, 94, false)
-	p.leading = a.edit(118, 416, 94, false)
-	p.tracking = a.edit(220, 416, 94, false)
-	p.apply = a.textIconButton("Použít úpravu", idTextApply, 16, 457, 34)
-	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 56, 457, 34)
-	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 96, 457, 34)
-	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 136, 457, 34)
-	p.report = a.readout(16, 500, 298, 82)
+	a.label("Šířka (pt)", 16, 266, 93, false)
+	a.label("Řádkování (×)", 118, 266, 94, false)
+	a.label("Proklad (pt)", 220, 266, 94, false)
+	p.width = a.edit(16, 288, 94, false)
+	p.leading = a.edit(118, 288, 94, false)
+	p.tracking = a.edit(220, 288, 94, false)
+	p.apply = a.textIconButton("Použít úpravu", idTextApply, 16, 329, 34)
+	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 56, 329, 34)
+	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 96, 329, 34)
+	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 136, 329, 34)
+	p.report = a.readout(16, 372, 298, 82)
 	a.textGuide()
 }
 
 func (a *app) textGuide() {
 	p := &a.textTool
 	setText(p.guide, [...]string{
-		"Klikněte na text v dokumentu.",
-		"Klikněte do odstavce, který chcete vybrat.",
-		"Tažením vyznačte oblast na stránce.",
+		"Klikněte na text a pište přímo do rámečku.",
+		"Klikněte do odstavce a upravte ho v dokumentu.",
+		"Vyznačte oblast a klikněte do rámečku.",
 		"Klikáním přidávejte body. Dokončete Enterem nebo kliknutím na první bod.",
 	}[p.mode])
 	for i, h := range p.modes {
@@ -115,18 +113,19 @@ func (v *documentView) lastDraftIs(action string) bool {
 
 func (a *app) clearTextSelection() {
 	p := &a.textTool
-	if p.input == 0 {
+	if p.guide == 0 {
 		return
 	}
 	if p.drag {
 		p.drag = false
 		user32.NewProc("ReleaseCapture").Call()
 	}
-	p.model, p.flow, p.editable, p.hasHover = nil, textFlow{}, false, false
-	p.pick, p.gesture, p.stored = textSelection{}, textSelection{}, nil
+	p.model, p.flow, p.hasHover = nil, textFlow{}, false
+	a.clearInlineFrames()
+	p.pick, p.gesture = textSelection{}, textSelection{}
 	a.view.nativeText.next = textSelection{}
 	a.view.nativeText.flight = textSelection{}
-	for _, control := range []uintptr{p.input, p.original, p.size, p.width, p.leading, p.tracking, p.report} {
+	for _, control := range []uintptr{p.original, p.size, p.width, p.leading, p.tracking, p.report} {
 		setText(control, "")
 	}
 	for _, option := range []uintptr{p.bold, p.italic, p.underline} {
@@ -138,13 +137,17 @@ func (a *app) clearTextSelection() {
 
 func (a *app) updateTextActions() {
 	p := &a.textTool
-	if p.input == 0 {
+	if p.guide == 0 {
 		return
 	}
 	ready := !a.busy && a.view.ready()
 	valid := ready && p.pick.generation == a.view.generation && p.pick.source != 0
 	hasText := valid && p.flow.text != ""
-	edit := hasText && p.editable
+	frame := a.inlineCurrent()
+	edit := hasText && frame != nil && frame.editable
+	if p.inline.handle != 0 {
+		sendMessage.Call(p.inline.handle, 0x00cf, uintptr(boolFlag(!edit)), 0)
+	}
 	for _, h := range []uintptr{p.apply, p.font, p.size, p.width, p.leading, p.tracking, p.regular, p.bold, p.italic, p.underline} {
 		setEnabled(h, edit)
 	}
@@ -156,11 +159,6 @@ func (a *app) updateTextActions() {
 		a.setChecked(h, i == p.alignment && edit)
 	}
 	a.setChecked(p.regular, edit && !a.checked(p.bold) && !a.checked(p.italic))
-	readonly := uintptr(1)
-	if edit {
-		readonly = 0
-	}
-	sendMessage.Call(p.input, 0x00cf, readonly, 0) // EM_SETREADONLY
 	setEnabled(p.copy, hasText)
 	setEnabled(p.ocr, valid && p.model != nil && !hasText && len(p.pick.polygon) >= 3)
 	setEnabled(p.undo, ready && a.view.lastDraftIs("text_edit"))
@@ -173,6 +171,9 @@ func (a *app) textCommand(id, notification int) bool {
 	p := &a.textTool
 	switch {
 	case id >= idTextSelectObject && id <= idTextSelectLasso:
+		if a.saveInlineBefore(func() { a.textCommand(id, notification) }) {
+			return true
+		}
 		p.mode = id - idTextSelectObject
 		a.clearTextSelection()
 		a.textGuide()
@@ -192,8 +193,7 @@ func (a *app) textCommand(id, notification int) bool {
 		case idTextApply:
 			a.startTextEdit()
 		case idTextCopy:
-			sendMessage.Call(p.input, 0x00b1, 0, ^uintptr(0)) // EM_SETSEL
-			sendMessage.Call(p.input, 0x0301, 0, 0)           // WM_COPY
+			a.copyTextSelection()
 		case idTextUndo:
 			if !a.busy && a.view.lastDraftIs("text_edit") {
 				a.view.undo()
@@ -204,6 +204,8 @@ func (a *app) textCommand(id, notification int) bool {
 			return false
 		}
 	}
+	a.layoutInlineEditor()
+	a.view.invalidateCanvas()
 	return true
 }
 
@@ -261,6 +263,12 @@ func (a *app) textPointer(msg uint32, x, y int32) bool {
 		pick := v.textAt(x, y)
 		if pick.source == 0 {
 			return false
+		}
+		if a.editFrameAt(pick) {
+			return true
+		}
+		if a.saveInlineBefore(a.resumeTextPick(pick)) {
+			return true
 		}
 		setFocus.Call(a.window)
 		switch pick.mode {
@@ -362,8 +370,8 @@ func (a *app) completeTextGesture() {
 
 func (a *app) selectText(pick textSelection) {
 	p := &a.textTool
-	p.model, p.pick, p.flow, p.editable = nil, pick, textFlow{}, false
-	setText(p.input, "")
+	p.model, p.pick, p.flow = nil, pick, textFlow{}
+	a.clearInlineFrames()
 	setText(p.original, "")
 	setText(p.report, "")
 	a.updateTextActions()
@@ -382,27 +390,25 @@ func readTextNumber(control uintptr, low, high float64) (float64, bool) {
 
 func (a *app) startTextEdit() {
 	p, v := &a.textTool, a.view
-	if a.busy || !p.editable || p.model == nil || p.pick.generation != v.generation {
+	e, frame := &p.inline, a.inlineCurrent()
+	if a.busy || frame == nil || !frame.editable || p.model == nil || p.pick.generation != v.generation {
 		return
 	}
-	size, ok1 := readTextNumber(p.size, 1, 600)
-	box := p.model.Boxes[p.pick.box]
-	top := textPoint{p.flow.bounds[0] / p.dim[0], max(0., p.flow.bounds[1]-.3*size) / p.dim[1]}
-	if p.stored != nil {
-		top = pdfPointToText(p.stored.Origin, box, p.rotation)
-	}
-	width, ok2 := readTextNumber(p.width, 1, p.dim[0]*(1-top[0])+.003)
-	leading, ok3 := readTextNumber(p.leading, .7, 5)
-	tracking, ok4 := readTextNumber(p.tracking, -size*.18, 72)
-	if !ok1 || !ok2 || !ok3 || !ok4 {
-		a.report("Zkontrolujte velikost písma, šířku na stránce, řádkování 0,7–5 a proklad.")
+	style := a.inlineStyle()
+	_, trackingOK := readTextNumber(p.tracking, -style.size*.18, 72)
+	if style.size <= 0 || e.fixedWidth && style.width <= 0 || style.leading <= 0 || !trackingOK {
+		a.report("Zkontrolujte velikost písma, šířku rámečku a řádkování.")
 		return
 	}
-	block := textBlockEdit{Text: strings.ReplaceAll(getText(p.input), "\r\n", "\n"),
-		Align: textAlignments[p.alignment], Width: width, Height: p.dim[1] * (1 - top[1]), Leading: leading, Tracking: tracking,
-		Origin: textPointToPDF(top, box, p.rotation), Rotation: p.rotation}
+	a.layoutInlineEditor()
+	b := e.bounds
+	top := textPoint{b[0] / p.dim[0], b[1] / p.dim[1]}
+	block := textBlockEdit{Text: strings.ReplaceAll(strings.ReplaceAll(getText(e.handle), "\r\n", "\n"), "\r", "\n"),
+		Align: textAlignments[style.alignment], Width: b[2] - b[0], Height: p.dim[1] - b[1],
+		Leading: style.leading, Tracking: style.tracking,
+		Origin: textPointToPDF(top, p.model.Boxes[p.pick.box], p.rotation), Rotation: p.rotation}
 	indexed := map[int]int{}
-	for _, glyph := range p.flow.glyphs() {
+	for _, glyph := range frame.flow.glyphs() {
 		token := p.model.Objects[glyph.run].BlockToken
 		index, found := indexed[token]
 		if !found {
@@ -414,8 +420,8 @@ func (a *app) startTextEdit() {
 	}
 	req := v.request("text_edit")
 	req.View.Page = p.pick.source
-	req.TextEdit = &textEditRequest{Font: p.fonts[max(0, comboIndex(p.font))], Size: size,
-		Bold: a.checked(p.bold), Italic: a.checked(p.italic), Underline: a.checked(p.underline), Block: block}
+	req.TextEdit = &textEditRequest{Font: style.font, Size: style.size,
+		Bold: style.bold, Italic: style.italic, Underline: style.underline, Block: block}
 	a.runDocumentDraft(req, "Upravuji text v otevřené kartě…", p.report)
 }
 
@@ -448,12 +454,7 @@ func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	old, _, _ := gdiSelect.Call(dc, pen)
 	if p.pick.source == source && p.pick.generation == a.view.generation {
 		drawTextOutline(dc, area, p.pick.polygon, true)
-		if p.dim[0] > 0 && p.dim[1] > 0 {
-			for _, b := range p.flow.highlightBounds() {
-				drawTextOutline(dc, area, rectangleSelection(textPoint{b[0] / p.dim[0], b[1] / p.dim[1]},
-					textPoint{b[2] / p.dim[0], b[3] / p.dim[1]}), true)
-			}
-		}
+		a.paintInlineFrames(dc, area)
 	}
 	if p.gesture.source == source && p.gesture.generation == a.view.generation {
 		polygon := p.gesture.polygon

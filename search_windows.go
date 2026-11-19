@@ -89,6 +89,9 @@ func (v *documentView) buildSearchPanel() {
 }
 
 func (a *app) showSearch() {
+	if a.saveInlineBefore(a.showSearch) {
+		return
+	}
 	if !a.view.ready() {
 		return
 	}

@@ -31,6 +31,9 @@ type printPage struct {
 }
 
 func (a *app) printDocument() {
+	if a.saveInlineBefore(a.printDocument) {
+		return
+	}
 	v := a.view
 	if a.busy || !v.ready() {
 		return

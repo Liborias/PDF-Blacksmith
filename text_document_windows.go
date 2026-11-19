@@ -27,6 +27,7 @@ type textRun struct {
 	Family                  int
 	Text                    string
 	Block                   *storedTextBlock
+	Fill                    [3]uint8
 	Size                    float64
 	Matrix                  [6]float64
 	Bold, Italic, Underline bool
@@ -197,7 +198,18 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 		oldBox := pick.box
 		raw := textPointToPDF(pick.point, model.Boxes[oldBox], rotation)
 		if v.secondary {
-			a.selectDocumentTab(a.comparison.tab)
+			tab := a.comparison.tab
+			if a.saveInlineBefore(func() {
+				if a.comparisonVisible() && a.comparison.tab == tab {
+					a.matchTextSelection(v, model, pick)
+				}
+			}) {
+				return
+			}
+			a.selectDocumentTab(tab)
+			if a.activeTab != tab {
+				return
+			}
 			v = a.view
 		}
 		a.activate(idTextTab)
@@ -216,64 +228,21 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 	}
 	p := &a.textTool
 	p.model, p.pick, p.flow, p.dim, p.rotation = model, pick, flow, dim, rotation
-	p.editable = false
-	p.stored = nil
-	setText(p.input, multiline(flow.text))
 	setText(p.original, "")
 	setText(p.report, "")
+	a.setInlineFrames(flow, stored, pick)
 	if flow.text == "" {
 		message := "Vyberte text nebo vyznačte oblast pro OCR."
 		if len(pick.polygon) >= 3 {
 			message = "V oblasti není textová vrstva. Použijte OCR výběru pro sken nebo křivky."
 		}
 		setText(p.report, message)
-	} else {
-		selection := flow.glyphs()
-		first := model.Objects[selection[0].run]
-		p.editable = len(selection) <= 8000
-		for _, glyph := range selection {
-			if !model.Objects[glyph.run].Editable {
-				p.editable = false
-				break
-			}
-		}
-		if len(pick.polygon) >= 3 {
-			p.flow.bounds[0], p.flow.bounds[1], p.flow.bounds[2] = 1e20, 1e20, 0
-			for _, point := range pick.polygon {
-				p.flow.bounds[0] = min(p.flow.bounds[0], point[0]*dim[0])
-				p.flow.bounds[1] = min(p.flow.bounds[1], point[1]*dim[1])
-				p.flow.bounds[2] = max(p.flow.bounds[2], point[0]*dim[0])
-			}
-		}
-		setText(p.original, first.Font)
-		font := slices.IndexFunc(p.fonts, func(font string) bool { return strings.EqualFold(font, first.Font) })
-		if font < 0 {
-			font = min(max(0, first.Family), len(bundledTextFonts)-1)
-		}
-		chooseCombo(p.font, font)
-		setText(p.size, formatTextNumber(first.Size))
-		setText(p.width, formatTextNumber(math.Floor(min(dim[0]-p.flow.bounds[0], max(10, p.flow.bounds[2]-p.flow.bounds[0]+.75))*100)/100))
-		setText(p.leading, "1,2")
-		setText(p.tracking, "0")
-		p.alignment = 0
-		if stored != nil && stored.Rotation == rotation {
-			anchor := pdfPointToText(stored.Origin, model.Boxes[pick.box], rotation)
-			if anchor[0] >= 0 && anchor[1] >= 0 && anchor[0] < 1 && anchor[1] < 1 &&
-				stored.Width >= 1 && stored.Width <= (1-anchor[0])*dim[0]+.003 {
-				p.stored = stored
-				setText(p.width, formatTextNumber(math.Floor(stored.Width*100)/100))
-				setText(p.leading, formatTextNumber(stored.Leading))
-				setText(p.tracking, formatTextNumber(stored.Tracking))
-				p.alignment = min(max(stored.Alignment, 0), len(textAlignments)-1)
-			}
-		}
-		a.setChecked(p.bold, first.Bold)
-		a.setChecked(p.italic, first.Italic)
-		a.setChecked(p.underline, first.Underline)
-		if !p.editable {
-			setText(p.report, "Tento výběr lze kopírovat. Část sazby nelze bezpečně oddělit, nebo výběr přesahuje 8 000 znaků.")
-		}
+	} else if len(p.inline.frames) > 1 {
+		setText(p.report, "Klikněte do rámečku, který chcete upravit.")
+	} else if frame := a.inlineCurrent(); frame != nil && !frame.editable {
+		setText(p.report, "Z tohoto rámečku lze text vybrat a zkopírovat.")
 	}
+
 	a.updateTextActions()
 	v.invalidateCanvas()
 }
@@ -316,7 +285,17 @@ func storedBlockFlow(model *textPage, glyphs []layoutGlyph, group int) (textFlow
 			previous := runs[i-1].Block
 			if newlines := min(64, run.Block.Paragraph-previous.Paragraph); newlines > 0 {
 				text.WriteString(strings.Repeat("\n", newlines))
-			} else if previous.WordWrap || run.Block.Row != previous.Row+1 {
+			} else if run.Block.Row != previous.Row && (previous.WordWrap || run.Block.Row != previous.Row+1) {
+				text.WriteByte(' ')
+			}
+		}
+		// Font fallback can produce several text operators on one row.
+		// Preserve spaces belonging to the fragment before joining them.
+		if i > 0 && run.Block.Row == runs[i-1].Block.Row {
+			previousGlyphs := runs[i-1].Glyphs
+			if len(previousGlyphs) > 0 && strings.TrimSpace(previousGlyphs[len(previousGlyphs)-1].Text) == "" {
+				text.WriteByte(' ')
+			} else if len(run.Glyphs) > 0 && strings.TrimSpace(run.Glyphs[0].Text) == "" {
 				text.WriteByte(' ')
 			}
 		}

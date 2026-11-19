@@ -2,7 +2,7 @@
 
 from collections import Counter
 from contextlib import closing
-from ctypes import byref, c_double, c_float, c_int, c_ubyte, c_ushort, c_void_p, cast
+from ctypes import byref, c_double, c_float, c_int, c_ubyte, c_uint, c_ushort, c_void_p, cast
 from io import BytesIO
 from math import isfinite
 from pathlib import Path
@@ -97,7 +97,7 @@ def positions(operators, resources, *, include_dependent=False):
             line = compose(line, (1, 0, 0, 1, 0, -leading))
         if in_text and name in PAINT:
             clipping |= mode >= 4
-            if (mode == 0 and (index in usable or include_dependent and name in ('Tj', 'TJ'))
+            if (mode in (0, 2) and (index in usable or include_dependent and name in ('Tj', 'TJ'))
                     and not any(marked)):
                 token = index + 1
                 states[token] = ctm, line
@@ -218,7 +218,7 @@ def stored_block(text):
     if group <= 0:
         return None
     block = integer_marks(text, ("PBWidth", "PBFirstX", "PBFirstY", "PBAngle", "PBAlign",
-                                 "PBLeading", "PBTracking", "PBRow", "PBParagraph", "PBWordWrap"))
+                                 "PBLeading", "PBTracking", "PBRow", "PBParagraph", "PBWordWrap", "PBBold", "PBItalic"))
     required = ("PBWidth", "PBFirstX", "PBFirstY", "PBAngle", "PBAlign", "PBLeading", "PBTracking",
                 "PBRow", "PBParagraph", "PBWordWrap")
     if not all(name in block for name in required):
@@ -226,7 +226,8 @@ def stored_block(text):
     return dict(id=group, width=block["PBWidth"]/1000,
                 origin=(block["PBFirstX"]/1000, block["PBFirstY"]/1000), rotation=block["PBAngle"],
                 alignment=block["PBAlign"], leading=block["PBLeading"]/1000, tracking=block["PBTracking"]/1000,
-                row=block["PBRow"], paragraph=block["PBParagraph"], word_wrap=bool(block["PBWordWrap"]))
+                row=block["PBRow"], paragraph=block["PBParagraph"], word_wrap=bool(block["PBWordWrap"]),
+                bold=block.get("PBBold"), italic=block.get("PBItalic"))
 
 def source_objects(page, operators, states, block_states):
     """Tag a private one-page probe so text objects map to exact operators."""
@@ -281,7 +282,7 @@ def source_objects(page, operators, states, block_states):
             if not value:
                 continue
             token = 0
-            if text.level == 0 and mode == 0:
+            if text.level == 0 and mode in (0, 2):
                 number = integer_marks(text, ("PBTextToken",)).get("PBTextToken", 0)
                 if number in styles:
                     token = number
@@ -295,10 +296,18 @@ def source_objects(page, operators, states, block_states):
             advance = []
             if token:
                 advance = glyph_advances(operators[token-1], styles[token], font, characters, matrix) or []
+            block = stored_block(text)
+            bold = font.get_weight() >= 600 or "bold" in generic
+            italic = any(word in font.get_base_name().casefold() for word in ("italic", "oblique"))
+            if block:
+                bold = bold if block["bold"] is None else bool(block["bold"])
+                italic = italic if block["italic"] is None else bool(block["italic"])
+            red, green, blue, alpha = c_uint(), c_uint(), c_uint(), c_uint()
+            raw.FPDFPageObj_GetFillColor(text, byref(red), byref(green), byref(blue), byref(alpha))
             objects.append(dict(token=token if token in states else 0, block_token=token, advances=advance,
-                                glyphs=characters, block=stored_block(text), text=value, bounds=bounds, matrix=matrix, font=name, family=family,
-                                size=size, bold=font.get_weight() >= 600 or "bold" in generic,
-                                italic=any(word in font.get_base_name().casefold() for word in ("italic", "oblique")),
+                                glyphs=characters, block=block, text=value, bounds=bounds, matrix=matrix, font=name, family=family,
+                                fill=[red.value, green.value, blue.value],
+                                size=size, bold=bold, italic=italic,
                                 underline=bool(token and has_underline(operators, token))))
     counts = Counter(item["block_token"] for item in objects)
     for item in objects:

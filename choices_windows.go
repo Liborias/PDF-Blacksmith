@@ -105,6 +105,12 @@ func (a *app) openChoice(choice *choiceControl) {
 }
 
 func (a *app) trackPopup(anchorHandle uintptr, width int, items []popupItem) int {
+	anchor := rect{}
+	user32.NewProc("GetWindowRect").Call(anchorHandle, uintptr(unsafe.Pointer(&anchor)))
+	return a.trackPopupAt(point{anchor.left, anchor.bottom + 2}, width, items)
+}
+
+func (a *app) trackPopupAt(pos point, width int, items []popupItem) int {
 	menu, _, _ := user32.NewProc("CreatePopupMenu").Call()
 	if menu == 0 {
 		return -1
@@ -119,10 +125,8 @@ func (a *app) trackPopup(anchorHandle uintptr, width int, items []popupItem) int
 		}
 		appendItem.Call(menu, flags, item, item)
 	}
-	anchor := rect{}
-	user32.NewProc("GetWindowRect").Call(anchorHandle, uintptr(unsafe.Pointer(&anchor)))
 	a.popup, a.popupWidth = items, width
-	selected, _, _ := user32.NewProc("TrackPopupMenuEx").Call(menu, 0x182, uintptr(anchor.left), uintptr(anchor.bottom+2), a.window, 0)
+	selected, _, _ := user32.NewProc("TrackPopupMenuEx").Call(menu, 0x182, uintptr(pos.x), uintptr(pos.y), a.window, 0)
 	a.popup = nil
 	if index := int(selected) - 1; index >= 0 && index < len(items) && !items[index].disabled && !items[index].separator {
 		return index

@@ -389,6 +389,9 @@ func (a *app) profileKey() string {
 }
 
 func (a *app) activate(id int) {
+	if a.mode == idTextTab && id != idTextTab && a.saveInlineBefore(func() { a.activate(id) }) {
+		return
+	}
 	old := a.mode
 	switch id {
 	case idFileTab:
@@ -651,6 +654,9 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmCtlColorEdit, wmCtlColorList, wmCtlColorText:
 		return a.colorControl(msg, wParam, lParam)
 	case wmCommand:
+		if wParam>>16&0xffff == 0x0300 {
+			a.inlineControlChange(lParam)
+		}
 		if v := a.comparison.view; v != nil && hwnd == v.thumbnailSidebar && lParam == v.pageList {
 			if wParam>>16&0xffff == 1 { // LBN_SELCHANGE
 				v.readPageSelection()
@@ -675,6 +681,9 @@ func (a *app) minimumSize(pointer uintptr) {
 }
 
 func (a *app) toggleFullscreen() {
+	if a.saveInlineBefore(a.toggleFullscreen) {
+		return
+	}
 	getStyle := user32.NewProc("GetWindowLongW")
 	setStyle := user32.NewProc("SetWindowLongW")
 	position := user32.NewProc("SetWindowPos")
@@ -727,6 +736,9 @@ func (a *app) openDrop(handle uintptr) {
 }
 
 func (a *app) openDialog() {
+	if a.saveInlineBefore(a.openDialog) {
+		return
+	}
 	if a.busy {
 		return
 	}
@@ -806,6 +818,9 @@ func (a *app) command(id, notification int) {
 	}
 	if notification == 1 {
 		switch id {
+		case idTextFont:
+			a.layoutInlineEditor()
+			a.view.invalidateCanvas()
 		case idExportOption:
             a.updateExportOptions()
         case idGrayProfile:
@@ -1305,6 +1320,13 @@ func (a *app) finish(result response) {
 	}
 	a.view.schedule()
 	a.pruneDrafts()
+	if req.Action == "text_edit" {
+		next := a.textTool.afterEdit
+		a.textTool.afterEdit = nil
+		if result.Status == "ok" && next != nil {
+			next()
+		}
+	}
 	if a.closing != nil {
 		if result.Status == "ok" && req.Action == "save_document" {
 			a.continueCloseDocuments()
@@ -1315,7 +1337,7 @@ func (a *app) finish(result response) {
 }
 
 func (a *app) handleInput(msg *winMessage) bool {
-	if a.fileMenuInput(msg) {
+	if a.fileMenuInput(msg) || a.documentMouseContext(msg) {
 		return true
 	}
 	if msg.message == 0x020a { // WM_MOUSEWHEEL
@@ -1342,7 +1364,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.message != 0x0100 {
 		return false
 	}
-	if a.textKey(msg) {
+	if a.textKey(msg) || a.documentKey(msg) {
 		return true
 	}
 	if msg.wParam == 0x0d && msg.window == a.view.moveTarget {

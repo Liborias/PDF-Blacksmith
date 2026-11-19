@@ -66,6 +66,9 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 	if a.busy || tab == a.activeTab {
 		return
 	}
+	if a.saveInlineBefore(func() { a.selectDocumentTab(tab) }) {
+		return
+	}
 	a.storeActiveTab()
 	if a.comparisonKeeps(tab) {
 		a.setComparisonTab(nil)
@@ -207,6 +210,9 @@ func (a *app) closeWindow() {
 
 func (a *app) confirmCloseDocuments(tabs []*documentTab, exit bool) {
 	if a.busy || a.closing != nil {
+		return
+	}
+	if slices.Contains(tabs, a.activeTab) && a.saveInlineBefore(func() { a.confirmCloseDocuments(tabs, exit) }) {
 		return
 	}
 	plan := &documentClose{tabs: tabs, exit: exit}

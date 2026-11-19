@@ -294,6 +294,7 @@ func (a *app) create() bool {
 	if !a.setupWorkspace() {
 		return false
 	}
+	a.createInlineTextEditor()
 	shell32.NewProc("DragAcceptFiles").Call(a.window, 1)
 	a.layout()
 	return true
@@ -423,6 +424,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmCommand:
 		if a.view != nil {
 			if wParam>>16&0xffff == 0x0300 { // EN_CHANGE
+				a.inlineControlChange(lParam)
 				if scope, field := a.scopeControls(); field != 0 && field == lParam {
 					delete(a.thumbnailScopes, scope)
 				}
@@ -478,6 +480,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.closeWindow()
 		return 0
 	case wmDestroy:
+		a.clearInlineFrames()
 		if a.view != nil {
 			a.view.canvas.close()
 		}

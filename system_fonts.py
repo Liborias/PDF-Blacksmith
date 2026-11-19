@@ -31,7 +31,7 @@ def load_system_font(family, bold, italic):
         previous = gdi.SelectObject(dc, face)
         actual_name = create_unicode_buffer(64)
         gdi.GetTextFaceW(dc, len(actual_name), actual_name)
-        if not previous or actual_name.value.casefold() != family.casefold():
+        if not previous or not actual_name.value:
             raise ValueError("Windows nemají zvolené písmo k dispozici.")
 
         def read_table(tag):

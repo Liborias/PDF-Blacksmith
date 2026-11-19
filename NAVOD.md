@@ -38,9 +38,13 @@ Kliknutím na text v náhledu otevřete nástroj **Text**. Pevná lišta nabíz�
 
 Obdélník a laso vybírají znaky uvnitř oblasti. **Odstavec** seskupuje znaky, slova a řádky podle jejich polohy, rozestupů a okrajů. V bloku se složené řádky spojí a mezery mezi zjištěnými odstavci se zachovají jako prázdné řádky. U složitého rozvržení můžete oblast vymezit ručně. [Princip prostorového seskupování v PDFMiner](https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html)
 
-Do pole **Textový blok** můžete psát a vkládat další odstavce. Vyberte písmo, velikost, šířku bloku, řádkování, proklad a zarovnání. Ikony nastavují běžný řez (Regular), tučné písmo, kurzívu a podtržení. Nastavení platí pro celý blok. V nabídce jsou přibalená písma Liberation a systémová písma TrueType z Windows. Pro zápis do PDF je zapotřebí dostupný řez s povoleným vložením pro úpravy.
+Pište a označujte znaky přímo v rámečku na stránce. Když výběr obsahuje několik rámečků, kliknutím jeden aktivujete. Při psaní se podle obsahu mění jeho šířka i výška. Levé zarovnání drží levou hranu, pravé pravou hranu a vystředění drží střed. Pro pevnou šířku přepište hodnotu **Šířka (pt)**. Vymazáním této hodnoty obnovíte automatickou šířku.
 
-Ikonou **Použít úpravu** přepíšete vybraný text v otevřené kartě. Celý vysázený blok znovu vyberete kliknutím na kterýkoli jeho řádek v režimu **Textový objekt**. Blok si pamatuje svoji šířku, zarovnání, řádkování a proklad i po uložení a znovuotevření PDF. **Vrátit úpravu** obnoví předchozí stav. Upravený dokument zapíšete přes **Soubor → Uložit** nebo **Uložit jako**. Pokud zvětšíte blok, zkontrolujte jeho umístění vůči okolnímu obsahu. Text v některých skupinách, skryté vrstvě OCR nebo se složitým kódováním lze kopírovat. Pro oblast bez textové vrstvy použijte **OCR výběru**.
+V pravém panelu nastavte písmo, velikost, zarovnání, řádkování a proklad aktivního rámečku. Ikony přepínají běžný řez, tučné písmo, kurzívu a podtržení. Pokud instalované písmo TrueType nabízí jen běžný řez, aplikace může vykreslit tučné písmo a kurzívu odvozeně. Jednotlivé chybějící znaky může doplnit náhradním písmem. Pro vložení řezu dál platí jeho pravidla pro zápis do PDF.
+
+**Ctrl+Enter** nebo ikona **Použít úpravu** zapíše text do otevřené karty. Přechod na jiný rámeček nebo kartu zapíše rozpracovanou úpravu také. **Esc** ukončí výběr a zahodí změny rozepsané v rámečku. Celý vysázený blok znovu vyberete kliknutím na kterýkoli jeho řádek v režimu **Textový objekt**. Upravený dokument uložte přes **Soubor → Uložit** nebo **Uložit jako**. Text v některých skupinách, skryté vrstvě OCR nebo se složitým kódováním lze kopírovat. Pro oblast bez textové vrstvy použijte **OCR výběru**.
+
+Pravé tlačítko myši nebo **Shift+F10** otevře nabídku pro danou část dokumentu. V textu fungují **Ctrl+A**, **Ctrl+X/C/V**, **Ctrl+Z/Y**, **Ctrl+B/I/U** a **Ctrl+L/E/R/J** pro zarovnání. V náhledu mění **Ctrl++** a **Ctrl+−** přiblížení a **Ctrl+0** přizpůsobí celou stránku.
 
 ## OCR skenů a textu v křivkách
 

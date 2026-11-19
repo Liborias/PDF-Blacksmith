@@ -171,9 +171,44 @@ def check_block(folder, fonts):
     assert all(abs(a-b)<.001 for a,b in zip(find_text(remaining, "Right")["bounds"], outside["bounds"]))
 
 
+def check_font_fallback(folder, fonts):
+    from fontTools.ttLib import TTFont
+
+    fallback = folder / "fonts"
+    fallback.mkdir()
+    for file in fonts.glob("*.ttf"):
+        (fallback / file.name).symlink_to(file)
+    target = fallback / "LiberationMono-BoldItalic.ttf"
+    target.unlink()
+    # Simulate a family without a bold or italic variant and without one Czech glyph.
+    with TTFont(fonts / "LiberationMono-Regular.ttf") as font:
+        for table in font["cmap"].tables:
+            table.cmap.pop(ord("ž"), None)
+        font.save(target)
+    original=folder / "mixed-source.pdf"
+    output=folder / "mixed-fonts.pdf"
+    block_fixture(original)
+    probe=dict(action="text_probe",input=str(original))
+    run=find_text(dispatch(probe)["text_page"],"Title")
+    edit=dict(font="Liberation Mono",size=13,bold=True,italic=True,block=dict(
+        text="AžB",align="left",width=100,height=80,rotation=0,leading=1.2,tracking=0,origin=[30,320],
+        selection=[dict(token=run["block_token"],glyphs=list(range(len(run["glyphs"]))))]))
+    dispatch(dict(action="text_edit",input=str(original),output=str(output),text_fonts=str(fallback),text_edit=edit))
+    content=dispatch({**probe,"input":str(output)})["text_page"]["objects"]
+    written=[run for run in content if run["block"]]
+    assert "".join(run["text"] for run in written)=="AžB"
+    assert len({run["font"] for run in written})==2
+    assert all(run["editable"] and run["bold"] and run["italic"] for run in written)
+    assert written[0]["matrix"][2]>.2
+    with pdf.Pdf.open(output) as document:
+        assert not document.check_pdf_syntax()
+        assert any(str(op)=="Tr" and int(args[0])==2 for args,op in pdf.parse_content_stream(document.pages[0]))
+
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
         fonts = Path(sys.argv[1]).resolve()
         check_text(Path(tmp), fonts)
         check_block(Path(tmp), fonts)
+        check_font_fallback(Path(tmp), fonts)
     print("Text blocks preserve nearby glyphs and graphics, and reflow with spacing, alignment and rotation.")

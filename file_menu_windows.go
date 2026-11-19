@@ -66,6 +66,9 @@ func (a *app) buildFileMenu(className *uint16) bool {
 }
 
 func (a *app) showFileMenu() {
+	if a.saveInlineBefore(a.showFileMenu) {
+		return
+	}
 	m := &a.fileMenu
 	if m.open {
 		a.hideFileMenu(true)
@@ -201,6 +204,9 @@ func (a *app) runFileOption(option int) {
 }
 
 func (a *app) saveDocument(saveAs bool) {
+	if a.saveInlineBefore(func() { a.saveDocument(saveAs) }) {
+		return
+	}
 	v := a.view
 	if a.busy || !v.ready() {
 		return

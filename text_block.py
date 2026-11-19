@@ -1,55 +1,13 @@
 """Reflow a selected range and write searchable text into its page."""
 
-from io import BytesIO
-from math import hypot, isfinite
-from pathlib import Path
+from itertools import groupby
+from math import isfinite
 import re
-import sys
 
-from fontTools.ttLib import TTFont, TTLibError
 import pikepdf as pdf
 
-from text_edit import (FAMILIES, TextError, UNDERLINE, code_size, encoded_runs, has_underline,
-                       instruction, pikepdf_operators, show_items, source_styles, text_page)
-
-
-def paragraph_font(style, folder):
-    family = style.get("font", "")
-    if not isinstance(family, str) or len(family) > 63 or "\0" in family:
-        raise TextError("Vyberte dostupné písmo.")
-    bundled = ("Liberation Sans", "Liberation Serif", "Liberation Mono")
-    try:
-        if not family or family in bundled:
-            index = bundled.index(family) if family else style.get("family", 0)
-            if type(index) is not int or not 0 <= index < len(bundled):
-                raise TextError("Vyberte dostupné písmo.")
-            face = ("Bold" if style.get("bold") else "") + ("Italic" if style.get("italic") else "") or "Regular"
-            data = (Path(folder) / f"{FAMILIES[index]}-{face}.ttf").read_bytes()
-        elif sys.platform == "win32":
-            from system_fonts import load_system_font
-            data = load_system_font(family, bool(style.get("bold")), bool(style.get("italic")))
-        else:
-            raise TextError("Toto systémové písmo je dostupné ve Windows.")
-        with TTFont(BytesIO(data)) as font:
-            if "glyf" not in font:
-                raise TextError("Pro úpravu zvolte písmo s křivkami TrueType.")
-            permissions = font["OS/2"].fsType if "OS/2" in font else 0
-            if permissions & 0x202 or (permissions & 4 and not permissions & 8):
-                raise TextError("Zvolené písmo neumožňuje vložení pro úpravy. Vyberte jiné písmo.")
-            if "OS/2" in font and family not in (*bundled, ""):
-                flags = font["OS/2"].fsSelection
-                if bool(flags & 0x20) != bool(style.get("bold")) or bool(flags & 0x201) != bool(style.get("italic")):
-                    raise TextError("Zvolené písmo nemá požadovaný řez.")
-            units = font["head"].unitsPerEm
-            mapping = font.getBestCmap() or {}
-            metrics = font["hmtx"].metrics
-            advances = {chr(code): metrics[name][0] / units for code, name in mapping.items()}
-            return data, advances, max(.7, min(1.2, font["hhea"].ascent / units))
-    except (OSError, TTLibError, KeyError, ValueError) as exc:
-        # TextError is itself a ValueError and carries the actionable explanation.
-        if isinstance(exc, (TextError, ValueError)) and not isinstance(exc, TTLibError):
-            raise TextError(str(exc)) from exc
-        raise TextError("Zvolené písmo se nepodařilo načíst.") from exc
+from block_fonts import embed_face, encoded_fragment, fonts_for_block
+from text_edit import TextError, UNDERLINE, code_size, has_underline, instruction, show_items, source_styles, text_page
 
 
 def numeric(value, low, high, message):
@@ -94,25 +52,6 @@ def wrap_block(content, advances, size, width, tracking):
         yield value, extent-tracking if value else 0, False, paragraph_index
 
 
-def encoded_line(show, value, extra, size):
-    if not extra:
-        return show
-    operands = show_items(show)
-    if len(operands) != 1 or not isinstance(operands[0], pdf.String):
-        raise TextError("Zvolené písmo nepodporuje zarovnání do bloku.")
-    codes = bytes(operands[0])
-    if len(codes) != 2*len(value):
-        raise TextError("Zvolené písmo nepodporuje zarovnání do bloku.")
-    items, start = [], 0
-    for index, char in enumerate(value, 1):
-        if char == " ":
-            items.extend((pdf.String(codes[start:2*index]), -1000 * extra / size))
-            start = 2*index
-    if start < len(codes):
-        items.append(pdf.String(codes[start:]))
-    return instruction("TJ", pdf.Array(items))
-
-
 def block_commands(document, page, block, style, folder, color, group):
     content = block.get("text")
     if not isinstance(content, str) or len(content) > 8000 or any(
@@ -131,55 +70,62 @@ def block_commands(document, page, block, style, folder, color, group):
             or not all(type(value) in (float, int) and isfinite(value) and abs(value) <= 2e6 for value in origin)):
         raise TextError("Vyberte platné umístění a zarovnání textového bloku.")
 
-    data, advances, ascent = paragraph_font(style, folder)
+    faces, assigned, advances = fonts_for_block(style, content, folder)
+    ascent = faces[0].ascent
     lines = list(wrap_block(content, advances, size, width, tracking))
     if ascent*size + (len(lines)-1)*line_spacing*size + size*.22 > height or len(lines) > 256:
         raise TextError("Text se nevejde na stránku. Zvětšete šířku bloku nebo zmenšete řádkování či písmo.")
-    values = [value for value, _, _, _ in lines if value]
-    encoded, _ = encoded_runs(values, {**style, "family": 0}, folder, font_data=data)
+    used = {char for value, _, _, _ in lines for char in value}
     matrix = {0: (1, 0, 0, 1), 90: (0, 1, -1, 0), 180: (-1, 0, 0, -1),
               270: (0, -1, 1, 0)}[angle]
     marked = pdf.Dictionary(PBTextBlock=group, PBWidth=round(width*1000), PBFirstX=round(origin[0]*1000),
                             PBFirstY=round(origin[1]*1000), PBAngle=angle,
                             PBAlign=("left", "center", "right", "justify").index(alignment),
-                            PBLeading=round(line_spacing*1000), PBTracking=round(tracking*1000))
+                            PBLeading=round(line_spacing*1000), PBTracking=round(tracking*1000),
+                            PBBold=int(bool(style.get("bold"))), PBItalic=int(bool(style.get("italic"))))
     result = [instruction("q"), *color, instruction("cm", *matrix, *origin),
               instruction("BDC", pdf.Name.Div, marked)]
     resources = pdf.Dictionary(page.resources)
     resources.Font = pdf.Dictionary(resources.get("/Font", pdf.Dictionary()))
     page.obj.Resources = resources
-    with pdf.Pdf.open(BytesIO(encoded)) as templates:
-        pages = iter(templates.pages)
-        key = None
-        for row, (value, advance, justification, paragraph) in enumerate(lines):
-            if not value:
-                continue
-            template = next(pages)
-            show = next((item for item in pikepdf_operators(template) if str(item.operator) in ("Tj", "TJ")), None)
-            if show is None:
-                raise TextError("Sazbu textového bloku se nepodařilo zakódovat.")
-            if key is None:
-                font = next(iter(template.resources.Font.values()))
-                key = page.add_resource(document.copy_foreign(templates.make_indirect(font)), pdf.Name.Font, prefix="Text")
-            left = 0.
-            if alignment == "right":
-                left = max(0., width-advance)
-            elif alignment == "center":
-                left = max(0., (width-advance)/2)
-            justify = alignment == "justify" and justification and value.count(" ") > 0
-            extra = max(0., width-advance) / value.count(" ") if justify else 0.
-            baseline = -(ascent+row*line_spacing)*size
-            row_mark = pdf.Dictionary(PBRow=row, PBParagraph=paragraph, PBWordWrap=int(justification))
-            result.extend((instruction("BDC", pdf.Name.Span, row_mark),
-                           instruction("BT"), instruction("Tr", 0), instruction("Tc", tracking),
-                           instruction("Tw", 0), instruction("Tz", 100), instruction("Ts", 0),
-                           instruction("Tf", key, size), instruction("Tm", 1, 0, 0, 1, left, baseline),
-                           encoded_line(show, value, extra, size), instruction("ET")))
-            if style.get("underline"):
-                result.extend((instruction("BMC", UNDERLINE),
-                               instruction("re", left, baseline-size*.13, width if justify else advance, size*.055),
-                               instruction("f"), instruction("EMC")))
-            result.append(instruction("EMC"))
+    references = {}
+    for index, face in enumerate(faces):
+        chars = sorted(char for char in used if assigned[char] == index)
+        if chars:
+            references[index] = embed_face(document, page, face, chars)
+    stroke_ops = {"g":"G", "rg":"RG", "k":"K", "cs":"CS", "sc":"SC", "scn":"SCN"}
+    result.extend(instruction(stroke_ops[str(item.operator)], *item.operands)
+                  for item in color if str(item.operator) in stroke_ops)
+    result.append(instruction("w", size*.035))
+    for row, (value, advance, justification, paragraph) in enumerate(lines):
+        if not value:
+            continue
+        left = 0.
+        if alignment == "right":
+            left = max(0., width-advance)
+        elif alignment == "center":
+            left = max(0., (width-advance)/2)
+        justify = alignment == "justify" and justification and value.count(" ") > 0
+        extra = max(0., width-advance) / value.count(" ") if justify else 0.
+        baseline = -(ascent+row*line_spacing)*size
+        row_mark = pdf.Dictionary(PBRow=row, PBParagraph=paragraph, PBWordWrap=int(justification))
+        result.extend((instruction("BDC", pdf.Name.Span, row_mark), instruction("BT"),
+                       instruction("Tc", tracking), instruction("Tw", 0), instruction("Tz", 100), instruction("Ts", 0)))
+        x = left
+        for index, group_chars in groupby(value, key=assigned.__getitem__):
+            piece = "".join(group_chars)
+            face = faces[index]
+            key, cids = references[index]
+            result.extend((instruction("Tr", 2 if face.fake_bold else 0), instruction("Tf", key, size),
+                           instruction("Tm", 1, 0, .21 if face.fake_italic else 0, 1, x, baseline),
+                           encoded_fragment(piece, cids, extra, size)))
+            x += sum(advances[char]*size+tracking for char in piece) + extra*piece.count(" ")
+        result.append(instruction("ET"))
+        if style.get("underline"):
+            result.extend((instruction("BMC", UNDERLINE),
+                           instruction("re", left, baseline-size*.13, width if justify else advance, size*.055),
+                           instruction("f"), instruction("EMC")))
+        result.append(instruction("EMC"))
     return [*result, instruction("EMC"), instruction("Q")]
 
 
