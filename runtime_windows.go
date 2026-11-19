@@ -38,6 +38,11 @@ type request struct {
 	CertPassword    string         `json:"cert_password,omitempty"`
 	Trust           string         `json:"trust,omitempty"`
 	Gray            bool           `json:"gray,omitempty"`
+	OpenResult      bool           `json:"open_result,omitempty"`
+	ColorMode       string         `json:"color_mode,omitempty"`
+	GrayProfile     string         `json:"gray_profile,omitempty"`
+	GrayCustomICC   string         `json:"gray_custom_icc,omitempty"`
+	KProfile        string         `json:"k_profile,omitempty"`
 	AllowRaster     bool           `json:"allow_raster,omitempty"`
 	Outline         bool           `json:"outline,omitempty"`
 	Decrypt         bool           `json:"decrypt,omitempty"`
@@ -130,7 +135,7 @@ func appRuntime() (string, error) {
 }
 
 func runtimeReady(path string) bool {
-	for _, name := range []string{"ready", "python.exe", "engine.py", "export_settings.py", "export_presets.json", "pdfx.py",
+	for _, name := range []string{"ready", "python.exe", "engine.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py",
 		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))

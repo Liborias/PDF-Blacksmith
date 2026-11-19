@@ -14,6 +14,8 @@ import tempfile
 import pikepdf
 from print_profiles import ProfileError, attach_intent, attach_srgb, clear_pdfx_claim, get_profile, source_cmyk, source_icc
 from export_settings import export_preset, export_settings, pdfwrite_settings
+from color_conversion import (ColorConversionError, resolve_gray_icc, convert_rich_black,
+                              gray_to_explicit_k, attach_gray_output_intent, preserve_solid_black_for_gray)
 from pdfx import PDFXError, check_profile, finish_pdfx, pdfx_prefix
 from proof import ProofError, describe, page_box, page_proof, scan_plates, screen_page
 from reader_render import render_screen
@@ -399,29 +401,36 @@ def convert_spot_vectors(pdf):
 
 
 def transform(src, request):
-    gray = request.get("gray", False)
+    color_mode = request.get("color_mode") or ("gray" if request.get("gray") else "unchanged")
+    if color_mode not in ("unchanged", "gray", "rich_black", "k_cmyk"):
+        raise UserError("Neznámý režim barevného převodu.")
+    gray = color_mode in ("gray", "k_cmyk")
+    explicit_k = color_mode == "k_cmyk"
+    rich_black = color_mode == "rich_black"
     outline = request.get("outline", False)
     profile_key = request.get("profile", "")
-    if gray and profile_key:
-        raise UserError("Vyberte buď desku K, nebo výstupní profil CMYK.")
+    if (gray or rich_black) and profile_key:
+        raise UserError("Nelze současně zvolit barevný režim K a běžný převod CMYK.")
+    if rich_black and outline:
+        raise UserError("Selektivní opravu složené černé nelze spojit s převodem textu na křivky.")
     decrypt = request.get("decrypt", False)
     preset = export_preset(request.get("preset", ""))
     if preset is None:
         raise UserError("Vyberte platnou předvolbu PDF.")
     mode = preset.get("mode")
     variant = preset.get("pdfx")
-    if mode and (gray or outline or decrypt or (profile_key and mode != "cmyk")):
+    if mode and (gray or rich_black or outline or decrypt or (profile_key and mode != "cmyk")):
         raise UserError("Pro tyto úpravy vyberte vlastní nastavení exportu.")
     if mode == "cmyk":
         profile_key = profile_key or preset["profile"]
     flatten = mode == "flatten"
-    convert = gray or outline or bool(profile_key) or mode in ("rewrite", "rgb", "flatten")
+    convert = gray or rich_black or outline or bool(profile_key) or mode in ("rewrite", "rgb", "flatten")
     view = request.get("view", {})
     if not (mode or convert or decrypt or "pages" in view):
         raise UserError("Vyberte alespoň jednu úpravu PDF.")
     options = export_settings(preset.get("options") if mode else request.get("export"))
     proof_dpi, repair_dpi = options["proof_dpi"], options["repair_dpi"]
-    exe = ghostscript_path(request) if convert else None
+    exe = ghostscript_path(request) if convert and not rich_black else None
 
     with open_pdf(src, request.get("pdf_password", "")) as pdf:
         source_pages = len(pdf.pages)
@@ -433,7 +442,15 @@ def transform(src, request):
         modified = prepare_edit(pdf, request)
         if selection is not None:
             modified = apply_page_order(pdf, list(pdf.pages), selection) or modified
+        if gray:
+            modified = bool(preserve_solid_black_for_gray(pdf)) or modified
         pages = len(pdf.pages)
+        if rich_black:
+            changed = convert_rich_black(pdf)
+            with output_file(src, request) as pending:
+                pdf.save(pending, encryption=False, fix_metadata_version=False)
+            return ("Uloženo PDF. Upravené operace složené černé: "
+                    f"{changed}. Zachovány ostatní barvy a obrázky. Počet stran {pages}.")
         if not convert:
             if decrypt and not pdf.is_encrypted:
                 raise UserError("Vstupní PDF už je bez šifrování a omezení heslem.")
@@ -449,7 +466,13 @@ def transform(src, request):
         if not pages:
             raise UserError("Vstupní PDF nemá žádné strany.")
         repaired = []
+        if explicit_k:
+            profile_key = request.get("k_profile") or "fogra51"
         profile = get_profile(profile_key, request.get("custom_icc", "")) if profile_key else None
+        gray_icc, gray_label = resolve_gray_icc(
+            request.get("gray_profile", "automatic"), request.get("gray_custom_icc", "")
+        ) if gray else (None, "")
+
         if variant:
             check_profile(profile, variant)
         with tempfile.TemporaryDirectory(prefix="pdftisk-") as tmp:
@@ -477,7 +500,20 @@ def transform(src, request):
                 args.extend([
                     "-sColorConversionStrategy=Gray", "-dProcessColorModel=/DeviceGray",
                     "-sBlendConversionStrategy=Simple", "-dPreserveSeparation=false", "-dPreserveDeviceN=false",
+                    "-dUsePDFX3Profile=false",
                 ])
+                permitted = []
+                if gray_icc:
+                    (folder / "gray-output.icc").write_bytes(gray_icc)
+                    args.append("-sOutputICCProfile=gray-output.icc")
+                    permitted.append("gray-output.icc")
+                source = source_cmyk(pdf)
+                if source:
+                    (folder / "source-cmyk.icc").write_bytes(source)
+                    args.append("-sDefaultCMYKProfile=source-cmyk.icc")
+                    permitted.append("source-cmyk.icc")
+                if permitted:
+                    args.append("--permit-file-read=" + os.pathsep.join(permitted))
             elif profile:
                 (folder / "cil.icc").write_bytes(profile[0])
                 source = source_cmyk(pdf)
@@ -517,8 +553,15 @@ def transform(src, request):
                 if gray:
                     revised = convert_spot_vectors(finished)
                     if "/OutputIntents" in finished.Root:
-                        # A source CMYK output intent is inapplicable to a DeviceGray file.
                         del finished.Root["/OutputIntents"]
+                        revised = True
+                    clear_pdfx_claim(finished)
+                    if explicit_k:
+                        converted_vectors, converted_images = gray_to_explicit_k(finished)
+                        attach_intent(finished, *profile)
+                        revised = True
+                    elif gray_icc:
+                        attach_gray_output_intent(finished, gray_icc, gray_label)
                         revised = True
                     if revised:
                         finished.save(folder / "vystup-upraveny.pdf", fix_metadata_version=False)
@@ -559,6 +602,9 @@ def transform(src, request):
         lines.append(f"Předvolba {preset['name']}.")
     if gray:
         lines.append(f"Separace při {proof_dpi} dpi ověřeny na všech stranách. C, M, Y i případné přímé desky jsou prázdné.")
+        if explicit_k:
+            lines.append(f"Explicitní DeviceCMYK C0 M0 Y0 Kx. Operace: {converted_vectors}, obrázky: {converted_images}.")
+        lines.append(f"Gray ICC pro přepočet: {gray_label}.")
     if repaired:
         lines.append(f"Rastrová oprava {repair_dpi} dpi na stranách " + ", ".join(map(str, repaired)) + ".")
     if profile:
@@ -1111,7 +1157,7 @@ def respond(payload, *, raster=False):
         response = {"status": "merge_encrypted", "message": str(exc)}
     except SignedPDF as exc:
         response = {"status": "signed_pdf", "message": str(exc)}
-    except (UserError, ProfileError, ProofError, PDFXError) as exc:
+    except (UserError, ProfileError, ProofError, PDFXError, ColorConversionError) as exc:
         response = {"status": "error", "message": str(exc)}
     except FileExistsError:
         response = {"status": "error", "message": "Cílový soubor už existuje. Vyberte nový název."}

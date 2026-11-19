@@ -6,6 +6,8 @@ PDF se otevírá přímo v hlavním okně. Podporuje souvislé a stránkové čt
 
 Editor umožňuje otáčet a přesouvat stránky a uložit upravenou kopii. Tiskový náhled zobrazuje výstupní záměr, procesní i přímé desky a jejich pokrytí. Panel **Export** nabízí výběr stran, předvolby pro tisk a digitální použití i vlastní parametry převodu.
 
+Ve vývojové větvi je nově navržen společný barevný převod pro **Export** a **Separace**: DeviceGray s volbou Gray ICC, selektivní složená černá → K100 a explicitní CMYK pouze K. Podrobnosti a omezení viz [Správa barev](COLOR_MANAGEMENT.md). Před nasazením je nutné ověřit regresní testy a skutečné tiskové separace na Windows.
+
 ## Použití
 
 Stáhněte `PDFBlaksmith.exe` z vydání a spusťte jej. Součástí aplikace je PDFium pro prohlížení a Ghostscript pro tiskové operace. [Vydání](https://github.com/Liborias/PDF-Blacksmith/releases) · [Návod](NAVOD.md)

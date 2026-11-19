@@ -274,6 +274,8 @@ type documentView struct {
 	previous, next, jump, pageInput, location, zoomOut, zoomIn, zoomLabel, fit uintptr
 	flow, screenBox, proofBox, proof, list, pageList, documentInfo             uintptr
 	outputInfo, sample, scanReport, all, none                                  uintptr
+    convertMode, convertGrayProfile, convertGrayICC, convertGrayBrowse        uintptr
+    convertKProfile, convertGrayLabel, convertKLabel, convertReport            uintptr
 	thumbnailHeading, thumbnailHint, scanSelection                             uintptr
 	left, right, back, ahead, undoButton, save                                 uintptr
 	moveLabel, moveTarget, moveButton, deleteButton                            uintptr
@@ -342,6 +344,27 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	a.scanButton = a.button("Zkontrolovat celý dokument", idReaderScan, 16, 519, 298, 0)
 	v.scanSelection = a.button("Zkontrolovat vybrané náhledy", idReaderScanSelection, 16, 559, 298, 0)
 	v.scanReport = a.readout(16, 602, 298, 133)
+    a.label("Převod barev aktuálního dokumentu", 16, 763, 298, true)
+    v.convertMode = a.combo(idProofColorMode, 16, 789, 298, []string{
+        "Stupně šedi · DeviceGray", "Složená černá → K100", "Pouze K · CMYK C0 M0 Y0",
+    })
+    chooseCombo(v.convertMode, defaultIndex(colorModes, a.export.ColorMode, defaults.ColorMode))
+    v.convertGrayLabel = a.label("ICC profil převodu do šedi", 16, 829, 298, false)
+    v.convertGrayProfile = a.combo(idProofGrayProfile, 16, 850, 298, []string{
+        "Automaticky podle dokumentu", "Gray Gamma 2.2", "Gray Gamma 1.8", "Vlastní ICC Gray…",
+    })
+    chooseCombo(v.convertGrayProfile, defaultIndex(grayProfiles, a.export.GrayProfile, defaults.GrayProfile))
+    v.convertGrayICC = a.edit(16, 886, 187, false)
+    v.convertGrayBrowse = a.button("Vybrat ICC…", idProofGrayICC, 212, 883, 102, 0)
+    v.convertKLabel = a.label("Cílový tiskový profil CMYK", 16, 925, 298, false)
+    cmykNames := make([]string, 0, len(catalog))
+    for _, profile := range catalog { cmykNames = append(cmykNames, profile.Name) }
+    v.convertKProfile = a.combo(idProofKProfile, 16, 946, 298, cmykNames)
+    index := slices.IndexFunc(catalog, func(p profileChoice) bool { return p.Key == a.export.KProfile })
+    chooseCombo(v.convertKProfile, max(index, 0))
+    a.proofApply = a.button("Použít převod a otevřít kopii…", idProofApply, 16, 1000, 298, 0)
+    a.primaryButtons[a.proofApply] = true
+    v.convertReport = a.readout(16, 1047, 298, 112)
 }
 
 func (v *documentView) ready() bool { return len(v.order) > 0 && !v.invalidSource }
