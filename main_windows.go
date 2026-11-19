@@ -169,6 +169,7 @@ type app struct {
 	comparison                                         documentComparison
 	ocr                                                ocrPanel
 	textTool textPanel
+	objects  objectEditor
 	thumbnailScopes map[uintptr]bool
 	busy                                               bool
 	waitingOverwrite                                   bool
@@ -394,6 +395,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		if wParam&0xffff == 0 {
 			a.hideFileMenu(false)
 			a.cancelPageDrag()
+			a.cancelObjectGesture()
 		}
 	case 0x002c: // WM_MEASUREITEM
 		if a.measurePopup(lParam) {
@@ -482,6 +484,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return 0
 	case wmDestroy:
 		a.cancelPageDrag()
+		a.cancelObjectGesture()
 		a.clearInlineFrames()
 		if a.view != nil {
 			a.view.canvas.close()

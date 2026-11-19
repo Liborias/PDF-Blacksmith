@@ -232,6 +232,7 @@ type readerTask struct {
 
 type readerJob struct {
 	textFrame uint64
+	objectPage, objectToken int
 	readerTask
 	action string
 	result response
@@ -438,6 +439,9 @@ func (v *documentView) sourceUnchanged() bool {
 
 func (v *documentView) resetRendering() {
 	v.generation++
+	if !v.secondary {
+		v.app.clearObjectSelection()
+	}
 	user32.NewProc("KillTimer").Call(v.app.window, v.zoomTimer())
 	v.zoomDeadline = time.Time{}
 	v.readerError = ""
@@ -554,6 +558,9 @@ func (v *documentView) clearPlateView() {
 
 func (v *documentView) reframe() {
 	v.generation++
+	if !v.secondary {
+		v.app.clearObjectSelection()
+	}
 	v.clearDetails()
 	v.clearPlateView()
 	setText(v.scanReport, "")
@@ -821,7 +828,7 @@ func absTextDrag(value int32) int32 {
 
 func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	x, y := int32(int16(param)), int32(int16(param>>16))
-	if !v.secondary && v.app.textPointer(msg, x, y) {
+	if !v.secondary && (v.objectPointer(msg, x, y) || v.app.textPointer(msg, x, y)) {
 		return true
 	}
 	switch msg {
@@ -905,7 +912,7 @@ func (v *documentView) schedule() {
 	if !v.ready() || !v.zoomDeadline.IsZero() {
 		return
 	}
-	if v.scheduleNativeText() || (!v.secondary && v.app.scheduleInlineBackground()) {
+	if v.scheduleNativeText() || v.scheduleObjects() || (!v.secondary && v.app.scheduleInlineBackground()) {
 		return
 	}
 	_, height := v.viewportSize()
@@ -985,6 +992,13 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 	if req.Action == "text_background" {
 		textFrame = v.app.textTool.inline.serial
 	}
+	var objectPage, objectToken int
+	if req.Action == "object_probe" || req.Action == "object_snapshot" {
+		objectPage = req.View.Page
+		if req.ObjectEdit != nil {
+			objectToken = req.ObjectEdit.Token
+		}
+	}
 	task := readerTask{generation, number, pixels, background, tile}
 	engine := v.engine
 	if background {
@@ -997,7 +1011,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 		v.running = true
 	}
 	go func() {
-		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame,
+		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame, objectPage: objectPage, objectToken: objectToken,
 			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
 		if unchanged(req.Input, original) {
 			result := engine.run(req)
@@ -1005,7 +1019,8 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 				job.result = result
 			}
 		}
-		if job.result.Status == "ok" && number > 0 && job.result.View != nil {
+		if job.result.Status == "ok" && number > 0 && job.result.View != nil &&
+			(req.Action != "object_snapshot" || len(job.result.View.Image) > 0) {
 			var err error
 			view := job.result.View
 			if view.RasterWidth != 0 {
@@ -1045,6 +1060,11 @@ func (v *documentView) finished(job readerJob) {
 		return
 	}
 	v.running = false
+	if job.action == "object_probe" || job.action == "object_snapshot" {
+		v.app.finishObjects(job)
+		v.schedule()
+		return
+	}
 	if job.action == "text_probe" {
 		v.finishNativeText(job)
 		v.schedule()
@@ -1519,6 +1539,7 @@ func (v *documentView) paintCanvas(dc uintptr) {
 		if !v.secondary {
 			v.paintSearchHighlights(dc, number, bounds)
 			v.app.paintTextSelection(dc, number, bounds)
+			v.app.paintObjectSelection(dc, number, bounds)
 		}
 	}
 	gdi32.NewProc("RestoreDC").Call(dc, saved)

@@ -151,6 +151,9 @@ func (v *documentView) finishNativeText(job readerJob) {
 
 func (v *documentView) clickedForText(x, y int32) {
 	a := v.app
+	if a.mode == idObjectsTab {
+		return
+	}
 	if a.busy || a.full || !v.ready() || (a.mode == idTextTab && (!v.secondary || a.textTool.gesture.source != 0)) {
 		return
 	}

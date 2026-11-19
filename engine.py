@@ -21,7 +21,7 @@ from color_conversion import (ColorConversionError, resolve_gray_icc, convert_ri
                               convert_spot_vectors)
 from pdfx import PDFXError, check_profile, finish_pdfx, pdfx_prefix
 from page_transfer import convert_inserted_artwork, transfer_color_plan
-from proof import ProofError, describe, page_box, page_proof, scan_plates, screen_page
+from proof import ProofError, box_options, describe, page_box, page_proof, scan_plates, screen_page
 from reader_render import render_screen
 
 
@@ -875,6 +875,58 @@ def save_document(src, request):
     return "PDF bylo uloženo."
 
 
+def edit_object_document(src, request):
+    from object_edit import (ObjectError, describe_objects, draws, modify_page, paste_object,
+                             pikepdf_operators, selected_draw, snapshot_object)
+
+    view = request.get("view", {})
+    edit = request.get("object_edit", {})
+    password = request.get("pdf_password", "")
+    action = request["action"]
+    state = src.stat()
+
+    def select(document):
+        number, rotation = view.get("page", 1), view.get("rotation", 0)
+        if type(number) is not int or not 1 <= number <= len(document.pages):
+            raise UserError("Vyberte existující stranu PDF.")
+        if type(rotation) is not int or rotation not in (0, 90, 180, 270):
+            raise UserError("Strana má neplatné otočení.")
+        return number, rotation, document.pages[number-1]
+
+    try:
+        if action in ("object_probe", "object_snapshot"):
+            with open_pdf(src, password) as document:
+                number, rotation, page = select(document)
+                operators = pikepdf_operators(page)
+                candidates = list(draws(page, operators))
+                if action == "object_probe":
+                    return {"object_page": describe_objects(page, operators, candidates)}
+                item = selected_draw(candidates, edit.get("token"))
+                return snapshot_object(document, number, page, operators, candidates, item, rotation)
+
+        with output_file(src, request) as pending:
+            with open_pdf(src, password) as document:
+                _, rotation, page = select(document)
+                prepare_edit(document, request)
+                operators = pikepdf_operators(page)
+                if edit.get("operation") == "paste":
+                    paste_object(document, page, operators, edit, rotation, box_options(view)[0])
+                else:
+                    modify_page(document, page, operators, list(draws(page, operators)), edit)
+                clear_pdfx_claim(document)
+                write_page_edits(document, src, password, pending, view)
+            with open_pdf(pending, password) as document:
+                description = {**describe(document), "bookmarks": describe_bookmarks(document)}
+            if not same_file_state(state, src.stat()):
+                raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
+    except ObjectError as exc:
+        raise UserError(str(exc)) from exc
+    return {**description, "message": {
+        "move": "Objekt byl přesunut.", "duplicate": "Objekt byl duplikován.",
+        "paste": "Objekt byl vložen.", "delete": "Objekt byl smazán.",
+    }[edit["operation"]]}
+
+
 def ocr_document(src, request):
     from ocr import OCRError, recognize
 
@@ -1227,7 +1279,8 @@ def dispatch(request, *, raster=False):
                  "split": split_document, "ocr": ocr_document, "insert_pages": insert_document_pages,
                  "insert_probe": inspect_insertion_colors,
                  "text_probe": edit_text_document, "text_edit": edit_text_document,
-                 "text_background": edit_text_document}.get(request.get("action"))
+                 "text_background": edit_text_document, "object_probe": edit_object_document,
+                 "object_snapshot": edit_object_document, "object_edit": edit_object_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:

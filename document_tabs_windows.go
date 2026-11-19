@@ -260,6 +260,9 @@ func (a *app) continueCloseDocuments() {
 }
 
 func (a *app) removeDocumentTab(tab *documentTab) {
+	if a.objects.owner == tab {
+		a.objects.owner, a.objects.clipboard = nil, nil
+	}
 	index := slices.Index(a.tabs, tab)
 	if index < 0 {
 		return

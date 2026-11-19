@@ -64,6 +64,7 @@ type request struct {
 	OCRRegion             []textPoint  `json:"ocr_region,omitempty"`
 	TextEdit              *textEditRequest `json:"text_edit,omitempty"`
 	TextSelection         []glyphSelection `json:"text_selection,omitempty"`
+	ObjectEdit            *objectEditRequest `json:"object_edit,omitempty"`
 }
 
 type viewRequest struct {
@@ -90,6 +91,8 @@ type plateInfo struct {
 
 type viewResponse struct {
 	TextPage     *textPage              `json:"text_page,omitempty"`
+	ObjectPage   *objectPage            `json:"object_page,omitempty"`
+	ObjectClipboard []byte              `json:"object_clipboard,omitempty"`
 	Sizes        []map[string][2]float64 `json:"sizes"`
 	Pages        int                     `json:"pages"`
 	DPI          int                     `json:"dpi"`

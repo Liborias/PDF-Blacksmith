@@ -36,6 +36,14 @@ Otevřete nástroj **Najít v PDF** nebo stiskněte **Ctrl+F**. Zadejte slovo č
 
 Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a skeny potřebuje dokument textovou vrstvu vytvořenou pomocí OCR. Aplikace spočítá všechny nalezené shody a v seznamu zobrazí prvních 2 000. Tlačítko **Vymazat** hledání zastaví a vyčistí výsledky.
 
+## Úprava objektů
+
+V nástroji **Objekty** klikněte na samostatný vektorový tvar, vložený obrázek nebo skupinu vykreslenou jako jeden objekt PDF. Tažením přesunete výběr po stejné stránce a vedle kurzoru uvidíte jeho náhled. K posouvání přiblížené stránky držte **mezerník** a táhněte.
+
+**Ctrl+D** vytvoří odsazenou kopii na stejné stránce. **Ctrl+C** zkopíruje objekt do schránky aplikace. Klikněte na místo na některé stránce stejného PDF a zvolte **Ctrl+V**. Bez kliknutí se objekt vloží doprostřed aktuální stránky. **Delete** smaže výběr, **Esc** ho zruší a **Ctrl+Z** vrátí úpravu. Změny zapíšete přes **Soubor → Uložit** nebo **Uložit jako**.
+
+Textové znaky upravujte v nástroji **Text**. U složitého ořezu lze některé objekty přemístit nebo duplikovat přímo na zdrojové straně.
+
 ## Úprava textu
 
 Kliknutím na text v náhledu otevřete nástroj **Text** a umístíte kurzor přímo do textu na stránce. V tabulce kliknutí vybere text v dané buňce podle rozestupů mezi sloupci. Pevná lišta nabízí výběr objektu, odstavce, obdélníkem nebo mnohoúhelníkovým lasem. Název každé ikony se ukáže po najetí myší. U lasa čára vede z posledního bodu ke kurzoru. Výběr uzavřete Enterem nebo kliknutím na první bod.

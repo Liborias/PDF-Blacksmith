@@ -156,6 +156,8 @@ func (a *app) undoDocumentDraft(base documentContent, action string) {
 		a.report("Poslední rozpoznávání OCR bylo vráceno.")
 	case "insert_pages":
 		a.report("Vložení stránek bylo vráceno.")
+	case "object_edit":
+		a.report("Úprava objektu byla vrácena.")
 	default:
 		a.report("Poslední úprava textu byla vrácena.")
 	}

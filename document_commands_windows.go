@@ -32,6 +32,7 @@ const (
 	docFullscreen
 	docSave
 	docPrint
+	docDuplicate
 )
 
 type documentAction struct {
@@ -50,6 +51,7 @@ var documentActions = map[documentCommand]documentAction{
 	docFitPage: {"Přizpůsobit stránce", "Ctrl+0"}, docPrevious: {"Předchozí strana", "Page Up"},
 	docNext: {"Další strana", "Page Down"}, docFullscreen: {"Celá obrazovka", "F11"},
 	docSave: {"Uložit", "Ctrl+S"}, docPrint: {"Tisk", "Ctrl+P"},
+	docDuplicate: {"Duplikovat", "Ctrl+D"},
 }
 
 type documentShortcut struct {
@@ -168,6 +170,8 @@ func (a *app) trackDocumentContext(v *documentView, pos point, editing bool) {
 			{docUndo, docRedo}, {docCut, docCopy, docPaste, docDelete, docSelectAll},
 			{docBold, docItalic, docUnderline}, {docAlignLeft, docAlignCenter, docAlignRight, docAlignJustify}, {docApplyText},
 		}
+	} else if v == a.view && a.mode == idObjectsTab {
+		groups[0] = []documentCommand{docUndo, docCopy, docPaste, docDuplicate, docDelete}
 	}
 	var commands []documentCommand
 	var items []popupItem
@@ -193,6 +197,14 @@ func (a *app) canDocumentCommand(v *documentView, command documentCommand, editi
 		return false
 	}
 	e, frame := &a.textTool.inline, a.inlineCurrent()
+	if !editing && v == a.view && a.mode == idObjectsTab {
+		switch command {
+		case docCopy, docDuplicate, docDelete:
+			return a.objects.selected.Token != 0
+		case docPaste:
+			return a.objects.owner == a.activeTab && len(a.objects.clipboard) > 0
+		}
+	}
 	inFrame := editing && frame != nil
 	writable := inFrame && frame.editable
 	hasSelection := false
@@ -239,6 +251,13 @@ func (a *app) canDocumentCommand(v *documentView, command documentCommand, editi
 func (a *app) doDocumentCommand(v *documentView, command documentCommand, editing bool) {
 	if !a.canDocumentCommand(v, command, editing) {
 		return
+	}
+	if !editing && v == a.view && a.mode == idObjectsTab {
+		if id := map[documentCommand]int{docCopy: idObjectCopy, docPaste: idObjectPaste,
+			docDuplicate: idObjectDuplicate, docDelete: idObjectDelete}[command]; id != 0 {
+			a.objectCommand(id, 0)
+			return
+		}
 	}
 	e := &a.textTool.inline
 	if editing {

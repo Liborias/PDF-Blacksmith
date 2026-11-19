@@ -86,6 +86,7 @@ var workspaceTabs = []struct {
 	{idFileTab, "Soubor", false},
 	{idBrowseTab, "Zobrazení", false},
 	{idSearchTab, "Najít v PDF", true},
+	{idObjectsTab, "Objekty", true},
 	{idTextTab, "Text", true},
 	{idOCRTab, "OCR", true},
 	{idProofTab, "Separace", true},
@@ -219,6 +220,8 @@ func (a *app) setupWorkspace() bool {
 	a.view.buildSearchPanel()
 	a.beginPanel(idTextTab)
 	a.buildTextPanel()
+	a.beginPanel(idObjectsTab)
+	a.buildObjectPanel()
 	a.beginPanel(idOCRTab)
 	a.buildOCRPanel()
 	a.beginPanel(idSplitTab)
@@ -418,7 +421,7 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = idPageOrderTool, idPagesTab
 	case idMergeTab:
 		a.tool, a.mode = idMergeTab, idMergeTab
-	case idProofTab, idSignTab, idSplitTab, idSearchTab, idOCRTab, idTextTab:
+	case idProofTab, idSignTab, idSplitTab, idSearchTab, idOCRTab, idTextTab, idObjectsTab:
 		if !a.documentTools {
 			return
 		}
@@ -431,6 +434,11 @@ func (a *app) activate(id int) {
 	if old == idTextTab && a.mode != idTextTab {
 		a.clearTextSelection()
 	}
+	if old == idObjectsTab && a.mode != idObjectsTab {
+		a.clearObjectSelection()
+		a.view.invalidateCanvas()
+	}
+	a.updateObjectActions()
 	if (old == idSearchTab) != (a.mode == idSearchTab) {
 		a.view.invalidateCanvas()
 	}
@@ -793,7 +801,8 @@ func (a *app) command(id, notification int) {
 		a.openChoice(choice)
 		return
 	}
-	if a.comparisonCommand(id, notification) || a.textCommand(id, notification) || a.view.command(id, notification) {
+	if a.comparisonCommand(id, notification) || a.textCommand(id, notification) ||
+		a.objectCommand(id, notification) || a.view.command(id, notification) {
 		return
 	}
 	if a.mergeCommand(id, notification) {
@@ -888,7 +897,7 @@ func (a *app) command(id, notification int) {
 		a.showFileMenu()
 	case idSearchTab:
 		a.showSearch()
-	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab, idTextTab:
+	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab, idTextTab, idObjectsTab:
 		a.activate(id)
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.runFileOption(id)
@@ -1091,7 +1100,7 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab || a.mode == idOCRTab || a.mode == idTextTab) {
+		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab || a.mode == idOCRTab || a.mode == idTextTab || a.mode == idObjectsTab) {
 			if a.tool == idFileTab {
 				a.mode = idFileDetails
 			} else {
@@ -1113,6 +1122,7 @@ func (a *app) updateActions() {
 	setEnabled(a.tabList, !a.busy)
 	setEnabled(a.ocr.undo, ready && a.view.lastDraftIs("ocr"))
 	a.updateTextActions()
+	a.updateObjectActions()
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply, a.ocr.start} {
 		setEnabled(button, ready)
 	}
@@ -1214,7 +1224,7 @@ func (a *app) finish(result response) {
 		return
 	}
 
-	draft := req.Action == "ocr" || req.Action == "text_edit" || req.Action == "insert_pages"
+	draft := req.Action == "ocr" || req.Action == "text_edit" || req.Action == "insert_pages" || req.Action == "object_edit"
 	if result.Status == "merge_encrypted" {
 		question := "Uložit sloučené PDF bez šifrování?"
 		if req.InsertPages != nil {
@@ -1245,6 +1255,9 @@ func (a *app) finish(result response) {
 		}
 		if req.Action == "text_edit" {
 			question = "Použít úpravu textu v pracovní kartě bez původních podpisů?"
+		}
+		if req.Action == "object_edit" {
+			question = "Použít úpravu objektu v pracovní kartě bez původních podpisů?"
 		}
 		if req.InsertPages != nil {
 			question = "Vložit strany do pracovní karty bez původních podpisů cílového PDF?"
@@ -1320,7 +1333,7 @@ func (a *app) finish(result response) {
 	if req.Action == "sign" {
 		setText(a.certPass, "")
 	}
-	if result.Status == "error" && (req.Action == "save_document" || req.Action == "print_page" || req.Action == "insert_pages") {
+	if result.Status == "error" && (req.Action == "save_document" || req.Action == "print_page" || req.Action == "insert_pages" || req.Action == "object_edit") {
 		notice(a.window, result.Message, 0x10)
 	}
 	a.updateActions()
@@ -1379,7 +1392,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.wParam == 0x1b && a.cancelPageDrag() {
 		return true
 	}
-	if a.textKey(msg) || a.documentKey(msg) {
+	if a.objectKey(msg) || a.textKey(msg) || a.documentKey(msg) {
 		return true
 	}
 	if msg.wParam == 0x0d && a.mode == idTextTab && a.textTool.inline.visible && !a.busy {
