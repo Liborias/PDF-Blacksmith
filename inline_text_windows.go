@@ -17,7 +17,7 @@ type inlineTextFrame struct {
 }
 
 type inlineTextEditor struct {
-	handle, font          uintptr
+	handle                uintptr
 	frames                []inlineTextFrame
 	active                int
 	original              string
@@ -26,6 +26,7 @@ type inlineTextEditor struct {
 	firstBaseline         float64
 	leftLimit, rightLimit float64
 	fixedWidth, loading   bool
+	nativeWrap            bool
 	visible               bool
 	foreground            uintptr
 	background            uintptr
@@ -37,6 +38,7 @@ type inlineTextEditor struct {
 	rect, pageArea, clip  rect
 	dpi, pixels           int
 	previewStyle          inlineTextStyle
+	layoutPosted          bool
 	textPixels            float64
 }
 
@@ -53,7 +55,7 @@ type inlineCharFormat struct {
 	color                                   uint32
 	charset, pitch                          byte
 	face                                    [32]uint16
-	weight                                  uint16
+	padding, weight                         uint16
 	spacing                                 int16
 	background, locale, reserved            uint32
 	style                                   int16
@@ -81,11 +83,13 @@ func (a *app) createInlineTextEditor() {
 			wsChild|wsTabstop|0x1000|0x0044|0x0100, 0, 0, 1, 1, a.window, idInlineText, a.instance, 0)
 	}
 	if e.handle != 0 {
-		sendMessage.Call(e.handle, 0x0459, 1|8, 0)        // EM_SETTEXTMODE, TM_PLAINTEXT | TM_MULTILEVELUNDO
-		sendMessage.Call(e.handle, 0x0445, 0, 1)          // EM_SETEVENTMASK, ENM_CHANGE
-		sendMessage.Call(e.handle, 0x0443, 0, 0x00ffffff) // EM_SETBKGNDCOLOR
-		sendMessage.Call(e.handle, 0x0435, 0, 8000)       // EM_EXLIMITTEXT
+		sendMessage.Call(e.handle, 0x0459, 2|8, 0)          // EM_SETTEXTMODE, TM_RICHTEXT | TM_MULTILEVELUNDO
+		sendMessage.Call(e.handle, 0x0452, 256, 0)          // EM_SETUNDOLIMIT
+		sendMessage.Call(e.handle, 0x0445, 0, 1|0x00080000) // EM_SETEVENTMASK, ENM_CHANGE | ENM_SELCHANGE
+		sendMessage.Call(e.handle, 0x0443, 0, 0x00ffffff)   // EM_SETBKGNDCOLOR
+		sendMessage.Call(e.handle, 0x0435, 0, 8000)         // EM_EXLIMITTEXT
 		e.background = 0xffffff
+		sendMessage.Call(e.handle, 0x0448, 0, 1) // Disable soft wrapping until a fixed width is chosen.
 		comctl32.NewProc("SetWindowSubclass").Call(e.handle, inlinePaintSubclass, 1, 0)
 	}
 }
@@ -94,7 +98,7 @@ func (a *app) inlineStyle() inlineTextStyle {
 	p := &a.textTool
 	size, _ := readTextNumber(p.size, 1, 600)
 	leading, _ := readTextNumber(p.leading, .7, 5)
-	tracking, _ := readTextNumber(p.tracking, -size*.18, 72)
+	tracking, _ := readTextNumber(p.tracking, -72, 72)
 	width, _ := readTextNumber(p.width, 1, 20000)
 	return inlineTextStyle{p.fonts[max(0, comboIndex(p.font))], size, leading, tracking, width, p.alignment,
 		a.checked(p.bold), a.checked(p.italic), a.checked(p.underline)}
@@ -114,12 +118,10 @@ func (a *app) inlineDirty() bool {
 	if frame == nil || !frame.editable || e.loading {
 		return false
 	}
+	modified, _, _ := sendMessage.Call(e.handle, 0x00c6, 0, 0) // EM_CANUNDO
 	style := a.inlineStyle()
-	original := e.initialStyle
-	if !e.fixedWidth {
-		style.width = original.width
-	}
-	return getText(e.handle) != e.original || style != original
+	return a.inlineValue() != e.original || modified != 0 || e.fixedWidth ||
+		style.leading != e.initialStyle.leading || style.alignment != e.initialStyle.alignment
 }
 
 // Editorial commands continue after the draft was written. On any error the
@@ -148,11 +150,7 @@ func (a *app) clearInlineFrames() {
 	if e.handle != 0 {
 		showWindow.Call(e.handle, 0)
 	}
-	if e.font != 0 {
-		sendMessage.Call(e.handle, wmSetFont, a.normalFont, 0)
-		gdiDelete.Call(e.font)
-		e.font = 0
-	}
+
 	e.previewStyle = inlineTextStyle{}
 	e.rect, e.clip = rect{}, rect{}
 }
@@ -165,13 +163,7 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 	}
 	groups := []textFlow{flow}
 	if len(pick.polygon) >= 3 && len(flow.paragraphs) > 1 {
-		groups = nil
-		for _, paragraph := range flow.paragraphs {
-			group := layoutText(textFlow{paragraphs: [][]textLine{paragraph}}.glyphs())
-			if group.text != "" {
-				groups = append(groups, group)
-			}
-		}
+		groups = inlineTextColumns(flow)
 	}
 	for _, group := range groups {
 		glyphs := group.glyphs()
@@ -189,9 +181,46 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 		}
 		e.frames = append(e.frames, inlineTextFrame{group, stored, editable})
 	}
-	if len(e.frames) == 1 {
-		a.focusInlineFrame(0, pick.point, len(pick.polygon) == 0)
+	for i, frame := range e.frames {
+		if frame.editable {
+			a.focusInlineFrame(i, pick.point, len(pick.polygon) == 0)
+			return
+		}
 	}
+	if len(e.frames) != 0 {
+		a.focusInlineFrame(0, pick.point, false)
+	}
+}
+
+func inlineTextColumns(flow textFlow) []textFlow {
+	var columns []textFlow
+	for _, paragraph := range flow.paragraphs {
+		group := textFlow{paragraphs: [][]textLine{paragraph}}
+		for _, line := range paragraph {
+			group.bounds = mergeTextBounds(group.bounds, line.bounds)
+			group.text += joinGlyphs(line) + "\n"
+		}
+		group.text = strings.TrimSuffix(group.text, "\n")
+		if group.text == "" {
+			continue
+		}
+		for i, column := range columns {
+			overlap := min(column.bounds[2], group.bounds[2]) - max(column.bounds[0], group.bounds[0])
+			width := min(column.bounds[2]-column.bounds[0], group.bounds[2]-group.bounds[0])
+			separateRows := group.bounds[1] >= column.bounds[3]-paragraph[0].em*.2
+			if separateRows && overlap >= width*.65 {
+				columns[i].bounds = mergeTextBounds(column.bounds, group.bounds)
+				columns[i].text += "\n" + group.text
+				columns[i].paragraphs = append(columns[i].paragraphs, paragraph)
+				group.text = ""
+				break
+			}
+		}
+		if group.text != "" {
+			columns = append(columns, group)
+		}
+	}
+	return columns
 }
 
 func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
@@ -218,7 +247,14 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	chooseCombo(p.font, font)
 	setText(p.original, first.Font)
 	setText(p.size, formatTextNumber(first.Size*math.Hypot(first.Matrix[2], first.Matrix[3])))
-	setText(p.leading, "1,2")
+	leading := 1.2
+	if lines := frame.flow.paragraphs[0]; len(lines) >= 2 {
+		size, _ := readTextNumber(p.size, 1, 600)
+		if size > 0 {
+			leading = min(5, max(.7, (lines[1].baseline-lines[0].baseline)/size))
+		}
+	}
+	setText(p.leading, formatTextNumber(leading))
 	setText(p.tracking, "0")
 	setText(p.width, formatTextNumber(max(1, e.sourceBounds[2]-e.sourceBounds[0])))
 	p.alignment = 0
@@ -242,16 +278,28 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	}
 	glyphs, _, _ := a.view.nativeTextGeometry(p.model, p.pick)
 	e.leftLimit, e.rightLimit = inlineNeighbourEdges(e.sourceBounds, glyphs, included, p.dim[0])
-	e.original = multiline(frame.flow.text)
-	setText(e.handle, e.original)
+	e.initialStyle = a.inlineStyle()
+	e.previewStyle = inlineTextStyle{}
+	content, runs := a.initialInlineContent(frame)
+	e.original = content
+	sendMessage.Call(e.handle, 0x00cf, 0, 0)
+	setText(e.handle, multiline(e.original))
+	for _, run := range runs {
+		a.setInlineCharacters(run.Start, run.End, run, inlineBaseMask, true)
+	}
+	a.formatInlineParagraph(e.initialStyle)
+	sendMessage.Call(e.handle, 0x00b1, 0, 0)
 	sendMessage.Call(e.handle, 0x00cf, uintptr(boolFlag(!frame.editable)), 0) // EM_SETREADONLY
 	sendMessage.Call(e.handle, 0x00cd, 0, 0)                                  // EM_EMPTYUNDOBUFFER
-	e.initialStyle = a.inlineStyle()
+	sendMessage.Call(e.handle, 0x00b9, 0, 0)                                  // EM_SETMODIFY
 	e.loading = false
 	a.updateTextActions()
 	a.layoutInlineEditor()
 	if e.visible {
 		setFocus.Call(e.handle)
+		if !useCaret && len(p.pick.polygon) >= 3 {
+			selectInline(e.handle, 0, -1)
+		}
 		if useCaret {
 			at := screenTextPoint(e.pageArea, caret)
 			local := point{at.x - e.rect.left, at.y - e.rect.top}
@@ -326,17 +374,18 @@ func (a *app) layoutInlineEditor() {
 		return
 	}
 	px := max(1, min(1900, int(math.Round(style.size*scale))))
-	preview := style
-	preview.width = 0
-	if e.font == 0 || e.pixels != px || e.previewStyle != preview {
-		a.formatInlineEditor(preview, px, scale)
+	a.zoomInlineEditor(scale)
+	if e.nativeWrap != e.fixedWidth {
+		e.nativeWrap = e.fixedWidth
+		sendMessage.Call(e.handle, 0x0448, 0, uintptr(boolFlag(!e.nativeWrap))) // EM_SETTARGETDEVICE
 	}
+	e.pixels = px
 	desired := style.width
 	if !e.fixedWidth {
-		desired = max(4*style.size/5, a.measureInlineWidth(style, scale))
+		desired = max(e.sourceBounds[2]-e.sourceBounds[0], a.measureInlineWidth(style, scale))
 	}
 	left, width := inlineHorizontal(e.sourceBounds, e.leftLimit, e.rightLimit, max(1, desired), style.alignment)
-	top := max(0., e.firstBaseline-.9*style.size)
+	top := max(0., e.firstBaseline-.9*e.initialStyle.size)
 	padding := int32(max(1, a.scale(1)))
 	box := rect{area.left + int32(math.Round(left*scale)) - padding,
 		area.top + int32(math.Round(top*scale)) - padding, 0, 0}
@@ -348,7 +397,7 @@ func (a *app) layoutInlineEditor() {
 		place(e.handle, int(box.left), int(box.top), int(box.right-box.left), int(height))
 	}
 	lines, _, _ := sendMessage.Call(e.handle, 0x00ba, 0, 0) // EM_GETLINECOUNT
-	lines = max(lines, uintptr(strings.Count(strings.ReplaceAll(getText(e.handle), "\r\n", "\n"), "\n")+1))
+	lines = max(lines, uintptr(strings.Count(a.inlineValue(), "\n")+1))
 	wantedHeight := int32(math.Ceil((1.25+float64(max(1, int(lines))-1)*style.leading)*float64(px))) + padding*2 + 4
 	box.bottom = min(area.bottom+1, box.top+wantedHeight)
 	e.bounds = searchRect{left, top, left + width, min(p.dim[1], top+float64(wantedHeight)/scale)}
@@ -387,46 +436,6 @@ func intersectInlineRect(a, b rect) rect {
 	return rect{max(a.left, b.left), max(a.top, b.top), min(a.right, b.right), min(a.bottom, b.bottom)}
 }
 
-func (a *app) formatInlineEditor(style inlineTextStyle, px int, scale float64) {
-	e := &a.textTool.inline
-	weight := 400
-	if style.bold {
-		weight = 700
-	}
-	font, _, _ := gdi32.NewProc("CreateFontW").Call(uintptr(-px), 0, 0, 0, uintptr(weight),
-		uintptr(boolFlag(style.italic)), uintptr(boolFlag(style.underline)), 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(wideString(style.font))))
-	if font == 0 {
-		return
-	}
-	old := e.font
-	sendMessage.Call(e.handle, wmSetFont, font, 0)
-	if old != 0 {
-		gdiDelete.Call(old)
-	}
-	e.font, e.pixels, e.previewStyle = font, px, style
-	dc, _, _ := user32.NewProc("GetDC").Call(e.handle)
-	dpi, _, _ := gdi32.NewProc("GetDeviceCaps").Call(dc, 90)
-	user32.NewProc("ReleaseDC").Call(e.handle, dc)
-	twips := 1440 / float64(max(1, int(dpi)))
-	format := inlineCharFormat{mask: 0xe8200007, color: uint32(e.foreground), height: int32(math.Round(float64(px) * twips)), charset: 1,
-		spacing: int16(math.Round(style.tracking * scale * twips)), effects: boolFlag(style.bold) | boolFlag(style.italic)<<1 | boolFlag(style.underline)<<2}
-	format.size = uint32(unsafe.Sizeof(format))
-	copy(format.face[:], syscall.StringToUTF16(style.font))
-	sendMessage.Call(e.handle, 0x0444, 4, uintptr(unsafe.Pointer(&format))) // EM_SETCHARFORMAT, SCF_ALL
-	para := inlineParaFormat{mask: 0x108, alignment: uint16(1 + style.alignment), spacing: int32(math.Round(style.leading * 20)), rule: 5}
-	if style.alignment == 1 {
-		para.alignment = 3
-	} else if style.alignment == 2 {
-		para.alignment = 2
-	}
-	para.size = uint32(unsafe.Sizeof(para))
-	var start, end int32
-	sendMessage.Call(e.handle, 0x00b0, uintptr(unsafe.Pointer(&start)), uintptr(unsafe.Pointer(&end)))
-	sendMessage.Call(e.handle, 0x00b1, 0, ^uintptr(0))
-	sendMessage.Call(e.handle, 0x0447, 0, uintptr(unsafe.Pointer(&para))) // EM_SETPARAFORMAT
-	sendMessage.Call(e.handle, 0x00b1, uintptr(start), uintptr(end))
-}
-
 func (a *app) measureInlineWidth(style inlineTextStyle, scale float64) float64 {
 	e := &a.textTool.inline
 	dc, _, _ := user32.NewProc("GetDC").Call(e.handle)
@@ -434,7 +443,13 @@ func (a *app) measureInlineWidth(style inlineTextStyle, scale float64) float64 {
 		return e.sourceBounds[2] - e.sourceBounds[0]
 	}
 	defer user32.NewProc("ReleaseDC").Call(e.handle, dc)
-	old, _, _ := gdiSelect.Call(dc, e.font)
+	font, _, _ := gdi32.NewProc("CreateFontW").Call(uintptr(-e.pixels), 0, 0, 0, 400,
+		0, 0, 0, 1, 0, 0, 5, 0, uintptr(unsafe.Pointer(wideString(style.font))))
+	if font == 0 {
+		return e.sourceBounds[2] - e.sourceBounds[0]
+	}
+	defer gdiDelete.Call(font)
+	old, _, _ := gdiSelect.Call(dc, font)
 	defer gdiSelect.Call(dc, old)
 	width := 0.
 	for _, line := range strings.Split(strings.ReplaceAll(getText(e.handle), "\r\n", "\n"), "\n") {
@@ -458,8 +473,10 @@ func (a *app) inlineControlChange(handle uintptr) {
 		if handle == p.width {
 			e.fixedWidth = getText(handle) != ""
 		}
-		a.layoutInlineEditor()
-		a.view.invalidateCanvas()
+		if !e.layoutPosted {
+			e.layoutPosted = true
+			postMessage.Call(a.window, wmInlineLayout, handle, 0)
+		}
 	}
 }
 
@@ -478,14 +495,12 @@ func (a *app) paintInlineFrames(dc uintptr, area rect) {
 			a.paintInlineBackdrop(dc, area, frame.flow.highlightBounds(), toPixel)
 			invalidate(e.handle)
 		} else {
-			drawInlineFrame(dc, toPixel(frame.flow.bounds))
+			for _, bounds := range frame.flow.highlightBounds() {
+				box := toPixel(bounds)
+				fillColor(dc, rect{box.left, box.bottom - 1, box.right, box.bottom + 1}, mutedColor)
+			}
 		}
 	}
-}
-
-func drawInlineFrame(dc uintptr, box rect) {
-	vertices := []point{{box.left, box.top}, {box.right, box.top}, {box.right, box.bottom}, {box.left, box.bottom}, {box.left, box.top}}
-	gdi32.NewProc("Polyline").Call(dc, uintptr(unsafe.Pointer(&vertices[0])), uintptr(len(vertices)))
 }
 
 func (a *app) resumeTextPick(pick textSelection) func() {

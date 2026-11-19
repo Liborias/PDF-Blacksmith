@@ -66,6 +66,9 @@ func (a *app) layoutHeader() {
 	d := a.scale
 	a.headerBrand = 200
 	a.windowButtonStart = a.width - d(windowButtonsWidth)
+	for i, handle := range a.historyButtons {
+		place(handle, d(a.headerBrand+7+i*34), d(8), d(32), d(33))
+	}
 	for i, handle := range a.windowButtons {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
 		invalidate(handle)
@@ -74,7 +77,7 @@ func (a *app) layoutHeader() {
 
 func (a *app) layoutDocumentTabs() {
 	d := a.scale
-	left, right := d(a.headerBrand), a.windowButtonStart-d(4)
+	left, right := d(a.headerBrand+80), a.windowButtonStart-d(4)
 	widths := make([]int, len(a.tabs))
 	names := make(map[string]int, len(a.tabs))
 	for _, tab := range a.tabs {

@@ -218,7 +218,11 @@ func engineCommandContext(ctx context.Context, args ...string) (*exec.Cmd, error
 }
 
 func runOperation(req request) response {
-	cmd, err := engineCommand()
+	return runOperationContext(context.Background(), req)
+}
+
+func runOperationContext(ctx context.Context, req request) response {
+	cmd, err := engineCommandContext(ctx)
 	if err != nil {
 		return operationError(err.Error())
 	}
@@ -228,6 +232,12 @@ func runOperation(req request) response {
 	}
 	cmd.Stdin = bytes.NewReader(payload)
 	output, err := cmd.Output()
+	if ctx.Err() == context.Canceled {
+		return operationError("Úprava textu byla přerušena. Rozpracovaný text zůstal v otevřené kartě.")
+	}
+	if ctx.Err() == context.DeadlineExceeded {
+		return operationError("Úprava textu trvala příliš dlouho. Rozpracovaný text zůstal v otevřené kartě.")
+	}
 	if err != nil {
 		return operationError(fmt.Sprintf("Zpracování PDF se nepodařilo spustit.\n%v", err))
 	}

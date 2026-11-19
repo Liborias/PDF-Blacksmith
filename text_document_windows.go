@@ -56,6 +56,9 @@ type textBlockEdit struct {
 	Baseline  *float64         `json:"baseline_offset,omitempty"`
 	Origin    textPoint        `json:"origin"`
 	Rotation  int              `json:"rotation"`
+	Runs      []inlineTextRun  `json:"runs,omitempty"`
+	Lines     []textPoint      `json:"original_lines,omitempty"`
+	Wrap      bool             `json:"wrap,omitempty"`
 	Selection []glyphSelection `json:"selection"`
 }
 
@@ -187,10 +190,15 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 			textPoint{pick.tolerance[0] * dim[0], pick.tolerance[1] * dim[1]})
 		if hit >= 0 {
 			seed := glyphs[hit]
-			if pick.mode == textBlock {
-				flow = layoutText(glyphs).paragraphAt(seed)
-			} else if block := model.Objects[seed.run].Block; block != nil {
+			run := model.Objects[seed.run]
+			if block := run.Block; block != nil {
 				flow, stored = storedBlockFlow(model, glyphs, block.ID)
+			} else if pick.mode == textBlock {
+				flow = layoutText(glyphs).paragraphAt(seed)
+			} else if run.Editable && run.WholeRunOnly {
+				flow = layoutText(slices.DeleteFunc(glyphs, func(glyph layoutGlyph) bool {
+					return glyph.run != seed.run
+				}))
 			} else {
 				// One PDF show instruction can cover several columns. Pick the
 				// connected text at the pointer, including neighboring word runs.
@@ -245,7 +253,7 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 		}
 		setText(p.report, message)
 	} else if len(p.inline.frames) > 1 {
-		setText(p.report, "Klikněte do rámečku, který chcete upravit.")
+		setText(p.report, "Pište přímo do textu. Kliknutím můžete přejít do další části výběru.")
 	} else if frame := a.inlineCurrent(); frame != nil && !frame.editable {
 		setText(p.report, "Tento výběr lze zkopírovat. Zkuste vybrat celý textový objekt nebo užší oblast.")
 	}

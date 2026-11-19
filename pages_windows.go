@@ -138,6 +138,7 @@ func (v *documentView) selectOnlyPage(index int) {
 }
 
 func (v *documentView) rememberOrder() {
+	v.app.dropRedo(v.app.activeTab)
 	v.history = append(v.history, pageEdit{page: v.page, order: v.order, selection: v.pageSelection})
 }
 

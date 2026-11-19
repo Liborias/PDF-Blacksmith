@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"unsafe"
 )
@@ -12,11 +13,15 @@ const (
 	idObjectDuplicate
 	idObjectDelete
 	idObjectUndo
+	idObjectPoint
+	idObjectRectangle
+	idObjectLasso
 )
 
 type objectEditRequest struct {
 	Operation string     `json:"operation,omitempty"`
 	Token     int        `json:"token,omitempty"`
+	Tokens    []int      `json:"tokens,omitempty"`
 	Delta     textPoint  `json:"delta,omitempty"`
 	At        *textPoint `json:"at,omitempty"`
 	Clipboard []byte     `json:"clipboard,omitempty"`
@@ -42,6 +47,12 @@ type objectEditor struct {
 	pick                                       textSelection
 	probe                                      bool
 	selected                                   pdfObject
+	items                                      []pdfObject
+	mode                                       int
+	modes                                      [3]uintptr
+	polygon                                    []textPoint
+	defining                                   bool
+	serial                                     uint64
 	snapshot, snapshotComplete                 bool
 	image                                      *printBitmap
 	capsule                                    []byte
@@ -56,14 +67,17 @@ type objectEditor struct {
 
 func (a *app) buildObjectPanel() {
 	e := &a.objects
-	a.label("Výběr objektu", 16, 16, 298, true)
-	a.add("STATIC", "Kliknutím vyberte objekt. Tažením jej přesunete na stejné straně.", 0, 16, 47, 298, 45, 0, 0, a.normalFont)
-	e.info = a.label("Vyberte objekt na stránce.", 16, 102, 298, false)
-	e.copy = a.button("Kopírovat · Ctrl+C", idObjectCopy, 16, 141, 145, 0)
-	e.paste = a.button("Vložit · Ctrl+V", idObjectPaste, 169, 141, 145, 0)
-	e.duplicate = a.button("Duplikovat · Ctrl+D", idObjectDuplicate, 16, 182, 145, 0)
-	e.remove = a.button("Smazat · Delete", idObjectDelete, 169, 182, 145, 0)
-	e.undo = a.button("Vrátit změnu · Ctrl+Z", idObjectUndo, 16, 223, 298, 0)
+	a.label("Výběr objektů", 16, 16, 298, true)
+	for i, name := range []string{"Výběr kliknutím (V)", "Obdélníkový výběr (M)", "Mnohoúhelníkové laso (L)"} {
+		e.modes[i] = a.textIconButton(name, idObjectPoint+i, 16+i*40, 42, 34)
+	}
+	a.add("STATIC", "Vybraný objekt nebo skupinu přesunete tažením. Laso uzavřete Enterem nebo kliknutím na první bod.", 0, 16, 80, 298, 47, 0, 0, a.normalFont)
+	e.info = a.label("Vyberte objekt na stránce.", 16, 132, 298, false)
+	e.copy = a.button("Kopírovat · Ctrl+C", idObjectCopy, 16, 165, 145, 0)
+	e.paste = a.button("Vložit · Ctrl+V", idObjectPaste, 169, 165, 145, 0)
+	e.duplicate = a.button("Duplikovat · Ctrl+D", idObjectDuplicate, 16, 206, 145, 0)
+	e.remove = a.button("Smazat · Delete", idObjectDelete, 169, 206, 145, 0)
+	e.undo = a.button("Vrátit změnu · Ctrl+Z", idObjectUndo, 16, 247, 298, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -73,6 +87,10 @@ func (a *app) updateObjectActions() {
 	}
 	ready := a.mode == idObjectsTab && a.view.ready() && !a.busy
 	selected := ready && e.selected.Token != 0
+	for i, handle := range e.modes {
+		setEnabled(handle, ready)
+		a.setChecked(handle, e.mode == i)
+	}
 	setEnabled(e.copy, selected)
 	setEnabled(e.paste, ready && e.owner == a.activeTab && len(e.clipboard) != 0)
 	setEnabled(e.duplicate, selected)
@@ -84,7 +102,8 @@ func (a *app) clearObjectSelection() {
 	e := &a.objects
 	a.cancelObjectGesture()
 	e.page, e.source, e.pick, e.probe = nil, 0, textSelection{}, false
-	e.selected, e.image, e.capsule = pdfObject{}, nil, nil
+	e.resetSelection()
+	e.defining, e.polygon = false, nil
 	e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
 	if e.info != 0 {
 		setText(e.info, "Vyberte objekt na stránce.")
@@ -113,10 +132,17 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 			e.endGesture()
 			v.invalidateCanvas()
 		}
+		if e.defining && e.mode == 1 {
+			e.defining, e.polygon = false, nil
+			v.invalidateCanvas()
+		}
 		return false
 	}
 	if a.mode != idObjectsTab || a.busy || !v.ready() || a.full {
 		return false
+	}
+	if e.mode != 0 && v.objectRegionPointer(msg, x, y) {
+		return true
 	}
 	switch msg {
 	case 0x0201:
@@ -125,12 +151,16 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 		if space&0x8000 != 0 || pick.source == 0 {
 			return false
 		}
-		e.selected, e.image, e.capsule = pdfObject{}, nil, nil
-		e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
+		keepGroup := len(e.items) > 1 && e.source == pick.source && e.selectionContains(pick, v)
+		if !keepGroup {
+			e.resetSelection()
+		}
 		e.pick, e.start, e.cursor, e.pressed = pick, point{x, y}, point{x, y}, true
 		setFocus.Call(a.window)
 		user32.NewProc("SetCapture").Call(a.window)
-		if e.page != nil && e.source == pick.source {
+		if keepGroup {
+			// Keep the group intact while the pointer becomes the drag origin.
+		} else if e.page != nil && e.source == pick.source {
 			a.pickObject()
 		} else {
 			setText(e.info, "Zjišťuji objekty na stránce…")
@@ -153,7 +183,7 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 			target := v.textAt(x, y)
 			a.cancelObjectGesture()
 			if moved && target.source == e.pick.source && math.Hypot(delta[0], delta[1]) > .01 {
-				a.runObjectEdit(e.pick.source, objectEditRequest{Operation: "move", Token: e.selected.Token, Delta: delta})
+				a.runObjectEdit(e.pick.source, objectEditRequest{Operation: "move", Token: e.selected.Token, Tokens: e.tokens(), Delta: delta})
 			}
 			return true
 		}
@@ -165,16 +195,30 @@ func (a *app) pickObject() {
 	v, e := a.view, &a.objects
 	rotation := e.rotation(v)
 	box := e.page.Boxes[e.pick.box]
-	p := textPointToPDF(e.pick.point, box, rotation)
-	tolerance := max(e.pick.tolerance[0], e.pick.tolerance[1]) * min(box[2]-box[0], box[3]-box[1])
-	for i := len(e.page.Objects) - 1; i >= 0; i-- {
-		obj := e.page.Objects[i]
-		b := obj.Bounds
-		if p[0] >= b[0]-tolerance && p[0] <= b[2]+tolerance && p[1] >= b[1]-tolerance && p[1] <= b[3]+tolerance {
-			e.selected = obj
-			label := map[string]string{"path": "Vektorový tvar", "image": "Obrázek", "form": "Skupina PDF"}[obj.Kind]
-			setText(e.info, label)
-			break
+	if len(e.pick.polygon) >= 3 {
+		for _, item := range e.page.Objects {
+			b := item.Bounds
+			center := pdfPointToText(textPoint{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}, box, rotation)
+			if pointInTextRegion(center, e.pick.polygon) {
+				e.items = append(e.items, item)
+			}
+		}
+		if len(e.items) > 0 {
+			e.selected = e.items[0]
+			setText(e.info, fmt.Sprintf("Vybrané objekty: %d", len(e.items)))
+		}
+	} else {
+		p := textPointToPDF(e.pick.point, box, rotation)
+		tolerance := max(e.pick.tolerance[0], e.pick.tolerance[1]) * min(box[2]-box[0], box[3]-box[1])
+		for i := len(e.page.Objects) - 1; i >= 0; i-- {
+			obj := e.page.Objects[i]
+			b := obj.Bounds
+			if p[0] >= b[0]-tolerance && p[0] <= b[2]+tolerance && p[1] >= b[1]-tolerance && p[1] <= b[3]+tolerance {
+				e.selected, e.items = obj, []pdfObject{obj}
+				label := map[string]string{"path": "Vektorový tvar", "image": "Obrázek", "form": "Skupina PDF"}[obj.Kind]
+				setText(e.info, label)
+				break
+			}
 		}
 	}
 	if e.selected.Token == 0 {
@@ -206,7 +250,7 @@ func (v *documentView) scheduleObjects() bool {
 		e.snapshot = true
 		req := v.request("object_snapshot")
 		req.View.Page, req.View.Rotation = e.source, v.rotations[e.source-1]
-		req.ObjectEdit = &objectEditRequest{Token: e.selected.Token}
+		req.ObjectEdit = &objectEditRequest{Token: e.selected.Token, Tokens: e.tokens()}
 		v.launch(req, e.source, 0, false, nil)
 		return true
 	}
@@ -232,7 +276,7 @@ func (a *app) finishObjects(job readerJob) {
 		a.pickObject()
 		return
 	}
-	if job.objectPage != e.pick.source || job.objectToken != e.selected.Token {
+	if job.objectPage != e.pick.source || job.objectSerial != e.serial {
 		return
 	}
 	e.snapshot, e.snapshotComplete = true, true
@@ -301,20 +345,28 @@ func (a *app) showObjectPreview() {
 
 func (a *app) paintObjectSelection(dc uintptr, source int, area rect) {
 	e, v := &a.objects, a.view
-	if a.mode != idObjectsTab || e.selected.Token == 0 || e.source != source || a.full {
+	if a.mode != idObjectsTab || a.full {
 		return
 	}
-	b := e.selected.Bounds
-	if e.moving {
-		b = searchRect{b[0] + e.delta[0], b[1] + e.delta[1], b[2] + e.delta[0], b[3] + e.delta[1]}
+	if e.defining && e.pick.source == source {
+		a.paintObjectRegion(dc, area)
 	}
-	bounds, show := searchDisplayRect(b, e.page.Boxes[v.box()], e.rotation(v))
-	if show {
-		pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), selectionColor.win())
-		old, _, _ := gdiSelect.Call(dc, pen)
-		drawTextOutline(dc, area, rectangleSelection(textPoint{bounds[0], bounds[1]}, textPoint{bounds[2], bounds[3]}), true)
-		gdiSelect.Call(dc, old)
-		gdiDelete.Call(pen)
+	if e.selected.Token == 0 || e.source != source {
+		return
+	}
+	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), selectionColor.win())
+	old, _, _ := gdiSelect.Call(dc, pen)
+	defer gdiDelete.Call(pen)
+	defer gdiSelect.Call(dc, old)
+	for _, item := range e.items {
+		b := item.Bounds
+		if e.moving {
+			b = searchRect{b[0] + e.delta[0], b[1] + e.delta[1], b[2] + e.delta[0], b[3] + e.delta[1]}
+		}
+		bounds, show := searchDisplayRect(b, e.page.Boxes[v.box()], e.rotation(v))
+		if show {
+			drawTextOutline(dc, area, rectangleSelection(textPoint{bounds[0], bounds[1]}, textPoint{bounds[2], bounds[3]}), true)
+		}
 	}
 }
 
@@ -339,7 +391,7 @@ func (a *app) copySelectedObject() {
 }
 
 func (a *app) objectCommand(id, notification int) bool {
-	if id < idObjectCopy || id > idObjectUndo || notification != 0 || a.mode != idObjectsTab {
+	if id < idObjectCopy || id > idObjectLasso || notification != 0 || a.mode != idObjectsTab {
 		return false
 	}
 	e, v := &a.objects, a.view
@@ -348,6 +400,10 @@ func (a *app) objectCommand(id, notification int) bool {
 	}
 	setFocus.Call(a.window)
 	switch id {
+	case idObjectPoint, idObjectRectangle, idObjectLasso:
+		e.mode = id - idObjectPoint
+		a.clearObjectSelection()
+		v.invalidateCanvas()
 	case idObjectCopy:
 		if e.selected.Token != 0 {
 			if !e.snapshotComplete {
@@ -375,7 +431,7 @@ func (a *app) objectCommand(id, notification int) bool {
 		v.undo()
 	case idObjectDuplicate, idObjectDelete:
 		if e.selected.Token != 0 {
-			edit := objectEditRequest{Operation: "delete", Token: e.selected.Token}
+			edit := objectEditRequest{Operation: "delete", Token: e.selected.Token, Tokens: e.tokens()}
 			if id == idObjectDuplicate {
 				edit.Operation = "duplicate"
 				box, angle := e.page.Boxes[v.box()], e.rotation(v)
@@ -405,6 +461,11 @@ func (a *app) objectKey(msg *winMessage) bool {
 		return true
 	case 0x2e:
 		return a.objectCommand(idObjectDelete, 0)
+	case 0x0d:
+		if a.objects.defining && a.objects.mode == 2 {
+			a.finishObjectRegion()
+			return true
+		}
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)
 	if ctrl&0x8000 != 0 {
@@ -416,7 +477,12 @@ func (a *app) objectKey(msg *winMessage) bool {
 		case 'D':
 			return a.objectCommand(idObjectDuplicate, 0)
 		case 'Z':
-			return a.objectCommand(idObjectUndo, 0)
+			return false
+		}
+	}
+	if ctrl&0x8000 == 0 {
+		if id := map[uintptr]int{'V': idObjectPoint, 'M': idObjectRectangle, 'L': idObjectLasso}[msg.wParam]; id != 0 {
+			return a.objectCommand(id, 0)
 		}
 	}
 	return false

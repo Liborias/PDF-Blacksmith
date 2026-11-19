@@ -829,7 +829,7 @@ def edit_text_document(src, request):
                 return {"text_page": describe_text(page)}
             from text_block import strip_selection
             try:
-                operators, _, _ = strip_selection(page, request.get("text_selection"))
+                operators, _, _ = strip_selection(pdf, page, request.get("text_selection"))
                 with pikepdf.Pdf.new() as clean:
                     clean.add_pages_from(pdf, [view.get("page", 1)-1], outlines="ignore")
                     if intents := pdf.Root.get("/OutputIntents"):
@@ -877,7 +877,7 @@ def save_document(src, request):
 
 def edit_object_document(src, request):
     from object_edit import (ObjectError, describe_objects, draws, modify_page, paste_object,
-                             pikepdf_operators, selected_draw, snapshot_object)
+                             pikepdf_operators, selected_draws, snapshot_object)
 
     view = request.get("view", {})
     edit = request.get("object_edit", {})
@@ -901,8 +901,8 @@ def edit_object_document(src, request):
                 candidates = list(draws(page, operators))
                 if action == "object_probe":
                     return {"object_page": describe_objects(page, operators, candidates)}
-                item = selected_draw(candidates, edit.get("token"))
-                return snapshot_object(document, number, page, operators, candidates, item, rotation)
+                items = selected_draws(candidates, edit)
+                return snapshot_object(document, number, page, operators, candidates, items, rotation)
 
         with output_file(src, request) as pending:
             with open_pdf(src, password) as document:

@@ -15,6 +15,7 @@ const (
 type documentTab struct {
 	button, close                            uintptr
 	content                                  documentContent
+	redo                                     []documentContent
 	tool, mode, screenBox, proofBox, profile int
 	anchor                                   readingAnchor
 	hasAnchor                                bool
@@ -191,6 +192,17 @@ func (a *app) closeDocument() {
 }
 
 func (a *app) closeWindow() {
+	if a.cancelTextJob != nil {
+		if !a.closeAfterTextJob && notice(a.window, "Přerušit právě probíhající úpravu textu a pokračovat k zavření?", 0x134) == 6 {
+			if a.cancelTextJob != nil {
+				a.closeAfterTextJob = true
+				a.cancelTextJob()
+			} else {
+				a.closeWindow()
+			}
+		}
+		return
+	}
 	if a.busy || a.closing != nil {
 		notice(a.window, "Počkejte na dokončení probíhající úlohy.", 0x40)
 		return
@@ -212,22 +224,31 @@ func (a *app) confirmCloseDocuments(tabs []*documentTab, exit bool) {
 	if a.busy || a.closing != nil {
 		return
 	}
-	if slices.Contains(tabs, a.activeTab) && a.saveInlineBefore(func() { a.confirmCloseDocuments(tabs, exit) }) {
-		return
-	}
 	plan := &documentClose{tabs: tabs, exit: exit}
+	discardInline := false
 	for _, tab := range tabs {
 		content := a.contentOf(tab)
-		if !content.changed() {
+		dirty := tab == a.activeTab && a.inlineDirty()
+		if !dirty && !content.changed() {
 			continue
 		}
 		switch notice(a.window, "Uložit změny do původního PDF před zavřením?\n\n"+content.path, 0x223) {
 		case 6:
 			plan.saves = append(plan.saves, tab)
 		case 7:
+			discardInline = discardInline || dirty
 		default:
 			return
 		}
+	}
+	// Ask about every tab before committing or discarding the current editor.
+	if discardInline {
+		a.clearTextSelection()
+	} else if slices.Contains(plan.saves, a.activeTab) && a.saveInlineBefore(func() {
+		a.closing = plan
+		a.continueCloseDocuments()
+	}) {
+		return
 	}
 	a.closing = plan
 	a.continueCloseDocuments()
@@ -270,6 +291,7 @@ func (a *app) removeDocumentTab(tab *documentTab) {
 	if a.comparisonKeeps(tab) {
 		a.endComparison()
 	}
+	a.dropRedo(tab)
 	a.retireDocumentDrafts(*a.contentOf(tab))
 	a.tabs = slices.Delete(a.tabs, index, index+1)
 	destroyWindow.Call(tab.button)

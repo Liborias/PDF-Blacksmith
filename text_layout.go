@@ -152,6 +152,10 @@ func nextTextLine(lines []textLine, used []bool, index int, margin float64) int 
 }
 
 func joinGlyphs(line textLine) string {
+	return writeGlyphLine(line, nil)
+}
+
+func writeGlyphLine(line textLine, span func(string, int)) string {
 	var result strings.Builder
 	right := math.Inf(-1)
 	spaced := true
@@ -166,10 +170,16 @@ func joinGlyphs(line textLine) string {
 		}
 		if !spaced && (isSpace || gap > threshold || glyph.run == previous.run && glyph.index > previous.index+1) {
 			result.WriteByte(' ')
+			if span != nil {
+				span(" ", previous.run)
+			}
 			spaced = true
 		}
 		if !isSpace {
 			result.WriteString(value)
+			if span != nil {
+				span(value, glyph.run)
+			}
 			spaced = false
 		}
 		right = max(right, glyph.bounds[2])

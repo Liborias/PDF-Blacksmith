@@ -361,6 +361,7 @@ func (v *documentView) editBookmark() {
 	if previous == nil {
 		previous = []pdfBookmark{}
 	}
+	v.app.dropRedo(v.app.activeTab)
 	v.history = append(v.history, pageEdit{bookmarks: previous, bookmarkSelection: index})
 	updated := slices.Clone(v.bookmarks)
 	if panel.creating {

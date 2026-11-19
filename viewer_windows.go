@@ -232,7 +232,8 @@ type readerTask struct {
 
 type readerJob struct {
 	textFrame uint64
-	objectPage, objectToken int
+	objectPage              int
+	objectSerial            uint64
 	readerTask
 	action string
 	result response
@@ -992,11 +993,12 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 	if req.Action == "text_background" {
 		textFrame = v.app.textTool.inline.serial
 	}
-	var objectPage, objectToken int
+	var objectPage int
+	var objectSerial uint64
 	if req.Action == "object_probe" || req.Action == "object_snapshot" {
 		objectPage = req.View.Page
 		if req.ObjectEdit != nil {
-			objectToken = req.ObjectEdit.Token
+			objectSerial = v.app.objects.serial
 		}
 	}
 	task := readerTask{generation, number, pixels, background, tile}
@@ -1011,7 +1013,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 		v.running = true
 	}
 	go func() {
-		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame, objectPage: objectPage, objectToken: objectToken,
+		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame, objectPage: objectPage, objectSerial: objectSerial,
 			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
 		if unchanged(req.Input, original) {
 			result := engine.run(req)
@@ -1332,6 +1334,7 @@ func (v *documentView) rotate(angle int) {
 		before = append(before, pageRotation{number, previous})
 		after = append(after, pageRotation{number, (previous + 360 + angle) % 360})
 	}
+	v.app.dropRedo(v.app.activeTab)
 	v.history = append(v.history, pageEdit{page: v.page, rotations: before})
 	v.applyRotations(after)
 }
@@ -1355,9 +1358,14 @@ func (v *documentView) undo() {
 	if index < 0 {
 		return
 	}
+	if tab := v.app.activeTab; tab != nil {
+		version := v.documentContent
+		version.rotations = slices.Clone(version.rotations)
+		tab.redo = append(tab.redo, version)
+	}
 	edit := v.history[index]
-	v.history[index] = pageEdit{}
-	v.history = v.history[:index]
+	v.history = v.history[:index:index]
+	defer v.app.updateHistoryButtons()
 	if edit.draftBase != nil {
 		v.app.undoDocumentDraft(*edit.draftBase, edit.draftAction)
 		return

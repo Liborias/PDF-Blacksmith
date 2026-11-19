@@ -29,6 +29,14 @@ type nativeTooltip struct {
 }
 
 var textIcons = map[int][][]point{
+	idHeaderUndo:          {{{6, 3}, {2, 7}, {6, 11}}, {{2, 7}, {12, 7}, {15, 9}, {15, 13}, {12, 16}}},
+	idHeaderRedo:          {{{12, 3}, {16, 7}, {12, 11}}, {{16, 7}, {6, 7}, {3, 9}, {3, 13}, {6, 16}}},
+	idTextSmaller:         {{{1, 15}, {6, 3}, {11, 15}}, {{3, 11}, {9, 11}}, {{12, 8}, {17, 8}}},
+	idTextLarger:          {{{1, 15}, {6, 3}, {11, 15}}, {{3, 11}, {9, 11}}, {{12, 8}, {17, 8}}, {{14, 5}, {14, 11}}},
+	idTextSizes:           {{{5, 7}, {9, 11}, {13, 7}}},
+	idTextWidths:          {{{5, 7}, {9, 11}, {13, 7}}},
+	idTextLeadings:        {{{5, 7}, {9, 11}, {13, 7}}},
+	idTextTracking:        {{{5, 7}, {9, 11}, {13, 7}}},
 	idTextSelectObject:    {{{4, 2}, {14, 2}, {14, 5}}, {{4, 2}, {4, 5}}, {{9, 2}, {9, 16}}, {{6, 16}, {12, 16}}},
 	idTextSelectParagraph: {{{13, 2}, {7, 2}, {4, 4}, {4, 7}, {7, 9}, {9, 9}}, {{9, 2}, {9, 16}}, {{13, 2}, {13, 16}}},
 	idTextSelectRectangle: {{{2, 4}, {2, 2}, {5, 2}}, {{8, 2}, {10, 2}}, {{13, 2}, {16, 2}, {16, 4}}, {{16, 7}, {16, 10}}, {{16, 13}, {16, 16}, {13, 16}}, {{10, 16}, {8, 16}}, {{5, 16}, {2, 16}, {2, 13}}, {{2, 10}, {2, 7}}},
@@ -50,8 +58,19 @@ var textIcons = map[int][][]point{
 	},
 }
 
+func init() {
+	textIcons[idObjectPoint] = [][]point{{{3, 2}, {3, 15}, {7, 12}, {10, 17}, {13, 15}, {10, 10}, {15, 9}, {3, 2}}}
+	textIcons[idObjectRectangle] = textIcons[idTextSelectRectangle]
+	textIcons[idObjectLasso] = textIcons[idTextSelectLasso]
+}
+
 func (a *app) textIconButton(label string, id, x, y, width int) uintptr {
 	h := a.button(label, id, x, y, width, 0)
+	a.addTextTooltip(h, label)
+	return h
+}
+
+func (a *app) addTextTooltip(h uintptr, label string) {
 	p := &a.textTool
 	if p.tooltip == 0 {
 		p.tooltip, _, _ = createWindow.Call(8, uintptr(unsafe.Pointer(wideString("tooltips_class32"))), 0,
@@ -65,7 +84,6 @@ func (a *app) textIconButton(label string, id, x, y, width int) uintptr {
 		info.size = uint32(unsafe.Sizeof(info))
 		sendMessage.Call(p.tooltip, 0x0400+50, 0, uintptr(unsafe.Pointer(&info)))
 	}
-	return h
 }
 
 func (a *app) drawTextIcon(item *buttonDraw) bool {
@@ -74,7 +92,11 @@ func (a *app) drawTextIcon(item *buttonDraw) bool {
 	if len(paths) == 0 {
 		return false
 	}
-	fillColor(item.dc, item.bounds, panelColor)
+	base := panelColor
+	if id == idHeaderUndo || id == idHeaderRedo {
+		base = titleColor
+	}
+	fillColor(item.dc, item.bounds, base)
 	color, background := textColor, inputColor
 	switch {
 	case item.state&4 != 0:

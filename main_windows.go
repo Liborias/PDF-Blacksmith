@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -131,6 +132,7 @@ type app struct {
 	canvasBrush, panelBrush, inputBrush, logo          uintptr
 	brand                                              *printBitmap
 	windowButtons                                      [3]uintptr
+	historyButtons                                     [2]uintptr
 	tabs                                               []*documentTab
 	activeTab                                          *documentTab
 	tabList                                             uintptr
@@ -173,6 +175,8 @@ type app struct {
 	thumbnailScopes map[uintptr]bool
 	busy                                               bool
 	waitingOverwrite                                   bool
+	cancelTextJob                                      context.CancelFunc
+	closeAfterTextJob                                  bool
 	pending                                            request
 	results                                            chan response
 }
@@ -438,6 +442,20 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 			return 0
 		}
+	case 0x004e: // WM_NOTIFY
+		if lParam != 0 && a.textTool.inline.handle != 0 {
+			notice := (*struct {
+				from, id uintptr
+				code uint32
+			})(*(*unsafe.Pointer)(unsafe.Pointer(&lParam)))
+			if notice.from == a.textTool.inline.handle && notice.code == 0x0702 {
+				a.syncInlineControls()
+				return 0
+			}
+		}
+	case wmInlineLayout:
+		a.finishInlineLayout(wParam)
+		return 0
 	case wmJobFinished:
 		a.finish(<-a.results)
 		return 0

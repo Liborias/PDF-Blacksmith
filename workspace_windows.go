@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"time"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -220,6 +222,9 @@ func (a *app) setupWorkspace() bool {
 	a.view.buildSearchPanel()
 	a.beginPanel(idTextTab)
 	a.buildTextPanel()
+	a.addingTab, a.controlParent = 0, 0
+	a.historyButtons[0] = a.textIconButton("Zpět (Ctrl+Z)", idHeaderUndo, 0, 0, 32)
+	a.historyButtons[1] = a.textIconButton("Znovu (Ctrl+Y)", idHeaderRedo, 0, 0, 32)
 	a.beginPanel(idObjectsTab)
 	a.buildObjectPanel()
 	a.beginPanel(idOCRTab)
@@ -439,6 +444,7 @@ func (a *app) activate(id int) {
 		a.view.invalidateCanvas()
 	}
 	a.updateObjectActions()
+	a.updateHistoryButtons()
 	if (old == idSearchTab) != (a.mode == idSearchTab) {
 		a.view.invalidateCanvas()
 	}
@@ -478,6 +484,9 @@ func (a *app) layout() {
 	}
 	showWindow.Call(a.status, chrome)
 	for _, handle := range a.windowButtons {
+		showWindow.Call(handle, chrome)
+	}
+	for _, handle := range a.historyButtons {
 		showWindow.Call(handle, chrome)
 	}
 	a.layoutDocumentTabs()
@@ -783,6 +792,7 @@ func (a *app) clearDocumentControls() {
 }
 
 func (a *app) loadDocument(path, password string, info os.FileInfo) {
+	a.dropRedo(a.activeTab)
 	a.retireDocumentDrafts(a.view.documentContent)
 	a.clearDocumentControls()
 	setText(a.password, password)
@@ -799,6 +809,15 @@ func (a *app) command(id, notification int) {
 	}
 	if choice := a.choiceCommands[id]; choice != nil && notification == 0 {
 		a.openChoice(choice)
+		return
+	}
+	if notification == 0 && (id == idHeaderUndo || id == idHeaderRedo) {
+		command := docUndo
+		if id == idHeaderRedo {
+			command = docRedo
+		}
+		setFocus.Call(a.window)
+		a.doDocumentCommand(a.view, command, false)
 		return
 	}
 	if a.comparisonCommand(id, notification) || a.textCommand(id, notification) ||
@@ -819,10 +838,6 @@ func (a *app) command(id, notification int) {
 	}
 	if notification == 1 {
 		switch id {
-		case idTextFont:
-			a.layoutInlineEditor()
-			a.view.invalidateCanvas()
-			a.focusInlineEditor()
 		case idExportOption:
             a.updateExportOptions()
         case idGrayProfile:
@@ -1123,6 +1138,7 @@ func (a *app) updateActions() {
 	setEnabled(a.ocr.undo, ready && a.view.lastDraftIs("ocr"))
 	a.updateTextActions()
 	a.updateObjectActions()
+	a.updateHistoryButtons()
 	for _, button := range []uintptr{a.runButton, a.signButton, a.verifyButton, a.scanButton, a.splitButton, a.proofApply, a.ocr.start} {
 		setEnabled(button, ready)
 	}
@@ -1170,7 +1186,13 @@ func (a *app) run(req request) bool {
 		return false
 	}
 	if a.beginJob(req, "Zpracovávám dokument…") {
-		a.launchJob(func() response { return runOperation(req) })
+		if req.Action == "text_edit" {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			a.cancelTextJob = cancel
+			a.launchJob(func() response { return runOperationContext(ctx, req) })
+		} else {
+			a.launchJob(func() response { return runOperation(req) })
+		}
 		return true
 	}
 	return false
@@ -1209,6 +1231,10 @@ func (a *app) launchJob(operation func() response) {
 
 func (a *app) finish(result response) {
 	req := a.pending
+	if a.cancelTextJob != nil {
+		a.cancelTextJob()
+		a.cancelTextJob = nil
+	}
 	a.busy = false
 	a.pending = request{}
 	if req.Action == "merge_probe" {
@@ -1348,8 +1374,14 @@ func (a *app) finish(result response) {
 	if req.Action == "text_edit" {
 		next := a.textTool.afterEdit
 		a.textTool.afterEdit = nil
+		if a.closeAfterTextJob {
+			a.closeAfterTextJob = false
+			a.closeWindow()
+			return
+		}
 		if result.Status == "ok" && next != nil {
 			next()
+			return
 		}
 	}
 	if a.closing != nil {

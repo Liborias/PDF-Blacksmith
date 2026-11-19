@@ -124,41 +124,54 @@ def clip_point(point, name):
     return point
 
 
-def selected_draw(candidates, token):
-    item = next((item for item in candidates if type(token) is int and item.token == token), None)
-    if item is None:
-        raise ObjectError("Objekt se mezitím změnil. Vyberte jej znovu.")
-    return item
+def selected_draws(candidates, edit):
+    tokens = edit.get("tokens", [edit.get("token")])
+    if not isinstance(tokens, list) or not 1 <= len(tokens) <= len(candidates) or any(type(token) is not int for token in tokens):
+        raise ObjectError("Vyberte platné objekty.")
+    chosen = set(tokens)
+    items = [item for item in candidates if item.token in chosen]
+    if len(items) != len(chosen) or len(chosen) != len(tokens):
+        raise ObjectError("Výběr objektů se mezitím změnil.")
+    return items
 
 
 def modify_page(document, page, operators, candidates, edit):
-    item = selected_draw(candidates, edit.get("token"))
+    items = selected_draws(candidates, edit)
     action = edit.get("operation")
-    if action == "delete":
-        replacement = []
-    elif action in {"move", "duplicate"}:
-        dx, dy = clip_point(edit.get("delta"), "posun")
+    if action not in {"move", "duplicate", "delete"}:
+        raise ObjectError("Neznámá úprava objektu.")
+    delta = clip_point(edit.get("delta"), "posun") if action != "delete" else None
+    combined, cursor = [], 0
+    for item in items:
+        combined.extend(operators[cursor:item.first])
+        cursor = item.end
+        if action == "delete":
+            continue
+        dx, dy = delta
         try:
             a, b, c, d, _, _ = invert(item.matrix)
         except TextError as exc:
             raise ObjectError(str(exc)) from exc
         original = operators[item.first:item.end]
-        replacement = [instruction("q"), instruction("cm", 1, 0, 0, 1, a*dx+c*dy, b*dx+d*dy),
-                       *original, instruction("Q")]
         if action == "duplicate":
-            replacement = [*original, *replacement]
-    else:
-        raise ObjectError("Neznámá úprava objektu.")
-    page.obj.Contents = document.make_stream(pdf.unparse_content_stream([
-        *operators[:item.first], *replacement, *operators[item.end:],
-    ]))
+            combined.extend(original)
+        combined.extend((instruction("q"), instruction("cm", 1, 0, 0, 1, a*dx+c*dy, b*dx+d*dy),
+                         *original, instruction("Q")))
+    combined.extend(operators[cursor:])
+    page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))
 
 
-def isolated_paint(operators, item):
-    """Replay the graphics state and clipping preceding the selected paint."""
+def isolated_paint(operators, items):
+    """Replay the selected paints in their original order and graphics state."""
     projected, stack = [], []
-    marks, text_mode = 0, 0
-    for op in operators[:item.first]:
+    marks, text_mode, current = 0, 0, 0
+    for index, op in enumerate(operators[:items[-1].end]):
+        item = items[current]
+        if item.first <= index < item.end:
+            projected.append(op)
+            if index+1 == item.end:
+                current += 1
+            continue
         name = str(op.operator)
         if name == "q":
             stack.append(text_mode)
@@ -182,18 +195,18 @@ def isolated_paint(operators, item):
             raise ObjectError("Objekt je ovlivněný textovým ořezem. Zkopírovat jej lze duplikací na stejné straně.")
         elif name not in TEXT | {"Do", "sh", "INLINE IMAGE"}:
             raise ObjectError("Obsah před objektem nelze při kopírování bezpečně přenést.")
-    return [*projected, *operators[item.first:item.end],
-            *[instruction("EMC")] * marks, *[instruction("Q")] * len(stack)]
+    return [*projected, *[instruction("EMC")] * marks, *[instruction("Q")] * len(stack)]
 
 
-def snapshot_object(document, number, page, operators, candidates, item, rotation):
+def snapshot_object(document, number, page, operators, candidates, items, rotation):
     scene = describe_objects(page, operators, candidates)
-    obj = next((obj for obj in scene["objects"] if obj["token"] == item.token), None)
-    if obj is None:
-        raise ObjectError("Hranice objektu se nepodařilo určit.")
-    left, bottom, right, top = obj["bounds"]
-    bounds = [left-.01, bottom-.01, right+.01, top+.01]
-    projection = isolated_paint(operators, item)
+    included = {item.token for item in items}
+    boxes = [obj["bounds"] for obj in scene["objects"] if obj["token"] in included]
+    if len(boxes) != len(items):
+        raise ObjectError("Hranice objektů se nepodařilo určit.")
+    bounds = [min(box[0] for box in boxes)-.01, min(box[1] for box in boxes)-.01,
+              max(box[2] for box in boxes)+.01, max(box[3] for box in boxes)+.01]
+    projection = isolated_paint(operators, items)
     buffer = BytesIO()
     with pdf.Pdf.new() as sample:
         sample.add_pages_from(document, [number-1], forms="strip", outlines="ignore")

@@ -126,9 +126,13 @@ func (e *readerEngine) close() {
 	e.process, e.closed = nil, true
 	e.mu.Unlock()
 	if process != nil {
-		// EOF lets Python clean up any active render before it exits.
-		process.input.Close()
-		process.output.Close()
-		go process.command.Wait()
+		// A worker can still be reading a render on a synchronous Windows pipe.
+		// Terminate it off the UI thread before releasing the pipe handles.
+		go func() {
+			process.command.Process.Kill()
+			process.input.Close()
+			process.output.Close()
+			process.command.Wait()
+		}()
 	}
 }

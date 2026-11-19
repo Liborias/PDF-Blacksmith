@@ -43,6 +43,7 @@ type textPanel struct {
 	width, leading, tracking                                 uintptr
 	regular, bold, italic, underline, apply, copy, undo, ocr uintptr
 	modes, alignments                                        [4]uintptr
+	typography                                               [6]uintptr
 	mode, alignment                                          int
 	fonts                                                    []string
 	tooltip                                                  uintptr
@@ -67,12 +68,15 @@ func (a *app) buildTextPanel() {
 		p.modes[i] = a.textIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
 	}
 	p.guide = a.add("STATIC", "", 0, 16, 82, 298, 39, 0, 0, a.normalFont)
-	p.original = a.add("STATIC", "", 0, 16, 137, 298, 21, 0x4000, 0, a.normalFont)
+	p.original = a.add("STATIC", "", 0, 16, 137, 158, 21, 0x4000, 0, a.normalFont)
 	a.label("Písmo", 16, 161, 205, false)
 	a.label("Velikost (pt)", 236, 161, 78, false)
 	p.fonts = a.installedTextFonts()
 	p.font = a.combo(idTextFont, 16, 183, 210, p.fonts)
-	p.size = a.edit(236, 183, 78, false)
+	p.size = a.edit(236, 183, 54, false)
+	p.typography[0] = a.textIconButton("Zmenšit na předchozí typografickou velikost", idTextSmaller, 180, 128, 32)
+	p.typography[1] = a.textIconButton("Zvětšit na následující typografickou velikost", idTextLarger, 216, 128, 32)
+	p.typography[2] = a.textIconButton("Typografické velikosti v bodech", idTextSizes, 291, 183, 23)
 	p.regular = a.textIconButton("Běžný řez (Regular)", idTextRegular, 16, 222, 32)
 	p.bold = a.textIconButton("Tučné", idTextBold, 52, 222, 32)
 	p.italic = a.textIconButton("Kurzíva", idTextItalic, 88, 222, 32)
@@ -83,9 +87,18 @@ func (a *app) buildTextPanel() {
 	a.label("Šířka (pt)", 16, 266, 93, false)
 	a.label("Řádkování (×)", 118, 266, 94, false)
 	a.label("Proklad (pt)", 220, 266, 94, false)
-	p.width = a.edit(16, 288, 94, false)
-	p.leading = a.edit(118, 288, 94, false)
-	p.tracking = a.edit(220, 288, 94, false)
+	p.width = a.edit(16, 288, 70, false)
+	p.leading = a.edit(118, 288, 70, false)
+	p.tracking = a.edit(220, 288, 70, false)
+	descriptions := [...]string{
+		"Šířka textového bloku v bodech. Automatická šířka zachová původní řádky.",
+		"Vzdálenost mezi účařími řádků jako násobek velikosti písma.",
+		"Přídavná mezera mezi písmeny v bodech. Záporná hodnota písmena přiblíží.",
+	}
+	for i, control := range []uintptr{p.width, p.leading, p.tracking} {
+		a.addTextTooltip(control, descriptions[i])
+		p.typography[i+3] = a.textIconButton(descriptions[i], idTextWidths+i, 87+i*102, 288, 23)
+	}
 	p.apply = a.textIconButton("Použít úpravu", idTextApply, 16, 329, 34)
 	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 56, 329, 34)
 	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 96, 329, 34)
@@ -151,6 +164,9 @@ func (a *app) updateTextActions() {
 	for _, h := range []uintptr{p.apply, p.font, p.size, p.width, p.leading, p.tracking, p.regular, p.bold, p.italic, p.underline} {
 		setEnabled(h, edit)
 	}
+	for _, h := range p.typography {
+		setEnabled(h, edit)
+	}
 	for _, h := range p.modes {
 		setEnabled(h, ready)
 	}
@@ -161,12 +177,24 @@ func (a *app) updateTextActions() {
 	a.setChecked(p.regular, edit && !a.checked(p.bold) && !a.checked(p.italic))
 	setEnabled(p.copy, hasText)
 	setEnabled(p.ocr, valid && p.model != nil && !hasText && len(p.pick.polygon) >= 3)
-	setEnabled(p.undo, ready && a.view.lastDraftIs("text_edit"))
+	setEnabled(p.undo, ready && a.canDocumentCommand(a.view, docUndo, false))
 }
 
 func (a *app) textCommand(id, notification int) bool {
-	if notification != 0 || a.mode != idTextTab {
+	if a.mode != idTextTab {
 		return false
+	}
+	if id == idTextFont && notification == 1 && !a.textTool.inline.loading {
+		a.changeInlineCharacters(inlineFace)
+		a.finishInlineLayout(0)
+		a.focusInlineEditor()
+		return true
+	}
+	if notification != 0 {
+		return false
+	}
+	if a.typographyCommand(id) {
+		return true
 	}
 	p := &a.textTool
 	switch {
@@ -195,14 +223,26 @@ func (a *app) textCommand(id, notification int) bool {
 		case idTextCopy:
 			a.copyTextSelection()
 		case idTextUndo:
-			if !a.busy && a.view.lastDraftIs("text_edit") {
-				a.view.undo()
-			}
+			a.doDocumentCommand(a.view, docUndo, false)
 		case idTextOCR:
 			a.startTextOCR()
 		default:
 			return false
 		}
+	}
+	switch id {
+	case idTextRegular:
+		a.changeInlineCharacters(inlineBold | inlineItalic)
+	case idTextBold:
+		a.changeInlineCharacters(inlineBold)
+	case idTextItalic:
+		a.changeInlineCharacters(inlineItalic)
+	case idTextUnderline:
+		a.changeInlineCharacters(inlineLine)
+	case idTextAlignLeft, idTextAlignCenter, idTextAlignRight, idTextAlignJustify:
+		p.inline.loading = true
+		a.formatInlineParagraph(a.inlineStyle())
+		p.inline.loading = false
 	}
 	a.layoutInlineEditor()
 	a.view.invalidateCanvas()
@@ -406,7 +446,7 @@ func (a *app) startTextEdit() {
 		return
 	}
 	style := a.inlineStyle()
-	_, trackingOK := readTextNumber(p.tracking, -style.size*.18, 72)
+	_, trackingOK := readTextNumber(p.tracking, -72, 72)
 	if style.size <= 0 || e.fixedWidth && style.width <= 0 || style.leading <= 0 || !trackingOK {
 		a.report("Zkontrolujte velikost písma, šířku rámečku a řádkování.")
 		return
@@ -415,10 +455,25 @@ func (a *app) startTextEdit() {
 	b := e.bounds
 	top := textPoint{b[0] / p.dim[0], b[1] / p.dim[1]}
 	baseline := e.firstBaseline - b[1]
-	block := textBlockEdit{Text: strings.ReplaceAll(strings.ReplaceAll(getText(e.handle), "\r\n", "\n"), "\r", "\n"),
+	content := a.inlineValue()
+	if !a.inlineDirty() {
+		return
+	}
+	block := textBlockEdit{Text: content, Runs: a.inlineRuns(content), Wrap: e.fixedWidth,
 		Align: textAlignments[style.alignment], Width: b[2] - b[0], Height: p.dim[1] - b[1],
 		Leading: style.leading, Tracking: style.tracking, Baseline: &baseline,
 		Origin: textPointToPDF(top, p.model.Boxes[p.pick.box], p.rotation), Rotation: p.rotation}
+	if style.leading == e.initialStyle.leading && !e.fixedWidth {
+		for _, group := range frame.flow.paragraphs {
+			for _, line := range group {
+				left := 0.
+				if style.alignment == e.initialStyle.alignment && style.alignment == 0 {
+					left = line.bounds[0] - b[0]
+				}
+				block.Lines = append(block.Lines, textPoint{left, line.baseline - b[1]})
+			}
+		}
+	}
 	block.Selection = a.inlineGlyphSelection(frame)
 	req := v.request("text_edit")
 	req.View.Page = p.pick.source
@@ -471,7 +526,9 @@ func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), color.win())
 	old, _, _ := gdiSelect.Call(dc, pen)
 	if p.pick.source == source && p.pick.generation == a.view.generation {
-		drawTextOutline(dc, area, p.pick.polygon, true)
+		if p.flow.text == "" {
+			drawTextOutline(dc, area, p.pick.polygon, true)
+		}
 		a.paintInlineFrames(dc, area)
 	}
 	if p.gesture.source == source && p.gesture.generation == a.view.generation {

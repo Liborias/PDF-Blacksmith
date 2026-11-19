@@ -67,7 +67,7 @@ var inlineShortcuts = map[documentShortcut]documentCommand{
 }
 
 var viewShortcuts = map[documentShortcut]documentCommand{
-	{'Z', false}: docUndo, {'C', false}: docCopy, {'A', false}: docSelectAll, {0x0d, false}: docApplyText,
+	{'Z', false}: docUndo, {'Y', false}: docRedo, {'Z', true}: docRedo, {'C', false}: docCopy, {'A', false}: docSelectAll, {0x0d, false}: docApplyText,
 	{0xbb, false}: docZoomIn, {0xbb, true}: docZoomIn, {0x6b, false}: docZoomIn,
 	{0xbd, false}: docZoomOut, {0x6d, false}: docZoomOut, {'0', false}: docFitPage, {0x60, false}: docFitPage,
 }
@@ -215,14 +215,9 @@ func (a *app) canDocumentCommand(v *documentView, command documentCommand, editi
 	}
 	switch command {
 	case docUndo:
-		if inFrame || v == a.view && a.inlineDirty() {
-			ok, _, _ := sendMessage.Call(e.handle, 0x00c6, 0, 0)
-			return frame != nil && frame.editable && ok != 0
-		}
-		return len(v.history) > 0 && v == a.view
+		return v == a.view && (a.canInlineHistory(command) || !a.inlineDirty() && len(v.history) > 0)
 	case docRedo:
-		ok, _, _ := sendMessage.Call(e.handle, 0x0455, 0, 0)
-		return writable && ok != 0
+		return v == a.view && (a.canInlineHistory(command) || !a.inlineDirty() && a.activeTab != nil && len(a.activeTab.redo) > 0)
 	case docCut, docDelete:
 		return writable && hasSelection
 	case docCopy:
@@ -260,8 +255,12 @@ func (a *app) doDocumentCommand(v *documentView, command documentCommand, editin
 		}
 	}
 	e := &a.textTool.inline
+	if (command == docUndo || command == docRedo) && a.canInlineHistory(command) {
+		a.doInlineHistory(command)
+		return
+	}
 	if editing {
-		message, ok := map[documentCommand]uintptr{docUndo: 0x00c7, docRedo: 0x0454, docCut: 0x0300, docCopy: 0x0301, docPaste: 0x0302, docDelete: 0x0303}[command]
+		message, ok := map[documentCommand]uintptr{docCut: 0x0300, docCopy: 0x0301, docPaste: 0x0302, docDelete: 0x0303}[command]
 		if ok {
 			setFocus.Call(e.handle)
 			sendMessage.Call(e.handle, message, 0, 0)
@@ -284,11 +283,9 @@ func (a *app) doDocumentCommand(v *documentView, command documentCommand, editin
 	}
 	switch command {
 	case docUndo:
-		if v == a.view && a.inlineDirty() {
-			a.doDocumentCommand(v, docUndo, true)
-			return
-		}
 		v.undo()
+	case docRedo:
+		a.redoDocument()
 	case docCopy:
 		a.copyTextSelection()
 	case docApplyText:

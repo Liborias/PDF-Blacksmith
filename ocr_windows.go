@@ -98,6 +98,7 @@ func (a *app) applyDocumentDraft(req request, result response) bool {
 		return false
 	}
 	v := a.view
+	a.dropRedo(a.activeTab)
 	base := v.documentContent
 	scope, _ := a.scopeControls()
 	automaticScope := a.thumbnailScopes[scope]
@@ -134,10 +135,17 @@ func (a *app) applyDocumentDraft(req request, result response) bool {
 }
 
 func (a *app) undoDocumentDraft(base documentContent, action string) {
+	a.restoreDocumentVersion(base)
+	messages := map[string]string{"ocr": "Poslední rozpoznávání OCR bylo vráceno.",
+		"insert_pages": "Vložení stránek bylo vráceno.", "object_edit": "Úprava objektu byla vrácena.",
+		"text_edit": "Poslední úprava textu byla vrácena."}
+	a.report(messages[action])
+}
+
+func (a *app) restoreDocumentVersion(base documentContent) {
 	v := a.view
 	scope, _ := a.scopeControls()
 	automaticScope := a.thumbnailScopes[scope]
-	a.retiredDrafts = append(a.retiredDrafts, v.draft)
 	v.resetDocument()
 	v.documentContent = base
 	v.resumeReader()
@@ -151,17 +159,6 @@ func (a *app) undoDocumentDraft(base documentContent, action string) {
 	if automaticScope {
 		a.applyThumbnailScope()
 	}
-	switch action {
-	case "ocr":
-		a.report("Poslední rozpoznávání OCR bylo vráceno.")
-	case "insert_pages":
-		a.report("Vložení stránek bylo vráceno.")
-	case "object_edit":
-		a.report("Úprava objektu byla vrácena.")
-	default:
-		a.report("Poslední úprava textu byla vrácena.")
-	}
-	a.pruneDrafts()
 }
 
 func (a *app) retireDocumentDrafts(content documentContent) {

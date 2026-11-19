@@ -266,6 +266,52 @@ def check_catalog(folder, fonts):
     assert any(run["text"] == "Baterie s termostatem" and run["bold"] for run in updated)
 
 
+
+def check_rich_text_in_shared_form(folder, fonts):
+    source, target = folder / "shared-text.pdf", folder / "shared-edited.pdf"
+    with pdf.Pdf.new() as document:
+        page = document.add_blank_page(page_size=(500, 400))
+        font = document.make_indirect(pdf.Dictionary(Type=pdf.Name.Font, Subtype=pdf.Name.Type1,
+                                                    BaseFont=pdf.Name.Helvetica))
+        inner = document.make_stream(
+            b"BT /F 12 Tf 1 0 0 1 10 38 Tm (Original heading) Tj 1 0 0 1 20 18 Tm (Second line) Tj ET",
+            Type=pdf.Name.XObject, Subtype=pdf.Name.Form, BBox=[0, 0, 160, 62],
+            Resources=pdf.Dictionary(Font=pdf.Dictionary(F=font)))
+        outer = document.make_stream(b"/Inner Do", Type=pdf.Name.XObject, Subtype=pdf.Name.Form,
+                                     BBox=[0, 0, 160, 62], Resources=pdf.Dictionary(XObject=pdf.Dictionary(Inner=inner)))
+        page.obj.Resources = pdf.Dictionary(XObject=pdf.Dictionary(Outer=outer))
+        page.Contents = document.make_stream(b"q .8 g 40 200 160 62 re f Q "
+                                            b"q 1 0 0 1 40 200 cm /Outer Do Q "
+                                            b"q 1 0 0 1 220 200 cm /Outer Do Q")
+        document.save(source)
+
+    probe = dict(action="text_probe", input=str(source))
+    initial = dispatch(probe)["text_page"]["objects"]
+    assert len({item["block_token"] for item in initial if item["editable"]}) == 4, initial
+    group = [item for item in initial if item["bounds"][0] < 190]
+    assert [item["text"] for item in group] == ["Original heading", "Second line"]
+    selection = [dict(token=item["block_token"], glyphs=list(range(len(item["glyphs"])))) for item in group]
+    content = "New heading\nSecond line"
+    regular = dict(font="Liberation Sans", size=12, tracking=0, color=0, bold=False, italic=False, underline=False)
+    bold = {**regular, "bold": True, "size": 14, "underline": True, "tracking": .25}
+    runs = [dict(regular, start=0, end=4), dict(bold, start=4, end=11),
+            dict(regular, start=11, end=len(content))]
+    block = dict(text=content, runs=runs, selection=selection, width=160, height=245, leading=1.2, tracking=0,
+                 align="left", rotation=0, origin=[50, 247], baseline_offset=9, original_lines=[[0, 9], [10, 29]])
+    dispatch({**probe, "action": "text_edit", "output": str(target), "text_fonts": str(fonts),
+              "text_edit": dict(font="Liberation Sans", size=12, block=block)})
+
+    changed = dispatch({**probe, "input": str(target)})["text_page"]
+    heading, first = (find_text(changed, phrase) for phrase in ("heading", "New"))
+    assert heading["bold"] and heading["underline"] and heading["size"] == 14
+    assert heading["block"]["tracking"] == .25
+    assert not first["bold"] and tuple(first["glyphs"][0]["origin"]) == (50, 238)
+    second = next(run for run in changed["objects"] if run["text"] == "Second line" and run["bounds"][0] < 190)
+    assert tuple(second["glyphs"][0]["origin"]) == (60, 218)
+    assert find_text(changed, "Original heading")["bounds"][0] > 210
+    assert all(run["block"] and run["editable"] for run in (first, second, heading))
+
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
         fonts = Path(sys.argv[1]).resolve()
@@ -273,4 +319,5 @@ if __name__ == "__main__":
         check_block(Path(tmp), fonts)
         check_font_fallback(Path(tmp), fonts)
         check_catalog(Path(tmp), fonts)
+        check_rich_text_in_shared_form(Path(tmp), fonts)
     print("Text blocks preserve nearby glyphs and graphics, and reflow with spacing, alignment and rotation.")

@@ -38,9 +38,9 @@ Hledání pracuje s textovou vrstvou a rozlišuje diakritiku. Pro obrázky a ske
 
 ## Úprava objektů
 
-V nástroji **Objekty** klikněte na samostatný vektorový tvar, vložený obrázek nebo skupinu vykreslenou jako jeden objekt PDF. Tažením přesunete výběr po stejné stránce a vedle kurzoru uvidíte jeho náhled. K posouvání přiblížené stránky držte **mezerník** a táhněte.
+V nástroji **Objekty** vybírejte vektorové tvary, obrázky a skupiny PDF kliknutím (**V**), obdélníkem (**M**) nebo mnohoúhelníkovým lasem (**L**). Laso uzavřete Enterem nebo kliknutím na první bod. Tažením přesunete výběr po stejné stránce a vedle kurzoru uvidíte jeho náhled. K posouvání přiblížené stránky držte **mezerník** a táhněte.
 
-**Ctrl+D** vytvoří odsazenou kopii na stejné stránce. **Ctrl+C** zkopíruje objekt do schránky aplikace. Klikněte na místo na některé stránce stejného PDF a zvolte **Ctrl+V**. Bez kliknutí se objekt vloží doprostřed aktuální stránky. **Delete** smaže výběr, **Esc** ho zruší a **Ctrl+Z** vrátí úpravu. Změny zapíšete přes **Soubor → Uložit** nebo **Uložit jako**.
+**Ctrl+D** vytvoří odsazenou kopii výběru na stejné stránce. **Ctrl+C** zkopíruje jeden či více objektů do schránky aplikace. Klikněte na místo na některé stránce stejného PDF a zvolte **Ctrl+V**. Bez kliknutí se objekt vloží doprostřed aktuální stránky. **Delete** smaže výběr, **Esc** ho zruší a **Ctrl+Z** vrátí úpravu. Změny zapíšete přes **Soubor → Uložit** nebo **Uložit jako**.
 
 Textové znaky upravujte v nástroji **Text**. U složitého ořezu lze některé objekty přemístit nebo duplikovat přímo na zdrojové straně.
 
@@ -48,15 +48,15 @@ Textové znaky upravujte v nástroji **Text**. U složitého ořezu lze někter�
 
 Kliknutím na text v náhledu otevřete nástroj **Text** a umístíte kurzor přímo do textu na stránce. V tabulce kliknutí vybere text v dané buňce podle rozestupů mezi sloupci. Pevná lišta nabízí výběr objektu, odstavce, obdélníkem nebo mnohoúhelníkovým lasem. Název každé ikony se ukáže po najetí myší. U lasa čára vede z posledního bodu ke kurzoru. Výběr uzavřete Enterem nebo kliknutím na první bod.
 
-Obdélník a laso vybírají znaky uvnitř oblasti. **Odstavec** seskupuje znaky, slova a řádky podle jejich polohy, rozestupů a okrajů. V bloku se složené řádky spojí a mezery mezi zjištěnými odstavci se zachovají jako prázdné řádky. U složitého rozvržení můžete oblast vymezit ručně. [Princip prostorového seskupování v PDFMiner](https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html)
+Obdélník a laso vybírají znaky uvnitř oblasti. **Odstavec** seskupuje znaky, slova a řádky podle jejich polohy, rozestupů a okrajů. Při úpravě se zachovají původní konce řádků. Nastavením pevné šířky zapnete automatické zalamování. U složitého rozvržení můžete oblast vymezit ručně. [Princip prostorového seskupování v PDFMiner](https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html)
 
-Pište přímo na stránce a tažením myši označte část textu. Při úpravě zůstává vidět původní pozadí stránky. Když výběr obsahuje několik rámečků, kliknutím jeden aktivujete. Při psaní se podle obsahu mění jeho šířka i výška. Levé zarovnání drží levou hranu, pravé pravou hranu a vystředění drží střed. Pro pevnou šířku přepište hodnotu **Šířka (pt)**. Vymazáním této hodnoty obnovíte automatickou šířku.
+Pište přímo na stránce a tažením myši označte část textu. Při úpravě zůstává vidět původní pozadí stránky. Když výběr zasahuje do více sloupců, kliknutím aktivujete část, kterou chcete upravovat. Při psaní se podle obsahu mění jeho šířka i výška. Levé zarovnání drží levou hranu, pravé pravou hranu a vystředění drží střed. Pro pevnou šířku přepište hodnotu **Šířka (pt)**. Vymazáním této hodnoty obnovíte automatickou šířku.
 
-V pravém panelu nastavte písmo, velikost, zarovnání, řádkování a proklad aktivního rámečku. Ikony přepínají běžný řez, tučné písmo, kurzívu a podtržení. Pokud instalované písmo TrueType nabízí jen běžný řez, aplikace může vykreslit tučné písmo a kurzívu odvozeně. Jednotlivé chybějící znaky může doplnit náhradním písmem. Pro vložení řezu dál platí jeho pravidla pro zápis do PDF.
+Písmo, řez, podtržení, velikost a proklad můžete změnit jen u označených znaků. Bez označení se použijí na celý aktivní blok. Tlačítka **A−** a **A+** přepínají mezi typografickými velikostmi. Číselná pole pro velikost, šířku, řádkování a proklad mají předvolby a přijímají i vlastní hodnoty. Ikony přepínají běžný řez, tučné písmo, kurzívu a podtržení. Pokud instalované písmo TrueType nabízí jen běžný řez, aplikace může vykreslit tučné písmo a kurzívu odvozeně. Jednotlivé chybějící znaky může doplnit náhradním písmem. Pro vložení řezu dál platí jeho pravidla pro zápis do PDF.
 
 **Ctrl+Enter** nebo ikona **Použít úpravu** zapíše text do otevřené karty. Přechod na jiný rámeček nebo kartu zapíše rozpracovanou úpravu také. **Esc** ukončí výběr a zahodí změny rozepsané v rámečku. Celý vysázený blok znovu vyberete kliknutím na kterýkoli jeho řádek v režimu **Textový objekt**. Upravený dokument uložte přes **Soubor → Uložit** nebo **Uložit jako**. Text v některých skupinách, skryté vrstvě OCR nebo se složitým kódováním lze kopírovat. Pro oblast bez textové vrstvy použijte **OCR výběru**.
 
-Pravé tlačítko myši nebo **Shift+F10** otevře nabídku pro danou část dokumentu. V textu fungují **Ctrl+A**, **Ctrl+X/C/V**, **Ctrl+Z/Y**, **Ctrl+B/I/U** a **Ctrl+L/E/R/J** pro zarovnání. V náhledu mění **Ctrl++** a **Ctrl+−** přiblížení a **Ctrl+0** přizpůsobí celou stránku.
+Pravé tlačítko myši nebo **Shift+F10** otevře nabídku pro danou část dokumentu. V textu fungují **Ctrl+A**, **Ctrl+X/C/V**, **Ctrl+Z/Y**, **Ctrl+B/I/U** a **Ctrl+L/E/R/J** pro zarovnání. Ikony **Zpět** a **Znovu** v horní liště vracejí kroky v editoru i změny v pracovní kartě. V náhledu mění **Ctrl++** a **Ctrl+−** přiblížení a **Ctrl+0** přizpůsobí celou stránku.
 
 ## OCR skenů a textu v křivkách
 

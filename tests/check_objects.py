@@ -92,6 +92,19 @@ def check_objects(work):
                    for args, op in parse_content_stream(form))
     assert source.read_bytes() == original
 
+    tokens = [red["token"], image["token"]]
+    group_snapshot = dispatch({"action": "object_snapshot", "input": str(source),
+                               "view": {"page": 1}, "object_edit": {"tokens": tokens}})
+    with Pdf.open(BytesIO(b64decode(group_snapshot["object_clipboard"]))) as document:
+        selected = list(parse_content_stream(document.pages[0]))
+        assert sum(str(op) == "f" for _, op in selected) == 1
+        assert sum(str(op) == "Do" for _, op in selected) == 1
+    moved_group = work / "moved-group.pdf"
+    edit(source, moved_group, "move", tokens=tokens, delta=[20, -10])
+    assert [tuple(round(value, 3) for value in obj["bounds"]) for obj in probe(moved_group)] == [
+        (60, 190, 130, 250), green["bounds"], (170, 200, 235, 252), group["bounds"],
+    ]
+
     invalid = work / "invalid.pdf"
     try:
         edit(source, invalid, "delete", token=999)

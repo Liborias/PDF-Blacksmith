@@ -7,7 +7,7 @@ import re
 import pikepdf as pdf
 
 from block_fonts import embed_face, encoded_fragment, fonts_for_block
-from text_edit import TextError, UNDERLINE, code_size, has_underline, instruction, show_items, source_styles, text_page
+from text_edit import TextError, UNDERLINE, code_size, has_underline, instruction, show_items
 
 
 def numeric(value, low, high, message):
@@ -52,7 +52,153 @@ def wrap_block(content, advances, size, width, tracking):
         yield value, extent-tracking if value else 0, False, paragraph_index
 
 
-def block_commands(document, page, block, style, folder, color, group):
+def rich_lines(glyphs, width, wrap):
+    for row, source in enumerate(glyphs):
+        line = source
+        while wrap and line:
+            extent = 0.
+            end, gap = len(line), 0
+            for index, (char, _, advance) in enumerate(line):
+                if index and extent + advance > width:
+                    end = gap or index
+                    break
+                extent += advance
+                if char == " ":
+                    gap = index + 1
+            if end == len(line):
+                break
+            yield line[:end], row, True
+            line = line[end:]
+        yield line, row, False
+
+
+def rich_block_commands(document, page, block, content, folder, size, width, height,
+                        leading, alignment, origin, angle, color, group, palette):
+    ranges = block.get("runs")
+    if not isinstance(ranges, list) or not 1 <= len(ranges) <= len(content):
+        raise TextError("Textový blok obsahuje neplatné formátování.")
+    style_keys, letters, cursor = {}, {}, 0
+    for run in ranges:
+        start, end = run.get("start"), run.get("end")
+        if type(start) is not int or type(end) is not int or not start == cursor < end <= len(content):
+            raise TextError("Textový blok obsahuje neplatný rozsah formátování.")
+        family = run.get("font")
+        if not isinstance(family, str):
+            raise TextError("Vyberte dostupné písmo.")
+        key = family, bool(run.get("bold")), bool(run.get("italic"))
+        span_size = numeric(run.get("size"), 1, 600, "Zadejte platnou velikost písma.")
+        tracking = numeric(run.get("tracking"), -72, 72, "Zadejte platný proklad písmen.")
+        ink = int(numeric(run.get("color"), 0, 0xffffff, "Zadejte platnou barvu textu."))
+        layout_style = key, span_size, tracking, bool(run.get("underline")), ink
+        value = content[start:end].replace("\t", "    ")
+        style_keys.setdefault(key, set()).update(" " if char.isspace() else char for char in value if char != "\n")
+        for index in range(start, end):
+            letters[index] = layout_style
+        cursor = end
+    if cursor != len(content) or len(style_keys) > 128:
+        raise TextError("Textový blok obsahuje příliš mnoho různých písem.")
+
+    resources = pdf.Dictionary(page.resources)
+    resources.Font = pdf.Dictionary(resources.get("/Font", pdf.Dictionary()))
+    page.obj.Resources = resources
+    fonts = {}
+    for key, chars in style_keys.items():
+        family, bold, italic = key
+        faces, assigned, advances = fonts_for_block(dict(font=family, bold=bold, italic=italic), "".join(chars), folder)
+        references = {}
+        for index, face in enumerate(faces):
+            used = sorted(char for char in chars if assigned.get(char) == index)
+            if used:
+                references[index] = embed_face(document, page, face, used)
+        fonts[key] = faces, assigned, advances, references
+
+    rows = [[]]
+    for index, char in enumerate(content):
+        if char == "\n":
+            rows.append([])
+            continue
+        style = letters[index]
+        advances = fonts[style[0]][2]
+        for letter in ("    " if char == "\t" else char):
+            letter = " " if letter.isspace() else letter
+            rows[-1].append((letter, style, advances[letter]*style[1]+style[2]))
+    lines = list(rich_lines(rows, width, block.get("wrap", False)))
+    if len(lines) > 256:
+        raise TextError("Zmenšete počet řádků v bloku.")
+    ascent = numeric(block.get("baseline_offset", size*.9), 0, 1200, "Vyberte platné umístění textového bloku.")
+    original = block.get("original_lines", [])
+    if len(original) != len(lines) or block.get("wrap"):
+        original = []
+    for offset in original:
+        if not isinstance(offset, list) or len(offset) != 2:
+            raise TextError("Textový blok obsahuje neplatné umístění řádku.")
+        numeric(offset[0], -20000, 20000, "Textový blok obsahuje neplatné umístění řádku.")
+        numeric(offset[1], 0, 20000, "Textový blok obsahuje neplatné umístění řádku.")
+
+    matrix = {0: (1, 0, 0, 1), 90: (0, 1, -1, 0), 180: (-1, 0, 0, -1), 270: (0, -1, 1, 0)}[angle]
+    marked = pdf.Dictionary(PBTextBlock=group, PBWidth=round(width*1000), PBFirstX=round(origin[0]*1000),
+                            PBFirstY=round(origin[1]*1000), PBAngle=angle,
+                            PBAlign=("left", "center", "right", "justify").index(alignment),
+                            PBLeading=round(leading*1000))
+    result = [instruction("q"), instruction("cm", *matrix, *origin), instruction("BDC", pdf.Name.Div, marked)]
+    stroke = {"g": "G", "rg": "RG", "k": "K", "cs": "CS", "sc": "SC", "scn": "SCN"}
+    first_ink = ranges[0]["color"]
+    baseline = ascent
+    for row, (line, paragraph, wrapped) in enumerate(lines):
+        line_size = max((style[1] for _, style, _ in line), default=size)
+        indent = 0.
+        if original:
+            indent, baseline = original[row]
+        if baseline + line_size*.22 > height:
+            raise TextError("Text se nevejde na stránku. Zmenšete řádkování nebo písmo.")
+        if not line:
+            baseline += line_size*leading
+            continue
+        extent = sum(advance for _, _, advance in line) - line[-1][1][2]
+        left = indent
+        if alignment == "center":
+            left = max(0., (width-extent)/2)
+        elif alignment == "right":
+            left = max(0., width-extent)
+        spaces = sum(char == " " for char, _, _ in line)
+        extra = max(0., width-extent)/spaces if spaces and alignment == "justify" and wrapped else 0.
+        x = left
+        for style, spans in groupby(line, key=lambda glyph: glyph[1]):
+            key, span_size, tracking, underlined, ink = style
+            _, bold, italic = key
+            faces, assigned, advances, references = fonts[key]
+            span = list(spans)
+            paint = palette.get(ink, color if ink == first_ink else (
+                pdf.ContentStreamInstruction(*instruction("rg", *((ink >> shift & 255)/255 for shift in (0, 8, 16)))),
+            ))
+            for index, letters in groupby(span, key=lambda glyph: assigned[glyph[0]]):
+                piece = "".join(glyph[0] for glyph in letters)
+                face = faces[index]
+                name, cids = references[index]
+                row_mark = pdf.Dictionary(PBRow=row, PBParagraph=paragraph, PBWordWrap=int(wrapped),
+                                          PBBold=int(bold), PBItalic=int(italic), PBTracking=round(tracking*1000))
+                length = sum(advances[char]*span_size+tracking for char in piece) + extra*piece.count(" ")
+                result.extend((instruction("BDC", pdf.Name.Span, row_mark), instruction("q"), *paint))
+                if face.fake_bold:
+                    result.extend(instruction(stroke[str(op.operator)], *op.operands)
+                                  for op in paint if str(op.operator) in stroke)
+                    result.append(instruction("w", span_size*.035))
+                result.extend((instruction("BT"), instruction("Tr", 2 if face.fake_bold else 0),
+                               instruction("Tc", tracking), instruction("Tf", name, span_size),
+                               instruction("Tm", 1, 0, .21 if face.fake_italic else 0, 1, x, -baseline),
+                               encoded_fragment(piece, cids, extra, span_size), instruction("ET")))
+                if underlined:
+                    result.extend((instruction("BMC", UNDERLINE),
+                                   instruction("re", x, -baseline-span_size*.13,
+                                               max(0., length-tracking), span_size*.055),
+                                   instruction("f"), instruction("EMC")))
+                result.extend((instruction("Q"), instruction("EMC")))
+                x += length
+        baseline += line_size*leading
+    return [*result, instruction("EMC"), instruction("Q")]
+
+
+def block_commands(document, page, block, style, folder, color, group, palette=None):
     content = block.get("text")
     if not isinstance(content, str) or len(content) > 8000 or any(
             ord(char) > 0xffff or (ord(char) < 32 and char not in "\t\n") for char in content):
@@ -63,12 +209,16 @@ def block_commands(document, page, block, style, folder, color, group):
     width = numeric(block.get("width"), 1, 20000, "Zadejte platnou šířku textového bloku.")
     height = numeric(block.get("height"), 1, 20000, "Vyberte platné umístění textového bloku.")
     line_spacing = numeric(block.get("leading"), .7, 5, "Řádkování musí být v rozsahu 0,7 až 5.")
-    tracking = numeric(block.get("tracking"), -size*.18, 72, "Zadejte menší záporný rozestup nebo rozestup nejvýš 72 bodů.")
+    tracking = numeric(block.get("tracking"), -72, 72, "Zadejte menší záporný rozestup nebo rozestup nejvýš 72 bodů.")
     alignment, origin, angle = block.get("align"), block.get("origin"), block.get("rotation")
     if (alignment not in ("left", "center", "right", "justify") or angle not in (0, 90, 180, 270)
             or not isinstance(origin, list) or len(origin) != 2
             or not all(type(value) in (float, int) and isfinite(value) and abs(value) <= 2e6 for value in origin)):
         raise TextError("Vyberte platné umístění a zarovnání textového bloku.")
+
+    if block.get("runs") is not None:
+        return rich_block_commands(document, page, block, content, folder, size, width, height,
+                                   line_spacing, alignment, origin, angle, color, group, palette or {})
 
     faces, assigned, advances = fonts_for_block(style, content, folder)
     ascent = numeric(block.get("baseline_offset", faces[0].ascent*size), 0, 1200,
@@ -164,13 +314,13 @@ def remove_glyphs(entry, step, advances, chosen):
     return instruction("TJ", pdf.Array(output))
 
 
-def strip_selection(page, selected):
-    from text_edit import positions
+def strip_selection(document, page, selected, *, palette=None):
+    from text_edit import source_objects, text_tree
 
-    operators, states, objects = text_page(page)
+    _, sources = text_tree(page)
+    objects = source_objects(page, sources)
     if not isinstance(selected, list) or not 1 <= len(selected) <= 4000:
         raise TextError("Vyberte platnou oblast textu.")
-    styles = source_styles(operators, page.resources, positions(operators, page.resources, include_dependent=True))
     indexed = {run["block_token"]: run for run in objects if run["block_token"]}
     replacements, discard = {}, set()
     glyph_count = 0
@@ -179,6 +329,16 @@ def strip_selection(page, selected):
         if type(token) is not int or token in replacements or token not in indexed or not isinstance(glyphs, list):
             raise TextError("Tento úsek nelze upravit bez změny okolní sazby. Vyberte jiný úsek.")
         run = indexed[token]
+        operators, index, style, independent, _, root = sources[token]
+        paint = style[4]
+        if not root and any(str(op.operator) == "cs" and op.operands[0] not in (
+                pdf.Name.DeviceGray, pdf.Name.DeviceRGB, pdf.Name.DeviceCMYK) for op in paint):
+            paint = (pdf.ContentStreamInstruction(*instruction("rg", *(value/255 for value in run["fill"]))),)
+        if palette is not None:
+            ink = sum(channel << (8 * i) for i, channel in enumerate(run["fill"]))
+            palette.setdefault(ink, paint)
+        if not replacements:
+            first_color = paint
         advances = run["advances"]
         count = len(run["glyphs"])
         if not glyphs or any(type(index) is not int or not 0 <= index < count for index in glyphs):
@@ -188,24 +348,25 @@ def strip_selection(page, selected):
         if glyph_count > 8000:
             raise TextError("Pro jednu úpravu vyberte nejvýš 8 000 znaků.")
         if advances:
-            replacements[token] = remove_glyphs(operators[token-1], code_size(styles[token][0]), advances, chosen)
-        elif token in states and len(chosen) == count:
+            replacements[token] = remove_glyphs(operators[index-1], code_size(style[0]), advances, chosen)
+        elif independent and len(chosen) == count:
             replacements[token] = instruction("TJ", pdf.Array())
         else:
             raise TextError("U tohoto kódování písma vyberte celý textový objekt.")
-        if len(chosen) == count and has_underline(operators, token):
-            discard.update(range(token+2, token+6))
+        if len(chosen) == count and has_underline(operators, index):
+            discard.add(token)
 
-    original = [replacements.get(index, entry) for index, entry in enumerate(operators, 1) if index not in discard]
+    original, _ = text_tree(page, document, replacements=replacements, discard=discard)
     group = max((run["block"]["id"] for run in objects if run["block"]), default=0) + 1
-    return original, styles[next(iter(replacements))][4], group
+    return original, first_color, group
 
 
 def replace_block(document, page, edits, font_dir):
     block = edits["block"]
-    original, color, group = strip_selection(page, block.get("selection"))
+    palette = {}
+    original, color, group = strip_selection(document, page, block.get("selection"), palette=palette)
     if group > 2**31 - 1:
         raise TextError("Na stránce nelze vytvořit další editovatelný blok.")
-    commands = block_commands(document, page, block, edits, font_dir, color, group)
+    commands = block_commands(document, page, block, edits, font_dir, color, group, palette)
     combined = [instruction("q"), *original, instruction("Q"), *commands] if commands else original
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))

@@ -121,9 +121,9 @@ def has_underline(operators, token):
             and tuple(following[1].operands) == (UNDERLINE,))
 
 
-def source_styles(operators, resources, marked):
+def source_styles(operators, resources, marked, initial_color=()):
     fonts = resources.get("/Font", pdf.Dictionary())
-    font, size, tracking, spacing, color = None, 0, 0, 0, ()
+    font, size, tracking, spacing, color = None, 0, 0, 0, initial_color
     stack, output = [], {}
     for token, entry in enumerate(operators, 1):
         name, args = str(entry.operator), entry.operands
@@ -260,18 +260,101 @@ def stored_block(text):
                 row=block["PBRow"], paragraph=block["PBParagraph"], word_wrap=bool(block["PBWordWrap"]),
                 bold=block.get("PBBold"), italic=block.get("PBItalic"))
 
-def source_objects(page, operators, states, block_states):
+def text_tree(page, document=None, *, probe=False, replacements=None, discard=()):
+    """Assign each show an ID in page paint order, including instances of shared Forms."""
+    root_operators = pikepdf_operators(page)
+    sources, serial, forms = {}, len(root_operators), 0
+
+    def visit(operators, resources, parents, outer, initial_color):
+        nonlocal serial, forms
+        states = positions(operators, resources)
+        block_states = positions(operators, resources, include_dependent=True)
+        form_calls = {i for i, op in enumerate(operators, 1) if str(op.operator) == "Do"}
+        styles = source_styles(operators, resources, block_states.keys() | form_calls, initial_color)
+        mapping = {}
+        for index in block_states:
+            if parents:
+                serial += 1
+                token = serial
+            else:
+                token = index
+            mapping[index] = token
+            sources[token] = (operators, index, styles[index], index in states, outer, not parents)
+        skip = {offset for index, token in mapping.items() if token in discard
+                for offset in range(index+2, index+6)}
+        output, new_resources, changed = [], None, False
+        xobjects = resources.get("/XObject", {})
+        ctm, matrices = outer, []
+        for index, op in enumerate(operators, 1):
+            name, operands = str(op.operator), op.operands
+            if name == "q":
+                matrices.append(ctm)
+            elif name == "Q" and matrices:
+                ctm = matrices.pop()
+            elif name == "cm":
+                ctm = compose(ctm, tuple(map(float, operands)))
+            if (name == "Do" and len(parents) < 8 and forms < 256 and hasattr(xobjects, "get")):
+                form = xobjects.get(operands[0])
+                if (isinstance(form, pdf.Stream) and form.get("/Subtype") == pdf.Name.Form
+                        and form.objgen not in parents and "/Ref" not in form
+                        and "/Group" not in form):
+                    matrix = form.get("/Matrix", IDENTITY)
+                    try:
+                        child_ops = pikepdf_operators(form)
+                        child_matrix = compose(ctm, tuple(map(float, matrix)))
+                    except (pdf.PdfError, ValueError, TypeError):
+                        child_ops = []
+                    if child_ops:
+                        forms += 1
+                        child_resources = form.get("/Resources")
+                        if not isinstance(child_resources, pdf.Dictionary):
+                            child_resources = resources
+                        child, child_resources, update = visit(child_ops, child_resources, (*parents, form.objgen),
+                                                               child_matrix, styles[index][4])
+                        if update:
+                            clone = document.make_stream(pdf.unparse_content_stream(child))
+                            for key, value in form.stream_dict.items():
+                                if key not in ("/Length", "/Filter", "/DecodeParms", "/Resources"):
+                                    clone[key] = value
+                            clone.Resources = child_resources
+                            if new_resources is None:
+                                new_resources = pdf.Dictionary(resources)
+                                new_resources.XObject = pdf.Dictionary(xobjects)
+                            key_index = index
+                            key = pdf.Name(f"/PBTextForm{key_index}")
+                            while key in new_resources.XObject:
+                                key_index += 1
+                                key = pdf.Name(f"/PBTextForm{key_index}")
+                            new_resources.XObject[key] = clone
+                            op = instruction("Do", key)
+                            changed = True
+            token = mapping.get(index)
+            if probe and token is not None:
+                output.extend((instruction("BDC", pdf.Name.Span, pdf.Dictionary(PBTextToken=token)),
+                               op, instruction("EMC")))
+                changed = True
+            elif replacements is not None and token in replacements:
+                output.append(replacements[token])
+                changed = True
+            elif index in skip:
+                changed = True
+            else:
+                output.append(op)
+        return output, new_resources if new_resources is not None else resources, changed
+
+    output, resources, changed = visit(root_operators, page.resources, (), IDENTITY, ())
+    if changed:
+        page.obj.Resources = resources
+    return output, sources
+
+
+def source_objects(page, sources):
     """Tag a private one-page probe so text objects map to exact operators."""
-    marked = []
-    for index, entry in enumerate(operators, 1):
-        if index in block_states:
-            marked.extend((instruction("BDC", pdf.Name.Span, pdf.Dictionary(PBTextToken=index)), entry, instruction("EMC")))
-        else:
-            marked.append(entry)
     buffer = BytesIO()
     with pdf.Pdf.new() as probe:
         probe.pages.append(page)
         sample = probe.pages[0]
+        marked, _ = text_tree(sample, probe, probe=True)
         sample.obj.Contents = probe.make_stream(pdf.unparse_content_stream(marked))
         # Probe every text object on the sheet, even outside the displayed crop.
         sample.obj.CropBox = sample.mediabox
@@ -296,7 +379,6 @@ def source_objects(page, operators, states, block_states):
             if all(map(isfinite, (*bounds, x.value, y.value))):
                 glyphs.setdefault(cast(handle, c_void_p).value, []).append(
                     dict(text=chr(code), bounds=bounds, origin=(x.value, y.value)))
-        styles = source_styles(operators, page.resources, block_states)
         for text in native_objects:
             mode = raw.FPDFTextObj_GetTextRenderMode(text)
             characters = glyphs.get(object_key(text), [])
@@ -313,9 +395,9 @@ def source_objects(page, operators, states, block_states):
             if not value:
                 continue
             token = 0
-            if text.level == 0 and mode in (0, 2):
+            if mode in (0, 2):
                 number = integer_marks(text, ("PBTextToken",)).get("PBTextToken", 0)
-                if number in styles:
+                if number in sources:
                     token = number
             font = text.get_font()
             name = font.get_family_name() or font.get_base_name()
@@ -324,9 +406,13 @@ def source_objects(page, operators, states, block_states):
                 word in generic for word in ("times", "serif", "georgia")) and "sans" not in generic else 0
             size = text.get_font_size()
             matrix = text.get_matrix().get()
-            advance = []
+            advance, whole, root = [], False, False
+            operator_list, index = (), 0
             if token:
-                advance = glyph_advances(operators[token-1], styles[token], font, characters, matrix) or []
+                operator_list, index, style, whole, outer, root = sources[token]
+                if not root:
+                    matrix = compose(outer, matrix)
+                advance = glyph_advances(operator_list[index-1], style, font, characters, matrix) or []
             block = stored_block(text)
             bold = font.get_weight() >= 600 or "bold" in generic
             italic = any(word in font.get_base_name().casefold() for word in ("italic", "oblique"))
@@ -335,28 +421,28 @@ def source_objects(page, operators, states, block_states):
                 italic = italic if block["italic"] is None else bool(block["italic"])
             red, green, blue, alpha = c_uint(), c_uint(), c_uint(), c_uint()
             raw.FPDFPageObj_GetFillColor(text, byref(red), byref(green), byref(blue), byref(alpha))
-            objects.append(dict(token=token if token in states else 0, block_token=token, advances=advance,
+            objects.append(dict(token=token if whole and root else 0, block_token=token, advances=advance, whole=whole,
                                 glyphs=characters, block=block, text=value, bounds=bounds, matrix=matrix, font=name, family=family,
                                 fill=[red.value, green.value, blue.value],
                                 size=size, bold=bold, italic=italic,
-                                underline=bool(token and has_underline(operators, token))))
+                                underline=bool(token and has_underline(operator_list, index))))
     counts = Counter(item["block_token"] for item in objects)
     for item in objects:
         if counts[item["block_token"]] != 1 or item["size"] <= 0 or not all(map(isfinite, item["matrix"])):
             item["token"] = item["block_token"] = 0
+            item["whole"] = False
             item["advances"] = []
     return objects
 
 
 def text_page(page):
-    operators = pikepdf_operators(page)
+    operators, sources = text_tree(page)
     states = positions(operators, page.resources)
-    block_states = positions(operators, page.resources, include_dependent=True)
-    return operators, states, source_objects(page, operators, states, block_states)
+    return operators, states, source_objects(page, sources)
 
 
 def pikepdf_operators(page):
-    if "/Contents" not in page.obj:
+    if isinstance(page, pdf.Page) and "/Contents" not in page.obj:
         return []
     operators = []
     for entry in pdf.parse_content_stream(page):
@@ -375,7 +461,7 @@ def describe_text(page):
     _, _, objects = text_page(page)
     for item in objects:
         partial = bool(item.pop("advances"))
-        item["editable"] = partial or bool(item["token"])
+        item["editable"] = item.pop("whole") or partial
         item["whole_run_only"] = not partial
     return dict(objects=objects, rotation=int(page.obj.get("/Rotate", 0)) % 360,
                 boxes={key: page_box(page, attribute) for key, (attribute, _) in BOXES.items()})
