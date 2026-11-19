@@ -193,6 +193,97 @@ def gray_to_explicit_k(pdf):
     return vector_count, image_count
 
 
+def convert_spot_vectors(pdf, space="Gray"):
+    """Resolve simple vector tints when pdfwrite retains a Separation in the output space."""
+    channels, paints = {"Gray": (1, ("g", "G")), "RGB": (3, ("rg", "RG")), "CMYK": (4, ("k", "K"))}[space]
+    device = pikepdf.Name("/Device" + space)
+    visited = set()
+
+    def process_tint(spot, value):
+        domain = spot.get("/Domain", [0, 1])
+        tint = min(float(domain[1]), max(float(domain[0]), float(value)))
+        weight = tint ** float(spot["/N"])
+        domain = spot.get("/Range", [0, 1] * channels)
+        result = []
+        for index, (first, last) in enumerate(zip(spot["/C0"], spot["/C1"])):
+            a, b = float(first), float(last)
+            low, high = max(0, float(domain[2*index])), min(1, float(domain[2*index+1]))
+            result.append(round(min(high, max(low, a + weight * (b-a))), 8))
+        return result
+
+    def walk(obj, resources):
+        if obj.objgen in visited:
+            return False
+        visited.add(obj.objgen)
+        spots = {}
+        for name, space in resources.get("/ColorSpace", {}).items():
+            if (isinstance(space, pikepdf.Array) and len(space) == 4
+                    and space[0] == pikepdf.Name.Separation
+                    and space[1] != pikepdf.Name("/None")
+                    and space[2] == device and isinstance(space[3], pikepdf.Dictionary)
+                    and space[3].get("/FunctionType") == 2
+                    and len(space[3].get("/C0", [])) == len(space[3].get("/C1", [])) == channels):
+                spots[name] = space[3]
+
+        changed = False
+        if spots:
+            stack = []
+            stroke = fill = None
+            rewritten = []
+            local_change = False
+            for instr in pikepdf.parse_content_stream(obj):
+                args, op = instr
+                command = str(op)
+                if command == "q":
+                    stack.append((stroke, fill))
+                elif command == "Q" and stack:
+                    stroke, fill = stack.pop()
+                elif command == "CS":
+                    stroke = spots.get(str(args[0]))
+                    if stroke is not None:
+                        instr = (process_tint(stroke, 1), pikepdf.Operator(paints[1]))
+                        local_change = True
+                elif command == "cs":
+                    fill = spots.get(str(args[0]))
+                    if fill is not None:
+                        instr = (process_tint(fill, 1), pikepdf.Operator(paints[0]))
+                        local_change = True
+                elif command in ("SC", "SCN") and stroke is not None:
+                    instr = (process_tint(stroke, args[0]), pikepdf.Operator(paints[1]))
+                    local_change = True
+                elif command in ("sc", "scn") and fill is not None:
+                    instr = (process_tint(fill, args[0]), pikepdf.Operator(paints[0]))
+                    local_change = True
+                elif command in ("G", "RG", "K"):
+                    stroke = None
+                elif command in ("g", "rg", "k"):
+                    fill = None
+                rewritten.append(instr)
+            if local_change:
+                content = pikepdf.unparse_content_stream(rewritten)
+                if obj.get("/Type") == pikepdf.Name.Page:
+                    obj.Contents = pdf.make_stream(content)
+                else:
+                    obj.write(content)
+                changed = True
+
+        children = list(resources.get("/XObject", {}).values())
+        children += list(resources.get("/Pattern", {}).values())
+        for graphic in resources.get("/ExtGState", {}).values():
+            mask = graphic.get("/SMask")
+            if isinstance(mask, pikepdf.Dictionary) and "/G" in mask:
+                children.append(mask["/G"])
+        for child in children:
+            if isinstance(child, pikepdf.Stream) and "/Resources" in child:
+                changed = walk(child, child.Resources) or changed
+        return changed
+
+    changed = False
+    for page in pdf.pages:
+        changed = walk(page.obj, page.obj.get("/Resources", {})) or changed
+    return changed
+
+
 def attach_gray_output_intent(pdf, data, label):
     stream = pdf.make_stream(data, N=1, Alternate=pikepdf.Name.DeviceGray)
     pdf.Root.OutputIntents = pikepdf.Array([pdf.make_indirect(pikepdf.Dictionary(

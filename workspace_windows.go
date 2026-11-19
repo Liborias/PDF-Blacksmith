@@ -1207,6 +1207,12 @@ func (a *app) finish(result response) {
 		a.view.schedule()
 		return
 	}
+	if req.Action == "insert_probe" {
+		a.finishInsertProbe(req, result)
+		a.updateActions()
+		a.view.schedule()
+		return
+	}
 
 	draft := req.Action == "ocr" || req.Action == "text_edit" || req.Action == "insert_pages"
 	if result.Status == "merge_encrypted" {
@@ -1314,7 +1320,7 @@ func (a *app) finish(result response) {
 	if req.Action == "sign" {
 		setText(a.certPass, "")
 	}
-	if result.Status == "error" && (req.Action == "save_document" || req.Action == "print_page") {
+	if result.Status == "error" && (req.Action == "save_document" || req.Action == "print_page" || req.Action == "insert_pages") {
 		notice(a.window, result.Message, 0x10)
 	}
 	a.updateActions()

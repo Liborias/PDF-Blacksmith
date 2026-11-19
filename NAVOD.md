@@ -26,6 +26,8 @@ V každém panelu můžete samostatně listovat, přibližovat **Ctrl + kolečke
 
 Přetažením jednoho náhledu nebo označeného výběru do druhého panelu vložíte kopie stránek v jejich aktuálním pořadí. Vínová čára ukazuje místo vložení. Přiblížením kurzoru k okraji seznamu jej při tažení posunete. Cílová karta zobrazí vložené strany jako neuloženou úpravu. **Ctrl+Z** vrátí vložení a **Soubor → Uložit** nebo **Uložit jako** změnu uloží.
 
+Po puštění náhledů zvolte **Zachovat původní barvy** nebo **Převést do prostoru cíle**. Zachování kopíruje původní barevné hodnoty stránek pod výstupní záměr cílového PDF. Převod použije cílový profil ICC pro CMYK, RGB nebo stupně šedi. U jednoznačného prostoru bez profilu použije výchozí profil Ghostscriptu. V dialogu je vždy uveden zjištěný prostor a případný dopad na přímé barvy, přetisky, průhlednost a vrstvy. Šedé strany a rozpoznané strany pouze s deskou K se kopírují v původním prostoru. U nejednoznačného cíle je dostupné zachování původních barev.
+
 **Zobrazení → Náhled → Ukončit zobrazení vedle sebe** vrátí náhled jednoho dokumentu a obě karty zůstanou otevřené. Přepnutí na kartu mimo dvojici nebo zavření jedné z porovnávaných karet ukončí společné zobrazení. **F11** zobrazí aktivní PDF na celé obrazovce, **Esc** obnoví dvojici.
 
 ## Vyhledávání v PDF

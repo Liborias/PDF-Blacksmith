@@ -17,8 +17,10 @@ from bookmarks import BookmarkError, apply_bookmarks, describe_bookmarks
 from print_profiles import ProfileError, attach_intent, attach_srgb, clear_pdfx_claim, get_profile, source_cmyk, source_icc
 from export_settings import export_preset, export_settings, pdfwrite_settings
 from color_conversion import (ColorConversionError, resolve_gray_icc, convert_rich_black,
-                              gray_to_explicit_k, attach_gray_output_intent, preserve_solid_black_for_gray)
+                              gray_to_explicit_k, attach_gray_output_intent, preserve_solid_black_for_gray,
+                              convert_spot_vectors)
 from pdfx import PDFXError, check_profile, finish_pdfx, pdfx_prefix
+from page_transfer import convert_inserted_artwork, transfer_color_plan
 from proof import ProofError, describe, page_box, page_proof, scan_plates, screen_page
 from reader_render import render_screen
 
@@ -317,92 +319,6 @@ def repair_k_pages(exe, folder, pages, dpi=600):
                 del page.obj["/Group"]
         pdf.save(folder / "opravene.pdf", fix_metadata_version=False)
     os.replace(folder / "opravene.pdf", folder / "hotovo.pdf")
-
-
-def convert_spot_vectors(pdf):
-    """Use the gray tint transform if pdfwrite retained a vector spot color."""
-    visited = set()
-
-    def gray_tint(spot, value):
-        domain = spot.get("/Domain", [0, 1])
-        tint = min(float(domain[1]), max(float(domain[0]), float(value)))
-        c0, c1 = float(spot["/C0"][0]), float(spot["/C1"][0])
-        gray = c0 + tint ** float(spot["/N"]) * (c1 - c0)
-        if "/Range" in spot:
-            low, high = map(float, spot["/Range"])
-            gray = min(high, max(low, gray))
-        return [round(min(1.0, max(0.0, gray)), 8)]
-
-    def walk(obj, resources):
-        if obj.objgen in visited:
-            return False
-        visited.add(obj.objgen)
-        spots = {}
-        for name, space in resources.get("/ColorSpace", {}).items():
-            if (isinstance(space, pikepdf.Array) and len(space) == 4
-                    and space[0] == pikepdf.Name.Separation
-                    and space[1] != pikepdf.Name("/None")
-                    and space[2] == pikepdf.Name.DeviceGray
-                    and isinstance(space[3], pikepdf.Dictionary) and space[3].get("/FunctionType") == 2):
-                spots[name] = space[3]
-
-        changed = False
-        if spots:
-            stack = []
-            stroke = fill = None
-            rewritten = []
-            local_change = False
-            for instr in pikepdf.parse_content_stream(obj):
-                args, op = instr
-                command = str(op)
-                if command == "q":
-                    stack.append((stroke, fill))
-                elif command == "Q" and stack:
-                    stroke, fill = stack.pop()
-                elif command == "CS":
-                    stroke = spots.get(str(args[0]))
-                    if stroke is not None:
-                        instr = (gray_tint(stroke, 1), pikepdf.Operator("G"))
-                        local_change = True
-                elif command == "cs":
-                    fill = spots.get(str(args[0]))
-                    if fill is not None:
-                        instr = (gray_tint(fill, 1), pikepdf.Operator("g"))
-                        local_change = True
-                elif command in ("SC", "SCN") and stroke is not None:
-                    instr = (gray_tint(stroke, args[0]), pikepdf.Operator("G"))
-                    local_change = True
-                elif command in ("sc", "scn") and fill is not None:
-                    instr = (gray_tint(fill, args[0]), pikepdf.Operator("g"))
-                    local_change = True
-                elif command in ("G", "RG", "K"):
-                    stroke = None
-                elif command in ("g", "rg", "k"):
-                    fill = None
-                rewritten.append(instr)
-            if local_change:
-                content = pikepdf.unparse_content_stream(rewritten)
-                if obj.get("/Type") == pikepdf.Name.Page:
-                    obj.Contents = pdf.make_stream(content)
-                else:
-                    obj.write(content)
-                changed = True
-
-        children = list(resources.get("/XObject", {}).values())
-        children += list(resources.get("/Pattern", {}).values())
-        for graphic in resources.get("/ExtGState", {}).values():
-            mask = graphic.get("/SMask")
-            if isinstance(mask, pikepdf.Dictionary) and "/G" in mask:
-                children.append(mask["/G"])
-        for child in children:
-            if isinstance(child, pikepdf.Stream) and "/Resources" in child:
-                changed = walk(child, child.Resources) or changed
-        return changed
-
-    changed = False
-    for page in pdf.pages:
-        changed = walk(page.obj, page.obj.get("/Resources", {})) or changed
-    return changed
 
 
 def transform(src, request):
@@ -1167,7 +1083,7 @@ def merge_intents(pdf):
     return tuple(fingerprints), intents
 
 
-def append_merge_source(target, pdf, entry, *, require_selection=False):
+def merge_page_selection(pdf, entry, *, require_selection=False):
     count = len(pdf.pages)
     view = entry.get("view", {})
     order = document_order(view, count)
@@ -1177,7 +1093,12 @@ def append_merge_source(target, pdf, entry, *, require_selection=False):
         if require_selection:
             raise UserError("Vyberte strany ke vložení.")
         positions = range(1, len(order) + 1)
-    indices = [order[position-1]-1 for position in positions]
+    return [order[position-1]-1 for position in positions], rotations
+
+
+def append_merge_source(target, pdf, entry, *, require_selection=False):
+    indices, rotations = merge_page_selection(pdf, entry, require_selection=require_selection)
+    view = entry.get("view", {})
     first = len(target.pages)
     apply_bookmarks(pdf, view.get("bookmarks", []))
     target.add_pages_from(pdf, indices)
@@ -1224,6 +1145,22 @@ def merge_documents(request):
     return message
 
 
+def inspect_insertion_colors(src, request):
+    insertion = request["insert_pages"]
+    entry = insertion["source"]
+    source = Path(entry["path"])
+    merge_source_state(source, entry)
+    with open_pdf(src, request.get("pdf_password", "")) as target:
+        order = document_order(request.get("view", {}), len(target.pages))
+        before = insertion["before"]
+        if type(before) is not int or not 0 <= before <= len(order):
+            raise UserError("Cílová pozice je mimo rozsah stran.")
+        with open_pdf(source, entry.get("pdf_password", "")) as donor:
+            indices, _ = merge_page_selection(donor, entry, require_selection=True)
+            _, _, details = transfer_color_plan(target, order, donor, indices)
+    return {"insert_color": details}
+
+
 def insert_document_pages(src, request):
     insertion = request["insert_pages"]
     entry, before = insertion["source"], insertion["before"]
@@ -1243,20 +1180,36 @@ def insert_document_pages(src, request):
             first = len(target.pages)
             if type(before) is not int or not 0 <= before <= first:
                 raise UserError("Cílová pozice je mimo rozsah stran.")
+            converted_count = 0
+            if insertion.get("convert"):
+                indices, _ = merge_page_selection(donor, entry, require_selection=True)
+                destination, conversion, details = transfer_color_plan(target, range(1, first+1), donor, indices)
+                if details["reason"]:
+                    raise UserError(details["reason"])
             # Import page resources and inter-page links together, then move the new pages
             # within the target PDF so its links and outlines keep their page references.
             clear_signatures(donor, list(signature_fields(donor)))
             append_merge_source(target, donor, entry, require_selection=True)
+            if insertion.get("convert"):
+                convert_inserted_artwork(target, [first + index for index in conversion], donor, destination,
+                                         pending.parent, ghostscript_path(request), run_ghostscript)
+                converted_count = len(conversion)
             last = len(target.pages)
             order = [*range(1, before+1), *range(first+1, last+1), *range(before+1, first+1)]
             apply_page_order(target, list(target.pages), order)
             clear_pdfx_claim(target)
-            target.save(pending, min_version=(donor.pdf_version, donor.extension_level),
+            version = (donor.pdf_version, donor.extension_level)
+            if converted_count:
+                version = max(version, ("1.7", 0))
+            target.save(pending, min_version=version,
                         encryption=target.is_encrypted, fix_metadata_version=False)
             description = {**describe(target), "bookmarks": describe_bookmarks(target)}
         if not same_file_state(donor_state, donor_path.stat()) or not same_file_state(target_state, src.stat()):
             raise UserError("Jedno z PDF se během vkládání změnilo. Otevřete je znovu.")
-    return {**description, "message": f"Vložené strany: {last-first}."}
+    message = f"Vložené strany: {last-first}."
+    if converted_count:
+        message = f"Vloženo {last-first} stran, s převodem {converted_count}."
+    return {**description, "message": message}
 
 
 def dispatch(request, *, raster=False):
@@ -1272,6 +1225,7 @@ def dispatch(request, *, raster=False):
                  "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,
                  "edit_pages": save_page_edits, "save_document": save_document,
                  "split": split_document, "ocr": ocr_document, "insert_pages": insert_document_pages,
+                 "insert_probe": inspect_insertion_colors,
                  "text_probe": edit_text_document, "text_edit": edit_text_document,
                  "text_background": edit_text_document}.get(request.get("action"))
     if operation is None:

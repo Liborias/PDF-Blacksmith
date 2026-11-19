@@ -101,6 +101,7 @@ type viewResponse struct {
 	Plates       []plateInfo             `json:"plates"`
 	UsedPlates   []plateInfo             `json:"used_plates"`
 	MergeInfo    []mergeSourceInfo       `json:"merge_info"`
+	InsertColor  *insertionColors        `json:"insert_color,omitempty"`
 	Bookmarks    []pdfBookmark           `json:"bookmarks"`
 }
 

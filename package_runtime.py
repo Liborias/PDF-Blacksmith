@@ -8,7 +8,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 source = Path(__file__).resolve().parent
 runtime = Path(sys.argv[1]).resolve()
 for name in ("engine.py", "bookmarks.py", "color_conversion.py", "export_settings.py", "export_presets.json", "pdfx.py", "proof.py", "reader_render.py", "reader_search.py", "ocr.py", "text_edit.py", "text_block.py", "block_fonts.py", "system_fonts.py",
-             "print_profiles.py", "profiles.json", "OSS.txt"):
+             "print_profiles.py", "page_transfer.py", "profiles.json", "OSS.txt"):
     shutil.copyfile(source / name, runtime / name)
 (runtime / "python314._pth").write_text("python314.zip\n.\npackages\n", encoding="ascii")
 with ZipFile(source / "runtime.zip", "w", ZIP_DEFLATED, compresslevel=6) as archive:
