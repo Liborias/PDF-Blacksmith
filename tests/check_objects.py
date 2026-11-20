@@ -100,10 +100,56 @@ def check_objects(work):
         assert sum(str(op) == "f" for _, op in selected) == 1
         assert sum(str(op) == "Do" for _, op in selected) == 1
     moved_group = work / "moved-group.pdf"
-    edit(source, moved_group, "move", tokens=tokens, delta=[20, -10])
+    edit(source, moved_group, "move", tokens=tokens, delta=[20, -10], grouping="separate")
     assert [tuple(round(value, 3) for value in obj["bounds"]) for obj in probe(moved_group)] == [
         (60, 190, 130, 250), green["bounds"], (170, 200, 235, 252), group["bounds"],
     ]
+
+    grouped = work / "grouped-move.pdf"
+    edit(source, grouped, "move", tokens=tokens, delta=[20, -10], grouping="group")
+    moved = probe(grouped)
+    assert [obj["kind"] for obj in moved] == ["path", "form", "form"]
+    assert [obj["bounds"] for obj in moved[:2]] == [green["bounds"], group["bounds"]]
+    assert all(abs(a-b) < .03 for a, b in zip(moved[-1]["bounds"], (60, 190, 235, 252))), moved[-1]
+    assert probe(grouped, 2) == probe(source, 2)
+    with Pdf.open(grouped) as document:
+        page = document.pages[0]
+        form = next(value for key, value in page.resources.XObject.items() if str(key).startswith("/PBObject"))
+        contents = list(parse_content_stream(form))
+        assert [str(op) for _, op in contents if str(op) in ("f", "Do")] == ["f", "Do"]
+        assert any(str(op) == "k" and list(map(float, args)) == [0, .78, 1, 0] for args, op in contents)
+        assert b"(Spare text) Tj" in page.Contents.read_bytes()
+        assert not document.check_pdf_syntax()
+
+    duplicated_group = work / "grouped-duplicate.pdf"
+    edit(source, duplicated_group, "duplicate", tokens=tokens, delta=[12, -12], grouping="group")
+    duplicated = probe(duplicated_group)
+    assert [(obj["kind"], obj["bounds"]) for obj in duplicated[:-1]] == [
+        (obj["kind"], obj["bounds"]) for obj in scene
+    ]
+    assert duplicated[-1]["kind"] == "form"
+
+    pasted_group = work / "grouped-paste.pdf"
+    pasted_separately = work / "separate-paste.pdf"
+    clipboard = group_snapshot["object_clipboard"]
+    edit(source, pasted_group, "paste", page=2, grouping="group", rotation=90, at=[.5, .4], clipboard=clipboard)
+    edit(source, pasted_separately, "paste", page=2, grouping="separate", rotation=90, at=[.5, .4], clipboard=clipboard)
+    one = probe(pasted_group, 2)
+    separate = probe(pasted_separately, 2)
+    assert len(one) == 2 and len(separate) == 3
+    first, second = [item["bounds"] for item in separate[-2:]]
+    combined = (min(first[0], second[0]), min(first[1], second[1]),
+                max(first[2], second[2]), max(first[3], second[3]))
+    assert all(abs(a-b) < .02 for a, b in zip(combined, one[-1]["bounds"]))
+    with Pdf.open(pasted_separately) as document:
+        assert not document.check_pdf_syntax()
+        parts = [value for key, value in document.pages[1].resources.XObject.items() if str(key).startswith("/PBObject")]
+        paints = {tuple(str(op) for _, op in parse_content_stream(part) if str(op) in ("f", "Do")) for part in parts}
+        assert paints == {("f",), ("Do",)}, paints
+    moved_part = work / "single-pasted-part-moved.pdf"
+    edit(pasted_separately, moved_part, "move", page=2, token=separate[-1]["token"], delta=[0, 8])
+    assert [obj["bounds"] for obj in probe(moved_part, 2)[:-1]] == [obj["bounds"] for obj in separate[:-1]]
+    assert source.read_bytes() == original
 
     invalid = work / "invalid.pdf"
     try:

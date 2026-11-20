@@ -42,7 +42,9 @@ V nástroji **Objekty** vybírejte vektorové tvary, obrázky a skupiny PDF klik
 
 Rámeček lze vyznačit i stisknutým kolečkem myši. Tažením doprava vyberete prvky celé uvnitř rámečku. Tažením doleva dostanete čárkovaný rámeček, který zahrne i prvky dotčené okrajem. Celostránkové pozadí se plošným výběrem neoznačí. Vybraný objekt přesunete tažením po stránce, vedle kurzoru uvidíte jeho náhled. K posouvání přiblížené stránky držte **mezerník** a táhněte.
 
-**Ctrl+D** vytvoří odsazenou kopii výběru na stejné stránce. **Ctrl+C** zkopíruje jeden či více objektů do schránky aplikace. Klikněte na místo na některé stránce stejného PDF a zvolte **Ctrl+V**. Bez kliknutí se objekt vloží doprostřed aktuální stránky. **Delete** smaže výběr, **Esc** ho zruší a **Ctrl+Z** vrátí úpravu. Změny zapíšete přes **Soubor → Uložit** nebo **Uložit jako**.
+Při přesunu, kopírování a duplikování více vybraných objektů nabízí aplikace volby **Ponechat objekty samostatně** a **Seskupit do jednoho objektu**. Skupinu lze po uložení PDF vybrat a upravit jako jediný objekt. Při přesunu a duplikování se skupina umístí nad ostatní prvky stránky. **Esc** zavře nabídku a ponechá výběr.
+
+**Ctrl+D** vytvoří odsazenou kopii výběru na stejné stránce. **Ctrl+C** zkopíruje výběr do schránky aplikace. Klikněte na místo na některé stránce stejného PDF a zvolte **Ctrl+V**. Bez kliknutí se výběr vloží doprostřed aktuální stránky. **Delete** smaže výběr a **Ctrl+Z** vrátí úpravu. Změny zapíšete přes **Soubor → Uložit** nebo **Uložit jako**.
 
 Textové znaky upravujte v nástroji **Text**. U složitého ořezu lze některé objekty přemístit nebo duplikovat přímo na zdrojové straně.
 

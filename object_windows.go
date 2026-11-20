@@ -19,6 +19,7 @@ const (
 
 type objectEditRequest struct {
 	Operation string     `json:"operation,omitempty"`
+	Grouping  string     `json:"grouping,omitempty"`
 	Token     int        `json:"token,omitempty"`
 	Tokens    []int      `json:"tokens,omitempty"`
 	Delta     textPoint  `json:"delta,omitempty"`
@@ -65,6 +66,7 @@ type objectEditor struct {
 	image                                      *printBitmap
 	capsule                                    []byte
 	copyWaiting                                bool
+	copyGrouping, clipboardGrouping            string
 	clipboard                                  []byte
 	owner                                      *documentTab
 	start, cursor                              point
@@ -179,7 +181,11 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 			target := v.textAt(x, y)
 			a.cancelObjectGesture()
 			if moved && target.source == e.pick.source && math.Hypot(delta[0], delta[1]) > .01 {
-				a.runObjectEdit(e.pick.source, objectEditRequest{Operation: "move", Token: e.selected.Token, Tokens: e.tokens(), Delta: delta})
+				if grouping, accepted := a.chooseObjectGrouping(); accepted {
+					a.runObjectEdit(e.pick.source, objectEditRequest{
+						Operation: "move", Grouping: grouping, Token: e.selected.Token, Tokens: e.tokens(), Delta: delta,
+					})
+				}
 			} else if click {
 				v.selectionClick(x, y, false)
 			}
@@ -367,6 +373,25 @@ func (a *app) runObjectEdit(source int, edit objectEditRequest) {
 	a.runDocumentDraft(req, "Upravuji objekt…", 0)
 }
 
+func (a *app) chooseObjectGrouping() (string, bool) {
+	e := &a.objects
+	if len(e.items) < 2 {
+		return "", true
+	}
+	tab, generation, selection := a.activeTab, a.view.generation, e.serial
+	var cursor point
+	user32.NewProc("GetCursorPos").Call(uintptr(unsafe.Pointer(&cursor)))
+	index := a.trackPopupAt(cursor, 256, []popupItem{
+		{label: "Ponechat objekty samostatně"},
+		{label: "Seskupit do jednoho objektu"},
+	})
+	if index < 0 || a.busy || a.mode != idObjectsTab || a.activeTab != tab ||
+		a.view.generation != generation || e.serial != selection {
+		return "", false
+	}
+	return [...]string{"separate", "group"}[index], true
+}
+
 func (a *app) copySelectedObject() {
 	e := &a.objects
 	if len(e.capsule) == 0 {
@@ -374,8 +399,15 @@ func (a *app) copySelectedObject() {
 		a.reportStatus("Objekt nelze přenést schránkou.")
 		return
 	}
-	e.clipboard, e.owner, e.copyWaiting = e.capsule, a.activeTab, false
-	a.reportStatus("Objekt byl zkopírován.")
+	e.clipboard, e.clipboardGrouping, e.owner, e.copyWaiting = e.capsule, e.copyGrouping, a.activeTab, false
+	switch e.clipboardGrouping {
+	case "group":
+		a.reportStatus("Výběr byl zkopírován jako skupina.")
+	case "separate":
+		a.reportStatus("Objekty byly zkopírovány samostatně.")
+	default:
+		a.reportStatus("Objekt byl zkopírován.")
+	}
 	a.updateObjectActions()
 }
 
@@ -395,6 +427,11 @@ func (a *app) objectCommand(id, notification int) bool {
 		v.invalidateCanvas()
 	case idObjectCopy:
 		if e.selected.Token != 0 {
+			grouping, accepted := a.chooseObjectGrouping()
+			if !accepted {
+				return true
+			}
+			e.copyGrouping = grouping
 			if !e.snapshotComplete {
 				e.copyWaiting = true
 				a.reportStatus("Připravuji objekt do schránky…")
@@ -414,7 +451,9 @@ func (a *app) objectCommand(id, notification int) bool {
 					at = &position
 				}
 			}
-			a.runObjectEdit(source, objectEditRequest{Operation: "paste", At: at, Clipboard: e.clipboard})
+			a.runObjectEdit(source, objectEditRequest{
+				Operation: "paste", Grouping: e.clipboardGrouping, At: at, Clipboard: e.clipboard,
+			})
 		}
 	case idObjectUndo:
 		v.undo()
@@ -422,7 +461,11 @@ func (a *app) objectCommand(id, notification int) bool {
 		if e.selected.Token != 0 {
 			edit := objectEditRequest{Operation: "delete", Token: e.selected.Token, Tokens: e.tokens()}
 			if id == idObjectDuplicate {
-				edit.Operation = "duplicate"
+				grouping, accepted := a.chooseObjectGrouping()
+				if !accepted {
+					return true
+				}
+				edit.Operation, edit.Grouping = "duplicate", grouping
 				box, angle := e.page.Boxes[v.box()], e.rotation(v)
 				offset := 12 / max(.01, e.page.Unit)
 				w, h := box[2]-box[0], box[3]-box[1]

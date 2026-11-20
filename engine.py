@@ -921,6 +921,15 @@ def edit_object_document(src, request):
                 raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
     except ObjectError as exc:
         raise UserError(str(exc)) from exc
+    if edit.get("grouping") == "group":
+        return {**description, "message": {
+            "move": "Výběr byl přesunut jako skupina.",
+            "duplicate": "Výběr byl duplikován jako skupina.",
+            "paste": "Výběr byl vložen jako skupina.",
+            "delete": "Objekt byl smazán.",
+        }[edit["operation"]]}
+    if edit.get("grouping") == "separate" and edit["operation"] == "paste":
+        return {**description, "message": "Objekty byly vloženy samostatně."}
     return {**description, "message": {
         "move": "Objekt byl přesunut.", "duplicate": "Objekt byl duplikován.",
         "paste": "Objekt byl vložen.", "delete": "Objekt byl smazán.",

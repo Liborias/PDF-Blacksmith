@@ -163,10 +163,10 @@ def path_outline(operators, draw, bounds):
     return {"contours": contours, "margin": margin, "rectangle": axis_aligned_rectangle}
 
 
-def describe_objects(page, operators, candidates):
+def describe_objects(page, operators, candidates, *, outlines=True):
     objects = []
     identified = {candidate.token: candidate for candidate in candidates}
-    outline_budget = 32000
+    outline_budget = 32000 if outlines else 0
     with pdfium.PdfDocument(marked_draws(page, operators, candidates)) as probe, closing(probe[0]) as native:
         for item in native.get_objects(max_depth=1):
             token = integer_marks(item, ("PBObjectDraw",)).get("PBObjectDraw")
@@ -216,14 +216,21 @@ def modify_page(document, page, operators, candidates, edit):
     action = edit.get("operation")
     if action not in {"move", "duplicate", "delete"}:
         raise ObjectError("Neznámá úprava objektu.")
-    delta = clip_point(edit.get("delta"), "posun") if action != "delete" else None
+    if action == "delete":
+        page.obj.Contents = document.make_stream(pdf.unparse_content_stream(omit_draws(operators, items)))
+        return
+    delta = clip_point(edit.get("delta"), "posun")
+    if len(items) > 1 and edit.get("grouping") == "group":
+        bounds, _ = selected_bounds(page, operators, candidates, items)
+        form = object_form(document, pdf.Dictionary(page.resources), bounds, isolated_paint(operators, items))
+        original = omit_draws(operators, items) if action == "move" else operators
+        append_forms(document, page, original, [(form, (1, 0, 0, 1, *delta))])
+        return
     combined, cursor = [], 0
+    dx, dy = delta
     for item in items:
         combined.extend(operators[cursor:item.first])
         cursor = item.end
-        if action == "delete":
-            continue
-        dx, dy = delta
         try:
             a, b, c, d, _, _ = invert(item.matrix)
         except TextError as exc:
@@ -237,15 +244,28 @@ def modify_page(document, page, operators, candidates, edit):
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))
 
 
-def isolated_paint(operators, items):
+def omit_draws(operators, items):
+    result, cursor = [], 0
+    for item in items:
+        result.extend(operators[cursor:item.first])
+        cursor = item.end
+    result.extend(operators[cursor:])
+    return result
+
+
+def isolated_paint(operators, items, *, parts=None):
     """Replay the selected paints in their original order and graphics state."""
     projected, stack = [], []
     marks, text_mode, current = 0, 0, 0
     for index, op in enumerate(operators[:items[-1].end]):
         item = items[current]
         if item.first <= index < item.end:
+            if parts is not None and index == item.first:
+                part_start = len(projected)
             projected.append(op)
             if index+1 == item.end:
+                if parts is not None:
+                    parts.append((part_start, len(projected)))
                 current += 1
             continue
         name = str(op.operator)
@@ -268,21 +288,28 @@ def isolated_paint(operators, items):
         elif name == "Tr":
             text_mode = int(op.operands[0])
         elif name in {"Tj", "TJ"} and text_mode >= 4:
-            raise ObjectError("Objekt je ovlivněný textovým ořezem. Zkopírovat jej lze duplikací na stejné straně.")
+            raise ObjectError("Výběr je ovlivněný textovým ořezem. Na stejné straně lze objekty přesunout nebo duplikovat samostatně.")
         elif name not in TEXT | {"Do", "sh", "INLINE IMAGE"}:
             raise ObjectError("Obsah před objektem nelze při kopírování bezpečně přenést.")
     return [*projected, *[instruction("EMC")] * marks, *[instruction("Q")] * len(stack)]
 
 
-def snapshot_object(document, number, page, operators, candidates, items, rotation):
-    scene = describe_objects(page, operators, candidates)
-    included = {item.token for item in items}
-    boxes = [obj["bounds"] for obj in scene["objects"] if obj["token"] in included]
-    if len(boxes) != len(items):
+def selected_bounds(page, operators, candidates, items):
+    scene = describe_objects(page, operators, candidates, outlines=False)
+    indexed = {obj["token"]: obj["bounds"] for obj in scene["objects"]}
+    if any(item.token not in indexed for item in items):
         raise ObjectError("Hranice objektů se nepodařilo určit.")
-    bounds = [min(box[0] for box in boxes)-.01, min(box[1] for box in boxes)-.01,
-              max(box[2] for box in boxes)+.01, max(box[3] for box in boxes)+.01]
-    projection = isolated_paint(operators, items)
+    boxes = [(box[0]-.01, box[1]-.01, box[2]+.01, box[3]+.01)
+             for box in (indexed[item.token] for item in items)]
+    bounds = [min(box[0] for box in boxes), min(box[1] for box in boxes),
+              max(box[2] for box in boxes), max(box[3] for box in boxes)]
+    return bounds, boxes
+
+
+def snapshot_object(document, number, page, operators, candidates, items, rotation):
+    bounds, boxes = selected_bounds(page, operators, candidates, items)
+    parts = []
+    projection = isolated_paint(operators, items, parts=parts)
     buffer = BytesIO()
     with pdf.Pdf.new() as sample:
         sample.add_pages_from(document, [number-1], forms="strip", outlines="ignore")
@@ -293,7 +320,9 @@ def snapshot_object(document, number, page, operators, candidates, items, rotati
                 del isolated.obj[key]
         isolated.obj.MediaBox = pdf.Array(bounds)
         isolated.obj.CropBox = pdf.Array(bounds)
-        isolated.obj.Rotate = (scene["rotation"] + rotation) % 360
+        isolated.obj.Rotate = (int(page.obj.get("/Rotate", 0)) + rotation) % 360
+        if len(parts) > 1:
+            isolated.obj.PBObjectParts = pdf.Array(pdf.Array([*span, *box]) for span, box in zip(parts, boxes))
         if intents := document.Root.get("/OutputIntents"):
             sample.Root.OutputIntents = sample.copy_foreign(document.make_indirect(intents))
         sample.remove_unreferenced_resources()
@@ -310,6 +339,59 @@ def snapshot_object(document, number, page, operators, candidates, items, rotati
     return result
 
 
+def object_form(document, resources, bounds, operators):
+    return document.make_stream(pdf.unparse_content_stream(operators), Type=pdf.Name.XObject,
+                                Subtype=pdf.Name.Form, FormType=1, BBox=pdf.Array(bounds), Resources=resources)
+
+
+def append_forms(document, page, operators, forms):
+    depth = 0
+    for op in operators:
+        name = str(op.operator)
+        depth += int(name == "q") - int(name == "Q")
+        if depth < 0:
+            raise ObjectError("Cílová strana má neplatný stav grafiky.")
+    if depth:
+        raise ObjectError("Cílová strana má neuzavřený stav grafiky.")
+    resources = pdf.Dictionary(page.resources)
+    resources.XObject = pdf.Dictionary(resources.get("/XObject", {}))
+    page.obj.Resources = resources
+    result = [instruction("q"), *operators, instruction("Q")]
+    for form, matrix in forms:
+        name = page.add_resource(form, pdf.Name.XObject, prefix="PBObject")
+        result.extend((instruction("q"), instruction("cm", *matrix), instruction("Do", name), instruction("Q")))
+    page.obj.Contents = document.make_stream(pdf.unparse_content_stream(result))
+
+
+def clipboard_forms(document, clip, source, grouping):
+    parts = source.obj.get("/PBObjectParts")
+    if grouping != "separate" or parts is None:
+        yield document.copy_foreign(clip.make_indirect(source.as_form_xobject(handle_transformations=False)))
+        return
+    if not isinstance(parts, pdf.Array):
+        raise ObjectError("Schránka neobsahuje platný seznam objektů.")
+
+    operators = pikepdf_operators(source)
+    resources = document.copy_foreign(clip.make_indirect(source.resources))
+    cursor = 0
+    items = []
+    for entry in parts:
+        if not isinstance(entry, pdf.Array) or len(entry) != 6:
+            raise ObjectError("Schránka neobsahuje platný seznam objektů.")
+        first, last, *bounds = entry
+        if type(first) is not int or type(last) is not int or not cursor <= first < last <= len(operators):
+            raise ObjectError("Ve schránce chybí obsah samostatných objektů.")
+        x0, y0, x1, y1 = map(float, bounds)
+        if not all(map(isfinite, (x0, y0, x1, y1))) or x0 >= x1 or y0 >= y1:
+            raise ObjectError("Objekty ve schránce mají neplatné hranice.")
+        items.append((ObjectDraw(first, last, "", IDENTITY), (x0, y0, x1, y1)))
+        cursor = last
+    if not items or sum(item.end for item, _ in items) > 2_000_000:
+        raise ObjectError("Tento výběr je pro samostatné vložení příliš složitý. Zkopírujte jej jako skupinu.")
+    for item, bounds in items:
+        yield object_form(document, resources, bounds, isolated_paint(operators, [item]))
+
+
 def paste_object(document, page, operators, edit, rotation, box):
     u, v = clip_point(edit.get("at", [.5, .5]), "vložení")
     if not 0 <= u <= 1 or not 0 <= v <= 1:
@@ -323,14 +405,6 @@ def paste_object(document, page, operators, edit, rotation, box):
     encoded = edit.get("clipboard")
     if not isinstance(encoded, str) or not 0 < len(encoded) <= 4*((CLIPBOARD_LIMIT+2)//3):
         raise ObjectError("Ve schránce není dostupný objekt.")
-    depth = 0
-    for op in operators:
-        name = str(op.operator)
-        depth += int(name == "q") - int(name == "Q")
-        if depth < 0:
-            raise ObjectError("Cílová strana má neplatný stav grafiky.")
-    if depth:
-        raise ObjectError("Cílová strana má neuzavřený stav grafiky.")
     with pdf.Pdf.open(BytesIO(b64decode(encoded, validate=True))) as clip:
         if len(clip.pages) != 1:
             raise ObjectError("Ve schránce není platný objekt.")
@@ -344,13 +418,6 @@ def paste_object(document, page, operators, edit, rotation, box):
         }[angle])
         left, bottom, right, top = map(float, source.mediabox)
         cx, cy = (left+right)/2, (bottom+top)/2
-        form = document.copy_foreign(clip.make_indirect(source.as_form_xobject(handle_transformations=False)))
-        resources = pdf.Dictionary(page.resources)
-        resources.XObject = pdf.Dictionary(resources.get("/XObject", {}))
-        page.obj.Resources = resources
-        name = page.add_resource(form, pdf.Name.XObject, prefix="PBObject")
-        page.obj.Contents = document.make_stream(pdf.unparse_content_stream([
-            instruction("q"), *operators, instruction("Q"),
-            instruction("q"), instruction("cm", a, b, c, d, x-a*cx-c*cy, y-b*cx-d*cy),
-            instruction("Do", name), instruction("Q"),
-        ]))
+        matrix = (a, b, c, d, x-a*cx-c*cy, y-b*cx-d*cy)
+        forms = clipboard_forms(document, clip, source, edit.get("grouping"))
+        append_forms(document, page, operators, ((form, matrix) for form in forms))
