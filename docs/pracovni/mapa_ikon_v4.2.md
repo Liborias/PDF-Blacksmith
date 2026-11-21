@@ -1,0 +1,135 @@
+# PDF Blacksmith – mapa zapojení ikon pro Codex
+
+Tento soubor propojuje novou SVG sadu s **existujícím rozhraním** PDF Blacksmith. Úplná mapa všech ikon, významů a statusů je v `ikonova_mapa.md` a strojově ve `manifest.json`.
+
+## 1. Hlavní navigace
+
+Relevantní zdroj: `workspace_windows.go`, pole `workspaceTabs` a definice ID nástrojů. SVG je pouze vizuální zdroj; žádný příkaz neodstraňovat ani nenahrazovat.
+
+| Zobrazená položka | SVG | Identifikátor v kódu |
+|---|---|---|
+| Soubor | `nav_file.svg` | `idFileTab` |
+| Zobrazení | `nav_view.svg` | `idBrowseTab` |
+| Najít v PDF | `nav_search_pdf.svg` | `idSearchTab` |
+| Objekty | `nav_objects.svg` | `idObjectsTab` |
+| Text | `nav_text.svg` | `idTextTab` |
+| OCR | `nav_ocr.svg` | `idOCRTab` |
+| Separace | `nav_separations.svg` | `idProofTab` |
+| Digitální podpis | `nav_signature.svg` | `idSignTab` |
+| Rozdělit PDF | `nav_split_pdf.svg` | `idSplitTab` |
+| Sloučit PDF | `nav_merge_pdf.svg` | `idMergeTab` |
+| Pořadí stránek | `nav_page_order.svg` | `idPageOrderTool` |
+| Poznámky | `nav_notes.svg` | Nový schválený nástroj; nemá se předstírat existující ID |
+| Nastavení | `nav_settings.svg` | Schválené samostatné okno; ID doplní implementace |
+| Nápověda | `nav_help.svg` | Schválená nápověda; kliknutí otevře hlavní stránku manuálu, F1 kontext |
+
+## 2. Text a objekty
+
+Relevantní zdroje: `text_windows.go`, `typography_windows.go`, `inline_text_windows.go`, `object_windows.go`, `object_selection_windows.go` a související soubory. Nejdříve ověřit odpovídající existující ovladač v aktuálním kódu.
+
+- Výběr textu/objektů: `cursor.svg`, `rect_select.svg`, `lasso.svg`. Obdélník stiskem kolečka myši respektovat podle specifikace.
+- Základní typografie: `regular.svg`, `bold.svg`, `italic.svg`, `underline.svg`, `strikethrough.svg`, `font_size_down.svg`, `font_size_up.svg`, `insert_text.svg`, `paragraph.svg`, `align_left.svg`, `align_center.svg`, `align_right.svg`, `align_justify.svg`.
+- Již viditelné parametry textového panelu: `font_family.svg`, `font_size.svg`, `font_width.svg`, `line_spacing.svg`, `letter_spacing.svg` (proklad). Ikony nemají automaticky nahradit číselná vstupní pole ani textové štítky.
+- Funkční rezerva: `kerning.svg`, `word_spacing.svg`, `paragraph_spacing.svg`, indexy, kapitálky, odsazení a pokročilá sazba; implementovat jen po schválení konkrétní funkce.
+- Kopírování, vložení, duplikace a historie: `copy.svg`, `paste.svg`, `duplicate.svg`, `undo.svg`, `redo.svg`, `delete.svg`.
+- Objekty do budoucna: `group_objects.svg`, `ungroup_objects.svg`, `node_edit.svg`, `bezier_curve.svg`, `eyedropper.svg`, `fill_color.svg`, `stroke_width.svg`, geometrická transformace a rozložení objektů.
+
+## 3. Separace a tisk
+
+Relevantní zdroje: `viewer_windows.go` (`buildProofPanel`, `syncPlateSelection`), `proof.py`, `COLOR_MANAGEMENT.md`.
+
+- Existující desky, přepínání a kontrola: `nav_separations.svg`, `plate_all.svg`, `plate_single.svg` (schválené doplnění funkce izolace jediné desky), `print.svg`, `color_profile.svg`, `spot_color.svg`.
+- Schválené rozšíření: `separation_gray.svg`, `separation_color.svg`, `tac_measure.svg`, `ink_limit.svg`.
+- Existující převody: `convert_gray.svg`, `convert_k.svg`; **neodstraňovat** DeviceGray, složenou černou K100 ani explicitní pouze K.
+- Vizuálně přidat malé barevné značky C/M/Y/K a přímých barev. Jsou to informační vzorky, nikoli náhrada hlavních přebarvitelných SVG ikon.
+- **Rozložení panelu Separace zachovat** podle schválení, bez automatického rozdělování do dvou záložek.
+
+## 4. Stránky, soubory, dokumenty
+
+Relevantní zdroje: `pages_windows.go`, `page_transfer_windows.go`, `document_tabs_windows.go`, `file_menu_windows.go`, `workspace_windows.go`.
+
+- Ukládání a export: `save.svg` (`idSaveDocument`), `save_copy.svg` (`idSaveDocumentAs`), `export.svg` (exportní ovládání), `print.svg` (`idPrintDocument`).
+- Pořadí a úpravy stránek: `move_before.svg`, `move_after.svg`, `rotate_left.svg`, `rotate_right.svg`, `page_delete.svg`, `merge_pages.svg`, `split_pages.svg`.
+- Funkce související s ochranou práce: `auto_recover.svg` pro schválenou obnovu po havárii.
+- Výběr stránky a přiblížení: `nav_thumbnails.svg`, `fit_page.svg`, `fit_width.svg`, `continuous.svg`, `zoom_in.svg`, `zoom_out.svg`, **`zoom_1_1.svg`** (Zobrazení 1:1 / 100 %).
+
+## 5. Poznámky
+
+Nový schválený nástroj. Při implementaci používat standardní anotace PDF oddělené od původního obsahu.
+
+- `nav_notes.svg`: hlavní nástroj Poznámky.
+- `sticky_note.svg`, `comment.svg`, `insert_text.svg`, `freehand_pen.svg`, `arrow_line.svg`, `rectangle_shape.svg`, `ellipse_shape.svg`, `highlight.svg`, `underline.svg`, `strikethrough.svg`: schválená základní funkčnost.
+- `note_show.svg`, `note_hide.svg`: viditelnost **samostatně pro každý dokument**.
+- `annotations_export.svg`: konzultační export s poznámkami. Běžný tisk a export zůstávají **bez poznámek**, běžné uložení pracovní kopie je zachová.
+- `stamp.svg`, `note_reply.svg` a další rezervní ikony nejsou schválením dalších funkcí.
+
+## 6. Implementační pravidla
+
+1. **Zachovat aktuální chování nástrojů**; nejprve provést inventuru dostupných ovladačů.
+2. Náhrady ikon provést bez změny ovládacích kláves, událostí a dostupnosti funkcí.
+3. Přebarvování: SVG používají `currentColor`, kořenový atribut `color` je výchozí vínová; pro Win32 připravit DPI-odpovídající rastrování či renderer SVG a centrální barevný token.
+4. SVG mají jednotný `viewBox="0 0 24 24"`, centrovaný optický obsah a sjednocenou základní tloušťku tahu. Zmenšení písma má záměrně menší A.
+5. Nové/rezervní ikony nezavádějí automaticky nové funkce ani nové záložky, pokud nebyly zvlášť schváleny.
+6. **Logo**: používat výhradně uživatelem dodané `kovadlina křivky.svg`. Balíček ikon žádné náhradní logo neobsahuje.
+
+## 7. Zobrazení 1:1 – nové schválené ovládání (v4.1)
+
+- Soubor: `icons/zoom_1_1.svg`.
+- Popisek/tooltip: **Zobrazení 1:1 (100 %)**.
+- Umístění: nabídka režimů přiblížení v dolní navigační liště a případně u přibližování v pravém panelu.
+- Kliknutí nastaví aktivní PDF na **100% zoom**, přepne z režimu „Přizpůsobit stránce/šířce“ na vlastní zoom, zachová pokud možno střed aktuálně viditelné oblasti a znovu vykreslí z původních PDF dat. V duálním zobrazení se týká pouze aktivního PDF.
+- Implementační poznámka ke stávající Go aplikaci: `documentView.zoom` přepočítává PDF body na obrazové pixely; základ při 100 % je `float64(v.app.dpi) / 72`, nikoli doslovně `1`. Nepoužívat zvětšení původního rastrového náhledu jako konečné vykreslení.
+- **Pozor na přesný fyzický rozměr:** běžné zobrazení 100 % nemusí odpovídat reálné velikosti 1:1 na konkrétním monitoru. Volitelná kalibrace fyzického měřítka monitoru je samostatný budoucí návrh; nezaměňovat s příkazem 100 %.
+- Zkratka: volitelně navrhnout `Ctrl+1` až po ověření kolize a sjednocení klávesových zkratek. Aktuální `Ctrl+0` pro přizpůsobení stránky zachovat.
+- Ikona mění pouze měřítko zobrazení, nikoliv velikost stránky či export.
+
+
+---
+
+# Rozšíření mapy pro budoucí moduly (v4.2)
+
+**Stav: návrh roadmapy, nikoli nový schválený seznam funkcí.** Zde uvedené názvy `nav_*` jsou pouze připravené soubory SVG. V současné větvi `workspace_windows.go` pro tyto čtyři moduly nejsou odpovídající `id*Tab` konstanty. Nezavádět nové ID ani funkce bez odsouhlasení návrhu a testů.
+
+## Formuláře (nově zařazená plánovaná oblast)
+
+- **Hlavní nástroj:** `nav_forms.svg`, zpočátku režimy `form_fill.svg`, `form_edit.svg`, `form_preview.svg`.
+- **Pole AcroForm:** `form_text_field.svg`, `form_multiline.svg`, `form_checkbox.svg`, `form_radio.svg`, `form_dropdown.svg`, `form_listbox.svg`, `form_button.svg`, `form_signature_field.svg`.
+- **Vlastnosti a ovládání:** `form_properties.svg`, `form_required.svg`, `form_readonly.svg`, `form_tab_order.svg`, `form_validate.svg`, `form_clear.svg`, `form_duplicate_field.svg`, `form_align_fields.svg`.
+- **Tisk a data:** `form_flatten.svg` (pouze explicitní operace!), `form_import_data.svg`, `form_export_data.svg` (odložená etapa); `form_date.svg`, `form_calculation.svg`, `form_password.svg` (budoucí rezerva s bezpečnostním posouzením).
+- **Kompatibilita:** AcroForm `/AcroForm` a widget anotace; chybějící nebo poškozené appearance streams `/AP` ošetřit. Rozlišení mezi komentáři a widgety je zásadní: **Export bez poznámek NESMÍ zahazovat formulářová pole, jejich vyplněné hodnoty ani formulářové podpisy**.
+- **Ochrana dat:** bezpečné ukládání kopie, práce s přístupovými právy, bez nevyžádaného spouštění JavaScriptu; u podepsaných formulářů respektovat platnost podpisu. XFA odhalit a srozumitelně oznámit omezení, neprovádět tichý převod.
+
+## Preflight (navržený nový nástroj)
+
+- **Hlavní nástroj:** `nav_preflight.svg` (obecné `preflight.svg` existuje jako symbol, nikoli jako hotový kompletní panel).
+- **Akce a výsledky:** `preflight_run.svg`, `preflight_error.svg`, `preflight_warning.svg`, `preflight_pass.svg`, `preflight_report.svg`, `preflight_fix.svg`.
+- **Konkrétní kontroly:** `preflight_image_dpi.svg`, `preflight_fonts.svg`, `preflight_white_overprint.svg`, `preflight_pdfx.svg`, `preflight_hairlines.svg`.
+- **Vazby:** znovupoužít `proof.py`, `pdfx.py`, `print_profiles.py`, export a existující barevné testy; rozlišit dílčí PDF/X kontrolu od plnohodnotného Preflight.
+
+## Grafické porovnávání (navržené rozšíření duálního zobrazení)
+
+- **Hlavní nástroj:** `nav_compare.svg`; doplnit k existujícímu `compare_documents.svg`.
+- **Zobrazení:** `compare_overlay.svg`, `compare_difference.svg`, `compare_slider.svg`, `compare_sync.svg`, `compare_swap.svg`.
+- **Vazby:** `comparison_windows.go`, `reader_render.py`, `viewer_windows.go`; využít stávající synchronizaci stránek/panelů, nevytvářet nezávislý prohlížeč.
+- **Pozor:** barevná odchylka po řízeném ICC převodu nemusí být geometrická chyba; oddělit geometrické a barevné porovnání.
+
+## Měření a vodítka (navržený modul)
+
+- **Hlavní nástroj:** `nav_measure.svg`; použít i již existující ikonové položky `measure_distance.svg`, `ruler.svg`, `stroke_width.svg`.
+- **Měření:** `measure_angle.svg`, `measure_area.svg`, `measure_stroke.svg`, `measure_calibrate.svg`.
+- **Zobrazení a pomůcky:** `guides_toggle.svg`, `grid_toggle.svg`, `snap_to_guides.svg`.
+- **Vazby:** stránkové souřadnice v bodech + page boxes; správně zohlednit otočení stránky a různé hodnoty UserUnit. Kalibrace pro fyzicky přesné měřítko je oddělená od ikony `zoom_1_1.svg`.
+
+## Dávkové zpracování (navržený modul)
+
+- **Hlavní nástroj:** `nav_batch.svg`; akce `batch_add_files.svg`, `batch_queue.svg`, `batch_run.svg`, `batch_pause.svg`, `batch_presets.svg`, `batch_output_folder.svg`, `batch_report.svg`.
+- **Vazby:** na existující exportní předvolby, `engine.py` a převody; volby výstupu přebírat z existujícího nástroje, nevytvářet druhou konfliktní správu ICC.
+- **Bezpečnost:** nikdy implicitně nepřepisovat zdrojová PDF, transakční výstupy, záznam dílčích selhání a možnost přeskočit soubor.
+
+## Pravidla jednotného zapojení ikon
+
+1. Vždy zachovat původní funkčnost a zkratky; samotné SVG není důvod vytvářet nový příkaz.
+2. Aktivní nástroj zvýraznit vínově; vypnutý ovladač vizuálně odlišit; tooltip i vysvětlující pole zachovat.
+3. Používat `currentColor` a jednotné plátno `24 × 24`; konkrétní velikost ve Win32 kontrolovat při DPI škálování.
+4. Schválené uživatelské logo `kovadlina křivky.svg` nenahrazovat návrhem loga z ikonové sady.
+5. Plánované moduly zavést v roadmapě s etapami a integračními testy; nepronikají automaticky mezi aktuální schválené implementační požadavky.
