@@ -1,6 +1,6 @@
 # PDF Blacksmith – pracovní podklady pro Codex
 
-**Aktualizováno:** 21. listopadu 2026 · **Stav:** návrh rozhraní F1, implementace F1 schválena po etapách; ostatní položky jen plán.
+**Aktualizováno:** 22. listopadu 2026 · **Stav:** návrh rozhraní F1, implementace F1 schválena po etapách; ostatní položky jen plán.
 
 Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje stávající implementaci** v Go/Win32 a Pythonu; přítomnost návrhu neznamená, že byl implementován.
 
@@ -12,9 +12,10 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. [Formuláře F1 – klikací návrh rozhraní](formulare/F1_mockup_v1.0.html)
-8. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
-9. [Mapa ikon v4.2](mapa_ikon_v4.2.md)
+7. **[Nový celkový HTML návrh: dvě horní lišty, malé ouška, původní SVG logo](rozhrani/cely_vizual_dve_listy_v2.1.html) – pracovní vizuální varianta k revizi.**
+8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
+9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
+10. [Mapa ikon v4.2](mapa_ikon_v4.2.md)
 
 ## Závazné rozlišení
 
