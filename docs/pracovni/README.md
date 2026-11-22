@@ -12,7 +12,8 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML návrh v2.7: Vložit strany, samostatná ouška bez lišty a zaoblené posuvníky](rozhrani/cely_vizual_vlozit_strany_panely_v2.7.html)** – pracovní varianta k revizi.
+7. **[Aktuální HTML návrh v2.8: jedno místo pro pomocné panely, ikonové ovládání, historie a adaptivní šířka](rozhrani/cely_vizual_panely_historie_v2.8.html)** – pracovní varianta k revizi.
+   - [Předchozí verze v2.7 – vložení stran a posuvníky](rozhrani/cely_vizual_vlozit_strany_panely_v2.7.html) pro porovnání.
    - [Předchozí návrh panelů v2.6](rozhrani/cely_vizual_panely_ouska_v2.6.html) pro porovnání.
    - **[Rozlišení Vložit / Importovat / Sloučit a otevřít (Otevřít pouze PDF; širší formáty)](rozhrani/ROZHODNUTI_Vlozit_Importovat_Sloucit_2026-11-22.md)** — schválený směr, HTML a kód zatím neupravovat.
    - **[Pokyny k ouškům a posuvníkům](rozhrani/ODLOZENE_UPRAVY_PANELU_PO_v2.6.md)** — zaneseny do HTML v2.7; zatím neimplementovány v Go.
@@ -22,7 +23,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
    - [Starší varianta v2.1](rozhrani/cely_vizual_dve_listy_v2.1.html) pro porovnání.
 8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
 9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
-10. [Mapa ikon v4.2](mapa_ikon_v4.2.md)
+10. [Mapa ikon v4.3](mapa_ikon_v4.3.md)
 
 ## Závazné rozlišení
 
