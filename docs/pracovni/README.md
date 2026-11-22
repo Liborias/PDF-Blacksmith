@@ -12,7 +12,8 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML návrh v2.2: všechny nástroje, záložky a poznámky jako samostatné panely](rozhrani/cely_vizual_vsechny_nastroje_v2.2.html) – pracovní vizuální návrh k revizi.**
+7. **[Aktuální HTML návrh v2.3: nabídka Soubor, jednotné podmenu vlevo a kontextové vlastnosti](rozhrani/cely_vizual_soubor_v2.3.html)** – pracovní varianta k revizi.
+   - [Předchozí rozložení v2.2](rozhrani/cely_vizual_vsechny_nastroje_v2.2.html), zachováno pro porovnání.
    - [Starší varianta v2.1](rozhrani/cely_vizual_dve_listy_v2.1.html) pro porovnání.
 8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
 9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
