@@ -12,7 +12,8 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML návrh v2.8: jedno místo pro pomocné panely, ikonové ovládání, historie a adaptivní šířka](rozhrani/cely_vizual_panely_historie_v2.8.html)** – pracovní varianta k revizi.
+7. **[Aktuální HTML návrh v2.9: Nastavení, automatická obnova a šířka stránky respektující ouška](rozhrani/cely_vizual_nastaveni_bezpecna_sirka_v2.9.html)** – pracovní varianta k revizi.
+   - [Předchozí návrh v2.8: historie a sdílené pomocné panely](rozhrani/cely_vizual_panely_historie_v2.8.html) pro porovnání.
    - [Předchozí verze v2.7 – vložení stran a posuvníky](rozhrani/cely_vizual_vlozit_strany_panely_v2.7.html) pro porovnání.
    - [Předchozí návrh panelů v2.6](rozhrani/cely_vizual_panely_ouska_v2.6.html) pro porovnání.
    - **[Rozlišení Vložit / Importovat / Sloučit a otevřít (Otevřít pouze PDF; širší formáty)](rozhrani/ROZHODNUTI_Vlozit_Importovat_Sloucit_2026-11-22.md)** — schválený směr, HTML a kód zatím neupravovat.
