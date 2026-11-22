@@ -13,6 +13,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
 7. **[Aktuální HTML návrh v2.6: společná ouška skupin panelů a nezávislé pomocné panely](rozhrani/cely_vizual_panely_ouska_v2.6.html)** – pracovní varianta k revizi.
+   - **[Odložené úpravy oušek a posuvníků po v2.6](rozhrani/ODLOZENE_UPRAVY_PANELU_PO_v2.6.md)** — pouze zaznamenáno, v HTML zatím neprovádět.
    - [Starší nabídky Soubor/Zobrazení v2.4](rozhrani/cely_vizual_soubor_zobrazeni_v2.4.html) pro porovnání.
    - [Předchozí návrh v2.3](rozhrani/cely_vizual_soubor_v2.3.html) pro porovnání.
    - [Původní rozložení v2.2](rozhrani/cely_vizual_vsechny_nastroje_v2.2.html).
