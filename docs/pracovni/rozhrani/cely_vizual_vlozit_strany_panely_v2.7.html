@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light"><title>PDF Blacksmith – Vložit strany a boční panely (v2.7)</title><style>
+:root{--base:#131418;--top:#1a1a21;--panel:#202027;--panel-alt:#25252e;--panel-dark:#1e1e24;--line:#35333d;--line-soft:#2d2d35;--text:#eceaf0;--muted:#a49faa;--dim:#817e89;--accent:#ae4b75;--accent-soft:rgba(174,75,117,.13);--accent-border:#7b405b;--good:#5bba9d;--bad:#f17b83;--warn:#e9a15f;--thumbs-width:136px;--tools-width:172px;--props-width:315px;--rail-width:23px}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{background:var(--base);color:var(--text);font:12px/1.4 'Segoe UI',system-ui,Arial,sans-serif;overflow:hidden}button,select,input,textarea{font:inherit}button{cursor:pointer;color:inherit}button:disabled{opacity:.4;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:1px solid #ca7799;outline-offset:1px}button{background:none;border:1px solid transparent}.ico{height:16px;width:16px;flex:none;color:#b5b0bb}.label-muted{font-size:10px;color:var(--muted)}.divider{width:1px;height:18px;background:var(--line);flex:none}.app{height:100dvh;min-width:720px;min-height:540px;display:flex;flex-direction:column}
+/* FIRST TOP STRIP — original SVG logo, tabs, app chrome */
+.titlebar{height:40px;flex:none;background:var(--top);border-bottom:1px solid var(--line-soft);display:flex;align-items:stretch;gap:5px;padding:0 7px 0 7px}.brand-mark{display:flex;align-items:center;justify-content:center;flex:none;height:40px;width:48px;color:var(--accent);padding:2px 4px;border:0}.brand-mark:hover{background:#27242c}.titlebar .brand-mark{margin-right:29px}.logo-svg{height:34px;max-width:41px;width:auto;display:block}.title-small{align-self:center;color:#aaa5ae;font-size:10px;padding:0 8px 0 1px;white-space:nowrap;letter-spacing:.02em}.titlebar .divider{align-self:center}.title-btn{width:27px;height:26px;border:1px solid var(--line);background:var(--panel-dark);margin:auto 0;display:grid;place-items:center;border-radius:3px;color:#c7c2cc;font-size:15px}.title-btn:hover,.toolbtn:hover{background:#2c2931}.doc-tabs{display:flex;align-items:flex-end;gap:2px;min-width:0;margin-left:9px}.doc-tab{height:34px;min-width:130px;max-width:280px;background:#29262e;border:1px solid var(--line);border-bottom-color:var(--top);display:flex;align-items:center;gap:8px;padding:0 10px;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.doc-tab .name{overflow:hidden;text-overflow:ellipsis}.doc-tab .dirty{color:#cb7697}.doc-tab .x{margin-left:auto;color:var(--muted)}.tab-add{border:0;background:transparent;padding:0 13px;height:33px;align-self:flex-end;font-size:19px}.tab-add:hover{background:#28262e}.window-spacer{flex:1}.window-controls{display:flex;align-items:center;margin-left:auto;gap:1px}.window-controls button{width:34px;height:29px;color:#999;font-size:13px}.window-controls button:hover{background:#292731}
+/* SECOND TOP STRIP — menu and toolbar */
+.commandbar{height:42px;flex:none;display:flex;align-items:center;gap:3px;padding:0 8px;background:#1d1d23;border-bottom:1px solid var(--line);min-width:0;overflow:hidden}.menus{display:flex;align-items:center;gap:1px;flex:none}.menubtn{font-size:11px;border-radius:2px;padding:8px 9px;white-space:nowrap;color:#d3d0d8}.menubtn:hover,.menubtn.on{background:var(--accent-soft);color:#eccbd9}.commandbar .divider{margin:0 6px}.toolbar{display:flex;align-items:center;gap:3px;min-width:0;flex:1;justify-content:flex-end}.toolbtn{width:27px;height:27px;flex:none;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:2px;color:#cbc7d0;font-size:12px}.toolbtn .ico{width:16px;height:16px}.toolbtn.active{background:var(--accent-soft);border-color:#6d4055;color:#f0dce6}.toolbtn.active .ico{color:#d79ab3}.toolbtn.squared{border-color:var(--line);background:#25242b}.zoom-select{height:26px;min-width:73px;background:#22222a;border:1px solid var(--line);color:var(--text);padding:0 5px;font-size:11px;outline:0;border-radius:2px}.page-nav{font-variant-numeric:tabular-nums;font-size:11px;min-width:40px;text-align:center;white-space:nowrap;color:#d1ccd5}.toolbar .hide-small{display:flex}.toolbar-divider{width:1px;height:22px;background:#36333d;margin:0 5px;flex:none}
+/* WORK AREA, SQUARE PANELS AND SMALL EARS */
+.workarea{display:flex;flex:1;min-height:0;overflow:hidden}.toolpane{width:var(--tools-width);flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;overflow-x:hidden;padding:8px 6px}.toolpane .pane-label{padding:10px 9px 8px;color:var(--dim);font-size:10px;letter-spacing:.085em;text-transform:uppercase}.toolpane .tool{width:100%;min-height:31px;padding:5px 8px;display:flex;align-items:center;gap:10px;text-align:left;border-left:2px solid transparent;color:#d7d4dc}.toolpane .tool:hover{background:#2b2931}.toolpane .tool.active{background:var(--accent-soft);border-left-color:var(--accent);color:#f0dce6}.toolpane .tool.active .ico{color:#d781a5}.toolpane .pane-sep{height:1px;background:var(--line-soft);margin:9px 7px}.thumbpane{width:var(--thumbs-width);flex:none;background:#1e1f26;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:auto}.thumb-head{height:33px;flex:none;padding:10px 8px 5px;font-size:11px;font-weight:600;border-bottom:1px solid var(--line-soft)}.thumbstack{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 5px 18px}.thumbbutton{border:1px solid transparent;background:transparent;display:flex;flex-direction:column;align-items:center;gap:5px;padding:5px 8px}.thumbbutton:hover{background:#2c2931}.mini-page{width:67px;height:92px;background:#f8f8fa;border:1px solid #cac7cc;box-shadow:0 2px 5px #0007;padding:9px 7px;display:flex;flex-direction:column;gap:5px;color:#444}.mini-page b{font-size:6px;text-align:left;color:#333}.mini-page span{height:2px;background:#bab7bd}.mini-page span:nth-child(2){width:93%}.mini-page span:nth-child(3){width:68%}.mini-page span:nth-child(4){width:94%}.mini-page span:nth-child(5){width:76%}.mini-page span:nth-child(6){width:89%}.thumbbutton.active .mini-page{outline:2px solid #995073;outline-offset:1px}.thumb-index{color:#aaa;font-size:10px}.thumbbutton.active .thumb-index{color:#e5b3c8}.earrail{width:var(--rail-width);flex:none;background:#191a20;border-left:1px solid #2c2b32;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:3px;padding-top:5px}.earrail.left{border-left:0}.ear{width:21px;min-height:70px;border:1px solid #38333d;border-left:0;background:#232129;color:#aaa4ae;writing-mode:vertical-rl;text-orientation:mixed;text-align:center;font-size:10px;letter-spacing:.03em;padding:8px 3px;display:flex;align-items:center;justify-content:center;gap:5px;border-radius:0 4px 4px 0;user-select:none}.earrail.right .ear{border-left:1px solid #38333d;border-right:0;border-radius:4px 0 0 4px}.ear:hover{background:#29262e}.ear.active{background:#2f2630;border-color:#67465a;color:#dfb8ca}.ear .ico{height:12px;width:12px;color:inherit;transform:rotate(-90deg)}.ear.compact{min-height:32px;padding:7px 3px;font-size:0}.ear.compact .ico{transform:none;height:14px;width:14px}.ear.all{min-height:36px;flex:none;color:#b9a9b3;border-color:#37303b;background:#25202a}.editor{min-width:180px;flex:1;background:#131417;overflow:auto;position:relative;padding:20px 18px 38px;scrollbar-color:#4b4650 #17171c}.editor .canvas-note{margin:0 auto 12px;max-width:580px;text-align:center;color:#bcb5c1;font-size:10px}.pdf-page{background:#fcfcfc;color:#25232a;box-shadow:0 8px 28px #000a;width:560px;min-height:748px;padding:44px 50px;display:none;margin:0 auto 16px;position:relative}.pdf-page.active{display:block}.pdf-page h1{font-size:22px;margin:0 0 5px}.pdf-page h2{font-size:14px;margin:20px 0 12px}.pdf-page .desc{color:#76737c;font-size:11px}.pdf-page .rule{border-top:2px solid #ae4b75;margin:20px 0}.pdf-page .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pdf-page .field{display:flex;flex-direction:column;gap:4px;margin:7px 0 12px;position:relative}.pdf-page .field label{font-size:11px;color:#343139}.pdf-page .field .required{color:#ae4b75}.pdf-page .field input,.pdf-page .field select,.pdf-page .field textarea{background:#faf7f9;border:1px solid #c389a3;border-radius:2px;padding:7px 8px;width:100%;color:#333;font-size:12px;outline:0;resize:vertical}.pdf-page .field select{background:#faf7f9}.pdf-page .field input:focus,.pdf-page .field textarea:focus,.pdf-page .field select:focus{border-color:#9b4268;box-shadow:0 0 0 2px #b65e8322}.pdf-page.hide-fill .field input,.pdf-page.hide-fill .field select,.pdf-page.hide-fill .field textarea{border-color:#bab7bb;background:#fff}.pdf-page .field.invalid input,.pdf-page .field.invalid textarea,.pdf-page .field.invalid select{border-color:#d45d65;background:#fff7f7}.pdf-page .field .errtext{font-size:10px;color:#bc4c57;min-height:13px}.pdf-page .field input[readonly]{background:#eeeeef;border-color:#d7d7d9;color:#777}.pdf-page .checkline{display:flex;align-items:center;gap:8px;padding:7px 6px;border:1px dashed #be8ba2;background:#fcf7f9;margin:10px 0}.pdf-page .checkline input{accent-color:#a54e75}.pdf-page .pagefooter{font-size:10px;color:#8c8990;border-top:1px solid #ddd;padding-top:12px;margin-top:26px}.pdf-page .doc-card{background:#f3f3f4;border:1px solid #ddd;padding:10px;margin-top:15px;font-size:11px;color:#5b5960}.pdf-page .faux-table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:11px}.pdf-page .faux-table td,.pdf-page .faux-table th{border:1px solid #d6d3da;padding:8px;text-align:left}.pdf-page .faux-table th{background:#f1eff2}.pdf-page .sign-box{border:1px solid #c4c2c8;height:90px;display:grid;place-items:center;color:#aaa;font-size:11px;margin-top:10px}
+.recent-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}.recent-doc{width:100%;text-align:left;border:1px solid var(--line);background:#26252d;padding:8px 10px;border-radius:3px;display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;color:#eceaf0}.recent-doc:hover{background:#2d2a34;border-color:#5f4a57}.recent-doc .sub{font-size:10px;color:var(--muted)}.recent-pin{font-size:10px;color:#d9a1ba;background:#392732;border:1px solid #6d4455;border-radius:10px;padding:1px 6px}.context-menu{position:fixed;z-index:90;min-width:210px;background:#221f27;border:1px solid #5a4450;box-shadow:0 8px 24px #000b;border-radius:4px;padding:5px;display:none}.context-menu.on{display:block}.context-menu button{width:100%;display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:3px;text-align:left;color:#eceaf0}.context-menu button:hover{background:#312733}.sticker-arrow{position:absolute;display:flex;align-items:center;min-height:30px;background:linear-gradient(180deg,#b95177,#8e3557);color:#fff3f7;border:1px solid #742f49;border-radius:4px 3px 3px 4px;padding:6px 10px 6px 12px;font-size:11px;font-weight:600;box-shadow:0 4px 10px rgba(72,0,24,.25)}.sticker-arrow:before{content:'';position:absolute;left:-16px;top:50%;transform:translateY(-50%);border-top:15px solid transparent;border-bottom:15px solid transparent;border-right:16px solid #9e4164;filter:drop-shadow(-1px 0 0 #742f49)}.sticker-arrow .close{margin-left:8px;width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,.45);display:grid;place-items:center;font-size:11px;line-height:1;color:#fff9}.sticker-arrow small{display:block;font-weight:400;color:#ffe0ea}.sticker-arrow.sample{position:relative;left:auto;top:auto;margin:8px 0 6px 16px}.marker-layer{position:absolute;inset:0;pointer-events:none}.marker-layer .sticker-arrow{pointer-events:auto}.iconized-label{display:inline-flex;align-items:center;gap:6px}.iconized-label svg{width:13px;height:13px;color:#c58da6;flex:none}.fit-width-mode .editor{padding-left:8px;padding-right:8px}.fit-width-mode .pdf-page{margin-left:auto;margin-right:auto}
+/* Right content */
+.props{width:var(--props-width);flex:none;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}.props-head{height:41px;padding:12px 13px 8px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;flex:none}.props-body{overflow:auto;flex:1;padding:12px 12px 16px}.segmented{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:0 0 12px}.segmented button{border:1px solid #41404a;background:#2a2931;padding:7px 5px;font-size:11px;border-radius:2px}.segmented button.active{background:var(--accent-soft);border-color:#835069;color:#f0dce6}.panel-caption{color:var(--dim);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:14px 0 7px}.switchline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0;font-size:11px}.switchline input{accent-color:#ae4b75}.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:13px 0}.stat{background:#26262f;border:1px solid var(--line);padding:6px;text-align:center}.stat strong{display:block;font-size:15px;font-weight:600}.stat span{font-size:10px;color:var(--muted)}.sectiontoggle{background:transparent;border-bottom:1px solid var(--line);color:var(--text);width:100%;display:flex;justify-content:space-between;text-align:left;padding:11px 0 8px;font-weight:600}.grouphead{padding:9px 3px 4px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);width:100%;text-align:left}.grouphead:hover{color:#fff}.frow{width:100%;display:flex;gap:6px;align-items:center;min-height:29px;text-align:left;border:1px solid transparent;padding:5px 5px;color:#ddd}.frow:hover,.frow.selected{background:var(--accent-soft);border-color:#57404d}.frow .status{width:17px;flex:none;text-align:center;font-size:12px}.frow .fname{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.frow .fvalue{max-width:85px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;font-size:10px;color:#aaa}.frow .status.good{color:var(--good)}.frow .status.bad{color:var(--bad)}.frow .status.missing{color:var(--warn)}.frow .status.ro{color:#999}.validation-summary{border:1px solid #68504e;background:#2d2729;color:#d4bcc0;margin:15px 0 4px;padding:9px;font-size:11px}.validation-summary strong{color:#e4c5cc}.props-actions{display:flex;gap:7px;margin-top:14px}.btn{background:#302e37;border:1px solid #45414b;border-radius:2px;padding:7px 9px;font-size:11px;white-space:nowrap}.btn:hover{background:#39353f}.btn.primary{background:#533342;border-color:#82516a;color:#f7e6ed}.btn.primary:hover{background:#684052}.props-actions .btn{flex:1}.infobox{font-size:11px;color:#aaa7b2;border:1px solid #3a3841;padding:10px;background:#25252e;margin:8px 0}.props-footer{height:27px;border-top:1px solid var(--line);padding:6px 13px;color:var(--dim);font-size:10px}.hidden{display:none!important}
+/* bottom status */
+.statusbar{height:33px;flex:none;display:flex;align-items:center;gap:8px;background:#1c1c23;border-top:1px solid var(--line);padding:0 8px;font-size:11px;color:#ada7b2}.statusbar .spacer{flex:1}.statusbar button{border:1px solid var(--line);height:23px;min-width:24px;background:#26252d;padding:0 6px;border-radius:2px}.statusbar button:hover{background:#35303a}.statusbar .smallicon{width:13px;height:13px}.status-pill{padding:2px 8px;border:1px solid #3b3740;background:#23232a}.menu-float{position:absolute;z-index:30;background:#27252e;border:1px solid #514352;box-shadow:0 9px 28px #0007;min-width:195px;padding:5px;display:none}.menu-float.on{display:block}.menu-float button{display:block;width:100%;text-align:left;padding:7px;font-size:11px}.menu-float button:hover{background:#3c2d38}.toast{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);background:#322b33;border:1px solid #76536a;color:#eee;padding:8px 13px;z-index:50;display:none;box-shadow:0 6px 18px #0007}.toast.on{display:block}.modal-overlay{position:fixed;inset:0;background:#0009;z-index:50;display:none;place-items:center}.modal-overlay.on{display:grid}.modal-dialog{width:min(480px,90vw);background:#25242c;border:1px solid #766070;padding:19px;box-shadow:0 16px 45px #000c}.modal-dialog h2{font-size:15px;margin:0 0 9px}.modal-dialog .actions{display:flex;gap:7px;justify-content:flex-end;margin-top:18px}.modal-dialog ul{color:#dbcbd4;line-height:1.8}.modal-dialog p{color:#aaa;font-size:11px}
+body.hide-tools .toolpane{display:none}body.hide-thumbs .thumbpane{display:none}body.hide-props .props{display:none}body.hide-tools .earrail.left .ear[data-panel=tools],body.hide-thumbs .earrail.left .ear[data-panel=thumbs],body.hide-props .earrail.right .ear[data-panel=props]{background:#322835;color:#f1d3e0}.page-chooser{padding:0 4px;color:#c9c5ce;font-size:11px}.docmode{display:flex;gap:5px;align-items:center}.fake-noop{opacity:.55}
+@media(max-width:1190px){:root{--tools-width:146px;--thumbs-width:105px;--props-width:270px}.toolbar .hide-small{display:none}.menubtn{padding:8px 6px}.pdf-page{margin-left:auto;margin-right:auto}}
+@media(max-width:960px){:root{--tools-width:135px;--thumbs-width:98px;--props-width:255px}.title-small{display:none}.window-controls button{width:25px}.thumb-head{font-size:10px}.toolpane .tool{gap:7px;padding-left:5px}.pdf-page{margin-left:0;margin-right:0}.editor{padding:14px 13px}}
+@media(max-width:780px){.doc-tab{min-width:95px;max-width:155px}.commandbar .menus .menubtn:nth-last-child(-n+3){display:none}body:not(.force-thumbs) .thumbpane{display:none}}
+
+/* v2.2: independent auxiliary panels on the right, mirror the left thumbnails */
+.aux-pane{width:203px;min-width:170px;flex:none;background:#1e1f26;border-left:1px solid var(--line);border-right:1px solid var(--line-soft);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.aux-bookmarks,.aux-notes{display:none}
+body.show-bookmarks #bookmarkPane{display:flex}body.show-notes #notesPane{display:flex}
+.aux-head{min-height:36px;flex:none;display:flex;align-items:center;gap:7px;padding:7px 9px;border-bottom:1px solid var(--line);font-size:11px;font-weight:600}
+.aux-head>.ico{width:14px;height:14px;color:#b7adb7}.aux-head strong{flex:1}.aux-close{border:0;color:#aaa;background:transparent;font-size:17px;padding:0 3px}.aux-close:hover{color:#fff}
+.aux-body{padding:10px 8px 16px;overflow:auto;min-height:0;flex:1}.aux-caption{font-size:10px;color:var(--muted);font-weight:600;margin:8px 0}
+.tree-root{font-size:11px;color:#d4d0d8;padding:8px 4px;border-bottom:1px solid var(--line-soft)}
+.tree-list button{display:flex;gap:5px;width:100%;align-items:center;text-align:left;padding:8px 3px 8px 10px;border:0;border-bottom:1px solid var(--line-soft);font-size:10px;color:#c9c6cf;background:transparent}
+.tree-list button:hover{background:var(--accent-soft)}.tree-list button .ico{width:13px;height:13px;color:#aaa}.tree-list button em{font-style:normal;margin-left:auto;color:var(--dim)}
+.mini-label{display:block;font-size:10px;color:var(--muted);margin:9px 0 5px}.mini-label input,.mini-label select,.mini-label textarea,.aux-body textarea{width:100%;min-width:0;margin-top:5px;border-radius:0;background:#29282f;border:1px solid var(--line);padding:6px;color:var(--text);outline:0}
+.mini-label input:focus,.mini-label select:focus,.aux-body textarea:focus,.control-input:focus{border-color:var(--accent-border)}
+.aux-hint{font-size:10px;color:var(--dim);line-height:1.55;border-top:1px solid var(--line-soft);padding-top:10px;margin-top:14px}
+.aux-body .btn{white-space:normal}.aux-body .btn .ico{vertical-align:middle;width:13px;height:13px}
+.note-item{width:100%;display:grid;gap:4px;text-align:left;background:#26252c;border:1px solid #3c3943;color:var(--text);padding:8px;margin-bottom:7px;font-size:11px}.note-item:hover{border-color:#675062}.note-title{font-weight:600}.note-item small{color:var(--muted)}.note-item>span:last-child{color:#aca8b2;font-size:10px}
+body.show-bookmarks .earrail.right .ear[data-panel="bookmarks"],body.show-notes .earrail.right .ear[data-panel="notes"]{background:#302630;color:#e8b9cd;border-color:#6e4659}
+.props-head{display:flex;align-items:center;gap:8px;padding-top:9px;padding-bottom:9px}.props-head .ico{width:15px;height:15px;color:#cf93b0}
+.earrail.right .ear[data-panel="props"]{min-height:36px}.earrail.right .ear:not(.compact){min-height:67px}.earrail{width:23px}
+.toolpane .tool .ico{width:15px;height:15px;flex:none;color:#a9a2ad}.toolpane .tool{gap:8px;padding-left:6px;font-size:11px}
+.future-tools{margin:5px 0 10px}.future-tools summary{font-size:10px;color:var(--muted);padding:9px 6px;cursor:pointer}.future-tools .tool{opacity:.7}.future-tools .tool:hover{opacity:1}.planned-tag{color:#9c929f;font-size:9px;float:right}.planned-tool small{margin-left:auto;font-size:9px;color:#b2a7b0}
+.p-block{padding-bottom:11px;border-bottom:1px solid var(--line-soft);margin-bottom:11px}.p-block:last-child{border-bottom:0}.p-head{font-size:11px;font-weight:600;color:#ded9e3;margin:4px 0 9px;display:flex;align-items:center;gap:7px}.p-head .ico{width:14px;height:14px;color:#aba5af}.p-row{display:flex;align-items:center;gap:6px;margin:7px 0}.p-row>.control-label{flex:1;color:#b9b4be;font-size:10px;min-width:0}.p-row .control-input{max-width:148px}
+.control-input{background:#292830;border:1px solid #413d46;color:#e0dde3;border-radius:0;min-height:27px;padding:4px 6px;font-size:11px;min-width:0;width:100%}
+.control-input[readonly]{color:#9d99a5}.control-input.small{max-width:83px}.control-input.tiny{max-width:61px}.control-input[type="checkbox"]{width:auto;min-height:unset;accent-color:#9b4268}
+.icon-grid{display:flex;gap:3px;flex-wrap:wrap}.icon-grid .btn{display:inline-flex;align-items:center;gap:4px;padding:5px 7px;border-radius:0;min-width:30px;min-height:29px;justify-content:center}.icon-grid .btn .ico,.p-block .btn .ico{width:14px;height:14px;vertical-align:middle}.icon-grid .btn.selected{background:var(--accent-soft);border-color:var(--accent-border)}
+.compact-row{display:flex;gap:5px;margin:8px 0;flex-wrap:wrap}.compact-row .btn{display:inline-flex;justify-content:center;align-items:center;gap:5px;flex:1;white-space:normal}.compact-row .btn .ico{width:13px;height:13px}
+.hr-lite{border:0;border-top:1px solid var(--line-soft);margin:10px 0}.tool-muted{font-size:10px;color:var(--muted);line-height:1.5;margin:7px 0}.tool-state{font-size:10px;color:#cbb2bd;border-left:2px solid var(--accent-border);padding:5px 7px;background:#29252c}
+.plate-row{display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--line-soft);padding:7px 3px;font-size:11px}.plate-row label{display:flex;align-items:center;gap:7px;flex:1}.plate-row input{accent-color:#ad5d83}.plate-swatch{width:11px;height:11px;border:1px solid #ffffff33;flex:none}.plate-row button{font-size:10px;border:1px solid var(--line);padding:3px 5px;color:#c9c2cd;background:#28262e}
+.results-list{border:1px solid var(--line-soft);max-height:250px;overflow:auto}.results-list button{display:block;width:100%;font-size:10px;text-align:left;color:#c8c5cd;padding:8px;border-bottom:1px solid var(--line-soft)}.results-list button:hover{background:var(--accent-soft)}
+.status-label{font-size:9px;color:var(--dim);padding:3px 6px;border:1px solid #514452;background:#25222a;margin-left:auto}
+#otherProps .infobox{font-size:10px;line-height:1.5;margin-top:7px}.aux-pane .switchline{font-size:10px}.aux-pane .switchline input{width:14px;height:14px}
+@media(max-width:1350px){.aux-pane{width:180px}.toolpane .tool{font-size:10px}.props{width:270px}}
+@media(max-width:1100px){.aux-pane{width:155px;min-width:140px}.props{width:250px}}
+@media(max-width:890px){.aux-pane{width:145px;min-width:130px}.props{width:225px}.props-body{padding-left:9px;padding-right:9px}}
+
+
+/* v2.3: the File menu is ONE source of actions used by the top dropdown and the left nested list */
+.file-chevron{margin-left:auto;color:#96919b;font-size:10px;flex:none;transition:transform .12s ease}
+.toolpane .tool[aria-expanded="true"] .file-chevron{transform:rotate(90deg);color:#d6b2c3}
+.file-submenu{margin:1px 0 5px 13px;border-left:1px solid #45404a;padding-left:7px;display:flex;flex-direction:column;gap:1px}
+.file-submenu[hidden]{display:none}
+.toolpane .file-action{width:100%;min-height:29px;display:flex;align-items:center;gap:7px;padding:5px 6px;border-left:2px solid transparent;text-align:left;color:#c1bec7;font-size:11px}
+.toolpane .file-action .ico{width:14px;height:14px;color:#a6a1ae}
+.toolpane .file-action span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.toolpane .file-action:hover{background:#2b2931;color:#e5e1e8}
+.toolpane .file-action.selected{background:rgba(174,75,117,.11);border-left-color:#98607c;color:#ecd8e1}
+.toolpane .file-action.selected .ico{color:#d29ab2}
+.menu-float{max-height:min(470px,75vh);overflow-y:auto;min-width:227px;padding:4px;background:#23232a;border-color:#46414b;scrollbar-color:#504850 #22232a}
+.menu-float .file-menu-item{display:flex;align-items:center;gap:9px;min-height:31px;padding:6px 10px;border-left:2px solid transparent}
+.menu-float .file-menu-item .ico{width:14px;height:14px;color:#b7b2be}
+.menu-float .file-menu-item.selected{background:rgba(174,75,117,.12);border-left-color:#a15c7c;color:#ead9e1}
+.menu-float .file-menu-item:hover{background:#353039}
+.menu-float .menu-separator{height:1px;background:var(--line-soft);margin:5px 7px}
+.file-path{border:1px solid var(--line);background:#26252e;color:#d8d3dc;padding:8px 9px;font-size:11px;overflow-wrap:anywhere}
+.file-action-note{font-size:10px;color:var(--muted);line-height:1.5;padding:7px 0}
+.file-props-top{display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:12px}
+.file-props-top .ico{width:17px;height:17px;color:#c5a3b5}
+.file-props-top strong{font-size:12px;color:#e8e4eb}
+.file-props-top small{font-size:10px;color:#99939f;display:block;margin-top:2px}
+.file-radio-row{font-size:11px;display:flex;align-items:center;gap:6px;margin:6px 0;color:#c7c1cd}
+.file-radio-row input{accent-color:var(--accent)}
+.file-options{display:grid;gap:6px;margin:8px 0 12px}
+.file-options label{display:flex;gap:8px;align-items:flex-start;color:#cfcbd3;font-size:11px}
+.file-options input{margin-top:2px;accent-color:var(--accent)}
+.menu-float .file-menu-head{padding:7px 10px 6px;color:var(--dim);font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+@media(max-width:1000px){.titlebar .brand-mark{margin-right:19px}}
+/* v2.4: Zobrazení follows Soubor, and search is always available in the compact second toolbar. */
+.view-submenu[hidden]{display:none}
+.toolbar-search{height:27px;width:clamp(112px,12vw,176px);flex:0 1 176px;display:flex;align-items:center;gap:6px;padding:0 7px;border:1px solid var(--line);background:#23232a;border-radius:2px;min-width:94px;color:#a9a4ae;cursor:text}
+.toolbar-search:hover{border-color:#645766}
+.toolbar-search:focus-within{border-color:#916278;background:#29252d}
+.toolbar-search .ico{width:14px;height:14px;flex:none;color:#b9b1bd}
+.toolbar-search input{min-width:0;width:100%;background:transparent;color:var(--text);border:0;outline:none!important;font-size:11px;padding:0;font-family:inherit}
+.toolbar-search input::placeholder{color:#918c99;opacity:1}
+.toolbar-search input::-webkit-search-cancel-button{cursor:pointer}
+.view-option-caption{font-size:10px;color:var(--muted);line-height:1.5;margin:5px 0 12px}
+.view-detail-heading{border-bottom:1px solid var(--line);padding:0 0 10px;margin-bottom:13px;display:flex;gap:8px;align-items:center}
+.view-detail-heading .ico{height:16px;width:16px;color:#c5a3b5}
+.view-detail-heading strong{font-size:12px}
+.view-demo-controls{display:flex;gap:5px;align-items:center;justify-content:space-between;margin:8px 0}
+.view-demo-controls>.btn{flex:1}
+@media(max-width:1300px){.toolbar-search{width:110px;flex-basis:110px}.toolbar .hide-small{display:none}}
+@media(max-width:1040px){.toolbar-search{width:95px;flex-basis:95px}.toolbar-search input{font-size:10px}}
+
+/* v2.6: group closing ears anchored at the upper edge of MAIN panels, extending into AUXILIARY area */
+.panel-dock{position:relative;display:flex;flex:none;height:100%;min-height:0;min-width:23px;isolation:isolate}
+.panel-dock .dock-toggle{position:absolute;top:3px;z-index:22;width:25px;height:31px;display:flex;align-items:center;justify-content:center;padding:0 1px;background:#292730;border:1px solid #605260;color:#cfbfca;border-radius:0 4px 4px 0;font:600 19px/1 'Segoe UI Symbol','Segoe UI',sans-serif;box-shadow:1px 1px 2px #0005}
+.panel-dock .dock-toggle:hover{background:#352c35;color:#f2e5ec;border-color:#8b5b70}
+.panel-dock .dock-toggle:focus-visible{outline:1px solid #c3839f}
+.panel-dock .dock-toggle-right{border-radius:4px 0 0 4px;box-shadow:-1px 1px 2px #0005}
+.panel-dock.dock-collapsed{width:23px;min-width:23px;max-width:23px}
+.panel-dock.dock-collapsed>*:not(.dock-toggle){display:none!important}
+/* We don't change the actual states of individual panels during group collapse. */
+.left-dock .thumbpane{padding-top:38px}
+.right-dock .aux-pane{padding-top:38px}
+.left-dock .earrail,.right-dock .earrail{padding-top:43px}
+/* Main panels don't get a second independent top tab: one group tab controls the complete side. */
+.panel-dock .earrail .ear{min-height:68px}
+.right-dock .earrail .ear[data-panel="search-results"]{min-height:70px}
+.aux-search{display:none}
+body.show-search-results .aux-search{display:flex}
+body.show-search-results .earrail.right .ear[data-panel="search-results"]{background:#302630;color:#e8b9cd;border-color:#6e4659}
+body.show-bookmarks .earrail.right .ear[data-panel="bookmarks"],body.show-notes .earrail.right .ear[data-panel="notes"]{background:#302630;color:#e8b9cd;border-color:#6e4659}
+/* In collapsed groups, the remaining control is visible and points to reopening. */
+.panel-dock.dock-collapsed .dock-toggle-left{left:0!important}
+.panel-dock.dock-collapsed .dock-toggle-right{right:0!important}
+
+/* v2.7 — no permanent side rails: auxiliary ears are slim tabs OVER the document area */
+.panel-dock{z-index:5;overflow:visible}
+.editor{z-index:0}
+.panel-dock .earrail{position:absolute!important;z-index:18;top:42px;display:flex;flex-direction:column;gap:3px;padding:0!important;width:22px!important;min-width:0!important;max-width:22px!important;background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none}
+.left-dock .earrail.left{left:auto;right:-22px}
+.right-dock .earrail.right{right:auto;left:-22px}
+.panel-dock .earrail .ear{pointer-events:auto;width:22px;max-width:22px;min-height:71px;margin:0;border:1px solid #554251;box-shadow:1px 1px 3px #0008;background:#24232a}
+.left-dock .earrail.left .ear{border-radius:0 4px 4px 0;border-left:0}
+.right-dock .earrail.right .ear{border-radius:4px 0 0 4px;border-right:0;box-shadow:-1px 1px 3px #0008}
+.panel-dock .dock-toggle{z-index:25}
+.panel-dock .thumbpane,.panel-dock .aux-pane{padding-top:38px}
+/* Narrow custom scrollbars; thumb rounded, with a fine centered guide line */
+.toolpane,.thumbpane,.props-body,.aux-body,.editor,.file-submenu{scrollbar-color:#5b5360 #211f27;scrollbar-width:thin}
+.toolpane::-webkit-scrollbar,.thumbpane::-webkit-scrollbar,.props-body::-webkit-scrollbar,.aux-body::-webkit-scrollbar,.editor::-webkit-scrollbar,.file-submenu::-webkit-scrollbar{width:10px;height:10px}
+.toolpane::-webkit-scrollbar-track,.thumbpane::-webkit-scrollbar-track,.props-body::-webkit-scrollbar-track,.aux-body::-webkit-scrollbar-track,.editor::-webkit-scrollbar-track,.file-submenu::-webkit-scrollbar-track{background:#211f26;border-radius:9px}
+.toolpane::-webkit-scrollbar-thumb,.thumbpane::-webkit-scrollbar-thumb,.props-body::-webkit-scrollbar-thumb,.aux-body::-webkit-scrollbar-thumb,.editor::-webkit-scrollbar-thumb,.file-submenu::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#504b57 0%,#57505d 43%,#aa9baa 49%,#aa9baa 51%,#57505d 57%,#504b57 100%);border:2px solid #24212a;border-radius:9px;min-height:28px}
+.toolpane::-webkit-scrollbar-thumb:hover,.thumbpane::-webkit-scrollbar-thumb:hover,.props-body::-webkit-scrollbar-thumb:hover,.aux-body::-webkit-scrollbar-thumb:hover,.editor::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#675b69 0%,#695d6b 43%,#d0bccc 49%,#d0bccc 51%,#695d6b 57%,#675b69 100%)}
+/* Insert-pages form keeps rectangular style and muted burgundy emphasis */
+.insert-choice{display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:7px 8px;margin:4px 0;border:1px solid #35333d;background:#24242b;border-radius:2px;line-height:1.4}
+.insert-choice:has(input:checked){border-color:#775165;background:#302630}
+.insert-choice input{accent-color:#ad5075;margin:2px 2px 0 0;flex:none}
+.insert-choice b{display:block;font-size:11px;font-weight:600}
+.insert-choice small{font-size:10px;color:#b6aeba;display:block}
+.insert-select-pages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:6px 0}
+.insert-thumb{position:relative;border:1px solid #4e4753;border-radius:2px;min-height:43px;background:#292833;color:#c9c5ce;display:grid;place-items:center;font-size:11px}
+.insert-thumb.active{background:#442c3a;color:#fff0f6;border-color:#a15076}
+.insert-thumblabel{font-size:10px;color:#bdb5c1;margin:6px 0 3px}
+.insert-inputwrap{display:flex;gap:6px;align-items:center;margin:5px 0}
+.insert-inputwrap[hidden]{display:none!important}
+.insert-inputwrap input{max-width:90px}
+.insert-inputwrap.range input{max-width:none;flex:1}
+.insert-error{color:#f39aa5;font-size:10px;min-height:15px;margin:4px 0}
+.insert-preview{border:1px solid #44404a;background:#1c1d22;padding:9px 7px;margin:7px 0 4px}
+.insert-chain{display:flex;align-items:center;gap:3px;overflow-x:auto;scrollbar-width:thin;padding:6px 0}
+.insert-chip{flex:none;font-size:9px;padding:5px;border:1px solid #49444e;background:#292b34;border-radius:2px;min-width:24px;text-align:center}
+.insert-chip.new{background:#4c2c40;border-color:#9b5174;color:#f8dce7}
+.insert-chip.more{font-style:italic}
+.insert-total{font-size:10px;color:#c2b7c4;line-height:1.5;margin:6px 0}
+.insert-hint{font-size:10px;color:#b1abb6;margin:4px 0 8px}
+</style></head>
+<body><svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true"><defs><symbol id="i-nav_file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M3 7V5h7l2 2h9v12H3z"/><path d="M3 9h18"/>
+</g></symbol><symbol id="i-nav_view" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(2.54656 2.54656) scale(0.787786)" stroke-width="2.2849"><path d="M2 12s3.7-6 10-6 10 6 10 6-3.7 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>
+</g></symbol><symbol id="i-nav_search_pdf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.84918 1.63770) scale(0.845902)" stroke-width="2.1279"><path d="M6 3h8l4 4v6 M14 3v4h4"/><circle cx="10" cy="15" r="4"/><path d="m13 18 3.5 3.5"/>
+</g></symbol><symbol id="i-nav_objects" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="3" y="4" width="9" height="9" rx="1.5"/><circle cx="17.5" cy="8.5" r="3.5"/><path d="m8 20 4-7 4 7z"/>
+</g></symbol><symbol id="i-nav_text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M4 5h16 M12 5v14 M8 19h8 M4 5v3 M20 5v3"/>
+</g></symbol><symbol id="i-nav_ocr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M8 3H5a2 2 0 0 0-2 2v3 M16 3h3a2 2 0 0 1 2 2v3 M21 16v3a2 2 0 0 1-2 2h-3 M8 21H5a2 2 0 0 1-2-2v-3"/>
+<path d="M7 9h10 M7 12h10 M7 15h7"/>
+</g></symbol><symbol id="i-nav_separations" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="m12 3 9 4.5-9 4.5L3 7.5 12 3z M3 12l9 4.5 9-4.5 M3 16.5 12 21l9-4.5"/>
+</g></symbol><symbol id="i-nav_signature" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.23130 1.82957) scale(0.897391)" stroke-width="2.0058"><path d="M4 20h16 M6 16l2.6-.7 9-9a2.1 2.1 0 0 0-3-3l-9 9L5 15z M13.7 5.3l3 3"/>
+</g></symbol><symbol id="i-nav_split_pdf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M4 3h8v18H4z M14 3h6v18h-6z M13 10l-2-2 M13 14l-2 2"/>
+</g></symbol><symbol id="i-nav_merge_pdf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M3 4h6v16H3z M15 4h6v16h-6z M9 12h6 M12.5 9.5 15 12l-2.5 2.5"/>
+</g></symbol><symbol id="i-nav_page_order" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.15966 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="9" y="3" width="12" height="15" rx="1"/><path d="M6 6H4v15h12v-2 M12 7h6 M12 11h6 M12 15h4"/>
+</g></symbol><symbol id="i-nav_bookmarks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M6 3h12v18l-6-4-6 4V3z"/>
+</g></symbol><symbol id="i-nav_notes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 0.72605) scale(0.867227)" stroke-width="2.0756"><path d="M3 5h18v12H9l-6 4V5z M7 9h10 M7 13h7"/>
+</g></symbol><symbol id="i-nav_settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.48000 0.68000) scale(0.960000)" stroke-width="1.8750"><path d="M12 3.8 13.35 5.4l2.1-.3.7 1.95 2 .8-.3 2.1 1.6 1.35-1.6 1.35.3 2.1-2 .8-.7 1.95-2.1-.3L12 19.8l-1.35-1.6-2.1.3-.7-1.95-2-.8.3-2.1-1.6-1.35 1.6-1.35-.3-2.1 2-.8.7-1.95 2.1.3z"/><circle cx="12" cy="11.8" r="2.35"/></g></symbol><symbol id="i-nav_help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 0 1 5 1.1c0 1.8-2.5 2.2-2.5 4.2"/><circle cx="12" cy="17.8" r=".75" fill="currentColor" stroke="none"/>
+</g></symbol><symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M4 3h14l2 2v16H4z M7 3v6h9V3 M7 21v-8h10v8"/>
+</g></symbol><symbol id="i-save_copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M4 7h13v14H4z M8 3h12v14h-3 M10.5 11h5 M13 8.5v5"/>
+</g></symbol><symbol id="i-open_document" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.15966) scale(0.867227)" stroke-width="2.0756"><path d="M3 8V5h6l2 3h10v12H3z"/><path d="M4 11h16"/>
+</g></symbol><symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M6 9V3h12v6 M6 17H4V9h16v8h-2"/><path d="M6 14h12v7H6z"/><circle cx="17" cy="11.5" r=".7" fill="currentColor" stroke="none"/>
+</g></symbol><symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.42617 0.90841) scale(0.964486)" stroke-width="1.8663"><path d="m9 6-5 5 5 5 M5 11h9a6 6 0 0 1 6 6"/>
+</g></symbol><symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.42617 0.90841) scale(0.964486)" stroke-width="1.8663"><path d="m15 6 5 5-5 5 M19 11h-9a6 6 0 0 0-6 6"/>
+</g></symbol><symbol id="i-cursor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.73362 1.52227) scale(0.901310)" stroke-width="1.9971"><path d="m5 3 2 17 4.2-4.8 3.2 5 2.6-1.6-3.3-5L20 12z"/>
+</g></symbol><symbol id="i-rect_select" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-1.03579 -1.03579) scale(1.086316)" stroke-width="1.6570"><path d="M5 5h14v14H5z" stroke-dasharray="3 2.4"/>
+</g></symbol><symbol id="i-lasso" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.58565 1.18650) scale(0.870886)" stroke-width="2.0669"><path d="M11.8 4.1C6.7 4.1 3 6.8 3 10.5s3.5 6.1 8.4 6.1c5 0 9.5-2.5 9.5-6.2 0-3.7-3.6-6.3-9.1-6.3z" stroke-dasharray="2.6 1.8"/>
+<path d="M13.6 15.8c1.6.1 3.6 1.2 3.7 2.6.2 1.3-1.1 2.3-2.6 2.3-1.2 0-1.9-.4-2.4-1.2"/>
+</g></symbol><symbol id="i-zoom_in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.03818 0.03818) scale(0.938182)" stroke-width="1.9186"><circle cx="10.5" cy="10.5" r="6"/><path d="M10.5 7v7 M7 10.5h7 m1 4.5 6 6"/>
+</g></symbol><symbol id="i-zoom_out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.03818 0.03818) scale(0.938182)" stroke-width="1.9186"><circle cx="10.5" cy="10.5" r="6"/><path d="M7 10.5h7 m1 4.5 6 6"/>
+</g></symbol><symbol id="i-zoom_1_1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title xmlns="http://www.w3.org/2000/svg">Zobrazení 1:1 (100 %)</title>
+  <!-- Rámeček a kresba se stejným optickým rozměrem jako ostatní ikony -->
+  <rect xmlns="http://www.w3.org/2000/svg" x="4.3" y="4.3" width="15.4" height="15.4" rx="2"/>
+  <path xmlns="http://www.w3.org/2000/svg" d="M6.75 10.05 L8.15 8.85 V15.2 M6.75 15.2 H9.55"/>
+  <circle xmlns="http://www.w3.org/2000/svg" cx="12" cy="10.5" r="0.55" fill="currentColor" stroke="none"/>
+  <circle xmlns="http://www.w3.org/2000/svg" cx="12" cy="13.45" r="0.55" fill="currentColor" stroke="none"/>
+  <path xmlns="http://www.w3.org/2000/svg" d="M15.05 10.05 L16.45 8.85 V15.2 M15.05 15.2 H17.85"/>
+</symbol><symbol id="i-fit_page" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="8" y="5.5" width="8" height="13" rx=".8"/>
+</g></symbol><symbol id="i-fit_width" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M6 8h12v8H6z M8.5 12h7 M8.5 12l2-2 M8.5 12l2 2 M15.5 12l-2-2 M15.5 12l-2 2"/>
+</g></symbol><symbol id="i-side_by_side" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/>
+</g></symbol><symbol id="i-align_left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-0.26139 0.76040) scale(1.021782)" stroke-width="1.7616"><path d="M4.5 5h15 M4.5 9h10 M4.5 13h15 M4.5 17h10"/>
+</g></symbol><symbol id="i-align_center" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-1.03579 0.05053) scale(1.086316)" stroke-width="1.6570"><path d="M8 5h8 M5 9h14 M8 13h8 M5 17h14"/>
+</g></symbol><symbol id="i-align_right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-0.26139 0.76040) scale(1.021782)" stroke-width="1.7616"><path d="M4.5 5h15 M9.5 9h10 M4.5 13h15 M9.5 17h10"/>
+</g></symbol><symbol id="i-align_justify" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-0.26139 0.76040) scale(1.021782)" stroke-width="1.7616"><path d="M4.5 5h15 M4.5 9h15 M4.5 13h15 M4.5 17h15"/>
+</g></symbol><symbol id="i-bold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-0.38276 -0.84606) scale(1.010837)" stroke-width="1.7807"><path d="M7 5.5h5.8c2.5 0 4 1.35 4 3.35 0 1.8-1.1 2.8-2.6 3.25 1.95.37 3.3 1.7 3.3 3.8 0 2.25-1.75 3.95-4.7 3.95H7z" stroke-width="2.5"/>
+  <path d="M7 12h5.3" stroke-width="2.5"/>
+</g></symbol><symbol id="i-italic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(-1.03579 -1.03579) scale(1.086316)" stroke-width="1.6570"><path d="M10 5h9 M5 19h9 M14.5 5l-5 14"/>
+</g></symbol><symbol id="i-underline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.04071 0.58407) scale(0.913274)" stroke-width="1.9709"><path d="M6 4v8a6 6 0 0 0 12 0V4 M4 21h16"/>
+</g></symbol><symbol id="i-nav_thumbnails" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>
+</g></symbol><symbol id="i-rotate_right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.10172 1.43534) scale(0.889655)" stroke-width="2.0233"><path d="M21 4v6h-6 M20.3 10a8.5 8.5 0 1 0-2.4 8"/>
+</g></symbol><symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.03818 0.03818) scale(0.938182)" stroke-width="1.9186"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 6 6"/>
+</g></symbol><symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.15966 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M6 3h9l4 4v14H6z M15 3v4h4"/><path d="M12 11v7 M9 15l3 3 3-3"/>
+</g></symbol><symbol id="i-font_size_up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.01438 1.49795) scale(0.936986)" stroke-width="1.9211"><path d="M4.6 19 8.7 7h1.1L14 19"/><path d="M6.2 14.5h6.2"/><path d="M16.8 5.5h4.2M18.9 3.4v4.2"/></g></symbol><symbol id="i-comment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(0.42617 -0.53832) scale(0.964486)" stroke-width="1.8663"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 9h8 M8 13h6"/>
+</g></symbol><symbol id="i-nav_forms" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5" y="4.5" width="14" height="15" rx="1.8"/><path d="M8 9h2.3M8 13h2.3M12.5 9h3.5M12.5 13h3.5M8 16.5h8"/>
+</symbol>
+<symbol id="i-nav_preflight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M6.5 4.5h9l3 3V19.5h-12z"/><path d="M15.5 4.5v3h3"/><path d="m9 14 2.2 2.2 4.3-5"/>
+</symbol>
+<symbol id="i-nav_compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4" y="5" width="7.5" height="14" rx="1.2"/><rect x="13.5" y="5" width="6.5" height="14" rx="1.2"/><path d="m9 12 2 2 4-4"/>
+</symbol>
+<symbol id="i-nav_measure" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M4.5 16.5 16.5 4.5l3 3-12 12z"/><path d="M8.8 12.2l1.8 1.8m1.1-5.2 1.8 1.8"/>
+</symbol>
+<symbol id="i-nav_batch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4.5" y="4.5" width="9" height="12" rx="1"/><rect x="8.5" y="7.5" width="9" height="12" rx="1"/><path d="M12 12.5h4M14 10.5v4"/>
+</symbol>
+<symbol id="i-form_fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5" y="4.5" width="14" height="15" rx="1.4"/><path d="M8 9h6M8 13h4"/><path d="m12.5 16 2 2 3.6-4"/>
+</symbol>
+<symbol id="i-form_edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4.5" y="5" width="15" height="14" rx="1.5"/><path d="M7.5 8.5h6M7.5 12h5M14.5 17l4.2-4.2-1.6-1.6-4.2 4.2-.3 1.9z"/>
+</symbol>
+<symbol id="i-form_validate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5" y="4.5" width="14" height="15" rx="1.5"/><path d="M8 9h8M8 12h4M8 16l2 2 5-5"/>
+</symbol>
+<symbol id="i-form_text_field" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4.5" y="6" width="15" height="12" rx="1.5"/><path d="M8 9h8M12 9v6M9.2 15h5.6"/>
+</symbol>
+<symbol id="i-form_checkbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5.5" y="5.5" width="13" height="13" rx="2"/><path d="m8.3 12.2 2.4 2.5 5-5.1"/>
+</symbol>
+<symbol id="i-form_radio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.3" fill="currentColor" stroke="none"/>
+</symbol>
+<symbol id="i-form_dropdown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4.5" y="5.5" width="15" height="13" rx="1.5"/><path d="M7.5 9h5M7.5 13h5M15.1 11.3l2 2 2-2"/>
+</symbol>
+<symbol id="i-form_properties" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5" y="4.5" width="14" height="15" rx="1.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/><circle cx="16" cy="16" r="2" fill="currentColor" stroke="none"/>
+</symbol>
+<symbol id="i-form_required" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4.5" y="6.5" width="15" height="11" rx="1.5"/><path d="M12 9v5M9.5 11.5h5"/><circle cx="19" cy="5.5" r="1.5" fill="currentColor" stroke="none"/>
+</symbol>
+<symbol id="i-regular" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-2.31628 -2.31628) scale(1.193023)" stroke-width="1.5088"><path d="M7 18.2V5.8h5.4c3 0 4.6 1.6 4.6 4.1s-1.8 4.2-4.6 4.2H7M12 14.1l5 4.1" /></g></symbol>
+<symbol id="i-strikethrough" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-1.03579 -1.03579) scale(1.086316)" stroke-width="1.6570"><path d="M5 12h14 M16 8c-.8-2-2.1-3-4.5-3-3 0-4.5 1.5-4.5 3.5 0 3 9.5 1.6 9.5 6.9 0 2.4-2 3.6-5 3.6-2.6 0-4.1-1-4.8-2.8" />
+</g></symbol>
+<symbol id="i-font_size_down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.21276 -0.67321) scale(0.924490)" stroke-width="1.9470"><path d="M5.5 17.9 8.6 9.5h.7l3.1 8.4" /><path d="M7.1 14.4h3.8" /><path d="M15.2 11.7h4.8" /></g></symbol>
+<symbol id="i-font_family" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.77228 -0.00594) scale(1.021782)" stroke-width="1.7616"><path d="M5 17.5 9.3 6h1l4.3 11.5" /><path d="M6.7 13.5h6.2" /><path d="M16 7.5h4M16 11.5h4M16 15.5h4" /></g></symbol>
+<symbol id="i-font_size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.90000 -0.63673) scale(1.053061)" stroke-width="1.7093"><path d="M5 18 9.3 6h1.4L15 18M6.5 14.5h6.8" /><path d="M18 8v9M16.5 9.5 18 8l1.5 1.5M16.5 15.5 18 17l1.5-1.5" /></g></symbol>
+<symbol id="i-font_width" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M7 18 10.5 7h1L15 18M8.2 14h5.6" /><path d="M4 5v14M20 5v14" /></g></symbol>
+<symbol id="i-line_spacing" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.60664 0.26161) scale(0.978199)" stroke-width="1.8401"><path d="M8.5 6h10M8.5 12h10M8.5 18h10" /><path d="M4.5 6v12M2.8 8 4.5 6l1.7 2M2.8 16 4.5 18l1.7-2" /></g></symbol>
+<symbol id="i-letter_spacing" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.04071 0.81239) scale(0.913274)" stroke-width="1.9709"><path d="M3.5 18.5 6.1 10h.7l2.6 8.5M4.6 15.5h3.7" /><path d="M14.6 18.5 17.2 10h.7l2.6 8.5M15.7 15.5h3.7" /><path d="M9.6 7.5h4.8M11.1 6l-1.5 1.5L11.1 9M12.9 6l1.5 1.5L12.9 9" /></g></symbol>
+<symbol id="i-kerning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.34038 1.20865) scale(0.992308)" stroke-width="1.8140"><path d="M4 17V7M4 12l6-5M4 12l6 5" /><path d="M13 17l3-10h.5l3 10M14.2 14h4.3" /><path d="M10.7 4.8h2.6M10.7 4.8l1 1.2M13.3 4.8l-1 1.2" /></g></symbol>
+<symbol id="i-group_objects" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><rect x="5" y="5" width="6" height="6" rx="1" /><circle cx="16" cy="8" r="3" /><path d="M4 14v5h16v-5" /></g></symbol>
+<symbol id="i-ungroup_objects" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><rect x="5" y="5" width="6" height="6" rx="1" /><circle cx="16" cy="8" r="3" /><path d="M4 17h6m4 0h6" /><path d="M12 15v4" /></g></symbol>
+<symbol id="i-align_objects_center" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.04071 1.04071) scale(0.913274)" stroke-width="1.9709"><path d="M12 3.5v17" stroke-dasharray="2 2" /><rect x="6" y="6" width="12" height="4" rx=".5" /><rect x="8" y="13" width="8" height="4" rx=".5" /></g></symbol>
+<symbol id="i-fill_color" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.63673 -0.90000) scale(1.053061)" stroke-width="1.7093"><path d="M5.5 13.5 12 5l6.5 8.5-6.5 6z" /><path d="M5.5 13.5h13" /><path d="M9 16.5h6" /></g></symbol>
+<symbol id="i-stroke_width" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.13684 0.68421) scale(0.905263)" stroke-width="1.9884"><path d="M4 6h16" stroke-width="1" /><path d="M4 12h16" stroke-width="2" /><path d="M4 18h16" stroke-width="3" /></g></symbol>
+<symbol id="i-rotate_left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.54655 1.43534) scale(0.889655)" stroke-width="2.0233"><path d="M3 4v6h6 M3.7 10a8.5 8.5 0 1 1 2.4 8" />
+</g></symbol>
+<symbol id="i-ocr_region" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.26139 -0.26139) scale(1.021782)" stroke-width="1.7616"><path d="M4.5 9V4.5H9M15 4.5h4.5V9M4.5 15v4.5H9M15 19.5h4.5V15" /><path d="M7.5 11h9M12 11v6M9 17h6" /></g></symbol>
+<symbol id="i-convert_k" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-1.03579 -1.03579) scale(1.086316)" stroke-width="1.6570"><rect x="5" y="5" width="14" height="14" rx="1.5" /><path d="M9 8v8M15 8l-6 5M11 12l4 4" /></g></symbol>
+<symbol id="i-convert_gray" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><rect x="4" y="7" width="16" height="10" rx="1.5" /><path d="M12 7v10" /><path d="M8 7v10M16 7v10" /></g></symbol>
+<symbol id="i-color_profile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-1.03579 -1.03579) scale(1.086316)" stroke-width="1.6570"><rect x="5" y="5" width="14" height="14" rx="1.5" /><circle cx="12" cy="12" r="4.5" /><path d="M12 7.5v9M7.5 12h9" /></g></symbol>
+<symbol id="i-overprint_preview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><circle cx="9" cy="10" r="5" /><circle cx="15" cy="10" r="5" /><path d="M9 5c1.8 1.2 2.7 2.9 2.7 5s-.9 3.8-2.7 5" /><path d="M5 19h14" /></g></symbol>
+<symbol id="i-spot_color" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.97247 1.24130) scale(0.835628)" stroke-width="2.1541"><path d="M12 3.5c-3.7 5-6.5 8.4-6.5 12.2a6.5 6.5 0 0 0 13 0c0-3.8-2.8-7.2-6.5-12.2z" /><circle cx="12" cy="15" r="1.7" /></g></symbol>
+<symbol id="i-tac_measure" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.68000 2.09280) scale(0.825600)" stroke-width="2.1802"><path d="M5 20V12 M9.5 20V7 M14.5 20V10 M19 20V4 M3 20h19" /><path d="M5 12h0 M9.5 7h0" />
+</g></symbol>
+<symbol id="i-signature_verify" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.58407 -2.23186) scale(0.913274)" stroke-width="1.9709"><path d="M5 15c3.5-5 4.3 1 6.8-2.5 1.3-1.9 3.7-1.6 4.5.4" /><path d="M13.5 17l2.5 2.5L21 14" /><path d="M4 20h8" /></g></symbol>
+<symbol id="i-split_pages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M3 3h8v18H3z M13 3h8v18h-8z M8 12H4 M16 12h4" />
+</g></symbol>
+<symbol id="i-merge_pages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M4 3h7v18H4z M13 3h7v18h-7z M10 12h4 M12 10l2 2-2 2" />
+</g></symbol>
+<symbol id="i-page_delete" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M5 3h10l4 4v14H5z M15 3v4h4 M9 11l6 6 M15 11l-6 6" />
+</g></symbol>
+<symbol id="i-page_insert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.90841 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M6 4h8l3 3v13H6zM14 4v3h3" /><path d="M11.5 11v6M8.5 14h6" /></g></symbol>
+<symbol id="i-page_range" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.26139 -0.77228) scale(1.021782)" stroke-width="1.7616"><path d="M5 5h10v13H5zM9 8h10v12H9z" /><path d="M11.5 12h5M11.5 15h3" /></g></symbol>
+<symbol id="i-page_extract" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.90841 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M6 4h8l3 3v13H6zM14 4v3h3" /><path d="M9 15h6M12 12v6M10 16l2 2 2-2" /></g></symbol>
+<symbol id="i-move_up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M6 11h12v10H6z M12 11V3 M8 7l4-4 4 4" />
+</g></symbol>
+<symbol id="i-move_down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M6 3h12v10H6z M12 13v8 M8 17l4 4 4-4" />
+</g></symbol>
+<symbol id="i-page_replace" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.26139 -0.77228) scale(1.021782)" stroke-width="1.7616"><path d="M5 5h8v13H5zM11 7h8v13h-8" /><path d="M14 11h3M17 11l-1.5-1.5M17 11l-1.5 1.5" /></g></symbol>
+<symbol id="i-print_preview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M7 4h10v16H7z" /><path d="M9.5 8h5M9.5 11h5" /><circle cx="12" cy="16" r="1.4" /></g></symbol>
+<symbol id="i-document_properties" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.90841 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M6 4h8l3 3v13H6zM14 4v3h3" /><circle cx="11.5" cy="11" r=".7" fill="currentColor" stroke="none" /><path d="M11.5 14v3" /></g></symbol>
+<symbol id="i-new_document" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.15966 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M6 3h9l4 4v14H6z M15 3v4h4 M12.5 11v7 M9 14.5h7" />
+</g></symbol>
+<symbol id="i-preflight_run" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="4.5" y="4.5" width="15" height="15" rx="1.8"/><path d="m9 8 7 4-7 4z"/>
+</symbol>
+<symbol id="i-compare_overlay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5" y="5.5" width="11" height="11" rx="1.4"/><rect x="8" y="8.5" width="11" height="11" rx="1.4"/>
+</symbol>
+<symbol id="i-measure_distance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(2.11000 1.68000) scale(0.860000)" stroke-width="2.0930"><path d="M4 18 19 6" /><circle cx="4" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M7.2 18H19V9" /></g></symbol>
+<symbol id="i-batch_queue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M5.5 7h11M5.5 12h11M5.5 17h8"/><circle cx="18.5" cy="17" r="2"/>
+</symbol>
+<symbol id="i-note_edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.26139 -0.26139) scale(1.021782)" stroke-width="1.7616"><path d="M4.5 5.5h15v10h-9l-4 3v-3h-2z" /><path d="M10 12.5l5-5 1.5 1.5-5 5-2.5.5z" /></g></symbol>
+<symbol id="i-note_reply" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.03818 0.03818) scale(0.938182)" stroke-width="1.9186"><path d="M4.5 5.5h15v10h-9l-4 3v-3h-2z" /><path d="M10 9.5h6M10 12h3" /><path d="M17 18h4M19 16v4" /></g></symbol>
+<symbol id="i-note_filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 -0.05607) scale(0.964486)" stroke-width="1.8663"><path d="M4 5h16l-6.5 7V19l-3 1v-8z" /></g></symbol>
+<symbol id="i-note_hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.04071 1.04071) scale(0.913274)" stroke-width="1.9709"><path d="M3.5 12s3.6-5 8.5-5 8.5 5 8.5 5-3.6 5-8.5 5-8.5-5-8.5-5z" /><circle cx="12" cy="12" r="2.3" /><path d="M4 20 20 4" /></g></symbol>
+<symbol id="i-note_show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.04071 1.04071) scale(0.913274)" stroke-width="1.9709"><path d="M3.5 12s3.6-5 8.5-5 8.5 5 8.5 5-3.6 5-8.5 5-8.5-5-8.5-5z" /><circle cx="12" cy="12" r="2.3" /></g></symbol>
+<symbol id="i-sticky_note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M4 3h16v12l-6 6H4z M14 15h6 M14 15v6" />
+</g></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><rect x="8" y="8" width="12" height="12" rx="1.5" /><path d="M16 8V4H4v12h4" />
+</g></symbol>
+<symbol id="i-paste" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="5" y="5" width="14" height="16" rx="1.5" /><rect x="9" y="3" width="6" height="5" rx="1" /><path d="M8 13h8 M8 17h5" />
+</g></symbol>
+<symbol id="i-delete" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0.42617 0.42617) scale(0.964486)" stroke-width="1.8663"><path d="M5 6h14 M9 6V4h6v2 M7 6l1 14h8l1-14 M10 10v6 M14 10v6" />
+</g></symbol>
+<symbol id="i-panel_right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M15 3v18" />
+</g></symbol></defs></svg><div class="app" id="app">
+<!-- 1: title bar -->
+<header class="titlebar"><button class="brand-mark" title="Původní logo – kovadlina SVG (geometrie zachována)"><svg class="logo-svg" viewBox="13 69 177 162" aria-label="Původní SVG logo PDF Blacksmith – kovadlina" role="img" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="m 56.955308,229.40023 c -0.164777,-0.0671 -3.50152,-2.1287 -7.414985,-4.58131 -3.913464,-2.45261 -7.57061,-4.73567 -8.126991,-5.07347 -1.01319,-0.61514 -1.46006,-1.18882 -1.46006,-1.87439 0,-0.17333 0.950565,-2.55616 2.112367,-5.29517 1.161801,-2.73901 2.311969,-5.4811 2.555927,-6.09354 0.243959,-0.61243 0.569545,-1.28652 0.723525,-1.49797 0.15398,-0.21146 1.250224,-1.12597 2.436098,-2.03224 l 2.156136,-1.64778 1.52098,-2.27891 c 1.080138,-1.6184 1.662261,-2.35198 2.008421,-2.53099 0.268093,-0.13863 1.403589,-0.37231 2.523325,-0.51929 2.272762,-0.29832 3.511733,-0.66041 4.900594,-1.43217 6.002442,-3.33547 7.624801,-11.51412 3.244227,-16.35481 -0.976541,-1.07911 -2.102523,-1.85055 -3.467567,-2.37571 -0.98729,-0.37983 -1.120168,-0.39158 -4.76058,-0.42108 -4.330505,-0.0351 -4.691293,-0.0972 -9.045103,-1.55603 -6.305353,-2.11279 -12.267045,-5.26435 -18.450753,-9.75374 -6.34759,-4.60835 -11.52765,-9.95545 -12.72228,-13.1325 -0.42788,-1.13792 -0.43595,-2.34789 -0.0211,-3.16109 1.47011,-2.88165 11.63969,-6.36527 22.637994,-7.75471 1.112248,-0.14052 2.10653,-0.27929 2.209516,-0.30839 0.142644,-0.0403 0.187247,-0.8516 0.187247,-3.40591 0,-3.23037 0.01233,-3.37114 0.337044,-3.84896 0.573993,-0.84464 1.10496,-1.0085 4.194335,-1.29443 l 2.808707,-0.25994 v -1.90829 c 0,-1.04956 0.05997,-2.06435 0.133274,-2.25509 0.0733,-0.19073 0.846425,-0.95347 1.718053,-1.69497 l 1.584778,-1.34818 0.0046,-13.75602 0.0046,-13.75602 -2.080768,-2.32696 c -1.766508,-1.97551 -2.095822,-2.42051 -2.180435,-2.94642 -0.135294,-0.84091 -0.07944,-8.99477 0.06722,-9.81227 0.136162,-0.75902 0.524891,-1.33782 1.138793,-1.69563 0.741844,-0.43237 7.648138,-0.98653 21.14435,-1.69661 8.76471,-0.46114 10.135231,-0.4727 10.746896,-0.0906 0.247167,0.15439 2.437958,1.53566 4.868425,3.06948 l 4.419031,2.78877 0.0749,-3.03982 c 0.08064,-3.27286 0.144845,-3.54465 0.964168,-4.08149 0.405314,-0.26557 0.355508,-0.26019 6.226125,-0.67337 2.34807,-0.16526 6.898178,-0.49727 10.111338,-0.7378 10.22493,-0.76543 11.07559,-0.81207 11.5832,-0.63511 0.25593,0.0892 1.22597,0.66256 2.15565,1.27409 8.25621,5.4309 9.87748,6.51275 10.64352,7.1022 0.48227,0.3711 0.92329,0.62838 0.98005,0.57173 0.0567,-0.0567 0.12061,-1.93436 0.14192,-4.17269 0.0533,-5.59638 -0.0288,-5.46924 3.78155,-5.85828 2.43599,-0.24872 11.80164,-1.03225 23.4757,-1.96397 8.00979,-0.63927 6.65451,-0.80957 10.15343,1.27587 1.15344,0.68748 3.31053,1.95204 4.79353,2.81014 1.48299,0.8581 2.86488,1.72543 3.07085,1.92741 l 0.37449,0.36722 0.0414,7.7111 c 0.0453,8.43923 0.0498,8.39125 -0.82076,8.73206 -0.23045,0.0902 -1.59545,0.25369 -3.03333,0.36326 -2.97431,0.22666 -2.02456,0.37708 -8.5456,-1.35343 -4.41251,-1.17097 -4.08015,-1.10843 -5.26834,-0.99135 l -1.03843,0.10233 0.0451,0.60129 0.0451,0.60128 1.34818,-0.0157 1.34818,-0.0157 5.16474,2.57977 c 3.90435,1.9502 5.2107,2.67059 5.35306,2.95195 0.14285,0.28234 0.18885,2.00661 0.19053,7.14219 l 0.002,6.76999 -0.3553,0.41306 c -0.3339,0.38819 -0.47147,0.42417 -2.28441,0.59753 -3.01118,0.28793 -3.30229,0.26412 -6.95597,-0.56905 -1.86573,-0.42545 -3.50336,-0.73091 -3.63917,-0.67879 -0.2224,0.0853 -0.24694,0.5803 -0.24694,4.98102 v 4.88627 l 1.83502,-0.12549 c 3.46264,-0.23679 2.2997,-0.66071 11.89042,4.33431 4.68573,2.44042 9.8677,5.1352 11.51547,5.98841 3.99166,2.06685 3.69336,1.47834 3.63735,7.17605 l -0.0422,4.29226 -0.4494,0.59489 c -0.24716,0.32719 -1.1821,1.43932 -2.07764,2.47141 -1.74088,2.00634 -2.03956,2.21374 -3.61467,2.5101 -5.83525,1.0979 -13.49771,3.30488 -18.72471,5.39317 -3.24466,1.29631 -8.89796,3.93309 -11.97014,5.58305 -6.85474,3.68145 -12.39575,8.71499 -14.75359,13.40242 -1.14315,2.27259 -1.78985,5.21897 -1.59874,7.28391 0.48492,5.23977 3.66414,10.08108 9.74756,14.84359 1.58465,1.24057 4.30184,2.99672 6.06681,3.92103 l 1.42307,0.74527 0.97572,1.61114 c 1.0003,1.65174 1.83462,2.51621 4.82416,4.99854 0.67062,0.55684 1.13354,1.08932 1.38759,1.59611 0.54725,1.09166 4.12226,11.12011 4.12226,11.56357 0,0.59505 -0.42995,1.2628 -0.95412,1.48181 -0.58834,0.24583 -2.40848,0.38904 -12.37788,0.97392 -7.97491,0.46787 -23.08871,1.42955 -30.55872,1.94443 -2.34808,0.16185 -6.79707,0.466 -9.88665,0.67589 -7.44902,0.50606 -16.448038,1.17355 -35.335313,2.62095 -15.665087,1.20047 -17.060939,1.28424 -17.61816,1.05732 z m 2.162091,-1.49744 c 0.22768,-0.14408 0.332327,-0.46793 2.350602,-7.27453 0.708462,-2.38927 1.304599,-4.36256 1.324749,-4.38508 0.04868,-0.0544 6.656322,-0.54889 12.437874,-0.93077 2.554051,-0.16869 7.576018,-0.50659 11.159927,-0.75088 8.645092,-0.58926 19.830919,-1.2984 37.749009,-2.39314 8.11529,-0.49581 17.51884,-1.071 20.89678,-1.2782 3.37794,-0.20719 7.68068,-0.46499 9.56164,-0.57289 3.46043,-0.19849 3.86026,-0.287 3.57341,-0.79096 -0.0565,-0.0992 -0.87466,-0.85868 -1.81821,-1.68773 l -1.71556,-1.50736 -0.17635,0.41943 c -0.23896,0.56831 -0.75748,0.73507 -2.60914,0.83911 -0.86508,0.0486 -4.26923,0.25418 -7.56478,0.45684 -3.29555,0.20266 -8.2164,0.50259 -10.93523,0.66651 -2.71883,0.16392 -8.17895,0.50148 -12.13361,0.75014 -3.95466,0.24865 -12.61671,0.79044 -19.249,1.20396 -6.632293,0.41353 -14.620254,0.91915 -17.751025,1.12361 -3.130771,0.20446 -7.849398,0.50828 -10.485837,0.67517 -2.636439,0.16688 -5.669842,0.36942 -6.740896,0.45008 -1.071053,0.0807 -2.337437,0.14682 -2.814186,0.14702 l -0.866817,3.6e-4 -6.52839,-4.00709 c -6.206042,-3.80923 -7.403582,-4.62041 -7.567141,-5.1258 -0.113936,-0.35205 -2.745747,1.79054 -2.745747,2.23535 0,0.29214 1.121613,1.04391 7.414985,4.96995 4.078242,2.54416 7.434882,4.7166 7.4592,4.82764 0.02432,0.11104 -0.797317,2.82011 -1.825855,6.02015 -1.028539,3.20003 -1.836512,5.87254 -1.795497,5.93891 0.101129,0.16363 1.128259,0.14905 1.395095,-0.0198 z m 9.013532,-17.98366 c 5.908605,-0.47224 29.448142,-1.91944 47.545059,-2.92305 5.27288,-0.29241 12.38453,-0.69412 15.80366,-0.89268 3.41913,-0.19855 9.50823,-0.5472 13.53133,-0.77478 4.78283,-0.27054 7.39872,-0.47519 7.55741,-0.59122 0.22028,-0.16107 0.20898,-0.24101 -0.12243,-0.86572 -0.62491,-1.17797 -1.11424,-1.81005 -1.5741,-2.03332 -0.38653,-0.18767 -1.01394,-0.18238 -4.93674,0.0416 -6.0654,0.34634 -5.65843,0.36864 -6.60531,-0.36187 -1.97681,-1.52511 -4.12003,-4.23795 -5.48105,-6.93781 -0.78872,-1.5646 -1.68358,-4.30365 -2.01202,-6.15853 -0.32535,-1.83744 -0.36752,-6.18987 -0.0762,-7.86437 0.68924,-3.96174 1.94195,-7.2387 3.89398,-10.18625 1.1822,-1.78511 1.17419,-1.77073 0.82959,-1.48887 -5.25345,4.29707 -8.88571,9.86374 -10.02033,15.35679 -0.3368,1.63055 -0.31067,2.31908 0.14735,3.88311 0.73079,2.49547 1.76695,4.5413 3.41381,6.74036 1.61562,2.15736 4.66562,4.81871 7.48454,6.53085 1.55278,0.94311 1.58458,0.98512 0.41147,0.54353 -2.93382,-1.10438 -5.55519,-2.81239 -7.86466,-5.12439 -2.97665,-2.97992 -4.6836,-6.1355 -5.64241,-10.43093 -0.45679,-2.0464 -0.48881,-5.67084 -0.0673,-7.62178 1.66278,-7.69684 6.93116,-14.91925 15.04724,-20.62824 3.2772,-2.30524 7.07129,-4.40166 10.39501,-5.74375 0.88368,-0.35683 1.58011,-0.67536 1.54762,-0.70784 -0.11747,-0.11748 -18.79458,1.99801 -30.86689,3.49618 -26.701556,3.31367 -37.387712,5.03891 -46.827055,7.56004 -1.532597,0.40934 -2.854049,0.74425 -2.93656,0.74425 -0.0937,0 -0.07501,-0.28918 0.04981,-0.77036 0.311344,-1.20026 0.526882,-3.77277 0.417363,-4.98135 l -0.09932,-1.09603 1.629041,-0.17223 c 1.911436,-0.20209 12.849723,-1.20623 24.697885,-2.26728 17.671066,-1.58251 34.701046,-3.24391 52.279386,-5.10023 13.51655,-1.42739 14.41862,-1.5519 22.76924,-3.14291 4.28422,-0.81625 9.09126,-1.72083 10.68233,-2.01017 1.59106,-0.28934 2.95875,-0.5668 3.0393,-0.61658 0.17274,-0.10676 0.16525,-4.67268 -0.008,-4.77966 -0.15585,-0.0963 -19.1201,1.53153 -40.07817,3.44023 -16.40899,1.49441 -25.53367,2.25884 -41.11946,3.44485 -10.939321,0.83244 -14.656678,1.13625 -33.030383,2.69956 -2.554051,0.21731 -4.755491,0.44055 -4.89209,0.4961 -0.213697,0.0869 -0.156164,0.25735 0.412203,1.22123 1.482569,2.51425 2.28176,5.17819 2.415617,8.05198 0.144249,3.09689 -0.433025,5.91403 -1.765453,8.61554 -0.562226,1.13992 -0.566491,1.16135 -0.243729,1.22454 0.18068,0.0354 1.125027,0.20633 2.098549,0.37991 3.438397,0.61305 7.267398,2.14656 10.114057,4.05065 2.629915,1.75913 5.18306,4.53606 6.57863,7.15526 2.971604,5.5771 2.559601,12.33279 -1.130407,18.53552 -1.574414,2.64651 -4.710511,6.00436 -7.337346,7.85617 -2.340067,1.64964 -2.417993,1.61836 -0.571034,-0.22921 5.114436,-5.11614 7.84283,-9.56807 8.879649,-14.48895 0.173755,-0.82466 0.258819,-1.91486 0.25938,-3.32425 9.34e-4,-2.34856 -0.288559,-3.85378 -1.117085,-5.80831 -0.444801,-1.0493 -1.635062,-3.16176 -1.72872,-3.0681 -0.02544,0.0254 0.01469,0.68486 0.08918,1.46538 0.284075,2.97664 -0.449569,6.44888 -2.162666,10.23561 -1.372357,3.03355 -4.699786,7.82767 -8.228531,11.85559 -1.805532,2.06094 -3.430927,3.81984 -3.529902,3.81984 -0.05227,0 -3.009177,-1.97541 -6.57091,-4.38981 l -6.475876,-4.3898 -1.235021,0.12366 c -0.679262,0.068 -1.370745,0.19254 -1.536629,0.27672 -0.389022,0.19741 -3.121517,4.2815 -3.027302,4.52473 0.0393,0.10145 1.984037,1.30538 4.32164,2.6754 2.337604,1.37001 5.227618,3.06703 6.422254,3.77113 2.162077,1.27431 2.176961,1.28025 3.236347,1.29145 0.585353,0.006 1.899828,-0.0555 2.921054,-0.13714 z m -10.535494,-36.4968 c 1.706325,-0.82144 4.29025,-3.77744 5.613342,-6.42163 3.814184,-7.62264 2.137948,-15.62375 -4.278204,-20.42101 -2.209254,-1.65182 -2.356425,-1.67682 -0.914626,-0.15537 0.748129,0.78947 1.676491,1.91111 2.063026,2.49254 1.609548,2.4211 2.704978,5.37472 3.10574,8.37404 0.511723,3.82975 -0.683572,8.87829 -2.935514,12.39864 -1.127991,1.76333 -2.131394,2.77518 -4.060784,4.09494 -0.479365,0.3279 0.49409,0.0773 1.40702,-0.36215 z m 4.003417,-12.78598 c 0.05824,-0.65798 0.0586,-1.66731 7.91e-4,-2.24296 -0.123959,-1.23433 0.107006,-1.1382 -3.071461,-1.27831 -9.421011,-0.41528 -24.986597,-3.014 -34.066385,-5.68749 -2.18116,-0.64223 -5.19803,-1.6661 -4.43162,-1.504 7.17915,1.51836 16.513355,2.70835 25.894958,3.30126 3.839493,0.24265 14.211508,0.47358 14.598623,0.32503 0.21142,-0.0811 0.196356,-0.21534 -0.132973,-1.18472 -0.503293,-1.48143 -1.441661,-3.31669 -2.247547,-4.39575 -2.496217,-3.34235 -7.041291,-6.45787 -10.144204,-6.95356 -1.434621,-0.22919 -6.86731,0.15232 -10.742122,0.75436 -10.294175,1.59942 -19.476675,4.78052 -20.135995,6.97572 -0.18159,0.60459 1.90156,2.10367 5.23113,3.76443 6.54619,3.2652 15.774012,6.01031 26.015526,7.73917 3.808519,0.64291 10.635454,1.49116 12.57923,1.56297 l 0.54615,0.0202 z m 15.054848,-15.49067 c 11.830674,-1.00421 21.762991,-1.78011 35.651848,-2.78507 11.68023,-0.84515 14.47875,-1.07421 31.15791,-2.55035 13.07513,-1.15717 21.5185,-1.88447 29.58504,-2.5484 14.10954,-1.16132 13.70649,-1.11598 13.70649,-1.54195 0,-0.11286 -0.11797,-0.30703 -0.26215,-0.43149 -0.14418,-0.12447 -3.19443,-1.74471 -6.77834,-3.60053 -3.58391,-1.85583 -8.55713,-4.43491 -11.05161,-5.73131 l -4.53541,-2.35707 -1.3067,0.0966 c -2.32543,0.17198 -3.17918,0.2707 -3.17844,0.36752 4e-4,0.0522 0.53968,0.72381 1.19838,1.49248 l 1.19765,1.39757 v 3.48996 c 0,2.89547 -0.0377,3.52124 -0.22127,3.6736 -0.14245,0.11822 -2.95745,0.41674 -7.90183,0.83796 -4.2243,0.35987 -8.76918,0.75405 -10.09973,0.87596 l -2.41918,0.22164 -3.12333,-1.31973 c -1.71784,-0.72585 -3.82308,-1.62988 -4.67832,-2.00895 l -1.55499,-0.68921 -0.61708,0.49585 c -2.5116,2.01817 -5.8059,3.52065 -8.88255,4.0512 -1.25554,0.21651 -7.83522,0.80824 -18.39852,1.65463 -2.63644,0.21124 -4.928337,0.41484 -5.093117,0.45244 -0.30075,0.0686 -2.94648,-1.08754 -8.91296,-3.89487 -1.688969,-0.79469 -3.541798,-1.65836 -4.117399,-1.91926 l -1.046546,-0.47438 0.672052,-0.0947 c 0.369629,-0.0521 1.32929,-0.14333 2.13258,-0.20278 l 1.460527,-0.10809 v -1.57825 -1.57825 l -1.011134,0.0907 c -0.556124,0.0499 -2.763767,0.22848 -4.905874,0.39685 -2.142107,0.16837 -4.11967,0.34263 -4.394585,0.38725 l -0.499845,0.0811 0.761991,0.80569 0.761991,0.8057 v 3.50058 c 0,2.56841 -0.04986,3.56658 -0.187247,3.74843 -0.15702,0.20784 -1.227044,0.33435 -6.628547,0.78371 -10.994643,0.91467 -13.610595,1.12068 -14.244945,1.12179 -0.531675,9.3e-4 -1.279526,-0.398 -5.615717,-2.99563 -2.751298,-1.64819 -5.048942,-3.11433 -5.105876,-3.2581 -0.05693,-0.14377 -0.108253,-0.65354 -0.114044,-1.13282 -0.0091,-0.75547 -0.04541,-0.86164 -0.272674,-0.79785 -0.144181,0.0405 -1.205872,0.1493 -2.359314,0.24184 -2.49077,0.19984 -2.679925,0.23402 -2.985478,0.53958 -0.555703,0.5557 -0.357815,0.71815 3.472321,2.85053 3.924951,2.18517 9.681977,5.47249 14.642722,8.36114 l 2.995954,1.74455 1.647774,-0.0675 c 0.906276,-0.0371 6.063061,-0.4423 11.459522,-0.90036 z m -8.717791,-7.20561 c 4.506425,-0.37069 8.547397,-0.7155 8.979937,-0.76625 l 0.786438,-0.0923 v -2.29055 -2.29055 l -0.761921,-0.54739 c -0.419056,-0.30106 -1.329077,-1.09188 -2.022268,-1.75737 l -1.260348,-1.20998 v -5.59392 -5.59391 l 0.337045,-0.0713 c 0.185374,-0.0392 2.2582,-0.21437 4.606278,-0.38919 4.714672,-0.35102 6.112003,-0.55006 7.964883,-1.13456 2.433586,-0.76768 4.320108,-1.88371 6.167025,-3.6483 2.355066,-2.25008 3.835873,-4.97322 4.686673,-8.61862 0.38372,-1.64406 0.39693,-5.91991 0.0235,-7.59412 -0.99241,-4.44896 -3.616825,-7.76802 -7.448417,-9.41991 -2.512392,-1.08315 -4.511848,-1.24544 -9.972046,-0.80943 -5.438989,0.43432 -20.374006,1.7267 -20.857836,1.8049 l -0.486842,0.0787 3.05e-4,2.87682 3.06e-4,2.87682 1.759817,0.89878 1.759817,0.89879 0.03518,17.15183 0.03518,17.15183 -1.420808,1.90573 -1.420808,1.90572 v 2.47586 c 0,1.63363 0.05365,2.47586 0.157721,2.47586 0.08675,0 3.844796,-0.30329 8.35122,-0.67397 z m 5.721838,-35.91071 v -7.70414 l 2.209516,-0.17694 c 5.103078,-0.40866 6.691211,-0.0826 8.574716,1.76039 1.44262,1.4116 2.098368,3.07751 2.098368,5.33085 0,3.54517 -1.961782,6.369 -5.209304,7.49838 -0.943379,0.32808 -2.266646,0.50841 -6.587263,0.89773 l -1.086033,0.0979 z m 2.995182,0.83714 c 0.590516,-1.55783 0.383362,-3.99565 -0.418292,-4.92253 -0.807703,-0.93387 -0.779709,-1.04279 -0.774927,3.01506 l 0.0044,3.72583 0.428007,-0.47018 c 0.235404,-0.2586 0.577773,-0.86528 0.760821,-1.34818 z m 33.180949,32.96937 c 4.53138,-0.37141 8.77815,-0.74441 9.43726,-0.82889 4.91826,-0.63037 9.18945,-2.83584 12.6516,-6.53276 5.81993,-6.21458 8.58347,-16.44576 7.2536,-26.85429 -0.47227,-3.6964 -1.2084,-6.22331 -2.68549,-9.21848 -1.09634,-2.2231 -2.04587,-3.56193 -3.66525,-5.16802 -2.60886,-2.58741 -5.76688,-4.04415 -9.28523,-4.2831 -0.91395,-0.0621 -4.33506,0.17122 -12.12278,0.82669 -5.96723,0.50224 -10.86186,0.92927 -10.87696,0.94896 -0.0151,0.0197 -0.0698,1.25604 -0.12151,2.74746 l -0.094,2.71166 1.23415,0.75914 c 0.67879,0.41752 1.3445,0.84879 1.47935,0.95838 0.22349,0.18161 0.25391,1.75632 0.34387,17.80047 l 0.0987,17.60122 -1.65461,2.14752 -1.65461,2.14753 v 1.38757 c 0,0.76316 0.0434,1.90069 0.0964,2.52784 l 0.0964,1.14028 0.61515,-0.0719 c 0.33833,-0.0396 4.32264,-0.37582 8.85402,-0.74723 z m 3.81984,-26.79803 c 0,-10.21555 0.0566,-17.77717 0.13343,-17.82465 0.0734,-0.0454 1.10138,-0.12386 2.28442,-0.17444 2.58685,-0.11062 3.84538,0.10414 5.49888,0.93835 1.1885,0.59961 2.95091,2.12984 3.82043,3.31713 1.2789,1.74628 2.27881,4.35607 2.82195,7.36533 0.41783,2.31497 0.45705,7.08771 0.0782,9.51519 -0.77138,4.94259 -2.32147,8.4269 -4.90046,11.01534 -2.17496,2.18293 -3.92488,2.96277 -7.55959,3.36888 -1.07391,0.11999 -2.00312,0.21882 -2.06491,0.21961 -0.0618,7.9e-4 -0.11235,-7.98254 -0.11235,-17.74074 z m 2.4262,9.09137 c 0.29803,-0.55613 0.77989,-1.71893 1.0708,-2.58401 0.95542,-2.84111 1.29695,-5.16981 1.29565,-8.83414 -0.002,-4.45221 -0.75257,-7.81862 -2.36513,-10.60211 -0.29832,-0.51493 -0.5958,-0.93624 -0.66107,-0.93624 -0.0653,0 -0.11867,5.39272 -0.11867,11.98382 0,6.59109 0.0532,11.98381 0.11827,11.98381 0.0651,0 0.36212,-0.45501 0.66015,-1.01113 z m 32.92606,15.31541 c 6.95021,-0.5856 9.61198,-0.82288 10.29859,-0.91806 l 0.63664,-0.0882 v -2.14675 -2.14675 l -0.74457,-0.64135 c -0.40951,-0.35274 -1.14132,-1.11483 -1.62626,-1.69353 l -0.88169,-1.05219 -0.082,-7.31287 c -0.0612,-5.45517 -0.0381,-7.32766 0.0908,-7.37112 0.25019,-0.0843 6.7004,-0.66079 8.62756,-0.77106 1.5642,-0.0895 1.67268,-0.076 2.43334,0.30233 0.43788,0.2178 1.25124,0.76713 1.80746,1.22072 1.72383,1.40577 1.61015,1.74843 1.61015,-4.85335 v -5.67806 l -0.56174,0.0654 c -1.08568,0.1263 -13.04882,1.10452 -13.50767,1.10452 h -0.46421 l 0.0391,-6.32895 0.0391,-6.32895 1.19838,-0.0996 c 0.65911,-0.0548 3.28806,-0.28021 5.84211,-0.50097 2.55405,-0.22077 5.18383,-0.37426 5.84396,-0.34109 1.69928,0.0854 2.42903,0.50996 4.52454,2.6324 1.31093,1.32778 1.75541,1.69117 2.02227,1.65331 l 0.34203,-0.0485 v -6.56786 c 0,-3.61233 -0.0337,-6.58822 -0.0749,-6.6131 -0.0412,-0.0249 -1.52419,0.0784 -3.29555,0.22949 -1.77136,0.15109 -5.71478,0.48427 -8.76316,0.74038 -3.04839,0.25612 -7.05922,0.59803 -8.91296,0.7598 -1.85375,0.16177 -5.39272,0.46506 -7.86438,0.67397 -2.47166,0.20891 -4.57819,0.4084 -4.68118,0.44331 -0.14117,0.0479 -0.18725,0.77783 -0.18725,2.96668 v 2.9032 l 1.38563,0.81158 1.38563,0.81158 0.0915,8.68567 c 0.0503,4.77712 0.10026,12.89873 0.11102,18.04803 l 0.0196,9.36235 -1.40502,1.83931 c -1.24908,1.63515 -1.41546,1.92611 -1.499,2.62146 -0.10774,0.89673 -0.0941,3.86571 0.0187,4.05302 0.0414,0.0688 0.45538,0.0849 0.91991,0.0357 0.46453,-0.0492 2.83317,-0.25699 5.26364,-0.46177 z m -89.525538,-1.35716 c 0.31777,-0.36094 0.587406,-0.76571 0.599191,-0.89949 0.01488,-0.16897 -1.372143,-1.0621 -4.542167,-2.92479 -2.509977,-1.47485 -4.602188,-2.68154 -4.649359,-2.68154 -0.143971,0 -1.559233,1.48626 -1.485486,1.56 0.1302,0.1302 9.35026,5.6183 9.425158,5.61019 0.0412,-0.004 0.334893,-0.30343 0.652663,-0.66437 z m 40.578058,-1.82851 0.67974,-0.86521 -4.338537,-2.52637 -4.33854,-2.52637 -0.737202,0.72611 c -0.466106,0.4591 -0.684819,0.7785 -0.594755,0.86857 0.10683,0.10683 8.554127,5.18197 8.634197,5.18743 0.008,5.7e-4 0.32124,-0.3883 0.695097,-0.86416 z m 42.55761,-2.3564 c 0.31034,-0.37127 0.52504,-0.7385 0.47711,-0.81606 -0.0869,-0.14053 -4.79428,-2.73746 -5.11772,-2.82327 -0.18586,-0.0493 -0.99044,1.28201 -0.91377,1.51201 0.0546,0.16387 4.60078,2.79705 4.83458,2.80024 0.0855,0.001 0.40945,-0.30165 0.7198,-0.67292 z m -58.996816,-0.075 c 2.965994,-0.24645 5.443273,-0.44814 5.505065,-0.44822 0.06179,-8e-5 0.112348,-0.39908 0.112348,-0.88667 0,-0.4876 0.03761,-0.98454 0.08357,-1.10431 0.04596,-0.11978 0.787461,-0.842 1.647774,-1.60492 l 1.564206,-1.38715 v -3.42253 -3.42253 l -1.06205,0.68704 c -2.954925,1.91153 -6.169449,2.8137 -11.371157,3.19137 -1.277025,0.0927 -2.574648,0.2063 -2.883605,0.2524 l -0.561742,0.0838 v 4.15621 c 0,2.28591 0.04494,4.20114 0.09986,4.25606 0.169984,0.16999 1.287713,0.11291 6.865727,-0.35056 z M 164.26644,99.81176 c 3.09997,-0.24973 5.93965,-0.50954 6.3104,-0.57733 l 0.67409,-0.12327 -0.59919,-0.26929 c -0.71848,-0.3229 -0.60156,-0.32719 -6.5004,0.2386 -4.47514,0.42923 -5.35878,0.59152 -5.63255,1.0345 -0.11644,0.1884 -0.80646,0.2248 5.74765,-0.30321 z M 68.714426,86.05005 c 17.297355,-1.48414 18.369531,-1.54428 20.287252,-1.13803 0.571037,0.12097 1.069284,0.18891 1.107214,0.15098 0.03793,-0.0379 -0.576905,-0.38121 -1.3663,-0.76285 -2.085132,-1.00808 -1.974497,-1.00557 -12.538283,-0.28381 -6.962635,0.47572 -13.947766,0.97695 -15.771546,1.13171 l -1.915261,0.16252 -2.803366,-1.63849 c -6.588656,-3.85087 -5.931767,-3.5217 -6.529548,-3.27193 -0.392376,0.16394 -0.563825,0.3495 -0.663833,0.71845 -0.167076,0.61638 -0.155374,0.63693 0.615367,1.0805 0.345894,0.19906 2.314122,1.3506 4.37384,2.55897 l 3.744942,2.19704 1.348179,-0.0766 c 0.741498,-0.0421 5.291603,-0.41494 10.111343,-0.82848 z m 40.837254,-3.15539 c 4.93376,-0.409 9.88049,-0.82773 10.99274,-0.93051 2.77809,-0.25672 6.15409,-0.23007 7.15284,0.0565 0.43254,0.12409 0.78643,0.17872 0.78643,0.12139 0,-0.16466 -2.25078,-1.17124 -2.99595,-1.33983 -0.37075,-0.0839 -1.28809,-0.15415 -2.03854,-0.15616 -1.32441,-0.004 -2.75918,0.0915 -15.96334,1.05712 -7.04354,0.51512 -6.163,0.58788 -8.287607,-0.6848 -3.871342,-2.319 -6.850658,-3.97113 -7.161206,-3.97113 -0.471875,0 -1.152566,0.53941 -1.152566,0.91335 0,0.18502 0.233813,0.43084 0.63664,0.66934 0.350153,0.20732 2.389273,1.41516 4.531382,2.6841 2.1421,1.26893 4.037377,2.31101 4.211727,2.31573 0.17434,0.005 4.3537,-0.32606 9.28745,-0.73505 z m 43.42393,-3.07769 c 5.27288,-0.45216 11.57562,-0.99199 14.00609,-1.19963 7.93011,-0.67747 9.32472,-0.8085 9.39935,-0.88313 0.0405,-0.0405 -0.30267,-0.25811 -0.76253,-0.48365 l -0.83612,-0.41007 -15.69692,1.20705 -15.69692,1.20705 -4.10021,-2.37698 c -2.52541,-1.46403 -4.25497,-2.37698 -4.50314,-2.37698 -0.49844,0 -1.05877,0.4989 -1.05808,0.94207 4.3e-4,0.26734 0.36877,0.54105 1.90992,1.41928 1.05017,0.59844 2.99638,1.71499 4.32491,2.48122 1.96856,1.13537 2.50904,1.38415 2.92105,1.34451 0.27805,-0.0268 4.81973,-0.41858 10.0926,-0.87074 z"/></svg></button><span class="divider"></span>
+<button class="title-btn" id="undo" title="Zpět"><svg class="ico " aria-hidden="true"><use href="#i-undo"/></svg></button><button class="title-btn" id="redo" title="Znovu"><svg class="ico " aria-hidden="true"><use href="#i-redo"/></svg></button>
+<div class="doc-tabs"><div class="doc-tab" title="Otevřený vzorový dokument"><svg class="ico " aria-hidden="true"><use href="#i-nav_file"/></svg><span class="name">Žádost_o_spolupráci.pdf</span><span class="dirty" id="dirtyMark"></span><span class="x" title="Pouze ukázkový náhled">×</span></div><button class="tab-add" id="newTab" title="Nové PDF">+</button></div>
+<div class="window-spacer"></div><div class="window-controls"><button disabled title="Systémové minimalizování není součástí HTML">—</button><button disabled title="Systémová maximalizace">□</button><button disabled title="Systémové zavření">×</button></div></header>
+<!-- 2: menu + contextual tool bar -->
+<div class="commandbar"><nav class="menus" aria-label="Hlavní nabídka"><button class="menubtn" data-menu="0" aria-haspopup="true" aria-expanded="false" title="Nabídka Soubor – najetím nebo kliknutím">Soubor</button><button class="menubtn" data-menu="1" aria-haspopup="true" aria-expanded="false" title="Nabídka Zobrazení – najetím nebo kliknutím">Zobrazení</button><button class="menubtn" data-menu="2">Nástroje</button><button class="menubtn" data-menu="3">Úpravy</button><button class="menubtn" data-menu="4">Formuláře</button><button class="menubtn" data-menu="5">Pomoc</button></nav><div class="divider"></div>
+<div class="toolbar"><button class="toolbtn active" id="selectPointer" data-select-mode="pointer" title="Kurzor a výběr"><svg class="ico " aria-hidden="true"><use href="#i-cursor"/></svg></button><button class="toolbtn" id="selectRect" data-select-mode="rect" title="Výběr obdélníkem"><svg class="ico " aria-hidden="true"><use href="#i-rect_select"/></svg></button><span class="toolbar-divider"></span>
+<button class="toolbtn squared" data-zoom="-10" title="Zmenšit"><svg class="ico " aria-hidden="true"><use href="#i-zoom_out"/></svg></button><select class="zoom-select" id="zoomTop" aria-label="Přiblížení"><option value="65">65 %</option><option value="75">75 %</option><option value="90">90 %</option><option selected value="100">100 %</option><option value="110">110 %</option><option value="125">125 %</option><option value="150">150 %</option><option value="160">160 %</option></select><button class="toolbtn squared" data-zoom="10" title="Zvětšit"><svg class="ico " aria-hidden="true"><use href="#i-zoom_in"/></svg></button><button class="toolbtn squared" data-zoom="1:1" title="Skutečné přiblížení 100 %"><svg class="ico " aria-hidden="true"><use href="#i-zoom_1_1"/></svg></button><button class="toolbtn squared hide-small" id="fitPage" title="Přizpůsobit stránce"><svg class="ico " aria-hidden="true"><use href="#i-fit_page"/></svg></button><button class="toolbtn squared hide-small" id="fitWidth" title="Přizpůsobit šířce"><svg class="ico " aria-hidden="true"><use href="#i-fit_width"/></svg></button><span class="toolbar-divider"></span><label class="toolbar-search" for="quickSearch" title="Najít v PDF (Ctrl+F)"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input id="quickSearch" type="search" placeholder="Najít v PDF…" autocomplete="off" spellcheck="false" aria-label="Hledat v PDF – aktivuje nástroj Najít v PDF"></label><span class="toolbar-divider"></span>
+<button class="toolbtn" data-page-nav="prev" title="Předchozí strana">‹</button><div class="page-nav" id="pageCountTop">1 / 3</div><button class="toolbtn" data-page-nav="next" title="Následující strana">›</button><button class="toolbtn hide-small" id="fullWidth" title="Dočasně sbalit náhledy a pravý panel"><svg class="ico " aria-hidden="true"><use href="#i-side_by_side"/></svg></button><button class="toolbtn" id="saveToolbar" title="Uložit (ukázkový dialog)"><svg class="ico " aria-hidden="true"><use href="#i-save"/></svg></button><button class="toolbtn hide-small" id="help" title="Nápověda"><svg class="ico " aria-hidden="true"><use href="#i-nav_help"/></svg></button></div></div>
+<!-- three-column + panel ears -->
+<div class="workarea"><section class="panel-dock left-dock" id="leftDock" aria-label="Levá skupina panelů"><nav class="toolpane" aria-label="Nástroje"><div class="pane-label">Nástroje</div><button class="tool" data-tool="nav_file" title="Soubor – rozbalit nabídku akcí" aria-controls="fileSubmenu" aria-expanded="false"><svg class="ico " aria-hidden="true"><use href="#i-nav_file"/></svg><span>Soubor</span><span class="file-chevron" aria-hidden="true">▸</span></button><div class="file-submenu" id="fileSubmenu" aria-label="Příkazy nabídky Soubor" hidden></div><button class="tool" data-tool="nav_view" title="Zobrazení – rozbalit nabídku" aria-controls="viewSubmenu" aria-expanded="false"><svg class="ico " aria-hidden="true"><use href="#i-nav_view"/></svg><span>Zobrazení</span><span class="file-chevron" aria-hidden="true">▸</span></button><div class="file-submenu view-submenu" id="viewSubmenu" aria-label="Příkazy nabídky Zobrazení" hidden></div><div class="pane-sep"></div><button class="tool" data-tool="nav_search_pdf" title="Najít v PDF"><svg class="ico " aria-hidden="true"><use href="#i-nav_search_pdf"/></svg><span>Najít v PDF</span></button><button class="tool" data-tool="nav_objects" title="Objekty"><svg class="ico " aria-hidden="true"><use href="#i-nav_objects"/></svg><span>Objekty</span></button><button class="tool" data-tool="nav_text" title="Text"><svg class="ico " aria-hidden="true"><use href="#i-nav_text"/></svg><span>Text</span></button><button class="tool" data-tool="nav_ocr" title="OCR"><svg class="ico " aria-hidden="true"><use href="#i-nav_ocr"/></svg><span>OCR</span></button><button class="tool" data-tool="form_text" title="Formuláře"><svg class="ico " aria-hidden="true"><use href="#i-nav_forms"/></svg><span>Formuláře</span></button><button class="tool" data-tool="nav_separations" title="Separace"><svg class="ico " aria-hidden="true"><use href="#i-nav_separations"/></svg><span>Separace</span></button><button class="tool" data-tool="nav_signature" title="Digitální podpis"><svg class="ico " aria-hidden="true"><use href="#i-nav_signature"/></svg><span>Digitální podpis</span></button><div class="pane-sep"></div><button class="tool" data-tool="nav_split_pdf" title="Rozdělit PDF"><svg class="ico " aria-hidden="true"><use href="#i-nav_split_pdf"/></svg><span>Rozdělit PDF</span></button><button class="tool" data-tool="nav_page_order" title="Pořadí stránek"><svg class="ico " aria-hidden="true"><use href="#i-nav_page_order"/></svg><span>Pořadí stránek</span></button><div class="pane-sep"></div><details class="future-tools"><summary>Budoucí nástroje <span class="planned-tag">návrhy</span></summary>
+<button class="tool planned-tool" data-tool="nav_preflight" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_preflight"/></svg><span>Preflight</span><small>plán</small></button><button class="tool planned-tool" data-tool="nav_compare" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_compare"/></svg><span>Porovnat PDF</span><small>plán</small></button><button class="tool planned-tool" data-tool="nav_measure" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_measure"/></svg><span>Měření</span><small>plán</small></button><button class="tool planned-tool" data-tool="nav_batch" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_batch"/></svg><span>Dávkové zpracování</span><small>plán</small></button></details></nav>
+<aside class="thumbpane" id="thumbPane"><div class="thumb-head">Náhledy stránek</div><div class="thumbstack">
+<button class="thumbbutton active" data-thumb="1" title="Otevřít stranu 1"><div class="mini-page"><b>ŽÁDOST</b><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="thumb-index">1</span></button><button class="thumbbutton " data-thumb="2" title="Otevřít stranu 2"><div class="mini-page"><b>ÚDAJE</b><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="thumb-index">2</span></button><button class="thumbbutton " data-thumb="3" title="Otevřít stranu 3"><div class="mini-page"><b>POTVRZENÍ</b><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="thumb-index">3</span></button>
+</div></aside>
+<div class="earrail left" aria-label="Ouška levých pomocných panelů"><button class="ear" data-panel="thumbs" title="Náhledy stránek – zobrazit / skrýt" aria-label="Náhledy stránek"><svg class="ico" aria-hidden="true"><use href="#i-nav_thumbnails"/></svg><span>Náhledy</span></button></div>
+<button type="button" class="dock-toggle dock-toggle-left" id="leftDockToggle" data-group-side="left" aria-controls="leftDock" aria-expanded="true" title="Sbalit levou skupinu panelů: Nástroje a Náhledy" aria-label="Sbalit levou skupinu panelů"><span id="leftDockGlyph" aria-hidden="true">«</span></button></section>
+<main class="editor" id="editor"><div class="canvas-note" id="pageCue">Strana 1 · ukázkový formulář</div><article class="pdf-page active" data-page="1" id="pdf1"><h1>Žádost o spolupráci</h1><div class="desc">Ukázkový formulář PDF · pracovní návrh ovládání PDF Blacksmith</div><div class="rule"></div>
+<h2>1. Kontaktní údaje</h2>
+<div class="cols"><div class="field" data-field="jmeno"><label for="jmeno">Jméno a příjmení <span class="required">*</span></label><input id="jmeno" data-fid="jmeno" value="Jana Nováková" required></div>
+<div class="field" data-field="email"><label for="email">E-mail <span class="required">*</span></label><input id="email" data-fid="email" type="text" value="jana.novakova@" required><span class="errtext"></span></div></div>
+<div class="cols"><div class="field" data-field="telefon"><label for="telefon">Telefon</label><input id="telefon" data-fid="telefon" value="+420 602 123 456"></div>
+<div class="field" data-field="datum"><label for="datum">Datum podání <span class="required">*</span></label><input id="datum" data-fid="datum" placeholder="DD. MM. RRRR" required><span class="errtext"></span></div></div>
+<h2>2. Údaje o spolupráci</h2><div class="field" data-field="oblast"><label for="oblast">Oblast spolupráce</label><select id="oblast" data-fid="oblast"><option>Grafické a technické podklady</option><option>Technická dokumentace</option><option>Vývoj softwaru</option></select></div>
+<div class="field" data-field="poznamka"><label for="poznamka">Doplňující informace</label><textarea id="poznamka" data-fid="poznamka" rows="4">Ráda bych navázala externí spolupráci na technických podkladech.</textarea></div>
+<div class="checkline"><input type="checkbox" id="souhlas" data-fid="souhlas" checked><label for="souhlas">Souhlasím se zpracováním uvedených údajů.</label></div>
+<div class="field" data-field="cislo"><label for="cislo">Číslo žádosti (pouze pro čtení)</label><input id="cislo" data-fid="cislo" readonly value="PB-2026-0017"></div>
+<div class="doc-card">V tomto ilustračním HTML jsou zvýraznění a chybová hlášení pouze součástí obrazovkového náhledu. Neprobíhá skutečná úprava PDF.</div>
+<div class="pagefooter">Ukázkový dokument · strana 1 ze 3</div></article><article class="pdf-page" data-page="2" id="pdf2"><h1>Doplňující údaje</h1><div class="desc">Žádost o spolupráci · pokračování formuláře</div><div class="rule"></div>
+<h2>3. Kontaktní adresa</h2><div class="cols"><div class="field" data-field="ulice"><label for="ulice">Ulice a číslo</label><input data-fid="ulice" id="ulice" value="Ukázková 12"></div><div class="field" data-field="mesto"><label for="mesto">Město <span class="required">*</span></label><input data-fid="mesto" id="mesto" value="Brno" required></div></div>
+<div class="cols"><div class="field" data-field="psc"><label for="psc">PSČ</label><input data-fid="psc" id="psc" value="602 00"></div><div class="field" data-field="stat"><label for="stat">Země</label><select data-fid="stat" id="stat"><option>Česká republika</option><option>Slovenská republika</option><option>Rakousko</option></select></div></div>
+<h2>4. Způsob spolupráce</h2><div class="field" data-field="typ"><label for="typ">Preferovaný typ spolupráce</label><select data-fid="typ" id="typ"><option>Externí spolupráce</option><option>Pracovní poměr</option><option>Jednorázová zakázka</option></select></div>
+<div class="field" data-field="termin"><label for="termin">Předpokládaný začátek</label><input data-fid="termin" id="termin" value="01. 01. 2027"></div><div class="doc-card">Na druhé straně se přehled polí automaticky aktualizuje. Rozbalovací seznam na pravé straně slouží k navigaci napříč stránkami, zatímco klávesa Tab se řídí pořadím formuláře.</div>
+<div class="pagefooter">Ukázkový dokument · strana 2 ze 3</div></article><article class="pdf-page" data-page="3" id="pdf3"><h1>Potvrzení a přehled</h1><div class="desc">Žádost o spolupráci · poslední strana</div><div class="rule"></div>
+<h2>5. Shrnutí údajů</h2><table class="faux-table"><tr><th>Oblast</th><th>Výběr</th></tr><tr><td>Podklady</td><td>Grafická a technická dokumentace</td></tr><tr><td>Forma</td><td>Externí spolupráce</td></tr><tr><td>Kontakt</td><td>Údaje uvedené na první straně</td></tr></table>
+<h2>6. Potvrzení</h2><div class="field" data-field="potvrzeni"><label for="potvrzeni">Místo potvrzení <span class="required">*</span></label><input data-fid="potvrzeni" id="potvrzeni" placeholder="Např. Brno" required></div><div class="field" data-field="datum2"><label for="datum2">Datum potvrzení</label><input data-fid="datum2" id="datum2" placeholder="DD. MM. RRRR"></div>
+<h2>Podpis</h2><div class="sign-box">Zástupná oblast pro podpis – F1 jej pouze chrání, nevytváří</div>
+<div class="doc-card">Při ukládání rozpracovaného formuláře musí aplikace nabídnout „Uložit přesto“. Tento HTML návrh simuluje pouze dialog, nikoli PDF ukládání.</div><div class="pagefooter">Ukázkový dokument · strana 3 ze 3</div></article></main>
+<section class="panel-dock right-dock" id="rightDock" aria-label="Pravá skupina panelů"><div class="earrail right" aria-label="Ouška pravých pomocných panelů"><button class="ear" data-panel="search-results" title="Výsledky hledání – zobrazit / skrýt" aria-label="Výsledky hledání"><svg class="ico" aria-hidden="true"><use href="#i-nav_search_pdf"/></svg><span>Výsledky</span></button><button class="ear" data-panel="bookmarks" title="Záložky – zobrazit / skrýt" aria-label="Záložky"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg><span>Záložky</span></button><button class="ear" data-panel="notes" title="Poznámky – zobrazit / skrýt" aria-label="Poznámky"><svg class="ico" aria-hidden="true"><use href="#i-nav_notes"/></svg><span>Poznámky</span></button></div>
+<aside class="aux-pane aux-search" id="searchResultsPane" aria-label="Doplňkový panel Výsledky vyhledávání"><div class="aux-head"> <svg class="ico" aria-hidden="true"><use href="#i-nav_search_pdf"/></svg> <strong>Výsledky vyhledávání</strong><button class="aux-close" type="button" data-aux-close="search-results" title="Sbalit Výsledky">×</button></div><div class="aux-body"><div class="aux-caption">Aktivní hledání</div><div class="tool-state" id="auxSearchTerm">Zadejte hledaný výraz</div><div id="demoSearchResults" class="results-list" aria-live="polite"><p class="tool-muted" style="padding:8px">Výskyty se zobrazí při psaní.</p></div><p class="aux-hint">Výsledky patří k aktuálnímu PDF. Tento HTML prototyp hledá jen v ilustračním textu stránky.</p></div></aside>
+<aside class="aux-pane aux-bookmarks" id="bookmarkPane" aria-label="Doplňkový panel Záložky">
+ <div class="aux-head"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg> <strong>Záložky</strong> <button class="aux-close" data-aux-close="bookmarks" title="Sbalit Záložky">×</button></div>
+ <div class="aux-body"><div class="aux-caption">Záložky v aktuálním PDF</div><div class="tree-list">
+  <div class="tree-root">▾ &nbsp; Žádost o spolupráci</div>
+  <button data-go-page="1"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg> Kontaktní údaje <em>1</em></button>
+  <button data-go-page="2"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg> Adresní údaje <em>2</em></button>
+  <button data-go-page="2"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg> Způsob spolupráce <em>2</em></button>
+  <button data-go-page="3"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg> Potvrzení <em>3</em></button>
+  </div><div class="aux-caption">Úpravy záložek</div>
+  <label class="mini-label">Název vybrané záložky<input id="bookmarkName" value="Kontaktní údaje"></label>
+  <label class="mini-label">Cílová strana<select id="bookmarkTarget"><option value="1">Strana 1</option><option value="2">Strana 2</option><option value="3">Strana 3</option></select></label>
+  <div class="compact-row"><button class="btn" data-ui-action="bookmark-add"><svg class="ico" aria-hidden="true"><use href="#i-nav_bookmarks"/></svg> Nová</button><button class="btn" data-ui-action="bookmark-edit">Použít změnu</button></div>
+  <p class="aux-hint">Ilustrace současného stromu záložek a editace. Tyto údaje v HTML nemění obsah PDF.</p></div>
+</aside>
+<aside class="aux-pane aux-notes" id="notesPane" aria-label="Doplňkový panel Poznámky">
+ <div class="aux-head"><svg class="ico" aria-hidden="true"><use href="#i-nav_notes"/></svg> <strong>Poznámky</strong><button class="aux-close" data-aux-close="notes" title="Sbalit Poznámky">×</button></div>
+ <div class="aux-body"><div class="aux-caption">Pracovní poznámky</div>
+  <label class="mini-label">Zobrazit<select id="notesFilter"><option>Všechny poznámky</option><option>Aktuální strana</option><option>Nevyřešené</option></select></label>
+  <div id="demoNotes" class="notes-list"><button class="note-item" data-go-page="1"><span class="note-title">Kontrola kontaktních údajů</span><small>Strana 1 · Ilustrační poznámka</small><span>Ověřit e-mail před finálním odesláním.</span></button></div>
+  <div class="aux-caption">Nová poznámka</div><textarea id="newDemoNote" rows="3" placeholder="Zapsat vlastní komentář k aktuální straně…"></textarea>
+  <div class="compact-row"><button class="btn primary" id="addDemoNote"><svg class="ico" aria-hidden="true"><use href="#i-note_edit"/></svg> Přidat poznámku</button></div>
+  <label class="switchline"><span>Zobrazit anotace</span><input id="showDemoNotes" type="checkbox" checked></label>
+  <p class="aux-hint">Poznámky jsou samostatné PDF anotace, nikoliv formulářová pole. V tomto HTML se zapisují jen do ukázkového seznamu.</p>
+ </div>
+</aside>
+<aside class="props" aria-label="Vlastnosti aktivního nástroje"><div class="props-head" id="propsTitle"><svg class="ico" aria-hidden="true"><use href="#i-nav_forms"/></svg><span>Formuláře</span></div><div class="props-body"><div id="formsProps">
+<div class="segmented"><button class="active">Vyplnit</button><button disabled title="Tvorba formulářů F2 je plánovaná, ne součást první etapy">Návrh polí · F2</button></div>
+<div class="panel-caption">Aktuální dokument</div><div class="label-muted">Žádost_o_spolupráci.pdf</div><label class="switchline"><span>Zvýraznit vyplnitelná pole</span><input id="showHighlights" type="checkbox" checked></label>
+<div class="statrow"><div class="stat"><strong id="countTotal">16</strong><span>celkem</span></div><div class="stat"><strong id="countFilled">0</strong><span>vyplněno</span></div><div class="stat"><strong id="countIssues">0</strong><span>k doplnění</span></div></div>
+<button class="sectiontoggle" id="collapseFieldList">Přehled polí <span>▾</span></button><div class="fieldlist" id="fieldList"></div><div class="validation-summary" id="issueSummary"></div>
+<div class="props-actions"><button class="btn" id="validate">Zkontrolovat</button><button class="btn" id="goIssue">Přejít na problém</button></div><div class="props-actions"><button class="btn primary" id="save"><svg class="ico " aria-hidden="true"><use href="#i-save"/></svg> Uložit…</button></div>
+</div><div id="otherProps" class="hidden"></div></div><div class="props-footer">HTML návrh v2.7 · pouze vizuální prototyp</div></aside><button type="button" class="dock-toggle dock-toggle-right" id="rightDockToggle" data-group-side="right" aria-controls="rightDock" aria-expanded="true" title="Sbalit pravou skupinu panelů: Vlastnosti a pomocné panely" aria-label="Sbalit pravou skupinu panelů"><span id="rightDockGlyph" aria-hidden="true">»</span></button></section></div>
+<footer class="statusbar"><button data-page-nav="prev" title="Předchozí strana">‹</button><span class="page-chooser" id="pageCountBottom">1 / 3</span><button data-page-nav="next" title="Další strana">›</button><span class="divider"></span><span id="zoomBottom">100 %</span><span class="divider"></span><span>Po stránkách</span><span class="spacer"></span><span id="bottomDirty">Bez změn</span><span class="status-pill" id="activeToolLabel">Formuláře → Vyplnit</span></footer></div>
+<div class="menu-float" id="menuFloat" aria-label="Rozbalovací nabídka" role="navigation"></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal-overlay" id="modal"><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle">Formulář není dokončen</h2><p>Souhrn kontroly údajů. Tento HTML prototyp nenahrazuje skutečné ukládání PDF.</p><ul id="modalIssues"></ul><div class="actions"><button class="btn" id="cancelSave">Zrušit</button><button class="btn" id="goIssueModal">Přejít na pole</button><button class="btn primary" id="saveAnyway">Uložit přesto (ukázka)</button></div></div></div>
+<div class="context-menu" id="recentContextMenu" role="menu" aria-label="Kontextová nabídka nedávných dokumentů"></div>
+<script>
+const $=id=>document.getElementById(id);
+const state={page:1,zoom:100,tool:'form_text',side:'props',showHighlights:true,groups:{1:true,2:false,3:false},touched:new Set(['email']),dirty:false,fileAction:'open',fileExpanded:false,viewAction:'fit_page',viewExpanded:false,searchQuery:'',viewMode:'pages',sourceFiles:[]};
+const labels={jmeno:'Jméno a příjmení',email:'E-mail',telefon:'Telefon',datum:'Datum podání',oblast:'Oblast spolupráce',poznamka:'Doplňující informace',souhlas:'Souhlas',cislo:'Číslo žádosti',ulice:'Ulice a číslo',mesto:'Město',psc:'PSČ',stat:'Země',typ:'Typ spolupráce',termin:'Začátek spolupráce',potvrzeni:'Místo potvrzení',datum2:'Datum potvrzení'};
+const fields=Object.keys(labels);
+const pageOf=id=>Number($(id).closest('.pdf-page').dataset.page);
+const val=id=>{const e=$(id);return e.type==='checkbox'?(e.checked?'ANO':''):e.value.trim()};
+function issueFor(id){const e=$(id),v=val(id);if(e.readOnly)return '';if(e.required&&!v)return 'Povinné pole není vyplněno';if(id==='email'&&v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return 'Neplatný formát e-mailu';if(['datum','datum2'].includes(id)&&v&&!/^\d{1,2}\.\s*\d{1,2}\.\s*\d{4}$/.test(v))return 'Datum musí být ve formátu DD. MM. RRRR';return ''}
+function allIssues(){return fields.map(id=>({id,message:issueFor(id)})).filter(x=>x.message)}
+function formView(){const visible=state.tool==='form_text';document.querySelectorAll('.pdf-page').forEach(p=>p.classList.toggle('hide-fill',!visible||!state.showHighlights));document.querySelectorAll('[data-fid]').forEach(x=>{x.disabled= !visible && !x.readOnly})}
+
+const toolInfo={
+ nav_file:['Soubor','nav_file'],nav_view:['Zobrazení','nav_view'],nav_search_pdf:['Najít v PDF','nav_search_pdf'],
+ nav_objects:['Objekty','nav_objects'],nav_text:['Text','nav_text'],nav_ocr:['OCR','nav_ocr'],
+ form_text:['Formuláře','nav_forms'],nav_separations:['Separace','nav_separations'],nav_signature:['Digitální podpis','nav_signature'],
+ nav_split_pdf:['Rozdělit PDF','nav_split_pdf'],nav_merge_pdf:['Sloučit PDF','nav_merge_pdf'],nav_page_order:['Pořadí stránek','nav_page_order'],
+ nav_preflight:['Preflight','nav_preflight'],nav_compare:['Porovnání PDF','nav_compare'],nav_measure:['Měření','nav_measure'],nav_batch:['Dávkové zpracování','nav_batch']
+};
+const miniIcon=name=>`<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const uiButton=(name,text,act,css='')=>`<button class="btn ${css}" data-ui-action="${act}" title="${text}">${miniIcon(name)} ${text}</button>`;
+const heading=(title,icon)=>`<div class="p-head">${miniIcon(icon)} ${title}</div>`;
+const block=(title,icon,inner)=>`<section class="p-block">${heading(title,icon)}${inner}</section>`;
+const rowInput=(label,value,type='text',extra='')=>`<label class="p-row"><span class="control-label">${label}</span><input class="control-input ${extra}" type="${type}" value="${value}"></label>`;
+const rowSelect=(label,options)=>`<label class="p-row"><span class="control-label">${label}</span><select class="control-input">${options.map(x=>`<option>${x}</option>`).join('')}</select></label>`;
+const tip=t=>`<p class="tool-muted">${t}</p>`;
+const boxes=(items)=>`<div class="icon-grid">${items.map(([icon,title,act,selected])=>`<button class="btn ${selected?'selected':''}" data-ui-action="${act}" title="${title}">${miniIcon(icon)}<span>${title}</span></button>`).join('')}</div>`;
+
+// One shared data source: top Soubor dropdown, left indented submenu, right contextual settings.
+const FILE_ACTIONS=[
+  {id:'open',label:'Otevřít',icon:'open_document'},
+  {id:'import',label:'Importovat',icon:'page_insert'},
+  {id:'insert_pages',label:'Vložit strany',icon:'page_insert'},
+  {id:'save',label:'Uložit',icon:'save'},
+  {id:'save_as',label:'Uložit jako',icon:'save_copy'},
+  {id:'merge_open',label:'Sloučit a otevřít',icon:'nav_merge_pdf'},
+  {id:'export',label:'Exportovat',icon:'export'},
+  {id:'print',label:'Tisknout',icon:'print'},
+  {id:'properties',label:'Vlastnosti',icon:'document_properties'}
+];
+const fileEntry=id=>FILE_ACTIONS.find(a=>a.id===id)||FILE_ACTIONS[0];
+// Source of truth for both Zobrazení menus and its contextual advanced properties.
+const VIEW_ACTIONS=[
+ {id:'pages',label:'Po stránkách',icon:'fit_page'},
+ {id:'continuous',label:'Souvislé zobrazení',icon:'nav_view'},
+ {id:'fit_page',label:'Přizpůsobit stránce',icon:'fit_page'},
+ {id:'fit_width',label:'Přizpůsobit šířce',icon:'fit_width'},
+ {id:'actual',label:'Zobrazení 1:1 (100 %)',icon:'zoom_1_1'},
+ {id:'side_by_side',label:'Dvě PDF vedle sebe',icon:'side_by_side'},
+ {id:'fullscreen',label:'Celá obrazovka',icon:'panel_right'},
+ {id:'panels',label:'Panely a náhledy',icon:'nav_thumbnails'},
+ {id:'render',label:'Kvalita zobrazení',icon:'nav_view'}
+];
+const viewEntry=id=>VIEW_ACTIONS.find(a=>a.id===id)||VIEW_ACTIONS[0];
+const RECENT_DOCS=[
+ {name:'CZ_cenik_3_2026_web.pdf',path:'C:\Dokumenty\LAUFEN\Ceníky\CZ_cenik_3_2026_web.pdf',when:'Dnes 17:31',size:'4,8 MB',pinned:true},
+ {name:'Objednavka_armatur_Schell.pdf',path:'C:\Zakázky\SCHELL\Objednavka_armatur_Schell.pdf',when:'Dnes 16:02',size:'1,2 MB'},
+ {name:'Laufen_katalog_technicky.pdf',path:'D:\Grafika\PDF\Laufen_katalog_technicky.pdf',when:'Včera 20:14',size:'12,5 MB'},
+ {name:'Nabidka_spoluprace_2027.pdf',path:'C:\Users\libor\Desktop\Nabidka_spoluprace_2027.pdf',when:'Včera 11:48',size:'886 kB'}
+];
+const SEARCH_ARROW_SAMPLES=[
+ {page:1,left:440,top:184,text:'SCHELL',note:'výskyt · obchodní značka'},
+ {page:1,left:438,top:432,text:'spolupráci',note:'výskyt · nadpis sekce'},
+ {page:2,left:430,top:250,text:'spolupráce',note:'výskyt · volba pole'}
+];
+let activeRecentDoc=null;
+
+function renderFileSubmenu(){
+  const box=$('fileSubmenu');
+  box.hidden=!state.fileExpanded;
+  box.innerHTML=FILE_ACTIONS.map(a=>`<button type="button" class="file-action ${a.id===state.fileAction?'selected':''}" data-file-action="${a.id}" title="${a.label}" ${a.id===state.fileAction?'aria-current="true"':''}>${miniIcon(a.icon)}<span>${escapeHTML(a.label)}</span></button>`).join('');
+  const trigger=document.querySelector('.tool[data-tool="nav_file"]');
+  if(trigger)trigger.setAttribute('aria-expanded',String(state.fileExpanded));
+}
+function renderViewSubmenu(){
+ const box=$('viewSubmenu');box.hidden=!state.viewExpanded;
+ box.innerHTML=VIEW_ACTIONS.map(a=>`<button type="button" class="file-action ${a.id===state.viewAction?'selected':''}" data-view-action="${a.id}" title="${escapeHTML(a.label)}" ${a.id===state.viewAction?'aria-current="true"':''}>${miniIcon(a.icon)}<span>${escapeHTML(a.label)}</span></button>`).join('');
+ const trigger=document.querySelector('.tool[data-tool="nav_view"]');
+ if(trigger)trigger.setAttribute('aria-expanded',String(state.viewExpanded));
+}
+function selectViewAction(id){
+ const a=viewEntry(id);state.viewAction=a.id;state.viewExpanded=true;
+ selectTool('nav_view');
+ if(document.body.classList.contains('hide-tools'))togglePanel('tools');
+ if(document.body.classList.contains('hide-props'))togglePanel('props');
+ // Apply immediately only the view actions that already have working HTML equivalents.
+ if(a.id==='fit_page')fit('page');
+ else if(a.id==='fit_width')fit('width');
+ else if(a.id==='actual')setZoom(100);
+ else if(a.id==='pages'||a.id==='continuous')state.viewMode=a.id;
+ else if(a.id==='fullscreen')showToast('Celá obrazovka je v HTML pouze vizuální nastavení, nikoli F11 režim Windows.');
+ hidePopupMenu();renderViewSubmenu();renderProps();
+}
+function selectFileAction(id){
+  const a=fileEntry(id);
+  state.fileAction=a.id;
+  state.fileExpanded=true;
+  selectTool('nav_file');
+  if(document.body.classList.contains('hide-tools'))togglePanel('tools');
+  if(document.body.classList.contains('hide-props'))togglePanel('props');
+  renderFileSubmenu();
+  hidePopupMenu();
+}
+const fileCheckbox=(text,checked=false)=>`<label><input type="checkbox" ${checked?'checked':''}><span>${text}</span></label>`;
+const fileButtons=(buttons)=>`<div class="compact-row">${buttons.map(([icon,text,op,primary])=>`<button class="btn ${primary?'primary':''}" type="button" data-file-execute="${op}">${miniIcon(icon)} ${escapeHTML(text)}</button>`).join('')}</div>`;
+const fileSelect=(label,opts)=>rowSelect(label,opts);
+const fileInput=(label,val)=>rowInput(label,val);
+const fileChecks=(...checks)=>`<div class="file-options">${checks.map(([name,checked])=>fileCheckbox(name,checked)).join('')}</div>`;
+const advancedHint=`<p class="tool-muted">Toto je pouze ukázka ovládacích prvků. HTML dokument neotevírá, neupravuje, neslučuje ani netiskne skutečná PDF.</p>`;
+
+// v2.7: Insert Pages is a new independent operation, with one shared import converter for non-PDF.
+const insertState={source:'pdf',rangeMode:'all',customRange:'1, 3–5, 9',selected:new Set([1,3]),position:'after',pageNumber:3,sourceName:'',maxPagesPdf:12,maxPagesDocument:8};
+const insCount=()=>insertState.source==='pdf'?insertState.maxPagesPdf:insertState.maxPagesDocument;
+const insAll=(n)=>Array.from({length:n},(_,i)=>i+1);
+function parseInsertPages(){
+ const count=insCount(),mode=insertState.rangeMode;
+ if(mode==='all')return {pages:insAll(count)};
+ if(mode==='odd')return {pages:insAll(count).filter(x=>x%2!==0)};
+ if(mode==='even')return {pages:insAll(count).filter(x=>x%2===0)};
+ if(mode==='selected')return {pages:insAll(count).filter(x=>insertState.selected.has(x))};
+ const src=insertState.customRange.trim().replace(/[–—−]/g,'-');
+ if(!src)return {pages:[],error:'Zadejte rozsah, např. 1, 3–5, 9.'};
+ let numbers=[];
+ for(const term of src.split(',')){
+   const m=term.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+   if(!m)return {pages:[],error:'Použijte čísla, čárky a pomlčky. Např. 1, 3–5, 9.'};
+   let a=Number(m[1]),b=m[2]?Number(m[2]):a;
+   if(a<1||b<a||b>count)return {pages:[],error:`Dostupný rozsah v ukázkovém zdroji je 1–${count}.`};
+   numbers.push(...insAll(b-a+1).map(x=>a+x-1));
+ }
+ return {pages:[...new Set(numbers)]};
+}
+function insertPositionIndex(){
+ if(insertState.position==='start')return 0;
+ if(insertState.position==='end')return 3;
+ if(insertState.position==='before')return state.page-1;
+ if(insertState.position==='at')return Math.max(0,Math.min(3,Number(insertState.pageNumber)-1||0));
+ return state.page;
+}
+function insertControls(group,options,value){
+ return `<div class="insert-options">${options.map(([v,txt,desc])=>`<label class="insert-choice"><input type="radio" name="insert-${group}" data-insert-field="${group}" value="${v}" ${value===v?'checked':''}><span><b>${escapeHTML(txt)}</b>${desc?`<small>${escapeHTML(desc)}</small>`:''}</span></label>`).join('')}</div>`;
+}
+function renderInsertPagesPanel(){
+ const count=insCount();
+ return block('Zdroj vkládaných stránek','page_insert',
+  `<p class="tool-muted">Přidá celé stránky do <strong>aktuálně otevřeného PDF</strong>. Otevřít přijímá jen PDF, Importovat vytváří nové PDF.</p>`+
+  insertControls('source',[['pdf','Z jiného PDF','Vybrat soubor PDF a jeho stránky'],['document','Z jiného dokumentu','Nejdříve převést Word, Excel, PowerPoint, grafiku nebo jiný podporovaný formát na dočasné PDF']],insertState.source)+
+  `<div class="compact-row">${uiButton('open_document',insertState.source==='pdf'?'Vybrat PDF…':'Vybrat dokument…','insert-pick','primary')}</div>`+
+  `<div class="file-path" id="insertSourceLabel">${escapeHTML(insertState.sourceName|| (insertState.source==='pdf'?'Ukázkový zdroj: 12 stránek PDF':'Ukázkový převod: 8 stránek PDF'))}</div>`+
+  (insertState.source==='document'?tip('V reálné aplikaci půjde o společný převodní modul jako při Importovat. Zde je převod pouze ilustrační.'):''))+
+ block('Výběr stran','page_range',
+  insertControls('rangeMode',[['all','Všechny stránky',`Strany 1–${count}`],['selected','Vybrané v náhledech','Klikněte na čísla v mřížce níže'],['custom','Vlastní rozsah','Např. 1, 3–5, 9'],['odd','Pouze liché','Liché stránky zdrojového dokumentu'],['even','Pouze sudé','Sudé stránky zdrojového dokumentu']],insertState.rangeMode)+
+  `<div class="insert-inputwrap range" id="insertRangeWrap" ${insertState.rangeMode==='custom'?'':'hidden'}><label for="insertCustomRange">Rozsah</label><input id="insertCustomRange" class="control-input" type="text" value="${escapeHTML(insertState.customRange)}" placeholder="1, 3–5, 9"></div>`+
+  `<div class="insert-thumblabel">Náhled zdrojových stran · ukázka</div><div class="insert-select-pages">${insAll(count).map(n=>`<button type="button" class="insert-thumb ${insertState.selected.has(n)?'active':''}" data-insert-page="${n}" aria-pressed="${insertState.selected.has(n)}" title="Označit stránku ${n}">${n}</button>`).join('')}</div>`+
+  `<div class="insert-error" id="insertError" aria-live="polite"></div>`)+
+ block('Umístění ve stávajícím PDF','nav_page_order',
+  insertControls('position',[['after','Za aktuální stránku',`Za stranu ${state.page} – výchozí`],['before','Před aktuální stránku',`Před stranu ${state.page}`],['start','Na začátek','Před první stránku'],['end','Na konec','Za poslední stránku'],['at','Na zadanou pozici','Vložit před stránku se zadaným číslem']],insertState.position)+
+  `<div class="insert-inputwrap" id="insertAtWrap" ${insertState.position==='at'?'':'hidden'}><label for="insertAtNumber">Před stranu č.</label><input id="insertAtNumber" class="control-input" type="number" min="1" max="4" value="${insertState.pageNumber}"></div>`+
+  `<div class="insert-preview"><strong>Náhled výsledného pořadí</strong><div class="insert-chain" id="insertPreviewChain"></div><div class="insert-total" id="insertPreviewSummary"></div></div>`+
+  `<div class="compact-row">${uiButton('page_insert','Vložit strany (ukázka)','insert-run','primary')}</div>`+
+  `<p class="insert-hint">Přehled ukazuje jen návrh. Skutečné PDF se nemění. Při produkční implementaci musí platit Ctrl+Z/Y, AutoRecover a ochrana anotací i podpisů.</p>`);
+}
+function renderInsertPreview(){
+ const summary=$('insertPreviewSummary'),chain=$('insertPreviewChain'),err=$('insertError');
+ if(!summary||!chain)return;
+ const parsed=parseInsertPages(),list=parsed.pages||[];
+ const idx=insertPositionIndex(),n=list.length;
+ if(err)err.textContent=parsed.error||(!n?'Vyberte alespoň jednu stránku.':'');
+ const old=insAll(3).map(i=>({type:'old',label:String(i)}));
+ const next=list.map(x=>({type:'new',label:String(x)}));
+ const arranged=[...old.slice(0,idx),...next,...old.slice(idx)];
+ let short=arranged.length>14?[...arranged.slice(0,10),{type:'more',label:`+${arranged.length-10}`}]:arranged;
+ chain.innerHTML=short.map(x=>`<span class="insert-chip ${x.type}">${x.type==='new'?'+':''}${escapeHTML(x.label)}</span>`).join('');
+ const posLabel={after:`za stranou ${state.page}`,before:`před stranou ${state.page}`,start:'na začátek',end:'na konec',at:`před stranou ${Math.min(4,Math.max(1,insertState.pageNumber||1))}`}[insertState.position];
+ summary.textContent=parsed.error||!n?'Výběr stránek není připraven.':`${n} ${n===1?'nová strana':n<5?'nové strany':'nových stran'} ${posLabel} · výsledkem by bylo ${3+n} stran. Vínové bloky jsou vkládané stránky.`;
+ const b=document.querySelector('[data-ui-action="insert-run"]');if(b)b.disabled=!!parsed.error||n===0;
+ const sourceButton=document.querySelector('[data-ui-action="insert-pick"]');if(sourceButton)sourceButton.title='Vybrat zdrojový soubor pro demonstraci (skutečný obsah se nečte)';
+}
+
+function renderFileProperties(){
+  const a=fileEntry(state.fileAction);
+  let body=a.id==='properties'?'':`<div class="file-props-top">${miniIcon(a.icon)}<div><strong>${escapeHTML(a.label)}</strong><small>Soubor · nastavení vybrané akce</small></div></div>`;
+  switch(a.id){
+    case 'open':
+      body+=block('Načíst dokument','open_document',
+        fileSelect('Typ dokumentu',['PDF (*.pdf)','Všechny podporované PDF'])+
+        fileChecks(['Otevřít pouze pro čtení',false],['Při otevření obnovit poslední zobrazení',true])+
+        fileButtons([['open_document','Vybrat soubor…','open',true]])+
+        `<div class="file-path" id="fileSourceName">Vybraný soubor: žádný</div>`)+
+        block('Nedávné dokumenty','nav_file',`<div class="tool-muted">Naposledy otevřené PDF. Najetí zobrazí plnou cestu, pravé tlačítko otevře nabídku.</div><div class="recent-list">${RECENT_DOCS.map((doc,i)=>`<button type="button" class="recent-doc" data-recent-doc="${i}" title="${escapeHTML(doc.path)}"><span>${miniIcon('open_document')}</span><span><strong>${escapeHTML(doc.name)}</strong><br><span class="sub">${escapeHTML(doc.when)} · ${escapeHTML(doc.size)}</span></span>${doc.pinned?'<span class="recent-pin">Připnuté</span>':''}</button>`).join('')}</div>`)+
+        block('Zabezpečení','nav_file',fileSelect('Heslem chráněné PDF',['Při otevření vyžádat heslo','Otevřít jen nechráněné PDF'])+
+        tip('Při otevření PDF se zobrazí případná výzva k zadání hesla; HTML hesla neukládá.'));
+      break;
+    case 'import':
+      body+=block('Převod dokumentu na PDF','page_insert',
+        tip('Importovat vytvoří nové PDF ze zdrojového dokumentu a otevře ho v nové záložce. Nevkládá stránky do právě otevřeného PDF.')+
+        fileSelect('Typ zdroje',['Automaticky rozpoznat','Kancelářský dokument','Prezentace','Grafika nebo obrázek'])+
+        fileButtons([['open_document','Vybrat dokument…','import',true]])+
+        `<div class="file-path" id="fileSourceName">Zdroj pro převod: žádný</div>`+
+        fileChecks(['Po převodu otevřít nové PDF v samostatné záložce',true]))+
+        block('Předvolby převodu','color_profile',
+          fileSelect('Zachování vzhledu',['Přednost vzhledu originálu','Přednost malého souboru'])+
+          fileSelect('Rozvržení stran',['Podle zdroje','A4','A3'])+
+          fileChecks(['Upozornit na chybějící fonty a nepodporované efekty',true])+
+          tip('Podpora Wordu, Excelu, PowerPointu, PSD/AI a open-source formátů je cílový požadavek; převodní moduly se musí teprve ověřit.'));
+      break;
+    case 'insert_pages':
+      body+=renderInsertPagesPanel();
+      break;
+    case 'save':
+      body+=block('Aktuální dokument','save',
+        `<div class="file-path">Žádost_o_spolupráci.pdf</div>`+
+        `<div class="file-action-note">${state.dirty?'Obsahuje neuložené změny':'Nyní bez neuložených změn'}.</div>`+
+        fileChecks(['Před uložením zkontrolovat stav formuláře',true])+
+        fileButtons([['save','Uložit dokument…','save',true]])+
+        tip('Při chybějících povinných polích se nabídne „Uložit přesto“. AutoRecover zůstává nezávislý.'));
+      break;
+    case 'save_as':
+      body+=block('Nová kopie PDF','save_copy',
+        fileInput('Název souboru','Žádost_o_spolupráci_kopie.pdf')+
+        fileSelect('Typ souboru',['PDF dokument (*.pdf)','PDF/A (samostatná exportní předvolba)'])+
+        fileChecks(['Po uložení otevřít novou kopii ve stejné kartě',true],['Potvrdit přepsání existujícího souboru',true])+
+        fileButtons([['save_copy','Uložit jako…','save_as',true]])+
+        tip('Podle schváleného návrhu po úspěšném uložení kopie nová kopie nahradí původní dokument v téže kartě.'));
+      break;
+    case 'merge_open':
+      body+=block('Zdrojové dokumenty','nav_merge_pdf',
+        `<div class="results-list" id="mergeSourceList"><button type="button">1. Žádost_o_spolupráci.pdf · 3 strany</button></div>`+
+        fileButtons([['open_document','Přidat soubory…','merge_add']])+tip('Sestava přijímá 2 a více PDF i další podporované dokumenty. Ne-PDF vstupy se nejprve převedou; soubory se spojí ve zvoleném pořadí. HTML simuluje pouze přehled.'))+
+        block('Sloučení a otevření','merge_pages',
+          fileSelect('Rozsah stran',['Všechny strany z každého souboru','Vybrané stránky'])+
+          fileSelect('Barevný prostor',['Zachovat původní barvy','Převést do profilu cíle'])+
+          fileChecks(['Po sloučení otevřít výsledné PDF v nové kartě',true])+
+          fileButtons([['merge_pages','Sloučit a otevřít…','merge_open',true]])+
+          tip('Vlastní operace sloučení navazuje na existující nástroj Sloučit PDF; nevytváříme druhý nezávislý proces.'));
+      break;
+    case 'export':
+      body+=block('Výstupní předvolba','export',
+        fileSelect('Účel',['PDF pro tisk','PDF/X-4','PDF/X-1a','Digitální PDF – menší soubor','PDF pro další zpracování','Vlastní předvolba'])+
+        fileSelect('Rozsah stran',['Všechny strany','Aktuální strana','Vybrané náhledy','Vlastní rozsah'])+
+        fileInput('Vlastní rozsah (je-li zvolen)','1–3'))+
+        block('Barvy a grafika','color_profile',
+          fileSelect('Barevný výstup',['Zachovat barvy','CMYK podle ICC','Stupně šedi (ICC)','Pouze K'])+
+          fileSelect('ICC profil',['Výstupní záměr z PDF','FOGRA51','FOGRA39','Vlastní ICC'])+
+          fileChecks(['Zachovat editovatelné vektory a text, pokud to předvolba dovoluje',true],['Zahrnout pracovní poznámky do exportu',false])+
+          fileButtons([['export','Exportovat PDF…','export',true]])+
+          tip('Tyto volby znázorňují stávající exportní možnosti. Jejich přesný rozsah má Codex ověřit ve zdrojovém kódu.'));
+      break;
+    case 'print':
+      body+=block('Tiskové nastavení','print',
+        fileSelect('Tiskárna',['Výchozí tiskárna (ukázka)','Microsoft Print to PDF (ukázka)'])+
+        fileSelect('Stránky',['Všechny','Aktuální','Vybrané náhledy','Vlastní rozsah'])+
+        fileInput('Počet kopií','1')+
+        fileSelect('Měřítko',['Skutečná velikost / 100 %','Přizpůsobit tiskové oblasti','Vlastní měřítko']))+
+        block('Tisk obsahu','print',
+          fileChecks(['Tisknout formulářová pole včetně hodnot',true],['Zahrnout pracovní poznámky',false])+
+          fileButtons([['print','Otevřít tisk…','print',true]])+
+          tip('Formulářová pole nejsou pracovní poznámky. Výchozí tisk pracovní poznámky nezahrnuje.'));
+      break;
+    case 'properties':
+      body+=block('Dokument','document_properties',
+         `<div class="file-path">Žádost_o_spolupráci.pdf</div>`+
+         `<div class="tool-state">3 stránky · ukázkový interaktivní AcroForm</div>`+
+         fileInput('Název dokumentu','Žádost o spolupráci')+
+         fileInput('Autor (metadata)','PDF Blacksmith – ukázka'))+
+         block('Podrobnosti a zabezpečení','document_properties',
+         fileSelect('Skupina',['Obecné','Písma','Zabezpečení','Barevné prostory / ICC','Záložky a odkazy'])+
+         `<div class="file-action-note">Typ: PDF · Formulářová pole: 16 · Textová vrstva: ano · PDF/X: nezjištěno (ukázka)</div>`+
+         fileButtons([['document_properties','Zobrazit informace','properties']])+advancedHint);
+      break;
+  }
+  return body;
+}
+
+function renderViewProperties(){
+ const a=viewEntry(state.viewAction);
+ let out=`<div class="view-detail-heading">${miniIcon(a.icon)}<strong>${escapeHTML(a.label)}</strong></div>`;
+ switch(a.id){
+  case 'pages':
+    out+=block('Listování','nav_view',rowSelect('Výchozí způsob zobrazení',['Po stránkách','Podle poslední volby'])+
+      fileChecks(['Přejít kolečkem na další stránku na okraji',true],['Pamatovat poslední stránku',true])+tip('Aktuální režim: po stránkách. Navigace a obsah PDF se nemění.'));
+    break;
+  case 'continuous':
+    out+=block('Souvislý dokument','nav_view',rowSelect('Rozestup stránek',['Malý','Střední','Velký'])+
+      fileChecks(['Průběžně načítat okolní stránky',true],['Zobrazit oddělovač stránek',true])+tip('Ukázka nastavení plynulého procházení. Přesné vykreslování musí zajistit aplikace.'));
+    break;
+  case 'fit_page':
+    out+=block('Přizpůsobení','fit_page',rowSelect('Zarovnání',['Na střed','K levému okraji'])+
+      fileChecks(['Automaticky přizpůsobit po změně velikosti okna',true])+`<div class="compact-row">${uiButton('fit_page','Přizpůsobit stránku','fit-page','primary')}</div>`+
+      tip('Přiblížení celé stránky je v HTML interaktivní.'));
+    break;
+  case 'fit_width':
+    out+=block('Šířka dokumentu','fit_width',fileChecks(['Zachovat střed stránky při změně zoomu',true])+
+      `<div class="compact-row">${uiButton('fit_width','Přizpůsobit šířku','fit-width','primary')}</div>`+tip('Dokument se roztáhne na maximální šířku nezabraného prostoru mezi bočními panely.'));
+    break;
+  case 'actual':
+    out+=block('Přiblížení 100 %','zoom_1_1',`<div class="tool-state">Aktuálně: ${state.zoom} %</div>`+rowSelect('Měřítko zobrazení',['100 %','75 %','125 %'])+
+       fileChecks(['Přepnout na vlastní přiblížení',true])+tip('100 % v PDF prohlížeči neznamená automaticky fyzické měřítko na každém monitoru.'));
+    break;
+  case 'side_by_side':
+    out+=block('Dvojice dokumentů','side_by_side',rowSelect('Druhý dokument',['Vybrat otevřené PDF…','Dokument 2 (ukázka)'])+
+      fileChecks(['Synchronizovat přiblížení',false],['Synchronizovat posun stránek',false])+tip('Dvě PDF vedle sebe jsou existující funkcí aplikace; HTML zde jejich uspořádání pouze naznačuje.'));
+    break;
+  case 'fullscreen':
+    out+=block('Celoobrazovkové zobrazení','panel_right',fileChecks(['Skrýt postranní panely',true],['Zobrazit navigaci po pohybu myší',true])+
+      `<div class="compact-row">${uiButton('panel_right','Režim celé obrazovky','planned')}</div>`+tip('V aplikaci použít F11; ukázka nezmění systémové okno.'));
+    break;
+  case 'panels':
+    out+=block('Doplňkové panely','nav_thumbnails',boxes([['nav_thumbnails','Náhledy','toggle-thumbs'],['nav_bookmarks','Záložky','toggle-bookmarks'],['nav_notes','Poznámky','toggle-notes']])+
+      tip('Záložky a Poznámky jsou samostatné doplňkové panely vedle Vlastností.'))+
+      block('Pracovní plocha','panel_right',boxes([['panel_right','Vlastnosti','toggle-props'],['panel_left','Nástroje','toggle-tools']]));
+    break;
+  case 'render':
+    out+=block('Vykreslování PDF','nav_view',fileChecks(['Vyhlazení textu',true],['Vyhlazení vektorů',true],['Zvýraznit velmi tenké čáry',false])+
+      rowSelect('Kvalita vykreslování',['Adaptivní','Vysoká','Úsporná'])+tip('Nastavení výkonu a kvality je zde ilustrační; skutečný PDF prohlížeč zachovává původní vektory.'));
+    break;
+ }
+ return out;
+}
+
+function renderToolPanel(key){
+ switch(key){
+ case 'nav_file':return renderFileProperties();
+ case 'nav_view':return renderViewProperties();
+ case 'nav_search_pdf':return block('Vyhledat v PDF','nav_search_pdf',
+   `<input id="demoSearch" class="control-input" placeholder="Hledat text…" value="${escapeHTML(state.searchQuery)}"><div class="p-row"><span class="control-label" id="demoSearchCount">Zadejte hledaný výraz</span></div><div class="tool-muted">Jednotlivé výskyty jsou přístupné v doplňkovém panelu <strong>Výsledky</strong>, který má vlastní ouško.</div><div class="compact-row">${uiButton('nav_search_pdf','Zobrazit výsledky','toggle-search-results')}</div>`+
+   tip('Vyhledávání běží okamžitě při psaní. Kliknutí do horního pole otevře tento nástroj i jeho nastavení.'))+
+   block('Šipkové nálepky k výskytům','arrow_line',`<div class="compact-row">${uiButton('arrow_line','Označit šipkami','search-arrows-on','primary')}${uiButton('delete','Odstranit šipky','search-arrows-off')}</div><div class="sticker-arrow sample"><span>SCHELL</span><small>Poznámka k výskytu</small><span class="close">×</span></div><p class="tool-muted">Šipka funguje jako poznámka: může obsahovat text, vlastní komentář i křížek pro odstranění. Ukládá se do samostatné skupiny poznámek „Vyhledané výskyty“.</p>`)+
+   block('Skupina poznámek','nav_notes',rowSelect('Uložit do skupiny',['Vyhledané výskyty','Pracovní poznámky','Kontrola korektur'])+fileChecks(['Přidat hledané slovo do názvu šipky',true],['Po vytvoření otevřít skupinu poznámek',true]));
+ case 'nav_objects':return block('Vložit objekt','nav_objects',`<div class="compact-row">${uiButton('open_document','Obrázek / grafika…','object-import','primary')}</div>`+tip('Vloží grafický objekt na současnou stránku. Není to vložení celé stránky; HTML skutečný PDF objekt nevytvoří.'))+
+  block('Výběr objektů','nav_objects',boxes([['cursor','Kurzor','obj-select',true],['rect_select','Rámeček','obj-rect'],['lasso','Laso','obj-lasso']]))+
+  block('Transformace','transform_object',rowInput('X (mm)','15,0')+rowInput('Y (mm)','20,0')+rowInput('Šířka (mm)','50,0')+rowInput('Výška (mm)','30,0')+boxes([['rotate_left','−90°','rotate-left'],['rotate_right','+90°','rotate-right']]))+
+  block('Uspořádání','group_objects',boxes([['group_objects','Seskupit','group'],['ungroup_objects','Rozdělit','ungroup'],['duplicate','Duplikovat','duplicate'],['delete','Smazat','delete-object']]))+
+  block('Vzhled','stroke_width',rowInput('Tloušťka (pt)','0,75')+rowSelect('Výplň',['Bez výplně','Černá','Bílá','Vlastní barva']));
+ case 'nav_text':return block('Typografie','font_family',rowSelect('Písmo',['Arial','Calibri','Liberation Sans','Původní písmo z PDF'])+rowInput('Velikost (pt)','12','number','tiny')+
+  boxes([['regular','Regular','text-reg',true],['bold','B','text-bold'],['italic','I','text-italic'],['underline','U','text-underline'],['strikethrough','S','text-strike']]))+
+  block('Odstavec','paragraph',boxes([['align_left','Vlevo','align-left',true],['align_center','Střed','align-center'],['align_right','Vpravo','align-right'],['align_justify','Blok','align-justify']])+rowInput('Řádkování (pt)','14,4')+rowInput('Proklad (pt)','0')+rowInput('Šířka bloku (pt)','180'))+
+  block('Výběr a úpravy','rect_select',boxes([['insert_text','Vložit text','insert-text'],['rect_select','Obdélník','text-rect'],['lasso','Laso','text-lasso']])+tip('Typografické hodnoty jsou ilustrační. Stávající úpravy přímo na stránce a zachování pozadí PDF zůstávají závazné.'));
+ case 'nav_ocr':return block('Rozpoznávání textu','nav_ocr',rowSelect('Jazyk',['Čeština','Angličtina','Čeština + angličtina'])+rowSelect('Strany',['Všechny strany','Aktuální strana','Vybrané náhledy','Vlastní výběr'])+rowInput('Vlastní rozsah','1, 3–5'))+
+  block('Režim OCR','ocr_region',boxes([['ocr_region','Oblast','ocr-area'],['nav_ocr','Celé strany','ocr-pages']])+tip('OCR přidává textovou vrstvu a zachovává původní grafiku.'))+
+  `<div class="compact-row">${uiButton('nav_ocr','Rozpoznat text','ocr-run','primary')}</div>`;
+ case 'nav_separations':return block('Náhled tiskových desek','nav_separations',
+  rowSelect('Simulační profil',['Z výstupního záměru PDF','FOGRA39','FOGRA51','FOGRA52'])+
+  rowSelect('Zobrazovaný režim',['Všechny desky','Stupně šedi','Barevné desky'])+
+  `<div class="compact-row">${uiButton('plate_all','Všechny desky','all-plates')}${uiButton('plate_single','Vypnout všechny','off-plates')}</div>`+
+  [['C','#00b7d1'],['M','#cc3894'],['Y','#dfc537'],['K','#161616']].map(([l,c])=>`<div class="plate-row"><label><input type="checkbox" data-plate="${l}" checked><span class="plate-swatch" style="background:${c}"></span>${l}</label><button data-ui-action="only-plate" data-plate-only="${l}">Jen tato</button></div>`).join('')+
+  `<div class="plate-row"><label><input type="checkbox" checked><span class="plate-swatch" style="background:#76996f"></span>Přímé barvy (ukázka)</label><button data-ui-action="only-plate" data-plate-only="spot">Jen tato</button></div>`+
+  tip('Pouze malé vzorníky vedle desek; rozložení stávajícího nástroje Separace nesmí být reorganizováno.'))+
+  block('Pokrytí a kontrola','tac_measure',`<div class="tool-state">TAC limit: 300 % · pod kurzorem: C 0 M 0 Y 0 K 100</div>${boxes([['tac_measure','Pokrytí','tac'],['overprint_preview','Přetisk','overprint']])}`)+
+  block('Výstup a konverze','convert_k',boxes([['convert_gray','Do šedi','to-gray'],['convert_k','Pouze K','to-k'],['color_profile','ICC profily','profiles']])+tip('Převody a správa ICC vycházejí ze stávajících schopností aplikace; HTML je jen náhled rozhraní.'));
+ case 'nav_signature':return block('Digitální podpis','nav_signature',rowSelect('Úkon',['Ověřit podpisy','Podepsat dokument'])+
+  `<div class="tool-state">Tento ukázkový dokument nemá digitální podpis.</div>`+boxes([['signature_verify','Ověřit','verify-sign'],['nav_signature','Podepsat kopii','sign-copy']]))+
+  block('Certifikáty a důvěra','nav_signature',rowInput('Certifikát','Není vybrán')+boxes([['open_document','Vybrat certifikát','choose-cert'],['signature_verify','Úložiště důvěry','trust-store']]))+
+  `<p class="tool-muted">Podepsané PDF vyžaduje opatrné ukládání; prototyp podpis nevytváří.</p>`;
+ case 'nav_split_pdf':return block('Rozdělení PDF','nav_split_pdf',rowSelect('Rozsah',['Všechny strany','Aktuální strana','Vybrané náhledy','Vlastní výběr'])+rowInput('Výběr','1–3')+
+  rowSelect('Způsob',['Každou stranu zvlášť','Podle rozsahu'])+tip('Názvy výstupních souborů vycházejí z originálu a čísla strany.'))+
+  block('Výstupní soubory','page_extract',rowInput('Cílová složka','C:\\Výstup')+`<div class="compact-row">${uiButton('split_pages','Rozdělit PDF','split-run','primary')}</div>`);
+ case 'nav_merge_pdf':return block('Sestava dokumentů','nav_merge_pdf',`<div class="results-list"><button data-ui-action="merge-item">1. Žádost_o_spolupráci.pdf · 3 str.</button><button data-ui-action="merge-item">2. Přidat další PDF…</button></div><div class="compact-row">${uiButton('open_document','Přidat PDF','merge-add')}${uiButton('page_range','Vybrat strany','merge-range')}</div>`)+
+  block('Sloučení a profil','color_profile',rowSelect('Barvy vložených stran',['Zachovat původní barvy','Převést do barevného prostoru cíle'])+tip('Zachování původních barev a upozornění na nevratné změny mají přednost.')+`<div class="compact-row">${uiButton('merge_pages','Sloučit do nového PDF','merge-run','primary')}</div>`);
+ case 'nav_page_order':return block('Pořadí stránek','nav_page_order',
+   `<div class="results-list"><button data-go-page="1">1 · Kontaktní údaje</button><button data-go-page="2">2 · Doplňující údaje</button><button data-go-page="3">3 · Potvrzení</button></div>`+
+   `<div class="compact-row">${uiButton('move_up','Nahoru','page-up')}${uiButton('move_down','Dolů','page-down')}</div>`+
+   boxes([['rotate_left','Otočit vlevo','rotate-page-left'],['rotate_right','Otočit vpravo','rotate-page-right'],['page_delete','Smazat','page-delete']])+tip('Skutečné přesuny stránek vždy vyžadují potvrzení a musí jít vrátit Ctrl+Z.'));
+ case 'nav_preflight':return `<div class="tool-state">PLÁN – návrh panelu, neimplementováno</div>`+block('Kontrola PDF před tiskem','nav_preflight',rowSelect('Kontrolní profil',['PDF/X-4','PDF/X-1a','Tiskové PDF','Vlastní pravidla'])+boxes([['preflight_run','Spustit kontrolu','planned'],['preflight_report','Protokol','planned']]))+tip('Kontrola písem, obrázků, přetisků, spadávky a dalších parametrů čeká na samostatné upřesnění.');
+ case 'nav_compare':return `<div class="tool-state">PLÁN – návrh panelu, neimplementováno</div>`+block('Porovnat dva dokumenty','nav_compare',rowInput('Soubor B','Nevybrán')+boxes([['side_by_side','Vybrat druhý PDF','planned'],['compare_overlay','Překrytí','planned'],['compare_difference','Rozdíly','planned']]));
+ case 'nav_measure':return `<div class="tool-state">PLÁN – návrh panelu, neimplementováno</div>`+block('Přesné měření','nav_measure',boxes([['measure_distance','Vzdálenost','planned'],['measure_angle','Úhel','planned'],['measure_area','Plocha','planned']])+rowSelect('Jednotka',['mm','cm','pt']));
+ case 'nav_batch':return `<div class="tool-state">PLÁN – návrh panelu, neimplementováno</div>`+block('Dávkové zpracování PDF','nav_batch',boxes([['batch_add_files','Přidat PDF','planned'],['batch_queue','Fronta','planned'],['batch_presets','Předvolby','planned']])+tip('Opakované zpracování více PDF a profily exportu jsou zatím plánované.'));
+ default:return `<p class="tool-muted">Pracovní panel pro tento nástroj není v prototypu připraven.</p>`;
+ }
+}
+
+function decorateControlLabels(scope){
+ const map={
+  'Typ dokumentu':'open_document','Heslem chráněné PDF':'nav_signature','Výchozí způsob zobrazení':'nav_view','Rozestup stránek':'fit_page','Zarovnání':'align_left','Měřítko zobrazení':'zoom_1_1','Druhý dokument':'side_by_side','Jazyk':'nav_ocr','Strany':'page_range','Vlastní rozsah':'rect_select','Výběr':'page_range','Výplň':'fill_color','Tloušťka':'stroke_width','X (mm)':'transform_object','Y (mm)':'transform_object','Šířka (mm)':'transform_object','Výška (mm)':'transform_object','Písmo':'font_family','Velikost (pt)':'font_size','Řádkování (pt)':'paragraph','Proklad (pt)':'letter_spacing','Šířka bloku (pt)':'rect_select','Simulační profil':'color_profile','Zobrazovaný režim':'nav_separations','Úkon':'nav_signature','Certifikát':'nav_signature','Rozsah':'page_range','Způsob':'nav_split_pdf','Cílová složka':'open_document','Barvy vložených stran':'color_profile','Cílová pozice':'move_down','Kontrolní profil':'nav_preflight','Soubor B':'side_by_side','Jednotka':'measure_distance','Uložit do skupiny':'nav_notes','Typ zdroje':'page_insert','Zachování vzhledu':'nav_view','Rozvržení stran':'fit_page'
+ };
+ scope.querySelectorAll('.control-label').forEach(label=>{
+   const txt=label.textContent.trim();
+   const key=Object.keys(map).find(k=>txt.startsWith(k));
+   if(!key||label.dataset.iconized)return;
+   label.dataset.iconized='1';
+   label.innerHTML=`<span class="iconized-label">${miniIcon(map[key])}<span>${escapeHTML(label.textContent)}</span></span>`;
+ });
+ scope.querySelectorAll('.mini-label').forEach(label=>{
+   const txt=label.childNodes[0]?.textContent?.trim?.()||label.textContent.trim();
+   if(label.dataset.iconized)return;
+   const key=Object.keys(map).find(k=>txt.startsWith(k));
+   if(!key)return;
+   label.dataset.iconized='1';
+   const firstText=txt;
+   const field=label.querySelector('input,select,textarea');
+   label.innerHTML=`<span class="iconized-label">${miniIcon(map[key])}<span>${escapeHTML(firstText)}</span></span>`;
+   if(field)label.appendChild(field);
+ });
+}
+function renderSearchArrowMarkers(){
+ document.querySelectorAll('.marker-layer').forEach(x=>x.remove());
+ if(!state.searchArrowsVisible)return;
+ SEARCH_ARROW_SAMPLES.forEach(item=>{
+   const page=$('pdf'+item.page); if(!page)return;
+   const layer=page.querySelector('.marker-layer')||page.appendChild(Object.assign(document.createElement('div'),{className:'marker-layer'}));
+   const el=document.createElement('div'); el.className='sticker-arrow'; el.style.left=item.left+'px'; el.style.top=item.top+'px';
+   el.innerHTML=`<span>${escapeHTML(item.text)}</span><small>${escapeHTML(item.note)}</small><span class="close">×</span>`;
+   layer.appendChild(el);
+ });
+}
+function renderProps(){
+  const [toolName,toolIcon]=toolInfo[state.tool]||['Nástroj','nav_file'];
+  const fileSelected=state.tool==='nav_file',action=fileEntry(state.fileAction);
+  const viewSelected=state.tool==='nav_view';
+   const name=fileSelected?'Soubor → '+action.label:viewSelected?'Zobrazení → '+viewEntry(state.viewAction).label:toolName;
+   const icon=fileSelected?action.icon:viewSelected?viewEntry(state.viewAction).icon:toolIcon;
+  $('propsTitle').innerHTML=`${miniIcon(icon)}<span>${fileSelected||viewSelected?'Vlastnosti':escapeHTML(name)}</span>`;
+  $('activeToolLabel').textContent=name+(state.tool==='form_text'?' → Vyplnit':'');
+ $('formsProps').classList.toggle('hidden',state.tool!=='form_text');
+ $('otherProps').classList.toggle('hidden',state.tool==='form_text');
+ if(state.tool!=='form_text'){$('otherProps').innerHTML=renderToolPanel(state.tool);bindSearchDemo();decorateControlLabels($('otherProps'));bindRecentDocuments();renderInsertPreview();}
+ formView();
+ renderSearchArrowMarkers();
+}
+function runSearchDemo(inputText){
+ const term=String(inputText||'').trim().toLocaleLowerCase('cs');
+ const list=$('demoSearchResults'),count=$('demoSearchCount');
+ if(!list||!count)return;
+ if(!term){list.innerHTML='<div class="tool-muted" style="padding:8px">Zadejte hledaný výraz…</div>';count.textContent='Bez dotazu';$('auxSearchTerm').textContent='Zadejte hledaný výraz';return;}
+ const found=[...document.querySelectorAll('.pdf-page')].flatMap((page,i)=>{
+   const txt=page.innerText.toLocaleLowerCase('cs'),idx=txt.indexOf(term);
+   return idx<0?[]:[{page:i+1,detail:page.querySelector('h1')?.textContent||'Dokument'}];
+ });
+ count.textContent=`Nalezeno na ${found.length} ${found.length===1?'straně':'stranách'} (ukázka)`;$('auxSearchTerm').textContent='Hledáno: '+inputText+' · '+found.length+' stran';
+ list.innerHTML=found.length?found.map(x=>`<button data-go-page="${x.page}">Strana ${x.page} · ${escapeHTML(x.detail)}</button>`).join(''):'<div class="tool-muted" style="padding:8px">Bez výskytu v ukázce.</div>';
+}
+function bindSearchDemo(){
+ const input=$('demoSearch');if(!input)return;
+ input.value=state.searchQuery;
+ input.addEventListener('input',()=>{
+  state.searchQuery=input.value;
+  $('quickSearch').value=state.searchQuery;
+  runSearchDemo(state.searchQuery);
+ });
+ runSearchDemo(state.searchQuery);
+}
+
+function bindRecentDocuments(){
+ document.querySelectorAll('[data-recent-doc]').forEach(btn=>{
+   const idx=Number(btn.dataset.recentDoc),doc=RECENT_DOCS[idx];
+   btn.addEventListener('click',()=>showToast('Ukázka otevření: '+doc.name));
+   btn.addEventListener('contextmenu',e=>{e.preventDefault();activeRecentDoc=doc;const menu=$('recentContextMenu');menu.innerHTML=`<button type="button" data-recent-cmd="open">${miniIcon('open_document')}<span>Otevřít</span></button><button type="button" data-recent-cmd="location">${miniIcon('open_document')}<span>Otevřít umístění souboru</span></button><button type="button" data-recent-cmd="copy">${miniIcon('duplicate')}<span>Kopírovat adresu souboru</span></button>`;menu.style.left=e.clientX+'px';menu.style.top=e.clientY+'px';menu.classList.add('on');});
+ });
+}
+
+function updateFields(){
+ const issues=allIssues();let filled=0;
+ fields.forEach(id=>{if(val(id))filled++;const f=document.querySelector(`[data-field="${id}"]`);const error=issueFor(id),touched=state.touched.has(id);if(f){f.classList.toggle('invalid',!!error&&touched);const msg=f.querySelector('.errtext');if(msg)msg.textContent=error&&touched?error:'';}});
+ $('countTotal').textContent=fields.length;$('countFilled').textContent=filled;$('countIssues').textContent=issues.length;
+ $('issueSummary').innerHTML=issues.length?`<strong>Vyžaduje pozornost · ${issues.length} problémy</strong><div>${issues.slice(0,3).map(x=>`${labels[x.id]}: ${x.message}`).join('<br>')}</div>`:'<strong style="color:#80c6b0">Formulář je bez zjištěných problémů.</strong>';
+ $('dirtyMark').textContent=state.dirty?'●':'';$('bottomDirty').textContent=state.dirty?'Neuložené změny':'Bez změn';
+ renderFieldList();
+}
+function renderFieldList(){const container=$('fieldList');let out='';for(const pg of [1,2,3]){const items=fields.filter(id=>pageOf(id)===pg);out+=`<button class="grouphead" data-group="${pg}">${state.groups[pg]?'▾':'▸'} &nbsp; Stránka ${pg} (${items.length} polí)</button>`;
+ if(state.groups[pg])for(const id of items){const err=issueFor(id),v=val(id),ro=$(id).readOnly,status=ro?'ro':err?(state.touched.has(id)?'bad':'missing'):'good',mark=status==='bad'?'!':status==='missing'?'○':status==='ro'?'⊘':'✓';out+=`<button class="frow" data-focus="${id}" title="Přejít na ${labels[id]}"><span class="status ${status}">${mark}</span><span class="fname">${labels[id]}${$(id).required?' *':''}</span><span class="fvalue">${escapeHTML(v.length>24?v.slice(0,24)+'…':v)}</span></button>`;}}
+ container.innerHTML=out;
+ container.querySelectorAll('[data-group]').forEach(b=>b.addEventListener('click',()=>{const pg=Number(b.dataset.group);state.groups[pg]=!state.groups[pg];renderFieldList()}));
+ container.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>focusField(b.dataset.focus)));
+}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function switchPage(num){state.page=Math.min(3,Math.max(1,num));document.querySelectorAll('.pdf-page').forEach(p=>p.classList.toggle('active',Number(p.dataset.page)===state.page));document.querySelectorAll('[data-thumb]').forEach(t=>t.classList.toggle('active',Number(t.dataset.thumb)===state.page));$('pageCountTop').textContent=state.page+' / 3';$('pageCountBottom').textContent=state.page+' / 3';$('pageCue').textContent='Strana '+state.page+' · ukázkový formulář';$('editor').scrollTop=0;setZoom(state.zoom,false);if(state.tool==='nav_file'&&state.fileAction==='insert_pages')renderProps()}
+function focusField(id){if(state.tool!=='form_text')selectTool('form_text');const pg=pageOf(id);state.groups[pg]=true;switchPage(pg);renderFieldList();const el=$(id);el.scrollIntoView({behavior:'smooth',block:'center'});el.focus({preventScroll:true});document.querySelectorAll('.frow').forEach(b=>b.classList.toggle('selected',b.dataset.focus===id))}
+function selectTool(name){
+ const prev=state.tool;state.tool=name;
+ if(name!=='nav_file')state.fileExpanded=false;
+ else if(prev!=='nav_file')state.fileExpanded=true;
+ if(name!=='nav_view')state.viewExpanded=false;
+ else if(prev!=='nav_view')state.viewExpanded=true;
+ document.querySelectorAll('.tool').forEach(x=>x.classList.toggle('active',x.dataset.tool===name));
+ document.querySelectorAll('[data-menu]').forEach(x=>x.classList.toggle('on',(name==='form_text' && x.textContent==='Formuláře')||(name==='nav_file'&&x.textContent==='Soubor')||(name==='nav_view'&&x.textContent==='Zobrazení')));
+ renderFileSubmenu();renderViewSubmenu();renderProps();
+ if(name==='nav_search_pdf' && prev!=='nav_search_pdf')setAuxPanel('search-results',true);
+}
+function setZoom(value,update=true){state.zoom=Math.min(160,Math.max(65,Number(value)||100));document.querySelectorAll('.pdf-page').forEach(p=>p.style.zoom=state.zoom+'%');$('zoomTop').value=[65,75,90,100,110,125,150,160].includes(state.zoom)?state.zoom:'100';$('zoomBottom').textContent=state.zoom+' %';if(update)showToast(`Přiblížení ${state.zoom} %`)}
+function fit(mode){const editor=$('editor'), pg=$('pdf'+state.page),availableW=editor.clientWidth-(mode==='width'?12:55),availableH=editor.clientHeight-60;document.body.classList.toggle('fit-width-mode',mode==='width');const z=mode==='width'?Math.floor(availableW/560*100):Math.floor(Math.min(availableW/560,availableH/748)*100);setZoom(Math.min(160,Math.max(65,z)))}
+// Individual panel toggles do NOT change the group collapse state.
+const AUX_PANEL_CLASSES={bookmarks:'show-bookmarks',notes:'show-notes','search-results':'show-search-results'};
+const DOCK_GROUPS={left:'leftDock',right:'rightDock'};
+function updateDockToggles(){
+ for(const side of ['left','right']){
+   const dock=$(DOCK_GROUPS[side]),collapsed=dock.classList.contains('dock-collapsed');
+   const toggle=$(side+'DockToggle'),glyph=$(side+'DockGlyph');
+   // Directions: left group points LEFT when open; RIGHT when collapsed.
+   // Right group is the exact mirror.
+   glyph.textContent=side==='left'?(collapsed?'»':'«'):(collapsed?'«':'»');
+   const label=collapsed?'Rozbalit':'Sbalit';
+   const suffix=side==='left'?'levou skupinu panelů':'pravou skupinu panelů';
+   toggle.title=label+' '+suffix;
+   toggle.setAttribute('aria-label',toggle.title);
+   toggle.setAttribute('aria-expanded',String(!collapsed));
+ }
+ // Position against main panel edge, overlapping the neighbouring auxiliary panel.
+ const leftDock=$('leftDock'),rightDock=$('rightDock');
+ const leftOpen=!leftDock.classList.contains('dock-collapsed');
+ const rightOpen=!rightDock.classList.contains('dock-collapsed');
+ $('leftDockToggle').style.left=(leftOpen?Math.max(0,document.querySelector('.toolpane').getBoundingClientRect().width-1):0)+'px';
+ $('rightDockToggle').style.right=(rightOpen?Math.max(0,document.querySelector('.props').getBoundingClientRect().width-1):0)+'px';
+}
+function setDockCollapsed(side,collapsed){
+ const dock=$(DOCK_GROUPS[side]);if(!dock)return;
+ dock.classList.toggle('dock-collapsed',collapsed);
+ // Body flags hide-tools/hide-thumbs/hide-props/show-bookmarks/show-notes/show-search-results stay intact.
+ updateDockToggles();
+}
+function toggleDock(side){
+ const dock=$(DOCK_GROUPS[side]);setDockCollapsed(side,!dock.classList.contains('dock-collapsed'));
+}
+function setAuxPanel(name,wantOpen){
+ const cls=AUX_PANEL_CLASSES[name];if(!cls)return;
+ if(wantOpen && window.innerWidth<1900){
+   // The editor remains usable on normal desktop screens; remember other panes' state only for group folds.
+   Object.values(AUX_PANEL_CLASSES).forEach(k=>document.body.classList.remove(k));
+ }
+ document.body.classList.toggle(cls,wantOpen);
+ Object.entries(AUX_PANEL_CLASSES).forEach(([key,c])=>{
+  const ear=document.querySelector(`.earrail.right .ear[data-panel="${key}"]`);
+  const open=document.body.classList.contains(c);
+  if(ear){ear.classList.toggle('active',open);ear.setAttribute('aria-expanded',String(open));}
+ });
+ updateDockToggles();
+}
+function togglePanel(name){
+ if(Object.prototype.hasOwnProperty.call(AUX_PANEL_CLASSES,name)){
+   setAuxPanel(name,!document.body.classList.contains(AUX_PANEL_CLASSES[name]));return;
+ }
+ const cls={tools:'hide-tools',thumbs:'hide-thumbs',props:'hide-props'}[name];if(!cls)return;
+ document.body.classList.toggle(cls);
+ document.querySelectorAll(`.ear[data-panel="${name}"]`).forEach(b=>{
+   b.classList.toggle('active',document.body.classList.contains(cls));
+   b.setAttribute('aria-expanded',document.body.classList.contains(cls)?'false':'true');
+ });
+ updateDockToggles();
+}
+function saveDialog(){const issues=allIssues();$('modalIssues').innerHTML=issues.length?issues.map(x=>`<li><b>${labels[x.id]}</b>: ${escapeHTML(x.message)}</li>`).join(''):'<li>Nejsou zjištěny žádné problémy.</li>';$('modalTitle').textContent=issues.length?'Formulář není dokončen':'Připraveno k uložení';$('modal').classList.add('on')}
+function goProblem(){const i=allIssues()[0];if(i)focusField(i.id);else showToast('Ve formuláři nejsou zjištěny žádné chyby.')}
+let toastTimer;
+function showToast(s){$('toast').textContent=s;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),2500)}
+document.querySelectorAll('[data-fid]').forEach(el=>{const id=el.dataset.fid;el.addEventListener('blur',()=>{state.touched.add(id);updateFields()});el.addEventListener('input',()=>{state.dirty=true;updateFields()});el.addEventListener('change',()=>{state.dirty=true;updateFields()})});
+
+
+// Insert Pages: interactive settings without touching the user's PDF.
+document.addEventListener('change',e=>{
+ const r=e.target.closest('[data-insert-field]');
+ if(r){const group=r.dataset.insertField,val=r.value;insertState[group]=val;
+   if(group==='source')insertState.sourceName='';
+   if(group==='rangeMode'){
+     document.querySelectorAll('.insert-thumb').forEach(b=>b.classList.toggle('active',insertState.selected.has(Number(b.dataset.insertPage))));
+   }
+   renderProps();return;
+ }
+ if(e.target.id==='insertAtNumber'){
+  const num=Math.max(1,Math.min(4,Number(e.target.value)||1));insertState.pageNumber=num;renderInsertPreview();
+ }
+});
+document.addEventListener('input',e=>{
+ if(e.target.id==='insertCustomRange'){
+   insertState.customRange=e.target.value;renderInsertPreview();
+ }
+});
+document.addEventListener('click',e=>{
+ const el=e.target.closest('[data-insert-page]');if(!el)return;
+ const n=Number(el.dataset.insertPage);
+ if(insertState.selected.has(n))insertState.selected.delete(n);else insertState.selected.add(n);
+ el.classList.toggle('active',insertState.selected.has(n));el.setAttribute('aria-pressed',String(insertState.selected.has(n)));
+ if(insertState.rangeMode!=='selected'){
+   insertState.rangeMode='selected';
+   document.querySelector('[data-insert-field="rangeMode"][value="selected"]')?.click();
+ }
+ renderInsertPreview();
+});
+
+// Left file submenu and floating File dropdown share the same selected action.
+document.addEventListener('click',event=>{
+  const view=event.target.closest('[data-view-action]');
+   if(view){event.preventDefault();selectViewAction(view.dataset.viewAction);return;}
+   const act=event.target.closest('[data-file-action]');
+  if(act){event.preventDefault();selectFileAction(act.dataset.fileAction);return;}
+  const run=event.target.closest('[data-file-execute]');
+  if(!run)return;
+  event.preventDefault();executeFileAction(run.dataset.fileExecute);
+});
+const fileInputControl=document.createElement('input');
+fileInputControl.type='file';fileInputControl.accept='.pdf,application/pdf';fileInputControl.style.display='none';fileInputControl.setAttribute('aria-label','Výběr zdrojového PDF pro HTML náhled');
+document.body.appendChild(fileInputControl);
+let fileInputPurpose='open';
+fileInputControl.addEventListener('change',()=>{
+  const names=[...fileInputControl.files].map(f=>f.name);if(!names.length)return;
+  state.sourceFiles=names;
+  const label=$('fileSourceName');if(label)label.textContent=(fileInputPurpose==='import'?'Zdroj pro import: ':'Vybraný soubor: ')+names.join(', ');
+  if(fileInputPurpose==='insert_pdf'||fileInputPurpose==='insert_document'){insertState.sourceName=names[0]+' · ukázkový náhled';if(state.tool==='nav_file'&&state.fileAction==='insert_pages')renderProps();}
+  if(fileInputPurpose==='merge_add'){
+    const list=$('mergeSourceList');if(list)names.forEach((n,i)=>{const b=document.createElement('button');b.textContent=(i+2)+'. '+n+' · externí soubor (ukázka)';list.appendChild(b)});
+  }
+  showToast('V HTML je použit pouze název vybraného PDF. Dokument se nezpracovává.');
+  fileInputControl.value='';
+});
+function executeFileAction(op){
+  if(['open','import','merge_add','insert_pdf','insert_document'].includes(op)){
+    fileInputPurpose=op;
+    fileInputControl.multiple=op==='merge_add';
+    fileInputControl.accept=op==='open'||op==='insert_pdf'?'.pdf,application/pdf':'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.png,.jpg,.jpeg,.tif,.tiff,.svg,.eps,.psd,.ai,.webp,.xcf,.kra,.sla';
+    fileInputControl.click();
+    return;
+  }
+  if(op==='insert-pick'){fileInputPurpose=insertState.source==='pdf'?'insert_pdf':'insert_document';fileInputControl.multiple=false;fileInputControl.accept=insertState.source==='pdf'?'.pdf,application/pdf':'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.png,.jpg,.jpeg,.tif,.tiff,.svg,.eps,.psd,.ai,.webp,.xcf,.kra,.sla';fileInputControl.click();return;}
+  if(['save','save_as'].includes(op)){
+    if(op==='save_as')showToast('Ukázka Uložit jako: nové PDF se v HTML nevytváří.');
+    saveDialog();return;
+  }
+  showToast('Nastavení „'+fileEntry(state.fileAction).label+'“ je pouze ukázka, žádná operace PDF se neprovádí.');
+}
+
+document.querySelectorAll('[data-tool]').forEach(el=>el.addEventListener('click',()=>{
+ const name=el.dataset.tool;
+ if(name==='nav_file' && state.tool==='nav_file'){state.fileExpanded=!state.fileExpanded;renderFileSubmenu();}
+ else if(name==='nav_view' && state.tool==='nav_view'){state.viewExpanded=!state.viewExpanded;renderViewSubmenu();}
+ else selectTool(name);
+ if(document.body.classList.contains('hide-props'))togglePanel('props');
+}));
+function activateQuickSearch(){
+ selectTool('nav_search_pdf');
+ if(document.body.classList.contains('hide-props'))togglePanel('props');
+ hidePopupMenu();
+}
+$('quickSearch').addEventListener('focus',activateQuickSearch);
+$('quickSearch').addEventListener('input',e=>{
+ state.searchQuery=e.target.value;
+ if(state.tool!=='nav_search_pdf')activateQuickSearch();
+ const secondary=$('demoSearch');if(secondary)secondary.value=state.searchQuery;
+ runSearchDemo(state.searchQuery);
+});
+document.querySelectorAll('[data-group-side]').forEach(el=>el.addEventListener('click',()=>toggleDock(el.dataset.groupSide)));
+window.addEventListener('resize',updateDockToggles);
+document.querySelectorAll('[data-panel]').forEach(el=>el.addEventListener('click',()=>{
+ const key=el.dataset.panel;
+ togglePanel(key);
+}));
+document.querySelectorAll('[data-page-nav]').forEach(el=>el.addEventListener('click',()=>switchPage(state.page+(el.dataset.pageNav==='next'?1:-1))));
+document.querySelectorAll('[data-thumb]').forEach(el=>el.addEventListener('click',()=>switchPage(Number(el.dataset.thumb))));
+document.querySelectorAll('[data-zoom]').forEach(el=>el.addEventListener('click',()=>setZoom(el.dataset.zoom==='1:1'?100:state.zoom+Number(el.dataset.zoom))));
+$('zoomTop').addEventListener('change',e=>setZoom(e.target.value));$('fitPage').addEventListener('click',()=>fit('page'));$('fitWidth').addEventListener('click',()=>fit('width'));
+$('showHighlights').addEventListener('change',e=>{state.showHighlights=e.target.checked;formView()});
+$('collapseFieldList').addEventListener('click',()=>{$('fieldList').classList.toggle('hidden');$('collapseFieldList').querySelector('span').textContent=$('fieldList').classList.contains('hidden')?'▸':'▾'});
+$('validate').addEventListener('click',()=>{fields.forEach(x=>state.touched.add(x));updateFields();showToast(allIssues().length?`Nalezeno problémů: ${allIssues().length}`:'Formulář je v pořádku')});
+$('goIssue').addEventListener('click',goProblem);
+$('save').addEventListener('click',saveDialog);$('saveToolbar').addEventListener('click',saveDialog);
+$('cancelSave').addEventListener('click',()=>$('modal').classList.remove('on'));
+$('goIssueModal').addEventListener('click',()=>{$('modal').classList.remove('on');goProblem()});
+$('saveAnyway').addEventListener('click',()=>{$('modal').classList.remove('on');showToast('Ukázka: skutečný PDF soubor nebyl uložen.');});
+$('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').classList.remove('on')});
+$('help').addEventListener('click',()=>showToast('HTML návrh v2.6: skupinová ouška panelů, každá strana si pamatuje své rozložení.'));
+$('newTab').addEventListener('click',()=>showToast('Ukázka vzhledu záložek dokumentů. Další PDF se nenačítá.'));
+$('fullWidth').addEventListener('click',()=>{const collapsed=$('leftDock').classList.contains('dock-collapsed')&&$('rightDock').classList.contains('dock-collapsed');setDockCollapsed('left',!collapsed);setDockCollapsed('right',!collapsed)});
+$('undo').addEventListener('click',()=>showToast('V této HTML ukázce se historie změn PDF neprovádí.'));
+$('redo').addEventListener('click',()=>showToast('V této HTML ukázce se historie změn PDF neprovádí.'));
+$('selectPointer').addEventListener('click',e=>{document.querySelectorAll('.toolbtn[data-select-mode]').forEach(x=>x.classList.remove('active'));e.currentTarget.classList.add('active')});
+$('selectRect').addEventListener('click',e=>{document.querySelectorAll('.toolbtn[data-select-mode]').forEach(x=>x.classList.remove('active'));e.currentTarget.classList.add('active')});
+let popupCloseTimer;
+function hidePopupMenu(){clearTimeout(popupCloseTimer);$('menuFloat').classList.remove('on');document.querySelectorAll('.menubtn').forEach(b=>b.setAttribute('aria-expanded','false'))}
+function scheduleClosePopup(){clearTimeout(popupCloseTimer);popupCloseTimer=setTimeout(hidePopupMenu,180)}
+function showPopupMenu(btn){
+  clearTimeout(popupCloseTimer);
+  const menu=$('menuFloat');
+  const names=['Soubor','Zobrazení','Nástroje','Úpravy','Formuláře','Pomoc'];
+  const name=names[Number(btn.dataset.menu)];
+  const contents={Nástroje:['Soubor','Zobrazení','Najít v PDF','Objekty','Text','OCR','Formuláře','Separace','Digitální podpis','Rozdělit PDF','Pořadí stránek'],Úpravy:['Zpět','Znovu'],Formuláře:['Vyplnit','Návrh polí (F2 – později)'],Pomoc:['Nápověda k prototypu']};
+  if(name==='Soubor'){
+    menu.innerHTML='<div class="file-menu-head">Příkazy souboru</div>'+FILE_ACTIONS.map(a=>`<button type="button" class="file-menu-item ${state.tool==='nav_file'&&a.id===state.fileAction?'selected':''}" data-file-action="${a.id}">${miniIcon(a.icon)}<span>${escapeHTML(a.label)}</span></button>`).join('');
+    menu.setAttribute('role','menu');
+  }else if(name==='Zobrazení'){
+     menu.innerHTML='<div class="file-menu-head">Zobrazení dokumentu</div>'+VIEW_ACTIONS.map(a=>`<button type="button" class="file-menu-item ${state.tool==='nav_view'&&a.id===state.viewAction?'selected':''}" data-view-action="${a.id}">${miniIcon(a.icon)}<span>${escapeHTML(a.label)}</span></button>`).join('');
+     menu.setAttribute('role','menu');
+   }else{
+     menu.innerHTML=(contents[name]||[]).map(x=>`<button data-menu-action="${escapeHTML(x)}">${escapeHTML(x)}</button>`).join('');
+    menu.removeAttribute('role');
+  }
+  const rect=btn.getBoundingClientRect();
+  menu.style.top=rect.bottom+'px';menu.style.left=rect.left+'px';menu.dataset.which=btn.dataset.menu;menu.classList.add('on');
+  document.querySelectorAll('.menubtn').forEach(b=>b.setAttribute('aria-expanded',String(b===btn)));
+}
+document.querySelectorAll('[data-menu]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const menu=$('menuFloat');
+    if(menu.classList.contains('on')&&menu.dataset.which===btn.dataset.menu){hidePopupMenu();return;}
+    showPopupMenu(btn);
+  });
+  // File menu opens directly on hover. Switching an already open dropdown follows native menus.
+  btn.addEventListener('mouseenter',()=>{if(['0','1'].includes(btn.dataset.menu)||$('menuFloat').classList.contains('on'))showPopupMenu(btn)});
+  btn.addEventListener('mouseleave',()=>{if($('menuFloat').classList.contains('on'))scheduleClosePopup()});
+  btn.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='Enter'){e.preventDefault();showPopupMenu(btn);$('menuFloat').querySelector('button')?.focus()}});
+});
+$('menuFloat').addEventListener('mouseenter',()=>clearTimeout(popupCloseTimer));
+$('menuFloat').addEventListener('mouseleave',scheduleClosePopup);
+$('menuFloat').addEventListener('click',e=>{
+ const a=e.target.closest('[data-menu-action]');if(!a)return;
+ const x=a.dataset.menuAction;hidePopupMenu();
+ if(x==='Uložit')saveDialog();
+ else if(x==='Přizpůsobit stránce')fit('page');
+ else if(x==='Zobrazení 1:1')setZoom(100);
+ else if(x==='Sbalit pravý panel')togglePanel('props');
+ else if(x==='Formuláře'||x==='Vyplnit')selectTool('form_text');
+ else if(x==='Text')selectTool('nav_text');
+ else if(x==='Separace')selectTool('nav_separations');
+ else if(x==='Záložky')togglePanel('bookmarks');
+ else if(x==='Poznámky')togglePanel('notes');
+ else if(x==='Náhledy')togglePanel('thumbs');
+ else if(x==='Sloučit PDF')selectFileAction('merge_open');
+ else if(({Soubor:'nav_file',Zobrazení:'nav_view','Najít v PDF':'nav_search_pdf',Objekty:'nav_objects',OCR:'nav_ocr','Digitální podpis':'nav_signature','Rozdělit PDF':'nav_split_pdf','Pořadí stránek':'nav_page_order'})[x])selectTool(({Soubor:'nav_file',Zobrazení:'nav_view','Najít v PDF':'nav_search_pdf',Objekty:'nav_objects',OCR:'nav_ocr','Digitální podpis':'nav_signature','Rozdělit PDF':'nav_split_pdf','Pořadí stránek':'nav_page_order'})[x]);
+ else showToast('Ukázka nabídky: '+x);
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.menubtn')&&!e.target.closest('.menu-float')&&!e.target.closest('[data-file-action]'))hidePopupMenu(); if(!e.target.closest('.context-menu')&&!e.target.closest('[data-recent-doc]'))$('recentContextMenu').classList.remove('on');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('modal').classList.remove('on');hidePopupMenu()}if(e.ctrlKey && e.key==='f'){e.preventDefault();$('quickSearch').focus();$('quickSearch').select()}if(e.ctrlKey && e.key==='0'){e.preventDefault();fit('page')}if(e.ctrlKey && e.key==='1'){e.preventDefault();setZoom(100)}if(e.ctrlKey && e.key==='s'){e.preventDefault();saveDialog()}});
+
+// Independent right-side auxiliaries: thumbnails on left and bookmarks/notes on right.
+document.querySelectorAll('[data-aux-close]').forEach(b=>b.addEventListener('click',()=>togglePanel(b.dataset.auxClose)));
+document.addEventListener('click',e=>{
+ const jump=e.target.closest('[data-go-page]');if(jump){switchPage(Number(jump.dataset.goPage));return;}
+ const action=e.target.closest('[data-ui-action]');if(!action)return;
+ const a=action.dataset.uiAction;
+ switch(a){
+ case 'zoom-in':setZoom(state.zoom+10);break;case 'zoom-out':setZoom(state.zoom-10);break;
+ case 'zoom-one':setZoom(100);break;case 'fit-page':fit('page');break;case 'fit-width':fit('width');break;
+ case 'insert-pick':executeFileAction('insert-pick');break;
+ case 'insert-run':{const sel=parseInsertPages();if(sel.error||!sel.pages.length)showToast('Zkontrolujte rozsah vkládaných stran.');else showToast('Ukázka: '+sel.pages.length+' stran by se vložilo do aktuálního PDF. Soubor nebyl změněn.');break;}
+ case 'object-import':showToast('Ukázka výběru grafického objektu: PDF nebylo změněno.');break;
+ case 'toggle-thumbs':togglePanel('thumbs');break;case 'toggle-bookmarks':togglePanel('bookmarks');break;
+ case 'toggle-notes':togglePanel('notes');break;case 'toggle-search-results':togglePanel('search-results');break;case 'toggle-props':togglePanel('props');break;case 'toggle-tools':togglePanel('tools');break;
+ case 'save':saveDialog();break;
+ case 'all-plates':document.querySelectorAll('[data-plate]').forEach(x=>x.checked=true);showToast('Ilustrační zapnutí všech desek.');break;
+ case 'off-plates':document.querySelectorAll('[data-plate]').forEach(x=>x.checked=false);showToast('Ilustrační vypnutí všech desek.');break;
+ case 'only-plate':{const plate=action.dataset.plateOnly;document.querySelectorAll('[data-plate]').forEach(x=>x.checked=x.dataset.plate===plate);showToast('Jen deska: '+plate+' (ukázka)');break;}
+ case 'bookmark-add':showToast('Ukázka nového záznamu záložky: PDF se nemění.');break;
+ case 'bookmark-edit':showToast('Ukázka úpravy záložky: PDF se nemění.');break;
+ case 'planned-search':showToast('Šipky k výskytům a poznámky jsou plánovány po Formulářích.');break;
+ case 'search-arrows-on':state.searchArrowsVisible=true;renderSearchArrowMarkers();showToast('Výskyty označeny šipkovými nálepkami (ukázka).');break;
+ case 'search-arrows-off':state.searchArrowsVisible=false;renderSearchArrowMarkers();showToast('Šipkové nálepky byly skryty (ukázka).');break;
+ case 'planned':showToast('Budoucí nástroj: zatím pouze návrh pracovního panelu.');break;
+ default:{
+  const group=action.closest('.icon-grid');
+  if(group){const buttons=group.querySelectorAll('.btn');if(['obj-select','obj-rect','obj-lasso','text-reg','text-bold','text-italic','text-underline','text-strike','align-left','align-center','align-right','align-justify','text-rect','text-lasso','ocr-area','ocr-pages'].includes(a)){
+    buttons.forEach(b=>b.classList.remove('selected'));action.classList.add('selected');
+  }}
+  showToast('Ilustrační ovládání nástroje: '+action.title+'. PDF nebylo změněno.');
+ }
+ }
+});
+$('addDemoNote').addEventListener('click',()=>{
+ const txt=$('newDemoNote').value.trim();if(!txt){showToast('Napište nejprve text poznámky.');return;}
+ const b=document.createElement('button');b.className='note-item';b.dataset.goPage=String(state.page);
+ b.innerHTML=`<span class="note-title">Nová poznámka</span><small>Strana ${state.page} · HTML ukázka</small><span></span>`;
+ b.lastElementChild.textContent=txt;$('demoNotes').appendChild(b);$('newDemoNote').value='';showToast('Poznámka přidána pouze do HTML náhledu.');
+});
+$('showDemoNotes').addEventListener('change',e=>{$('demoNotes').style.opacity=e.target.checked?'1':'.35';showToast(e.target.checked?'Poznámky zobrazeny':'Poznámky skryty (ukázka)')});
+$('notesFilter').addEventListener('change',()=>showToast('Ilustrační filtr poznámek.'));
+
+
+$('recentContextMenu').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-recent-cmd]'); if(!btn||!activeRecentDoc)return;
+ const cmd=btn.dataset.recentCmd; $('recentContextMenu').classList.remove('on');
+ if(cmd==='open')showToast('Ukázka otevření: '+activeRecentDoc.name);
+ else if(cmd==='location')showToast('Ukázka otevření složky: '+activeRecentDoc.path.replace(/\\[^\\]+$/,''));
+ else if(cmd==='copy'){
+   try{await navigator.clipboard.writeText(activeRecentDoc.path);showToast('Adresa souboru zkopírována.');}
+   catch(err){showToast('Cesta souboru: '+activeRecentDoc.path);}
+ }
+});
+selectTool('form_text');switchPage(1);setZoom(100,false);updateFields();updateDockToggles();
+</script></body></html>

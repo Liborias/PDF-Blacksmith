@@ -80,7 +80,7 @@ Má dvě volby zdroje:
 
 - **Soubor → Importovat** = konverze externího zdroje do PDF, s pokročilými volbami v pravém panelu.
 - **Soubor → Sloučit a otevřít** = sestava 2+ vstupů, požadované pořadí, konverze, společné PDF v nové záložce.
-- **Soubor → Vložit strany** = vložit do aktuálního PDF celé stránky buď z jiného PDF s výběrem rozsahu jako při Tisku, nebo z jiného dokumentu po převodu společným modulem Importovat.
+- **Soubor → Vložit strany** = vložit do aktuálního PDF celé stránky buď z jiného PDF s výběrem rozsahu jako při Tisku, nebo z jiného dokumentu po převodu společným modulem Importovat. **Schválená struktura pravého panelu:** ① Zdroj stránek (jiné PDF / jiný dokument), ② Výběr stránek (všechny, vybrané v náhledech, vlastní rozsah, liché, sudé), ③ Umístění (před/za aktuální, začátek, konec, zadaná pozice) s vizuálním náhledem pořadí. **Výchozí volba umístění: Za aktuální stránku**. Schváleno uživatelem 22. 11. 2026.
 - **Objekty → Vložit objekt** = vložit obrazový či vektorový objekt do existující stránky a následně jej upravovat grafickými nástroji. Oba příkazy jsou **samostatné**.
 - **Soubor → Otevřít = VÝHRADNĚ PDF.** Nepřijímá dokumenty Word, Excel, PowerPoint ani nativní grafické formáty a **nespouští implicitní konverzi**. Pro jiný formát slouží Importovat nebo Sloučit a otevřít; výběr souboru má odpovídající filtr PDF a při nepodporovaném vstupu nabídnout jasné přesměrování na Importovat.
 - Pravý panel **Vlastnosti** má pro každý z těchto úkonů vlastní pokročilá nastavení, ne duplicitní tlačítka celých nástrojů.
