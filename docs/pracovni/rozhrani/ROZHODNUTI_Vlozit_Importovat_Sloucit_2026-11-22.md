@@ -3,14 +3,39 @@
 **Datum rozhodnutí:** 22. listopadu 2026  
 **Stav:** schválený směr a význam příkazů; detaily převodního modulu, podporovaných formátů a volby stránkování dořešit před implementací. **Zatím neměnit HTML ani zdrojový kód.**
 
-## 1. Vložit
+## 1. Dva oddělené nástroje: Vložit objekt a Vložit strany — upřesněno uživatelem 22. 11. 2026
 
-**Cíl:** přidat obsah do *již otevřeného* PDF.
+**Cíl:** oba příkazy upravují **aktuálně otevřené PDF**, ale každý pracuje s jiným typem obsahu a má samostatnou obsluhu.
 
-- **Kancelářské i jiné vícestránkové dokumenty**, včetně Word/Excel/PowerPoint, OpenDocument formátů a dalších běžných formátů, lze vložit **jako stránky**. Zdroj se bezpečně převede do PDF, teprve pak se stránky vloží do otevřeného dokumentu. Při převodu PowerPointu rozlišit snímky a poznámky/tiskové rozložení; u tabulek listy a tiskové oblasti.
-- **Grafický podklad** (běžný obrázek, SVG, případně podporovaný výstup z Photoshopu, Illustratoru, GIMPu, Inkscapu, Krity, Scribusu a podobných programů) lze podle jeho povahy vložit **do aktuální stránky jako grafický objekt**, nebo převést/vložit jako samostatnou stránku. Zajistit polohu, velikost a další podporované vlastnosti bez svévolné rasterizace ostatního obsahu PDF. **Editovatelnost vrstev/křivek závisí na konkrétním formátu a převodní cestě**; neslibovat zachování nativních objektů proprietárních editorů bez ověření.
-- Rozlišit v dialogu `Vložit stránky ze souboru` a `Vložit obrázek do stránky`; přesnou nabídku a její umístění v menu navrhnout následně.
-- Zásahy do dokumentu jsou vratné, respektují historii Ctrl+Z/Y a AutoRecover, nesmějí nechtěně poškodit formulářová pole, poznámky, odkazy, podpisy nebo další obsah. U podepsaného PDF předem vysvětlit důsledky změny.
+### 1A. Objekty → Vložit objekt
+
+- Je **součástí nástroje Objekty** / grafických úprav; není totožný s vložením celé stránky.
+- Vkládá obrázek, vektorovou grafiku nebo jiný technicky podporovaný **grafický objekt do existující stránky**.
+- Uživatel volí umístění, rozměry, případně otočení, průhlednost, vrstvení a další vlastnosti podle možností stávajícího editoru Objekty.
+- Preferovat zachování vektorů a barevných profilů. Při převodu složitých grafických formátů (PSD, AI, XCF, KRA atd.) může dojít ke ztrátě editovatelnosti vrstev nebo efektů; jasně upozornit.
+- Vkládání se musí účastnit historie Ctrl+Z/Y a AutoRecover a nesmí měnit okolní obsah PDF.
+
+### 1B. Soubor → Vložit strany
+
+**Samostatný příkaz v nabídce Soubor**. Jeho výsledkem je přidání **jedné nebo více celých stránek** do právě otevřeného PDF.
+
+Má dvě volby zdroje:
+
+**(1) Z jiného PDF**
+- Vybrat existující PDF.
+- Vybrat rozsah **obdobným ovládáním jako při Tisku**: všechny stránky, jednotlivé stránky, rozsah nebo kombinace např. `1, 3–5, 9`; kde je relevantní, volby liché/sudé.
+- Ukázat počet a případně náhled vybíraných stránek.
+- Určit **místo vložení** (před aktuální stránku / za aktuální stránku / na zvolenou pozici / na konec) — konkrétní výchozí volba a případné doplňky budou ještě předmětem revize UX.
+
+**(2) Z jiného dokumentu**
+- Umožnit běžné kancelářské, prezentační a grafické dokumenty: Word, Excel, PowerPoint a další podporované komerční i open-source formáty dle katalogu níže.
+- Zdroj se nejdříve převede na **dočasné PDF stejným konverzním modulem jako `Soubor → Importovat`**. Nesmí vzniknout druhá nezávislá implementace převodu.
+- Po převodu nabídnout kontrolu výsledku a **výběr stránek / rozsahu obdobně jako při Tisku**; poté vložit zvolené stránky do **aktuálního PDF**, nikoli otevřít nový samostatný dokument.
+- Zohlednit vstupní volby příslušného formátu (např. listy a tiskové oblasti u tabulek, snímky u prezentací); případné chyby převodu nezamlčovat.
+
+**Společná pravidla obou větví:** zachovat zdrojový soubor, neprovádět nechtěné přepsání aktuálního PDF, začlenit vložení do Ctrl+Z/Y a AutoRecover; při editaci podepsaného PDF varovat před dopadem na platnost podpisů. Při problémech s rozměry, formuláři, odkazy a anotacemi zachovat pokud možno jejich strukturu a nespouštět nevratný převod bez jasného upozornění.
+
+**Rozhraní:** levé podmenu `Soubor → Vložit strany` a pravý panel `Vlastnosti` s výběrem jedné z obou větví, rozsahu a místa vložení. `Objekty → Vložit objekt` má vlastní nastavení v panelu Objekty; tyto dvě funkce **nezaměňovat ani nevytvářet duplicitní ovládání**.
 
 ## 2. Importovat
 
@@ -55,18 +80,19 @@
 
 - **Soubor → Importovat** = konverze externího zdroje do PDF, s pokročilými volbami v pravém panelu.
 - **Soubor → Sloučit a otevřít** = sestava 2+ vstupů, požadované pořadí, konverze, společné PDF v nové záložce.
-- **Vložit** = kontextový příkaz pro aktivní PDF. O přesném umístění v nabídce **Úpravy**, práci se stránkami a objekty, klávesové zkratce a zdroji rozhodnout při dalším ladění UI.
+- **Soubor → Vložit strany** = vložit do aktuálního PDF celé stránky buď z jiného PDF s výběrem rozsahu jako při Tisku, nebo z jiného dokumentu po převodu společným modulem Importovat.
+- **Objekty → Vložit objekt** = vložit obrazový či vektorový objekt do existující stránky a následně jej upravovat grafickými nástroji. Oba příkazy jsou **samostatné**.
 - **Soubor → Otevřít = VÝHRADNĚ PDF.** Nepřijímá dokumenty Word, Excel, PowerPoint ani nativní grafické formáty a **nespouští implicitní konverzi**. Pro jiný formát slouží Importovat nebo Sloučit a otevřít; výběr souboru má odpovídající filtr PDF a při nepodporovaném vstupu nabídnout jasné přesměrování na Importovat.
 - Pravý panel **Vlastnosti** má pro každý z těchto úkonů vlastní pokročilá nastavení, ne duplicitní tlačítka celých nástrojů.
 - Aktuální HTML v2.6 může ještě zobrazovat starší význam Importovat: před implementací je nutné **sjednotit s tímto novějším rozhodnutím**.
 
 ## 5. Otevřené otázky pro příští kolo
 
-1. Vložený Word/Excel: zda vždy převádět na stránky PDF, nebo nabídnout i samostatnou přílohu v PDF (odlišná funkce).
-2. Při vložení více stránek před/za aktuální stránku nebo na zadanou pozici; chování při konfliktních rozměrech stránky.
+1. Podrobnosti výběru rozsahu vložených stran: shodná ergonomie jako při Tisku, validace kombinovaného rozsahu, zachování pořadí a případná volba lichých/sudých stran.
+2. Výchozí pozice vložení stran (před / za aktuální, na zadané místo, na konec) a pravidla při odlišných rozměrech, rotaci, formulářích a anotacích.
 3. Nastavení Excelu: tiskové oblasti, listy, skryté listy, opakované řádky, měřítko; zachování původního formátování.
 4. Ověřit reálnou podporu katalogu DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, SVG, PNG/JPEG/TIFF, PSD/PSB, AI/EPS, XCF, KRA, SLA a dalších; zvlášť chování velkých, chráněných, poškozených a vrstvených dokumentů.
 5. Zachování písma, barevných ICC profilů, průhledností a vektorů podle možností vstupního formátu/enginu; bezpečné chování při nepodporovaných prvcích.
 6. Případné předvolby konverze a šablony sestav pro opakované operace.
 
-**Stav:** jde o požadavky a jejich rozdělení. Otevřít je pouze pro PDF. Podpora širokého katalogu zdrojů, včetně PPT/PPTX, PSD/AI a formátů open-source aplikací, je **cílový požadavek k technickému ověření**, nikoli již implementovaná funkcionalita.
+**Stav:** rozdělení **Vložit objekt** (Objekty) a **Vložit strany** (Soubor) bylo uživatelem upřesněno 22. 11. 2026. Podrobnosti a technická realizace zůstávají k dopracování. Otevřít je pouze pro PDF. Podpora širokého katalogu zdrojů, včetně PPT/PPTX, PSD/AI a formátů open-source aplikací, je **cílový požadavek k technickému ověření**, nikoli již implementovaná funkcionalita.
