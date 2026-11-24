@@ -6,7 +6,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.18** ([HTML](rozhrani/cely_vizual_v3.18.html), [pokyny pro Codex v3.18](rozhrani/UI_TEMATA_PREKLADY_VODITKA_OREZ_v3.18.md), [překladový katalog JSON](i18n/ui_catalog_v1.json) + [CSV](i18n/ui_catalog_v1.csv), [mapa ikon v5.1](mapa_ikon_v5.1.md), [mapa zkratek v1.3](mapa_klavesovych_zkratek_v1.3.md)). Úpravy zahrnují sbalitelné odsazené skupiny vodítek, výběr Ctrl+klik, duplikování Ctrl+tažením, potvrzovací tlačítka barev, symetrické kolečko Nastavení, tmavé/světlé motivy s vlastními akcenty a tvarový/poměrový ořez rastru. **Tato verze zůstává interaktivním HTML návrhem; produkční Go/PDFium nejsou dotčeny.**
+**Aktuální návrh:** **v3.19** ([HTML](rozhrani/cely_vizual_v3.19.html), [pokyny pro Codex v3.19](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md), [mapa barev a kontrastu](mapa_barev_v1.0.md) + [JSON](mapa_barev_v1.0.json), [překladový katalog v1.1](i18n/ui_catalog_v1.1.json)). V3.19 obsahuje šest kompletních světlých i tmavých palet (šedo-vínová, celošedá, krémová, modrá, olivová a petrolejová), světlá ouška, tlačítka a vstupy ve světlých motivech, opravu kontrastů a překlady dynamických formulářových upozornění. Ozubené kolečko je výškově sjednocené s disketou. **Zůstává interaktivním HTML prototypem, nikoli implementací Go/PDFium**. Starší schválená pravidla a historie se nemění.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,9 +18,13 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML v3.18 – témata, skupiny, ořez, přeložené rozhraní](rozhrani/cely_vizual_v3.18.html)**
+7. **[Aktuální HTML v3.19 – plné barevné palety, kontrast a dynamické překlady](rozhrani/cely_vizual_v3.19.html)**
+   - **[Codex v3.19: kompletní témata, světlé ovládací prvky, překlady](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md)**.
+   - **[Mapa barev a pravidel kontrastu v1.0](mapa_barev_v1.0.md)** – [strojová mapa JSON](mapa_barev_v1.0.json).
+   - [Aktualizované překlady JSON v1.1](i18n/ui_catalog_v1.1.json), [CSV v1.1](i18n/ui_catalog_v1.1.csv) – 809 položek.
+   - [Předchozí HTML v3.18](rozhrani/cely_vizual_v3.18.html) – skupiny, barevné editace a ořez.
    - **[Nové pokyny pro Codex v3.18](rozhrani/UI_TEMATA_PREKLADY_VODITKA_OREZ_v3.18.md)** – poslední závazné upřesnění UI.
-   - [Překlady: JSON pro Codex](i18n/ui_catalog_v1.json), [CSV tabulka](i18n/ui_catalog_v1.csv), [postup](i18n/README.md).
+   - [Překlady: JSON pro Codex](i18n/ui_catalog_v1.1.json), [CSV tabulka](i18n/ui_catalog_v1.1.csv), [postup](i18n/README.md).
    - [Předchozí HTML v3.17](rozhrani/cely_vizual_v3.17.html) – skupiny a dokončení základních překladů.
    - **[Nejnovější zadání pro Codex v3.17](rozhrani/UI_PREKLADY_SKUPINY_VODITEK_v3.17.md)** – výběr, skupinové operace a rozšířené cíle přichytávání.
    - [Předchozí HTML v3.16](rozhrani/cely_vizual_v3.16.html) – jazyk a kontextové vodítko. – pracovní prototyp, nikoli hotové funkce PDF.
