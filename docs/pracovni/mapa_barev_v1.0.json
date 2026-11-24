@@ -1,0 +1,1055 @@
+{
+  "schema": "pdf-blacksmith.color-tokens.v1",
+  "version": "1.0",
+  "date": "2026-11-24",
+  "source_html": "docs/pracovni/rozhrani/cely_vizual_v3.19.html",
+  "default": {
+    "palette": "wine",
+    "mode": "dark"
+  },
+  "modes": [
+    "dark",
+    "light"
+  ],
+  "palettes": {
+    "wine": {
+      "label": "Šedo-vínová",
+      "en": "Graphite & burgundy",
+      "dark": {
+        "base": "#19191F",
+        "top": "#222128",
+        "panel": "#26242D",
+        "surface": "#2E2B35",
+        "subtle": "#35303B",
+        "input": "#33313A",
+        "control": "#34313B",
+        "hover": "#43333F",
+        "selected": "#45303D",
+        "border": "#61535E",
+        "text": "#F5F1F4",
+        "muted": "#CDC3CD",
+        "accent": "#E0A1BC",
+        "accentStrong": "#AD5B80",
+        "onAccent": "#FFFFFF",
+        "focus": "#ECB3D1"
+      },
+      "light": {
+        "base": "#ECEAED",
+        "top": "#F4F0F3",
+        "panel": "#FFFCFE",
+        "surface": "#FFFFFF",
+        "subtle": "#F8F3F6",
+        "input": "#FFFFFF",
+        "control": "#F7F2F5",
+        "hover": "#F1E7EC",
+        "selected": "#F3E4EB",
+        "border": "#AFA4AE",
+        "text": "#262029",
+        "muted": "#574D59",
+        "accent": "#703950",
+        "accentStrong": "#753C55",
+        "onAccent": "#FFFFFF",
+        "focus": "#71364F"
+      }
+    },
+    "gray": {
+      "label": "Celošedá",
+      "en": "Monochrome gray",
+      "dark": {
+        "base": "#191B1E",
+        "top": "#21252A",
+        "panel": "#272B30",
+        "surface": "#30353B",
+        "subtle": "#383F46",
+        "input": "#353B42",
+        "control": "#353B42",
+        "hover": "#48515A",
+        "selected": "#454E57",
+        "border": "#626B75",
+        "text": "#F4F5F6",
+        "muted": "#CAD1D7",
+        "accent": "#E2E5E9",
+        "accentStrong": "#66717D",
+        "onAccent": "#FFFFFF",
+        "focus": "#E2E5E9"
+      },
+      "light": {
+        "base": "#E9EBED",
+        "top": "#F1F2F3",
+        "panel": "#FAFBFC",
+        "surface": "#FFFFFF",
+        "subtle": "#F3F4F6",
+        "input": "#FFFFFF",
+        "control": "#F5F6F7",
+        "hover": "#E5E8EC",
+        "selected": "#E3E7EC",
+        "border": "#ABB3BC",
+        "text": "#242930",
+        "muted": "#4C5661",
+        "accent": "#414B56",
+        "accentStrong": "#48535F",
+        "onAccent": "#FFFFFF",
+        "focus": "#344453"
+      }
+    },
+    "cream": {
+      "label": "Krémová",
+      "en": "Warm cream",
+      "dark": {
+        "base": "#24211C",
+        "top": "#2D2922",
+        "panel": "#332E26",
+        "surface": "#3E362B",
+        "subtle": "#473F32",
+        "input": "#453C31",
+        "control": "#463D32",
+        "hover": "#554937",
+        "selected": "#554637",
+        "border": "#706250",
+        "text": "#F8F0E2",
+        "muted": "#D9CCB6",
+        "accent": "#F1C98A",
+        "accentStrong": "#896639",
+        "onAccent": "#FFFFFF",
+        "focus": "#F3D6A8"
+      },
+      "light": {
+        "base": "#F0E8D9",
+        "top": "#F8F1E6",
+        "panel": "#FFF9EF",
+        "surface": "#FFFDF7",
+        "subtle": "#F8EEDC",
+        "input": "#FFFFFF",
+        "control": "#FCF4E8",
+        "hover": "#F2E2C8",
+        "selected": "#F4E2C6",
+        "border": "#BAAA91",
+        "text": "#332819",
+        "muted": "#66533D",
+        "accent": "#704C1D",
+        "accentStrong": "#775327",
+        "onAccent": "#FFFFFF",
+        "focus": "#684516"
+      }
+    },
+    "blue": {
+      "label": "Mořská modrá",
+      "en": "Coastal blue",
+      "dark": {
+        "base": "#131F2A",
+        "top": "#1B2B39",
+        "panel": "#223444",
+        "surface": "#293D50",
+        "subtle": "#324B60",
+        "input": "#30495D",
+        "control": "#30475A",
+        "hover": "#3D5A72",
+        "selected": "#31516B",
+        "border": "#5B768C",
+        "text": "#F0F7FD",
+        "muted": "#C7D9E8",
+        "accent": "#99D5FF",
+        "accentStrong": "#2D789F",
+        "onAccent": "#FFFFFF",
+        "focus": "#B3E0FE"
+      },
+      "light": {
+        "base": "#E7F0F7",
+        "top": "#F1F7FB",
+        "panel": "#FBFDFF",
+        "surface": "#FFFFFF",
+        "subtle": "#EDF5FA",
+        "input": "#FFFFFF",
+        "control": "#F1F7FC",
+        "hover": "#DDEDF8",
+        "selected": "#DDEFFA",
+        "border": "#A1B8CC",
+        "text": "#192D3E",
+        "muted": "#455E72",
+        "accent": "#165E88",
+        "accentStrong": "#1A658E",
+        "onAccent": "#FFFFFF",
+        "focus": "#14577F"
+      }
+    },
+    "olive": {
+      "label": "Olivově zelená",
+      "en": "Olive green",
+      "dark": {
+        "base": "#1E241B",
+        "top": "#292F24",
+        "panel": "#2F392C",
+        "surface": "#394536",
+        "subtle": "#455340",
+        "input": "#414D3E",
+        "control": "#414D3E",
+        "hover": "#536348",
+        "selected": "#4C6044",
+        "border": "#6A8065",
+        "text": "#F3F7EA",
+        "muted": "#D2DDC7",
+        "accent": "#C6DC9B",
+        "accentStrong": "#536B34",
+        "onAccent": "#FFFFFF",
+        "focus": "#D7E9B2"
+      },
+      "light": {
+        "base": "#EDF0E4",
+        "top": "#F4F6ED",
+        "panel": "#FDFEF8",
+        "surface": "#FFFFFF",
+        "subtle": "#F0F4E6",
+        "input": "#FFFFFF",
+        "control": "#F4F7ED",
+        "hover": "#E4ECD3",
+        "selected": "#E4EECE",
+        "border": "#A8B798",
+        "text": "#26321E",
+        "muted": "#52634A",
+        "accent": "#4B642F",
+        "accentStrong": "#537033",
+        "onAccent": "#FFFFFF",
+        "focus": "#40592A"
+      }
+    },
+    "teal": {
+      "label": "Petrolejová",
+      "en": "Teal & slate",
+      "dark": {
+        "base": "#162326",
+        "top": "#1F3033",
+        "panel": "#25383C",
+        "surface": "#2E4448",
+        "subtle": "#365256",
+        "input": "#344D51",
+        "control": "#344D51",
+        "hover": "#416065",
+        "selected": "#385C60",
+        "border": "#5A7B7E",
+        "text": "#F0FAF8",
+        "muted": "#C4DDDA",
+        "accent": "#A0E3D7",
+        "accentStrong": "#327F77",
+        "onAccent": "#FFFFFF",
+        "focus": "#BBF0E8"
+      },
+      "light": {
+        "base": "#E5F1EF",
+        "top": "#F0F8F7",
+        "panel": "#FCFFFE",
+        "surface": "#FFFFFF",
+        "subtle": "#ECF6F4",
+        "input": "#FFFFFF",
+        "control": "#F2F9F8",
+        "hover": "#DDF1EC",
+        "selected": "#DCF1EB",
+        "border": "#9CBDB8",
+        "text": "#1C3633",
+        "muted": "#4B6862",
+        "accent": "#126B63",
+        "accentStrong": "#12736A",
+        "onAccent": "#FFFFFF",
+        "focus": "#0D635C"
+      }
+    }
+  },
+  "roles": {
+    "base": "Základní plocha okna",
+    "top": "Horní lišty",
+    "panel": "Vnitřní panel",
+    "surface": "Vnořená plocha / dialog",
+    "subtle": "Jemně oddělená sekce",
+    "input": "Textové vstupní pole",
+    "control": "Běžné tlačítko a ouško",
+    "hover": "Najeď myší",
+    "selected": "Aktivní či vybraný prvek",
+    "border": "Obrys prvku",
+    "text": "Základní text",
+    "muted": "Sekundární text",
+    "accent": "Akcentní text a ikona",
+    "accentStrong": "Plná akcentní plocha / hrana",
+    "onAccent": "Text na plné akcentní ploše",
+    "focus": "Obrys fokusu"
+  },
+  "checks": [
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 13.67,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 12.41,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 11.39,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 10.77,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 11.44,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 8.95,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 8.12,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "dark",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 4.58,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 15.6,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 15.9,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 14.36,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 12.95,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 15.9,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 7.89,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 8.04,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "wine",
+      "mode": "light",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 8.29,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 13.05,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 11.33,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 10.37,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 7.76,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 10.37,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 9.23,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 8.02,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "dark",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 4.97,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 14.13,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 14.64,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 13.53,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 11.78,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 14.64,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 7.21,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 7.47,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "gray",
+      "mode": "light",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 7.84,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 11.9,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 10.5,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 9.4,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 8.01,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 9.55,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 8.5,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 7.5,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "dark",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 5.22,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 13.75,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 14.16,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 13.2,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 11.34,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 14.4,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 6.99,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 7.19,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "cream",
+      "mode": "light",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 6.88,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 11.83,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 10.35,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 8.93,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 7.71,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 8.69,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 8.84,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 7.73,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "dark",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 4.89,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 13.86,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 14.13,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 13.09,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 11.98,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 14.13,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 6.65,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 6.78,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "blue",
+      "mode": "light",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 6.37,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 11.08,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 9.29,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 8.19,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 6.3,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 8.19,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 8.56,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 7.17,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "dark",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 5.97,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 13.3,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 13.48,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 12.44,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 11.19,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 13.48,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 6.39,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 6.48,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "olive",
+      "mode": "light",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 5.63,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 11.54,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 9.69,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 8.48,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 6.88,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 8.48,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 8.6,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 7.22,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "dark",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 4.73,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "panel",
+      "ratio": 12.85,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "surface",
+      "ratio": 12.92,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "control",
+      "ratio": 12.11,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "selected",
+      "ratio": 10.97,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "text",
+      "background_role": "input",
+      "ratio": 12.92,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "panel",
+      "ratio": 6.04,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "muted",
+      "background_role": "surface",
+      "ratio": 6.08,
+      "pass_AA_4_5": true
+    },
+    {
+      "scheme": "teal",
+      "mode": "light",
+      "foreground_role": "onAccent",
+      "background_role": "accentStrong",
+      "ratio": 5.7,
+      "pass_AA_4_5": true
+    }
+  ],
+  "rules": {
+    "normal_text_ratio_min": 4.5,
+    "large_text_and_icons_ratio_min": 3,
+    "light_mode_controls": "tabs, buttons, fields and ears are light with dark text",
+    "no_burgundy_in_other_palettes": true,
+    "pdf_content_unaffected": true,
+    "custom_color_handling": "correct toward accessible contrast for UI text",
+    "semantic_colors": "danger/warning/success independent of palette hue",
+    "focus": "visible keyboard outline",
+    "translations": "use i18n catalog, not document content"
+  }
+}
