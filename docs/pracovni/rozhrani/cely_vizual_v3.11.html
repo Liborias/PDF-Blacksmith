@@ -2393,6 +2393,7 @@ function renderViewSnapMenu(){
  '</div></details>';
 }
 function updateViewAids(){
+ if(!viewAids.snap && typeof clearSnapPreview==='function')clearSnapPreview();
  for(const [id,key] of [['magnetToggle','snap'],['gridToggle','grid'],['rulerToggle','rulers']]){
   const b=$(id);if(b){b.classList.toggle('active',viewAids[key]);b.setAttribute('aria-pressed',String(viewAids[key]));}
  }
@@ -2447,6 +2448,7 @@ document.addEventListener('pointermove',e=>{
 },true);
 document.addEventListener('pointerup',clearSnapPreview,true);
 document.addEventListener('pointercancel',clearSnapPreview,true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSnapPreview()},true);
 
 function showPopupMenu(btn){
   clearTimeout(popupCloseTimer);
