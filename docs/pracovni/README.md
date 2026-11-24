@@ -6,6 +6,8 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
+**Předání Codexu na 25. 11. 2026:** [finální iniciační pokyn](rozhrani/CODEX_INICIALIZACE_2026-11-25.md). **Mapa ikon v4.7:** [mapa](mapa_ikon_v4.7.md) · [nové SVG Nastavení → Rozhraní](rozhrani/ikony/settings_interface.svg). HTML zůstává v3.25 (navigační položky bez rámečků, nová ikona Rozhraní); produkční Go/Win32 se neměnilo.
+
 **v3.25 – závěrečné dočištění:** [HTML](rozhrani/cely_vizual_v3.25.html), [Codex](rozhrani/UI_FINALNI_KONTRAST_AKTIVNI_IKONY_v3.25.md), [mapa barev v1.4](mapa_barev_v1.4.md) + [JSON](mapa_barev_v1.4.json). Oprava stavových boxů, popisků poznámek, „Připnuté“, OCR, výběru Text/Objekty a výraznějšího aktivního stavu ikon ve druhé liště. V3.24 ponechána pro porovnání.
 
 **v3.24:** [HTML](rozhrani/cely_vizual_v3.24.html) · [pokyny pro Codex](rozhrani/UI_BARVY_VODITEK_v3.24.md). Podklady barevných polí vodítek, skupin a místní nabídky respektují světlý/tmavý motiv; vybraná barva vzorku zůstává nezměněna. v3.23 ponechána pro srovnání.
@@ -77,7 +79,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
    - [Starší varianta v2.1](rozhrani/cely_vizual_dve_listy_v2.1.html) pro porovnání.
 8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
 9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
-10. **[Aktuální mapa ikon v4.6](mapa_ikon_v4.6.md)** – [SVG atlas v3.10](rozhrani/ikony/pdf_blacksmith_nove_v3.10.svg).
+10. **[Aktuální mapa ikon v4.7](mapa_ikon_v4.7.md)** – [SVG atlas v3.10](rozhrani/ikony/pdf_blacksmith_nove_v3.10.svg).
 
 ## Závazné rozlišení
 
