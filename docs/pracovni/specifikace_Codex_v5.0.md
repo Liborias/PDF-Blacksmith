@@ -1247,3 +1247,17 @@ V nástroji **Formuláře → Vyplnit** po opuštění pole s **bezpečně ově�
 Červený obrys je **pouze obrazovková vrstva**, neukládá se do PDF, netiskne ani neexportuje a nesmí měnit stav rozpracovaného dokumentu. Rozlišovat od vínového zvýraznění dostupných polí (F-Q4): jeho vypínací přepínač nezakrývá ověřené chyby. Při přepnutí na jiný nástroj se obrys skryje, ale interní chybový stav je k dispozici po návratu. Zajistit srozumitelný text/symbol chyby pro přístupnost, zoom, DPI, otočení a duální zobrazení. F-Q7/F-Q8 i možnost **„Uložit přesto“** zůstávají nedotčené, AutoRecover neblokovat.
 
 **Podrobný postup a akceptační testy T-50 až T-57:** `PDF_Blacksmith_Formulare_specifikace_navrh_v1.9.md`. **Plán:** `PDF_Blacksmith_plan_rozsireni_v2.0.md`. F2/F3 jsou dál plánované, kód aplikace tímto textem změněn nebyl.
+
+---
+
+## Aktuální návrhový dodatek – UI v3.9 (24. 11. 2026)
+
+**Aktuální pracovní HTML:** [rozhrani/cely_vizual_v3.9.html](rozhrani/cely_vizual_v3.9.html).  
+**Úplné schválené dodatky UI v3.4–v3.9:** [rozhrani/AKTUALNI_UI_CODEX_v3.9.md](rozhrani/AKTUALNI_UI_CODEX_v3.9.md).  
+**Mapa ikon:** [mapa_ikon_v4.5.md](mapa_ikon_v4.5.md), [SVG atlas](rozhrani/ikony/pdf_blacksmith_nove_v3.9.svg).
+
+Doplněk je závazný **pro návrh rozhraní**, nevyžaduje okamžitou implementaci v Go/Win32/PDFium. Platí původní bezpečnostní a funkční omezení tohoto souboru (SEL/TXT/OBJ, formuláře F1, podpisy, uložit/export, undo/redo). Codex má před úpravami backendu vždy provést inventuru skutečného kódu, návrh etapy a požádat o výslovné schválení.
+
+**Shrnutí nejnovějších změn:** konzistentní dynamická nápověda pod ikonami v pevném prostoru a plovoucí tooltip nad ikonami; žádný diagonální styl typografických tlačítek; adaptivní druhá lišta při min. návrhových 980×540 CSS px a 30% přiblížení PDF; nepřekrývat dokument pravými panely. Univerzální výběr šipkou, obdélníkem a lasem, automatická kontextová aktivace Textu/Objektů/OCR a ochrana smíšeného výběru; samostatný odstavcový textový blok; textové převody v Text → Výběr a sdílené OCR pro vektory, rastrové oblasti i kombinace. Dialog rekonstrukce textu s porovnáním a korekcemi, základní úpravy vybraných rastrových obrázků (pixely/PPI, resampling, grayscale/ICC/CMYK, ořez), inteligentní magnet, mřížka, pravítka a plánovaný SnapEngine se samostatnými cíli v Zobrazení → Přichytit.
+
+**V3.9 nahrazuje starší split-tlačítko kurzoru a vrací druhý horní přepínač zobrazení:** dvoustavová ikona šipka/textový kurzor a dvoustavová ikona Po stránkách/Souvislé zobrazení zobrazují vždy *příští akci*, po kliknutí se stav i symbol vystřídají. Obě volby využívají již existující sdílené stavové a dokumentové režimy bez druhé kopie handlerů. Kontrolní scénáře a přesné výjimky jsou v aktuálním pracovnímu doplňku v3.9.
