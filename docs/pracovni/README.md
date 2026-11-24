@@ -1,10 +1,10 @@
 # PDF Blacksmith – pracovní podklady pro Codex
 
-**Aktualizováno:** 22. listopadu 2026 · **Stav:** návrh rozhraní F1, implementace F1 schválena po etapách; ostatní položky jen plán.
+**Aktualizováno:** 24. listopadu 2026 · **Stav:** návrh rozhraní F1, implementace F1 schválena po etapách; ostatní položky jen plán.
 
 Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje stávající implementaci** v Go/Win32 a Pythonu; přítomnost návrhu neznamená, že byl implementován.
 
-## Začít zde
+## Nejnovější stav rozhraní (24. listopadu 2026)\n\n**Aktuální návrh:** v3.9 (HTML + konsolidovaný Codex MD + mapa ikon v4.5). V3.3 a starší zůstávají pouze pro porovnání a zachování historie. Překryv starších přechodných pravidel se řeší prioritou uvedenou v [aktuální specifikaci UI](rozhrani/AKTUALNI_UI_CODEX_v3.9.md).\n\n**Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.\n\n## Začít zde
 
 1. [Postup spolupráce a předání Codexu](POSTUP_SPOLUPRACE_S_CODEXEM.md)
 2. [Hlavní specifikace PDF Blacksmith v5.0](specifikace_Codex_v5.0.md)
@@ -12,7 +12,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML návrh v3.3: výběrové režimy Textu a smíšená typografie](rozhrani/cely_vizual_text_vyber_typografie_v3.3.html)** – pracovní prototyp; bez skutečné editace PDF.
+7. **[Aktuální HTML návrh v3.9: univerzální výběr, OCR, obrázky, přichytávání, přepínání režimu stránek](rozhrani/cely_vizual_v3.9.html)** – pracovní prototyp; bez skutečné editace PDF.\n   - **[Aktuální konsolidované pokyny pro Codex v3.9 – všechny změny v3.4 až v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md)** – hlavní zdroj aktuálních pravidel UI a jejich priorit.\n   - [Předchozí HTML v3.3 pro porovnání](rozhrani/cely_vizual_text_vyber_typografie_v3.3.html).
    - **[Pokyny pro Codex v3.3: bezkolizní výběr a smíšené formátování](rozhrani/TEXT_VYBER_A_SMISENA_TYPOGRAFIE_v3.3.md)** – novější upřesnění, zachovat původní pravidla SEL/TXT/OBJ.
    - [Předchozí HTML v3.2: horní řada a nápověda](rozhrani/cely_vizual_text_vyber_napoveda_v3.2.html) pro porovnání.
    - **[Pokyny pro Codex – rozmístění výběrových ikon a nápovědy v3.2](rozhrani/TEXT_VYBER_NAPOVEDA_v3.2.md)** – včetně ochrany schválených gest.
@@ -32,7 +32,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
    - [Starší varianta v2.1](rozhrani/cely_vizual_dve_listy_v2.1.html) pro porovnání.
 8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
 9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
-10. [Mapa ikon v4.4](mapa_ikon_v4.4.md)
+10. **[Aktuální mapa ikon v4.5](mapa_ikon_v4.5.md)** – [SVG atlas v3.9](rozhrani/ikony/pdf_blacksmith_nove_v3.9.svg).
 
 ## Závazné rozlišení
 
