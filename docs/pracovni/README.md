@@ -4,7 +4,13 @@
 
 Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje stávající implementaci** v Go/Win32 a Pythonu; přítomnost návrhu neznamená, že byl implementován.
 
-## Nejnovější stav rozhraní (24. listopadu 2026)\n\n**Aktuální návrh:** v3.9 (HTML + konsolidovaný Codex MD + mapa ikon v4.5). V3.3 a starší zůstávají pouze pro porovnání a zachování historie. Překryv starších přechodných pravidel se řeší prioritou uvedenou v [aktuální specifikaci UI](rozhrani/AKTUALNI_UI_CODEX_v3.9.md).\n\n**Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.\n\n## Začít zde
+## Nejnovější stav rozhraní (24. listopadu 2026)
+
+**Aktuální návrh:** v3.10 ([HTML](rozhrani/cely_vizual_v3.10.html) + [doplněk pro Codex](rozhrani/UI_PRICHYTAVANI_v3.10.md) + [mapa ikon v4.6](mapa_ikon_v4.6.md)). Pro všechny ostatní otázky platí [konsolidovaná specifikace v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md), hlavní specifikace v5.0 a jejich dříve schválená pravidla. Předchozí verze zůstávají pro porovnání a historii.
+
+**Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
+
+## Začít zde
 
 1. [Postup spolupráce a předání Codexu](POSTUP_SPOLUPRACE_S_CODEXEM.md)
 2. [Hlavní specifikace PDF Blacksmith v5.0](specifikace_Codex_v5.0.md)
@@ -12,8 +18,10 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML návrh v3.9: univerzální výběr, OCR, obrázky, přichytávání, přepínání režimu stránek](rozhrani/cely_vizual_v3.9.html)** – pracovní prototyp; bez skutečné editace PDF.\n   - **[Aktuální konsolidované pokyny pro Codex v3.9 – všechny změny v3.4 až v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md)** – hlavní zdroj aktuálních pravidel UI a jejich priorit.\n   - [Předchozí HTML v3.3 pro porovnání](rozhrani/cely_vizual_text_vyber_typografie_v3.3.html).
-   - [Předchozí pokyny pro Codex v3.3: bezkolizní výběr a smíšené formátování](rozhrani/TEXT_VYBER_A_SMISENA_TYPOGRAFIE_v3.3.md)** – novější upřesnění, zachovat původní pravidla SEL/TXT/OBJ.
+7. **[Aktuální HTML návrh v3.10: podkovový magnet, vlastní ikona vodítek a Přichytávat k:](rozhrani/cely_vizual_v3.10.html)** – pracovní prototyp; bez skutečné editace PDF.
+   - **[Nové pokyny pro Codex v3.10: přesné změny přichytávání](rozhrani/UI_PRICHYTAVANI_v3.10.md)** – mají přednost před v3.9 jen v popsaných třech změnách.
+   - [Předchozí HTML v3.9: univerzální výběr, OCR, obrázky a dvoustavové zobrazení](rozhrani/cely_vizual_v3.9.html) pro porovnání.\n   - **[Aktuální konsolidované pokyny pro Codex v3.9 – všechny změny v3.4 až v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md)** – hlavní zdroj aktuálních pravidel UI a jejich priorit.\n   - [Předchozí HTML v3.3 pro porovnání](rozhrani/cely_vizual_text_vyber_typografie_v3.3.html).
+   - [Předchozí pokyny pro Codex v3.3: bezkolizní výběr a smíšené formátování](rozhrani/TEXT_VYBER_A_SMISENA_TYPOGRAFIE_v3.3.md) – dřívější upřesnění, zachovat původní pravidla SEL/TXT/OBJ.
    - [Předchozí HTML v3.2: horní řada a nápověda](rozhrani/cely_vizual_text_vyber_napoveda_v3.2.html) pro porovnání.
    - **[Pokyny pro Codex – rozmístění výběrových ikon a nápovědy v3.2](rozhrani/TEXT_VYBER_NAPOVEDA_v3.2.md)** – včetně ochrany schválených gest.
    - [Předchozí HTML v3.1: záložky Výběr/Typografie](rozhrani/cely_vizual_text_zalozky_v3.1.html) pro porovnání.
@@ -32,7 +40,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
    - [Starší varianta v2.1](rozhrani/cely_vizual_dve_listy_v2.1.html) pro porovnání.
 8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
 9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
-10. **[Aktuální mapa ikon v4.5](mapa_ikon_v4.5.md)** – [SVG atlas v3.9](rozhrani/ikony/pdf_blacksmith_nove_v3.9.svg).
+10. **[Aktuální mapa ikon v4.6](mapa_ikon_v4.6.md)** – [SVG atlas v3.10](rozhrani/ikony/pdf_blacksmith_nove_v3.10.svg).
 
 ## Závazné rozlišení
 
