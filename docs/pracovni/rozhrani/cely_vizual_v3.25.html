@@ -1081,6 +1081,50 @@ body[data-app-theme] .commandbar .toolbar .toolbtn:focus-visible{
   outline-offset:1px;
 }
 /* Main menu remains text-only; the selected-state treatment applies solely to toolbar icons. */
+
+/* v3.25 correction (2026-11-24): unboxed navigational menu items.
+   Prevent broad themed button rules from drawing rectangles around tool navigation.
+   The 2px left accent is the ONLY visible edge on hover/selection. */
+body[data-app-theme] .toolpane > button.tool,
+body[data-app-theme] .toolpane .file-submenu > button.file-action,
+body[data-app-theme] .menu-float > button,
+body[data-app-theme] .menu-float > .file-menu-item{
+  background:transparent!important;
+  color:var(--ui-ink)!important;
+  border:0!important;
+  border-left:2px solid transparent!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+body[data-app-theme] .toolpane > button.tool:hover,
+body[data-app-theme] .toolpane .file-submenu > button.file-action:hover,
+body[data-app-theme] .menu-float > button:hover,
+body[data-app-theme] .menu-float > .file-menu-item:hover{
+  background:var(--ui-hover)!important;
+  border-left-color:var(--ui-accent-strong)!important;
+}
+body[data-app-theme] .toolpane > button.tool.active,
+body[data-app-theme] .toolpane .file-submenu > button.file-action.selected,
+body[data-app-theme] .toolpane .file-submenu > button.file-action.active,
+body[data-app-theme] .menu-float > button.selected,
+body[data-app-theme] .menu-float > button.active,
+body[data-app-theme] .menu-float > .file-menu-item.selected{
+  background:var(--ui-selected)!important;
+  border-left-color:var(--ui-accent-strong)!important;
+  color:var(--ui-ink)!important;
+}
+body[data-app-theme] .toolpane > button.tool.active:hover,
+body[data-app-theme] .toolpane .file-submenu > button.file-action.selected:hover,
+body[data-app-theme] .menu-float > button.selected:hover,
+body[data-app-theme] .menu-float > .file-menu-item.selected:hover{
+  background:var(--ui-hover)!important;
+  border-left-color:var(--ui-accent-strong)!important;
+}
+body[data-app-theme] .toolpane :is(button.tool,button.file-action):focus-visible,
+body[data-app-theme] .menu-float > button:focus-visible{
+  outline:2px solid var(--theme-focus)!important;
+  outline-offset:-2px!important;
+}
 </style></head>
 <body><svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true"><defs><symbol id="i-nav_file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M3 7V5h7l2 2h9v12H3z"/><path d="M3 9h18"/>
 </g></symbol><symbol id="i-nav_view" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(2.54656 2.54656) scale(0.787786)" stroke-width="2.2849"><path d="M2 12s3.7-6 10-6 10 6 10 6-3.7 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>
