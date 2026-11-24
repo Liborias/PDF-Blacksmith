@@ -6,7 +6,9 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.19** ([HTML](rozhrani/cely_vizual_v3.19.html), [pokyny pro Codex v3.19](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md), [mapa barev a kontrastu](mapa_barev_v1.0.md) + [JSON](mapa_barev_v1.0.json), [překladový katalog v1.1](i18n/ui_catalog_v1.1.json)). V3.19 obsahuje šest kompletních světlých i tmavých palet (šedo-vínová, celošedá, krémová, modrá, olivová a petrolejová), světlá ouška, tlačítka a vstupy ve světlých motivech, opravu kontrastů a překlady dynamických formulářových upozornění. Ozubené kolečko je výškově sjednocené s disketou. **Zůstává interaktivním HTML prototypem, nikoli implementací Go/PDFium**. Starší schválená pravidla a historie se nemění.
+**v3.20:** [HTML](rozhrani/cely_vizual_v3.20.html), [pravidla pro Codex](rozhrani/UI_SVETLE_MOTIVY_SCROLLBARY_KONTRAST_v3.20.md), [barevná mapa 1.1](mapa_barev_v1.1.md) a [JSON](mapa_barev_v1.1.json). Světlé ovládací plochy, kontrast, světlé posuvníky a stejný hover oušek pomocných panelů vlevo/vpravo a obou horních oušek. Předchozí v3.19 zůstává zachována; produkční kód se nemění.
+
+**Aktuální návrh:** **v3.20** ([HTML](rozhrani/cely_vizual_v3.20.html), [pokyny pro Codex v3.19](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md), [mapa barev a kontrastu](mapa_barev_v1.0.md) + [JSON](mapa_barev_v1.0.json), [překladový katalog v1.1](i18n/ui_catalog_v1.1.json)). V3.19 obsahuje šest kompletních světlých i tmavých palet (šedo-vínová, celošedá, krémová, modrá, olivová a petrolejová), světlá ouška, tlačítka a vstupy ve světlých motivech, opravu kontrastů a překlady dynamických formulářových upozornění. Ozubené kolečko je výškově sjednocené s disketou. **Zůstává interaktivním HTML prototypem, nikoli implementací Go/PDFium**. Starší schválená pravidla a historie se nemění.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,7 +20,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML v3.19 – plné barevné palety, kontrast a dynamické překlady](rozhrani/cely_vizual_v3.19.html)**
+7. **[Předchozí HTML v3.19 – plné barevné palety, kontrast a dynamické překlady](rozhrani/cely_vizual_v3.19.html)**
    - **[Codex v3.19: kompletní témata, světlé ovládací prvky, překlady](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md)**.
    - **[Mapa barev a pravidel kontrastu v1.0](mapa_barev_v1.0.md)** – [strojová mapa JSON](mapa_barev_v1.0.json).
    - [Aktualizované překlady JSON v1.1](i18n/ui_catalog_v1.1.json), [CSV v1.1](i18n/ui_catalog_v1.1.csv) – 809 položek.
