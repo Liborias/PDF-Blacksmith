@@ -1,6 +1,7 @@
 # PDF Blacksmith – specifikace oprav a rozšíření pro Codex
 
 **Verze:** 5.0 – F-Q9 schváleno (21. 11. 2026); nejnovější pracovní upřesnění UI v3.9 (24. 11. 2026)
+**Nejnovější doplněk UI (24. 11. 2026):** [UI v3.11 – Separace, pomocné panely, vodítka a snap](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md), [HTML v3.11](rozhrani/cely_vizual_v3.11.html), [mapa ikon v4.7](mapa_ikon_v4.7.md), [mapa klávesových zkratek v1.0](mapa_klavesovych_zkratek_v1.0.md). Starší upřesnění zůstávají v platnosti, pokud nejsou novější verzí výslovně změněna. **Nejde o povolení hromadné implementace.**
 **Aktuální UI a pokyny pro Codex (24. 11. 2026):** [aktuální HTML v3.10](rozhrani/cely_vizual_v3.10.html), [doplněk Přichytávání v3.10](rozhrani/UI_PRICHYTAVANI_v3.10.md), [mapa ikon v4.6](mapa_ikon_v4.6.md), [předchozí úplná konsolidace UI v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md). Doplněk v3.10 mění pouze magnet, vodítka a menu „Přichytávat k:“; ostatní schválené chování v3.9 a původní bezpečnostní pravidla zůstávají platná.\n**Zdroj:** https://github.com/Liborias/PDF-Blacksmith (`main`)  
 **Stav:** NEZADÁVAT HROMADNOU IMPLEMENTACI bez schválení sporných rozhodnutí.  
 **Zaměření:** Windows desktop; stávající rozhraní Go/Win32, PDFium, Python/Ghostscript.
@@ -1261,3 +1262,15 @@ Doplněk je závazný **pro návrh rozhraní**, nevyžaduje okamžitou implement
 **Shrnutí nejnovějších změn:** konzistentní dynamická nápověda pod ikonami v pevném prostoru a plovoucí tooltip nad ikonami; žádný diagonální styl typografických tlačítek; adaptivní druhá lišta při min. návrhových 980×540 CSS px a 30% přiblížení PDF; nepřekrývat dokument pravými panely. Univerzální výběr šipkou, obdélníkem a lasem, automatická kontextová aktivace Textu/Objektů/OCR a ochrana smíšeného výběru; samostatný odstavcový textový blok; textové převody v Text → Výběr a sdílené OCR pro vektory, rastrové oblasti i kombinace. Dialog rekonstrukce textu s porovnáním a korekcemi, základní úpravy vybraných rastrových obrázků (pixely/PPI, resampling, grayscale/ICC/CMYK, ořez), inteligentní magnet, mřížka, pravítka a plánovaný SnapEngine se samostatnými cíli v Zobrazení → Přichytit.
 
 **V3.9 nahrazuje starší split-tlačítko kurzoru a vrací druhý horní přepínač zobrazení:** dvoustavová ikona šipka/textový kurzor a dvoustavová ikona Po stránkách/Souvislé zobrazení zobrazují vždy *příští akci*, po kliknutí se stav i symbol vystřídají. Obě volby využívají již existující sdílené stavové a dokumentové režimy bez druhé kopie handlerů. Kontrolní scénáře a přesné výjimky jsou v aktuálním pracovnímu doplňku v3.9.
+
+
+---
+
+## Návrhový dodatek UI v3.11 (24. 11. 2026)
+
+- Separace → Výstup a konverze: ikony svisle ve třech řadách; každý řádek má vedle ikony výběrové okno s předvolbami převodu/ICC. Nepřenášet UI volbu bez kontroly do exportu PDF.
+- Dočasně automaticky otevřený panel Výsledky vyhledávání se při opuštění hledání obnoví na **původní ručně nastavený pomocný panel** (nebo žádný); ruční změny během hledání mají přednost.
+- Pevná vodítka jsou **plná**, přesahují hranice stránky k pravítkům; inteligentní přichytávací linky jsou **vínově červené, čárkované/tečkované**, dočasné a mají končit v cíli nebo na pravítkách u hran.
+- Mřížka má nastavitelnou rozteč a jemné dělení; zobrazení mřížky, přichytávání k mřížce a globální magnet jsou oddělené stavy. Magnet je vínově vyplněná podkova s **obrysovými koncovými póly**.
+- Konkrétní stávající zkratky a jejich konflikty ověřeny ve zdrojích: `document_commands_windows.go`, `workspace_windows.go`, `viewer_windows.go`. Nové zkratky jsou **jen návrhy** v [mapě v1.0](mapa_klavesovych_zkratek_v1.0.md); bez schválené migrace neměnit současné `T/V/M/L`.
+- Změna nastavení viditelnosti/rozvržení nemění PDF, nemá vytvářet Undo krok ani dirty; návrh SnapEngine implementovat až po zvláštním souhlasu.
