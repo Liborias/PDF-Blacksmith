@@ -6,7 +6,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.17** ([HTML](rozhrani/cely_vizual_v3.17.html), [pokyny pro Codex v3.17](rozhrani/UI_PREKLADY_SKUPINY_VODITEK_v3.17.md), [mapa ikon v5.0](mapa_ikon_v5.0.md), [mapa klávesových zkratek v1.2](mapa_klavesovych_zkratek_v1.2.md)). Dokončený audit překladů hlavních UI a dialogů; jednotný výběr vodítek řádkem a checkboxy, tenké linky, oko pro viditelnost, skupiny s hromadnou barvou, zámkem, skrytím a smazáním. Nové demonstrační cíle přichytávání: střed stránky, formulářová pole, textové rámce a předěly. **Zůstává to HTML prototyp, nikoli skutečný PDF SnapEngine nebo implementace Go/Win32.** Historická pravidla platí tam, kde nebyla novější verzí výslovně změněna.
+**Aktuální návrh:** **v3.18** ([HTML](rozhrani/cely_vizual_v3.18.html), [pokyny pro Codex v3.18](rozhrani/UI_TEMATA_PREKLADY_VODITKA_OREZ_v3.18.md), [překladový katalog JSON](i18n/ui_catalog_v1.json) + [CSV](i18n/ui_catalog_v1.csv), [mapa ikon v5.1](mapa_ikon_v5.1.md), [mapa zkratek v1.3](mapa_klavesovych_zkratek_v1.3.md)). Úpravy zahrnují sbalitelné odsazené skupiny vodítek, výběr Ctrl+klik, duplikování Ctrl+tažením, potvrzovací tlačítka barev, symetrické kolečko Nastavení, tmavé/světlé motivy s vlastními akcenty a tvarový/poměrový ořez rastru. **Tato verze zůstává interaktivním HTML návrhem; produkční Go/PDFium nejsou dotčeny.**
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,7 +18,10 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML v3.17 – překlady, očička a skupiny vodítek](rozhrani/cely_vizual_v3.17.html)**
+7. **[Aktuální HTML v3.18 – témata, skupiny, ořez, přeložené rozhraní](rozhrani/cely_vizual_v3.18.html)**
+   - **[Nové pokyny pro Codex v3.18](rozhrani/UI_TEMATA_PREKLADY_VODITKA_OREZ_v3.18.md)** – poslední závazné upřesnění UI.
+   - [Překlady: JSON pro Codex](i18n/ui_catalog_v1.json), [CSV tabulka](i18n/ui_catalog_v1.csv), [postup](i18n/README.md).
+   - [Předchozí HTML v3.17](rozhrani/cely_vizual_v3.17.html) – skupiny a dokončení základních překladů.
    - **[Nejnovější zadání pro Codex v3.17](rozhrani/UI_PREKLADY_SKUPINY_VODITEK_v3.17.md)** – výběr, skupinové operace a rozšířené cíle přichytávání.
    - [Předchozí HTML v3.16](rozhrani/cely_vizual_v3.16.html) – jazyk a kontextové vodítko. – pracovní prototyp, nikoli hotové funkce PDF.
    - **[Nový dodatek Codex v3.16: jazyk, dočasné Vlastnosti a kontextové menu](rozhrani/UI_JAZYK_VODITKA_v3.16.md)**.
@@ -33,7 +36,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
    - **[Předchozí HTML v3.12: autorský magnet + všechna pravidla v3.11](rozhrani/cely_vizual_v3.12.html)** – pracovní prototyp, nemění skutečné PDF.
    - [Předchozí HTML v3.11](rozhrani/cely_vizual_v3.11.html) pro porovnání.
    - **[Pokyny pro Codex – UI v3.11](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md)** – nové závazné upřesnění.
-   - **[Mapa klávesových zkratek v1.2](mapa_klavesovych_zkratek_v1.2.md)** – existující Go vs. návrhy a kolize.
+   - **[Mapa klávesových zkratek v1.3](mapa_klavesovych_zkratek_v1.3.md)** – existující Go vs. návrhy a kolize.
    - [Předchozí HTML v3.10](rozhrani/cely_vizual_v3.10.html) pro historii.
    - **[Nové pokyny pro Codex v3.10: přesné změny přichytávání](rozhrani/UI_PRICHYTAVANI_v3.10.md)** – mají přednost před v3.9 jen v popsaných třech změnách.
    - [Předchozí HTML v3.9: univerzální výběr, OCR, obrázky a dvoustavové zobrazení](rozhrani/cely_vizual_v3.9.html) pro porovnání.
