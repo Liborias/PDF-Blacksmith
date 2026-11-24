@@ -1,7 +1,7 @@
 # PDF Blacksmith – specifikace oprav a rozšíření pro Codex
 
 **Verze:** 5.0 – F-Q9 schváleno (21. 11. 2026); nejnovější pracovní upřesnění UI v3.9 (24. 11. 2026)
-**Aktuální UI a pokyny pro Codex (24. 11. 2026):** [rozhrani/AKTUALNI_UI_CODEX_v3.9.md](rozhrani/AKTUALNI_UI_CODEX_v3.9.md), [HTML v3.9](rozhrani/cely_vizual_v3.9.html), [mapa ikon v4.5](mapa_ikon_v4.5.md). Novější UI pravidla nahrazují pouze výslovně změněné starší varianty; jinak beze změny platí zde popsaná schválená funkčnost.\n**Zdroj:** https://github.com/Liborias/PDF-Blacksmith (`main`)  
+**Aktuální UI a pokyny pro Codex (24. 11. 2026):** [aktuální HTML v3.10](rozhrani/cely_vizual_v3.10.html), [doplněk Přichytávání v3.10](rozhrani/UI_PRICHYTAVANI_v3.10.md), [mapa ikon v4.6](mapa_ikon_v4.6.md), [předchozí úplná konsolidace UI v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md). Doplněk v3.10 mění pouze magnet, vodítka a menu „Přichytávat k:“; ostatní schválené chování v3.9 a původní bezpečnostní pravidla zůstávají platná.\n**Zdroj:** https://github.com/Liborias/PDF-Blacksmith (`main`)  
 **Stav:** NEZADÁVAT HROMADNOU IMPLEMENTACI bez schválení sporných rozhodnutí.  
 **Zaměření:** Windows desktop; stávající rozhraní Go/Win32, PDFium, Python/Ghostscript.
 **Doplněk pro Text a rozhraní (22. 11. 2026):** [Bezkolizní výběr a vnořené záložky Výběr/Typografie](rozhrani/TEXT_VYBER_A_ZALOZKY_v3.1.md). Jde o pracovní UI upřesnění; zejména **nepřepisovat schválené SEL-01 až SEL-03 a TXT-01 až TXT-04** zavedením kliknutí pro výběr celého bloku nebo dvojkliku k otevření editace. Rozdělení záložek se týká pouze panelu Text, nikoli Separací či globálního Nastavení.
