@@ -13,7 +13,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
 7. **[Aktuální HTML návrh v3.9: univerzální výběr, OCR, obrázky, přichytávání, přepínání režimu stránek](rozhrani/cely_vizual_v3.9.html)** – pracovní prototyp; bez skutečné editace PDF.\n   - **[Aktuální konsolidované pokyny pro Codex v3.9 – všechny změny v3.4 až v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md)** – hlavní zdroj aktuálních pravidel UI a jejich priorit.\n   - [Předchozí HTML v3.3 pro porovnání](rozhrani/cely_vizual_text_vyber_typografie_v3.3.html).
-   - **[Pokyny pro Codex v3.3: bezkolizní výběr a smíšené formátování](rozhrani/TEXT_VYBER_A_SMISENA_TYPOGRAFIE_v3.3.md)** – novější upřesnění, zachovat původní pravidla SEL/TXT/OBJ.
+   - [Předchozí pokyny pro Codex v3.3: bezkolizní výběr a smíšené formátování](rozhrani/TEXT_VYBER_A_SMISENA_TYPOGRAFIE_v3.3.md)** – novější upřesnění, zachovat původní pravidla SEL/TXT/OBJ.
    - [Předchozí HTML v3.2: horní řada a nápověda](rozhrani/cely_vizual_text_vyber_napoveda_v3.2.html) pro porovnání.
    - **[Pokyny pro Codex – rozmístění výběrových ikon a nápovědy v3.2](rozhrani/TEXT_VYBER_NAPOVEDA_v3.2.md)** – včetně ochrany schválených gest.
    - [Předchozí HTML v3.1: záložky Výběr/Typografie](rozhrani/cely_vizual_text_zalozky_v3.1.html) pro porovnání.
