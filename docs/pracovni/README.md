@@ -6,13 +6,15 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
+**v3.23:** [HTML](rozhrani/cely_vizual_v3.23.html) · [pokyny pro Codex](rozhrani/UI_HLAVNI_MENU_TEXTOVE_v3.23.md). Položky Soubor, Zobrazení, Nástroje, Úpravy, Formuláře a Pomoc ve druhé liště jsou opět pouze textové bez viditelných tlačítkových rámečků; hover a rozbalené nabídky zůstávají funkční. Ostatní v3.22 beze změny.
+
 **v3.22:** [HTML](rozhrani/cely_vizual_v3.22.html), [upřesnění Codex](rozhrani/UI_EDITOR_TOOLTIP_POZNAMKY_REZIM_v3.22.md), [barevná mapa v1.3](mapa_barev_v1.3.md) a [JSON](mapa_barev_v1.3.json). Paletová plocha kolem PDF, světlé tooltipy, štítky poznámek dle motivu s vlastní barvou, půlený kruhový přepínač nahoře, jemně zmenšené logo a ikony. Starší verze zachovat.
 
 **v3.21:** [HTML](rozhrani/cely_vizual_v3.21.html), [pokyny pro Codex](rozhrani/UI_AUDIT_BAREV_OCR_MINIATURY_v3.21.md), [mapa barev v1.2](mapa_barev_v1.2.md) a [JSON](mapa_barev_v1.2.json). Audit vínových rámečků miniatur, tmavých polí výběru barev, OCR a dalších starých CSS dekorací. Starší verze neměnit; Go/PDFium stále beze změny.
 
 **v3.20:** [HTML](rozhrani/cely_vizual_v3.20.html), [pravidla pro Codex](rozhrani/UI_SVETLE_MOTIVY_SCROLLBARY_KONTRAST_v3.20.md), [barevná mapa 1.1](mapa_barev_v1.1.md) a [JSON](mapa_barev_v1.1.json). Světlé ovládací plochy, kontrast, světlé posuvníky a stejný hover oušek pomocných panelů vlevo/vpravo a obou horních oušek. Předchozí v3.19 zůstává zachována; produkční kód se nemění.
 
-**Aktuální návrh:** **v3.22** ([HTML](rozhrani/cely_vizual_v3.22.html), [pokyny pro Codex v3.19](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md), [mapa barev a kontrastu](mapa_barev_v1.0.md) + [JSON](mapa_barev_v1.0.json), [překladový katalog v1.1](i18n/ui_catalog_v1.1.json)). V3.19 obsahuje šest kompletních světlých i tmavých palet (šedo-vínová, celošedá, krémová, modrá, olivová a petrolejová), světlá ouška, tlačítka a vstupy ve světlých motivech, opravu kontrastů a překlady dynamických formulářových upozornění. Ozubené kolečko je výškově sjednocené s disketou. **Zůstává interaktivním HTML prototypem, nikoli implementací Go/PDFium**. Starší schválená pravidla a historie se nemění.
+**Aktuální návrh:** **v3.23** ([HTML](rozhrani/cely_vizual_v3.23.html), [pokyny pro Codex v3.19](rozhrani/UI_MOTIVY_KONTRAST_PREKLADY_v3.19.md), [mapa barev a kontrastu](mapa_barev_v1.0.md) + [JSON](mapa_barev_v1.0.json), [překladový katalog v1.1](i18n/ui_catalog_v1.1.json)). V3.19 obsahuje šest kompletních světlých i tmavých palet (šedo-vínová, celošedá, krémová, modrá, olivová a petrolejová), světlá ouška, tlačítka a vstupy ve světlých motivech, opravu kontrastů a překlady dynamických formulářových upozornění. Ozubené kolečko je výškově sjednocené s disketou. **Zůstává interaktivním HTML prototypem, nikoli implementací Go/PDFium**. Starší schválená pravidla a historie se nemění.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
