@@ -6,7 +6,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.13** ([HTML](rozhrani/cely_vizual_v3.13.html), [pokyny pro Codex v3.13](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md), [mapa ikon v4.8](mapa_ikon_v4.8.md), [mapa klávesových zkratek v1.1](mapa_klavesovych_zkratek_v1.1.md)). Pravítka jsou mimo list; Zobrazení má Pomůcky rozvržení s pravým panelem; Nastavení → Klávesové zkratky má editaci vlastní kombinace a kontrolu kolizí. Pravidla v3.9–v3.12 zůstávají zachována v rozsahu, v němž je v3.13 výslovně nemění. Produkční Go/Win32 nebyl upraven.
+**Aktuální návrh:** **v3.13** ([HTML](rozhrani/cely_vizual_v3.13.html), [pokyny pro Codex v3.13](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md), [mapa ikon v4.8](mapa_ikon_v4.8.md), [mapa zkratek v1.1](mapa_klavesovych_zkratek_v1.1.md)). Oproti v3.12 jsou pravítka vně listu, nová volba Pomůcky rozvržení má vlastní pravý panel a Nastavení nabízí vlastní zkratku s upozorněním při kolizi. Historické verze a ostatní schválená pravidla zůstávají zachované. Nejde o implementaci v Go/Win32.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,10 +18,36 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML prototyp v3.13](rozhrani/cely_vizual_v3.13.html)** – pravítka vně stránky, panel Pomůcky rozvržení a vlastní zkratky.
-   - **[Nejnovější pokyny pro Codex v3.13](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md)** – upřesnění pouze nových částí UI.
-   - [Předchozí HTML v3.12](rozhrani/cely_vizual_v3.12.html), [pokyny v3.11](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md), [konsolidace v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md) pro historii.
-
+7. **[Aktuální HTML v3.13 – Pomůcky rozvržení, vnější pravítka a vlastní zkratky](rozhrani/cely_vizual_v3.13.html)** – pracovní prototyp, nikoli hotové funkce PDF.
+   - **[Nové pokyny pro Codex v3.13](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md)** – pouze poslední schválené změny.
+   - [Předchozí HTML v3.12](rozhrani/cely_vizual_v3.12.html) – autorský magnet s currentColor.
+   - **[V3.11: Separace, pomocné panely, vodítka](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md)**.
+   - **[Předchozí HTML v3.12: autorský magnet + všechna pravidla v3.11](rozhrani/cely_vizual_v3.12.html)** – pracovní prototyp, nemění skutečné PDF.
+   - [Předchozí HTML v3.11](rozhrani/cely_vizual_v3.11.html) pro porovnání.
+   - **[Pokyny pro Codex – UI v3.11](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md)** – nové závazné upřesnění.
+   - **[Mapa klávesových zkratek v1.1](mapa_klavesovych_zkratek_v1.1.md)** – existující Go vs. návrhy a kolize.
+   - [Předchozí HTML v3.10](rozhrani/cely_vizual_v3.10.html) pro historii.
+   - **[Nové pokyny pro Codex v3.10: přesné změny přichytávání](rozhrani/UI_PRICHYTAVANI_v3.10.md)** – mají přednost před v3.9 jen v popsaných třech změnách.
+   - [Předchozí HTML v3.9: univerzální výběr, OCR, obrázky a dvoustavové zobrazení](rozhrani/cely_vizual_v3.9.html) pro porovnání.
+   - **[Aktuální konsolidované pokyny pro Codex v3.9 – všechny změny v3.4 až v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md)** – hlavní zdroj aktuálních pravidel UI a jejich priorit.
+   - [Předchozí HTML v3.3 pro porovnání](rozhrani/cely_vizual_text_vyber_typografie_v3.3.html).
+   - [Předchozí pokyny pro Codex v3.3: bezkolizní výběr a smíšené formátování](rozhrani/TEXT_VYBER_A_SMISENA_TYPOGRAFIE_v3.3.md) – dřívější upřesnění, zachovat původní pravidla SEL/TXT/OBJ.
+   - [Předchozí HTML v3.2: horní řada a nápověda](rozhrani/cely_vizual_text_vyber_napoveda_v3.2.html) pro porovnání.
+   - **[Pokyny pro Codex – rozmístění výběrových ikon a nápovědy v3.2](rozhrani/TEXT_VYBER_NAPOVEDA_v3.2.md)** – včetně ochrany schválených gest.
+   - [Předchozí HTML v3.1: záložky Výběr/Typografie](rozhrani/cely_vizual_text_zalozky_v3.1.html) pro porovnání.
+   - **[Pokyny pro Codex: bezkolizní výběr textu a nové záložky](rozhrani/TEXT_VYBER_A_ZALOZKY_v3.1.md)** – doplněk k SEL/TXT/OBJ pravidlům, zachovat schválená gesta.
+   - [Předchozí v3.0: rozšířená typografie a nové SVG ikony](rozhrani/cely_vizual_typografie_v3.0.html) pro porovnání.
+   - **[Nové pravidlo automatického otevření pomocných panelů](rozhrani/PRAVIDLO_AUTOMATICKE_POMOCNE_PANELY_2026-11-22.md)** — pouze zaznamenáno; HTML zatím neměnit.
+   - [Předchozí v2.9: globální Nastavení a šířka respektující ouška](rozhrani/cely_vizual_nastaveni_bezpecna_sirka_v2.9.html) pro porovnání.
+   - [Předchozí návrh v2.8: historie a sdílené pomocné panely](rozhrani/cely_vizual_panely_historie_v2.8.html) pro porovnání.
+   - [Předchozí verze v2.7 – vložení stran a posuvníky](rozhrani/cely_vizual_vlozit_strany_panely_v2.7.html) pro porovnání.
+   - [Předchozí návrh panelů v2.6](rozhrani/cely_vizual_panely_ouska_v2.6.html) pro porovnání.
+   - **[Rozlišení Vložit / Importovat / Sloučit a otevřít (Otevřít pouze PDF; širší formáty)](rozhrani/ROZHODNUTI_Vlozit_Importovat_Sloucit_2026-11-22.md)** — schválený směr, HTML a kód zatím neupravovat.
+   - **[Pokyny k ouškům a posuvníkům](rozhrani/ODLOZENE_UPRAVY_PANELU_PO_v2.6.md)** — zaneseny do HTML v2.7; zatím neimplementovány v Go.
+   - [Starší nabídky Soubor/Zobrazení v2.4](rozhrani/cely_vizual_soubor_zobrazeni_v2.4.html) pro porovnání.
+   - [Předchozí návrh v2.3](rozhrani/cely_vizual_soubor_v2.3.html) pro porovnání.
+   - [Původní rozložení v2.2](rozhrani/cely_vizual_vsechny_nastroje_v2.2.html).
+   - [Starší varianta v2.1](rozhrani/cely_vizual_dve_listy_v2.1.html) pro porovnání.
 8. [Původní návrh Formulářů F1](formulare/F1_mockup_v1.0.html)
 9. [Vyhledávání – budoucí upřesnění](vyhledavani_navrh_v0.1.md)
 10. **[Aktuální mapa ikon v4.6](mapa_ikon_v4.6.md)** – [SVG atlas v3.10](rozhrani/ikony/pdf_blacksmith_nove_v3.10.svg).
