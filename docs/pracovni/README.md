@@ -6,7 +6,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.15** ([HTML](rozhrani/cely_vizual_v3.15.html), [aktuální pokyny pro Codex v3.15](rozhrani/UI_VODITKA_OPRAVY_v3.15.md), [mapa ikon v4.8](mapa_ikon_v4.8.md), [mapa klávesových zkratek v1.2](mapa_klavesovych_zkratek_v1.2.md)). Vytvoření vodítka pouze tažením, vodorovné z vodorovného a svislé ze svislého pravítka; odstraňování a hover nabídka, per-guide/selected barvy, default jen pro nová vodítka, přichytávání samotných vodítek. V příštím kroku dopracovat volbu jazyka (starší demo Čeština/English není skutečná lokalizace). Produkční Go/Win32 nebyl měněn; předchozí pravidla zůstávají zachována tam, kde nejsou výslovně nahrazena.
+**Aktuální návrh:** **v3.16** ([HTML](rozhrani/cely_vizual_v3.16.html), [aktuální pokyny pro Codex v3.16](rozhrani/UI_JAZYK_VODITKA_v3.16.md), [mapa ikon v4.9](mapa_ikon_v4.9.md), [mapa klávesových zkratek v1.2](mapa_klavesovych_zkratek_v1.2.md)). Záložka **Nastavení → Jazyk** nabízí češtinu/angličtinu jako okamžitý náhled a potvrzení/zrušení změny, bez změny OCR či obsahu PDF. Výběr vodítek a volba pomůcek dočasně otevírají pravý panel a po kliknutí mimo obnoví předchozí nástroj; pravé kliknutí vodítka má jen barvu, zámek a koš. **Tato verze je návrhem HTML, ne produkční Go/Win32 implementací; některé odborné popisy v EN demo ještě nejsou přeloženy.** Předchozí schválené funkce a dokumentace platí, pokud nejsou výslovně nahrazeny.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,7 +18,9 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML v3.15 – vodítka, barvy, mazání, přichytávání](rozhrani/cely_vizual_v3.15.html)** – pracovní prototyp, nikoli hotové funkce PDF.
+7. **[Aktuální HTML v3.16 – jazyk a kontextové ovládání vodítek](rozhrani/cely_vizual_v3.16.html)** – pracovní prototyp, nikoli hotové funkce PDF.
+   - **[Nový dodatek Codex v3.16: jazyk, dočasné Vlastnosti a kontextové menu](rozhrani/UI_JAZYK_VODITKA_v3.16.md)**.
+   - [Předchozí HTML v3.15](rozhrani/cely_vizual_v3.15.html) – interaktivní vodítka, barvy a přichytávání.
    - **[Pokyny pro Codex v3.15](rozhrani/UI_VODITKA_OPRAVY_v3.15.md)** – nové směry pravítek, odstranění konfliktů, další plán jazyka.
    - [Předchozí HTML v3.14](rozhrani/cely_vizual_v3.14.html) – původní interaktivní vodítka.
    - **[Nové pokyny pro Codex v3.14](rozhrani/UI_VODITKA_INTERAKCE_v3.14.md)** – jen interakce, geometrii PDF nepřepisovat.
