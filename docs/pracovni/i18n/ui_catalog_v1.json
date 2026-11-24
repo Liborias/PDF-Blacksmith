@@ -1,0 +1,4712 @@
+{
+  "schema": "pdf-blacksmith.localization.catalog.v1",
+  "version": "1.0",
+  "updated": "2026-11-24",
+  "supported_locales": [
+    "cs-CZ",
+    "en-US"
+  ],
+  "source": "Extracted from working HTML v3.18; integration source for future localization",
+  "fallback_locale": "cs-CZ",
+  "integration_notes": "IDs are derived from Czech source strings for initial migration. Once semantic IDs are adopted, DO NOT regenerate IDs on translation changes. OCR language, PDF contents, bookmarks and filenames are independent.",
+  "entries": {
+    "ui.soubor.5ee136c77a": {
+      "cs": "Soubor",
+      "en": "File",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.77f1559aa4": {
+      "cs": "Zobrazení",
+      "en": "View",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nastroje.a096f53723": {
+      "cs": "Nástroje",
+      "en": "Tools",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.upravy.07ca5172db": {
+      "cs": "Úpravy",
+      "en": "Edit",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.formulare.a578cb13d5": {
+      "cs": "Formuláře",
+      "en": "Forms",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pomoc.fc144bacfd": {
+      "cs": "Pomoc",
+      "en": "Help",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nastaveni.e01356eccc": {
+      "cs": "Nastavení",
+      "en": "Settings",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nastaveni.pdf.blacksmith.4868b702d1": {
+      "cs": "Nastavení PDF Blacksmith",
+      "en": "PDF Blacksmith Settings",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jazyk.011a5d575a": {
+      "cs": "Jazyk",
+      "en": "Language",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jazyk.rozhrani.edcf28a483": {
+      "cs": "Jazyk rozhraní",
+      "en": "Interface language",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obecne.581b24d753": {
+      "cs": "Obecné",
+      "en": "General",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozhrani.d282a02b00": {
+      "cs": "Rozhraní",
+      "en": "Interface",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.pdf.c47a1b0e5a": {
+      "cs": "Zobrazení PDF",
+      "en": "PDF display",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.klavesove.zkratky.40cd311f0e": {
+      "cs": "Klávesové zkratky",
+      "en": "Keyboard shortcuts",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.soubory.9d31241663": {
+      "cs": "Soubory",
+      "en": "Files",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.text.a.ocr.acb3f3cbd9": {
+      "cs": "Text a OCR",
+      "en": "Text and OCR",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barvy.a.tisk.89c51827fb": {
+      "cs": "Barvy a tisk",
+      "en": "Colors and printing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.o.aplikaci.fa2b18b1b4": {
+      "cs": "O aplikaci",
+      "en": "About",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cestina.f09dc57494": {
+      "cs": "Čeština",
+      "en": "Czech",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.anglictina.e1b2b02e38": {
+      "cs": "Angličtina",
+      "en": "English",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cestina.anglictina.047e63b32a": {
+      "cs": "Čeština + angličtina",
+      "en": "Czech + English",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.jazyk.ovladacich.prvku.apl.f2bdf77e5a": {
+      "cs": "Vyber jazyk ovládacích prvků aplikace. Změna se okamžitě zobrazí jako náhled; potvrď ji tlačítkem Použít nebo OK.",
+      "en": "Choose the language of application controls. Changes are previewed immediately; confirm with Apply or OK.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jazyk.ocr.se.nastavuje.samostatn.9ac8f73faa": {
+      "cs": "Jazyk OCR se nastavuje samostatně v části Text a OCR.",
+      "en": "OCR recognition language is configured separately under Text and OCR.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.preklad.se.tyka.rozhrani.text.uv.aab897cad0": {
+      "cs": "Překlad se týká rozhraní. Text uvnitř otevřeného PDF, názvy souborů ani samotný obsah dokumentů se nepřekládají. Rozšířené odborné popisy jsou v demonstrační verzi postupně doplňovány.",
+      "en": "Only the interface is translated. Text within open PDFs, file names and document contents are never translated. Some advanced descriptions remain in Czech in this demo.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tmavy.38d04407f4": {
+      "cs": "Tmavý",
+      "en": "Dark",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.svetly.e0d08090fa": {
+      "cs": "Světlý",
+      "en": "Light",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.spusteni.obnovit.pracovni.za.65b5713950": {
+      "cs": "Při spuštění obnovit pracovní záložky",
+      "en": "Restore document tabs on startup",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vzhled.aplikace.5edb10cd99": {
+      "cs": "Vzhled aplikace",
+      "en": "Application theme",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.velikost.ikon.f8848877b4": {
+      "cs": "Velikost ikon",
+      "en": "Icon size",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazovat.popisky.ikon.pri.naje.52646f84fa": {
+      "cs": "Zobrazovat popisky ikon při najetí",
+      "en": "Show icon tooltips on hover",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pamatovat.rozlozeni.panelu.7d06274f86": {
+      "cs": "Pamatovat rozložení panelů",
+      "en": "Remember panel layout",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.zobrazeni.054deaa610": {
+      "cs": "Výchozí zobrazení",
+      "en": "Default view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhlazovani.textu.1690099aa6": {
+      "cs": "Vyhlazování textu",
+      "en": "Text anti-aliasing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhlazovani.vektorovych.car.654d680111": {
+      "cs": "Vyhlazování vektorových čar",
+      "en": "Vector anti-aliasing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prizpusobit.strance.1656c87fd6": {
+      "cs": "Přizpůsobit stránce",
+      "en": "Fit page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prizpusobit.sirce.8bca0aacbe": {
+      "cs": "Přizpůsobit šířce",
+      "en": "Fit width",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prizpusobit.stranku.5e92b4382f": {
+      "cs": "Přizpůsobit stránku",
+      "en": "Fit page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prizpusobit.sirku.8fca2e9f0c": {
+      "cs": "Přizpůsobit šířku",
+      "en": "Fit width",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.priblizeni.e4a6a87be9": {
+      "cs": "Přiblížení",
+      "en": "Zoom",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.1.1.100.196289a6e9": {
+      "cs": "Zobrazení 1:1 (100 %)",
+      "en": "Actual size (100%)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cela.obrazovka.c44c09e551": {
+      "cs": "Celá obrazovka",
+      "en": "Full screen",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.po.strankach.ae9475b722": {
+      "cs": "Po stránkách",
+      "en": "Page by page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.souvisle.zobrazeni.00efb2eec0": {
+      "cs": "Souvislé zobrazení",
+      "en": "Continuous view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.souvisly.dokument.f2c0205ee2": {
+      "cs": "Souvislý dokument",
+      "en": "Continuous document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prizpusobeni.6b901cc9e8": {
+      "cs": "Přizpůsobení",
+      "en": "Fit options",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozestup.stranek.3d72126135": {
+      "cs": "Rozestup stránek",
+      "en": "Page spacing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.maly.20f7b17104": {
+      "cs": "Malý",
+      "en": "Small",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stredni.2db03dabb5": {
+      "cs": "Střední",
+      "en": "Medium",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.velky.462d6d10ba": {
+      "cs": "Velký",
+      "en": "Large",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastnosti.43d8ff25d4": {
+      "cs": "Vlastnosti",
+      "en": "Properties",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nastroj.bd9bb09643": {
+      "cs": "Nástroj",
+      "en": "Tool",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahledy.36a951f2d3": {
+      "cs": "Náhledy",
+      "en": "Thumbnails",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahledy.stranek.b556f7214a": {
+      "cs": "Náhledy stránek",
+      "en": "Page thumbnails",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.historie.4eaa806899": {
+      "cs": "Historie",
+      "en": "History",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.historie.uprav.fe4cc81576": {
+      "cs": "Historie úprav",
+      "en": "Edit history",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.poznamky.6efa7ff430": {
+      "cs": "Poznámky",
+      "en": "Notes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zalozky.d5988f16cb": {
+      "cs": "Záložky",
+      "en": "Bookmarks",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.poradi.stranek.98753ea603": {
+      "cs": "Pořadí stránek",
+      "en": "Page order",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.digitalni.podpis.5e66a36014": {
+      "cs": "Digitální podpis",
+      "en": "Digital signature",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozdelit.pdf.5dc7e235f5": {
+      "cs": "Rozdělit PDF",
+      "en": "Split PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sloucit.pdf.1dc5ce3c61": {
+      "cs": "Sloučit PDF",
+      "en": "Merge PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.najit.v.pdf.8069740ad4": {
+      "cs": "Najít v PDF",
+      "en": "Find in PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.objekty.0c404098a0": {
+      "cs": "Objekty",
+      "en": "Objects",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.text.71988c4d8e": {
+      "cs": "Text",
+      "en": "Text",
+      "context": "interface",
+      "status": "review"
+    },
+    "ui.separace.7468b3564b": {
+      "cs": "Separace",
+      "en": "Separations",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vysledky.83e98906cc": {
+      "cs": "Výsledky",
+      "en": "Results",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vysledky.vyhledavani.c8c29403e5": {
+      "cs": "Výsledky vyhledávání",
+      "en": "Search results",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktivni.hledani.21e7fcb99d": {
+      "cs": "Aktivní hledání",
+      "en": "Active search",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zadejte.hledany.vyraz.ac8cfc6638": {
+      "cs": "Zadejte hledaný výraz",
+      "en": "Enter a search term",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zadejte.hledany.vyraz.6b77337aa6": {
+      "cs": "Zadejte hledaný výraz…",
+      "en": "Enter a search term…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bez.dotazu.9064f7548c": {
+      "cs": "Bez dotazu",
+      "en": "No query",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhledat.v.pdf.6e2cc0fd36": {
+      "cs": "Vyhledat v PDF",
+      "en": "Search PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.dokumentu.c4f5538b31": {
+      "cs": "Zobrazení dokumentu",
+      "en": "Document view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prikazy.souboru.34fc0f4784": {
+      "cs": "Příkazy souboru",
+      "en": "File commands",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.2d4629ebdf": {
+      "cs": "Výběr",
+      "en": "Selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.objektu.bde41a0443": {
+      "cs": "Výběr objektů",
+      "en": "Object selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.oblasti.ocr.5b8ece5924": {
+      "cs": "Výběr oblasti OCR",
+      "en": "OCR area selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyberove.nastroje.2a013d9d0c": {
+      "cs": "Výběrové nástroje",
+      "en": "Selection tools",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obdelnik.e80dea7331": {
+      "cs": "Obdélník",
+      "en": "Rectangle",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ramecek.7b74d94588": {
+      "cs": "Rámeček",
+      "en": "Marquee",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.laso.42715e90ef": {
+      "cs": "Laso",
+      "en": "Lasso",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kurzor.67fed553ad": {
+      "cs": "Kurzor",
+      "en": "Pointer",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textovy.kurzor.af6a3c1f36": {
+      "cs": "Textový kurzor",
+      "en": "Text cursor",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.i.kurzor.3cdbd43652": {
+      "cs": "I-kurzor",
+      "en": "Text cursor",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sipka.53d5843baf": {
+      "cs": "Šipka",
+      "en": "Pointer",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zakladni.vyber.64e077b0f7": {
+      "cs": "Základní výběr",
+      "en": "Basic selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozsireny.vyber.f38dc26478": {
+      "cs": "Rozšířený výběr",
+      "en": "Extended selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozsireny.vyber.klikani.a.klaves.e308f40db3": {
+      "cs": "Rozšířený výběr (klikání a klávesy)",
+      "en": "Extended selection (mouse and keyboard)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstavcovy.text.4ff68be02c": {
+      "cs": "Odstavcový text",
+      "en": "Paragraph text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozit.objekt.908a234c4b": {
+      "cs": "Vložit objekt",
+      "en": "Insert object",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozit.text.731daf7b73": {
+      "cs": "Vložit text",
+      "en": "Insert text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevody.vybraneho.obsahu.8afc914395": {
+      "cs": "Převody vybraného obsahu",
+      "en": "Convert selected content",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevest.na.krivky.e3cfc75ee9": {
+      "cs": "Převést na křivky",
+      "en": "Convert to outlines",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rekonstruovat.text.701aa1ec0b": {
+      "cs": "Rekonstruovat text",
+      "en": "Reconstruct text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rekonstrukce.editovatelneho.text.cd1de78747": {
+      "cs": "Rekonstrukce editovatelného textu",
+      "en": "Editable text reconstruction",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozpoznavani.textu.dcebf1a301": {
+      "cs": "Rozpoznávání textu",
+      "en": "Text recognition",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozpoznat.text.48f1a7abf7": {
+      "cs": "Rozpoznat text",
+      "en": "Recognize text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rezim.ocr.382a5d6b69": {
+      "cs": "Režim OCR",
+      "en": "OCR mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jazyk.ocr.885032ca84": {
+      "cs": "Jazyk OCR",
+      "en": "OCR language",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jazyk.rozpoznavani.bd28cb10ed": {
+      "cs": "Jazyk rozpoznávání",
+      "en": "Recognition language",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahled.tiskovych.desek.8beed340b9": {
+      "cs": "Náhled tiskových desek",
+      "en": "Separation plate preview",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.simulacni.profil.66e94af922": {
+      "cs": "Simulační profil",
+      "en": "Simulation profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazovany.rezim.7374e14340": {
+      "cs": "Zobrazovaný režim",
+      "en": "Display mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.desky.2e69c02aa7": {
+      "cs": "Všechny desky",
+      "en": "All plates",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barevne.desky.14414b4b9c": {
+      "cs": "Barevné desky",
+      "en": "Color plates",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stupne.sedi.1de2ef7854": {
+      "cs": "Stupně šedi",
+      "en": "Grayscale",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prime.barvy.ukazka.0c34d17d48": {
+      "cs": "Přímé barvy (ukázka)",
+      "en": "Spot colors (demo)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pokryti.a.kontrola.39b5b53afd": {
+      "cs": "Pokrytí a kontrola",
+      "en": "Coverage and inspection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vystup.a.konverze.6713040ef4": {
+      "cs": "Výstup a konverze",
+      "en": "Output and conversion",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevod.na.stupne.sedi.725cfef33a": {
+      "cs": "Převod na stupně šedi",
+      "en": "Convert to grayscale",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevod.pouze.do.k.0b0d97c89c": {
+      "cs": "Převod pouze do K",
+      "en": "Convert to K only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sprava.icc.profilu.47d9647f94": {
+      "cs": "Správa ICC profilů",
+      "en": "ICC profile management",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.priradit.profil.e9af2c9c7a": {
+      "cs": "Přiřadit profil",
+      "en": "Assign profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevest.do.profilu.7cfee79321": {
+      "cs": "Převést do profilu",
+      "en": "Convert to profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.profilu.d0b87d1f9f": {
+      "cs": "Výběr profilu",
+      "en": "Select profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovat.puvodni.profil.f9f41de8f8": {
+      "cs": "Zachovat původní profil",
+      "en": "Preserve original profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozit.strany.4bbc80739d": {
+      "cs": "Vložit strany",
+      "en": "Insert pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.priprava.vlozeni.stranek.fd028539a9": {
+      "cs": "Příprava vložení stránek",
+      "en": "Prepare page insertion",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.a651bed120": {
+      "cs": "Otevřít",
+      "en": "Open",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.pdf.e53096d743": {
+      "cs": "Otevřít PDF",
+      "en": "Open PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevreni.dokumentu.24154ac956": {
+      "cs": "Otevření dokumentu",
+      "en": "Open document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nedavne.dokumenty.f1d9be5c98": {
+      "cs": "Nedávné dokumenty",
+      "en": "Recent documents",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pripnute.5dab6de28c": {
+      "cs": "Připnuté",
+      "en": "Pinned",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.78a5fe4f6b": {
+      "cs": "Uložit",
+      "en": "Save",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.jako.540ff00830": {
+      "cs": "Uložit jako",
+      "en": "Save as",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.f2694aebcf": {
+      "cs": "Uložit…",
+      "en": "Save…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.presto.ukazka.a2c0c4ff51": {
+      "cs": "Uložit přesto (ukázka)",
+      "en": "Save anyway (demo)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.exportovat.e31e45c3e7": {
+      "cs": "Exportovat",
+      "en": "Export",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.importovat.c9303a3d9b": {
+      "cs": "Importovat",
+      "en": "Import",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tisknout.fea6008220": {
+      "cs": "Tisknout",
+      "en": "Print",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyplnit.896e282bea": {
+      "cs": "Vyplnit",
+      "en": "Fill",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zpet.3e220c7830": {
+      "cs": "Zpět",
+      "en": "Undo",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.znovu.ef86d3752e": {
+      "cs": "Znovu",
+      "en": "Redo",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zrusit.6c77d8a4b0": {
+      "cs": "Zrušit",
+      "en": "Cancel",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ok.565339bc4d": {
+      "cs": "OK",
+      "en": "OK",
+      "context": "interface",
+      "status": "review"
+    },
+    "ui.pouzit.190439bbc3": {
+      "cs": "Použít",
+      "en": "Apply",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouzit.zmenu.795e1a62d5": {
+      "cs": "Použít změnu",
+      "en": "Apply changes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstranit.7904e49271": {
+      "cs": "Odstranit",
+      "en": "Delete",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstranit.vsechna.ec4162cb1d": {
+      "cs": "Odstranit všechna",
+      "en": "Remove all",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstranit.sipky.0bf933889f": {
+      "cs": "Odstranit šipky",
+      "en": "Remove arrows",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.smazat.voditko.9af96e1638": {
+      "cs": "Smazat vodítko",
+      "en": "Delete guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.voditka.34219a4a1d": {
+      "cs": "Barva vodítka",
+      "en": "Guide color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zamknout.voditko.15d1866047": {
+      "cs": "Zamknout vodítko",
+      "en": "Lock guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odemknout.voditko.4ef4cd09a1": {
+      "cs": "Odemknout vodítko",
+      "en": "Unlock guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pevna.voditka.a09360c8a6": {
+      "cs": "Pevná vodítka",
+      "en": "Fixed guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.pomucek.91fdcb5e66": {
+      "cs": "Zobrazení pomůcek",
+      "en": "Layout aids visibility",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pomucky.rozvrzeni.6ad91743f5": {
+      "cs": "Pomůcky rozvržení",
+      "en": "Layout aids",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.uzamknout.voditka.a493524767": {
+      "cs": "Uzamknout vodítka",
+      "en": "Lock guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.pravitka.347191afbc": {
+      "cs": "Zobrazit pravítka",
+      "en": "Show rulers",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.pevna.voditka.75b7ca3b9e": {
+      "cs": "Zobrazit pevná vodítka",
+      "en": "Show fixed guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.voditka.a723507751": {
+      "cs": "Zobrazit vodítka",
+      "en": "Show guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.mrizku.8cfde93724": {
+      "cs": "Zobrazit mřížku",
+      "en": "Show grid",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zapnout.prichytavani.fe110549c2": {
+      "cs": "Zapnout přichytávání",
+      "en": "Enable snapping",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytavani.zapnuto.8599053b83": {
+      "cs": "Přichytávání zapnuto",
+      "en": "Snapping enabled",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytavat.k.5ddbf35bd4": {
+      "cs": "Přichytávat k:",
+      "en": "Snap to:",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.mrizka.862e4fe064": {
+      "cs": "Mřížka",
+      "en": "Grid",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytavani.aa99b2f03f": {
+      "cs": "Přichytávání",
+      "en": "Snapping",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.inteligentni.prichytavani.87099f725f": {
+      "cs": "Inteligentní přichytávání",
+      "en": "Smart snapping",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.novych.voditek.2ab7a7e883": {
+      "cs": "Barva NOVÝCH vodítek",
+      "en": "Color for NEW guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.oznacenych.4fbc00935b": {
+      "cs": "Barva označených",
+      "en": "Selected guides color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.docasnych.car.5a0f2229a4": {
+      "cs": "Barva dočasných čar",
+      "en": "Temporary guide color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.mrizky.8e8dca1df0": {
+      "cs": "Barva mřížky",
+      "en": "Grid color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kryti.f215ca3afc": {
+      "cs": "Krytí (%)",
+      "en": "Opacity (%)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kryti.mrizky.55a10945ab": {
+      "cs": "Krytí mřížky (%)",
+      "en": "Grid opacity (%)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pocatek.x.mm.93f1b81c02": {
+      "cs": "Počátek X (mm)",
+      "en": "Origin X (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pocatek.y.mm.6333e45ccd": {
+      "cs": "Počátek Y (mm)",
+      "en": "Origin Y (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.svisle.x.mm.10c360749b": {
+      "cs": "Svislé X (mm)",
+      "en": "Vertical X (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vodorovne.y.mm.0d4efa206b": {
+      "cs": "Vodorovné Y (mm)",
+      "en": "Horizontal Y (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.roztec.hlavnich.car.mm.c458fc0419": {
+      "cs": "Rozteč hlavních čar (mm)",
+      "en": "Main grid spacing (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jemne.deleni.958f97dc2f": {
+      "cs": "Jemné dělení",
+      "en": "Subdivisions",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tolerance.px.1e7310e2ab": {
+      "cs": "Tolerance (px)",
+      "en": "Tolerance (px)",
+      "context": "interface",
+      "status": "review"
+    },
+    "ui.typ.cary.73fd0c27b2": {
+      "cs": "Typ čáry",
+      "en": "Line style",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.carkovana.7f2bc87d0d": {
+      "cs": "Čárkovaná",
+      "en": "Dashed",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.teckovana.2f53b483aa": {
+      "cs": "Tečkovaná",
+      "en": "Dotted",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vodici.linky.12392036de": {
+      "cs": "Vodicí linky",
+      "en": "Guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ucari.textu.f27db6f032": {
+      "cs": "Účaří textu",
+      "en": "Text baselines",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.okraje.objektu.00f845aaf9": {
+      "cs": "Okraje objektů",
+      "en": "Object edges",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stredy.objektu.f46041e556": {
+      "cs": "Středy objektů",
+      "en": "Object centers",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stredy.stran.objektu.a5ea5a5c1d": {
+      "cs": "Středy stran objektů",
+      "en": "Object side midpoints",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.uzly.krivek.c83d4fcace": {
+      "cs": "Uzly křivek",
+      "en": "Curve nodes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.okraje.a.stred.stranky.65232283de": {
+      "cs": "Okraje a střed stránky",
+      "en": "Page edges and center",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rovnomerne.rozestupy.3956ca40e9": {
+      "cs": "Rovnoměrné rozestupy",
+      "en": "Equal spacing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.svisle.b79916727f": {
+      "cs": "+ Svislé",
+      "en": "+ Vertical",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vodorovne.7ec6b05a72": {
+      "cs": "+ Vodorovné",
+      "en": "+ Horizontal",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.oznacenych.0.d2f388dc5e": {
+      "cs": "Barva označených (0)",
+      "en": "Selected guides color (0)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vodorovne.c4c8f2f167": {
+      "cs": "Vodorovné",
+      "en": "Horizontal",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.svisle.88380ca05b": {
+      "cs": "Svislé",
+      "en": "Vertical",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.svisle.voditko.8f8f44a36c": {
+      "cs": "Svislé vodítko",
+      "en": "Vertical guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vodorovne.voditko.6e34788d55": {
+      "cs": "Vodorovné vodítko",
+      "en": "Horizontal guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.novych.voditek.neni.barvou.2ff60bf6c0": {
+      "cs": "Barva nových vodítek není barvou již existujících. Vyber Ctrl+klik nebo zaškrtávacími políčky více čar.",
+      "en": "The color of newly created guides does not change existing guides. Ctrl+click or use checkboxes to select more guides.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.z.pravitka.vytahni.voditko.na.st.ca717e803f": {
+      "cs": "Z pravítka vytáhni vodítko na stránku. Čáru přetáhni pro posunutí; vybrané vodítko odstraň klávesou Delete. Uzamknuté vodítko nelze posunout.",
+      "en": "Drag a guide from a ruler onto the page. Drag the line to move it; use Delete to remove the selected guide. Locked guides cannot be moved.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.voditka.pridas.tazenim.z.pravitk.c832e5b61c": {
+      "cs": "Vodítka přidáš tažením z pravítka nebo tlačítky nahoře.",
+      "en": "Drag guides from rulers or use the buttons above.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.docasne.vinove.linky.se.zobrazuj.0655fcbf94": {
+      "cs": "Dočasné vínové linky se zobrazují pouze při manipulaci. Vše je zatím náhled, PDF se nemění.",
+      "en": "Temporary burgundy lines appear only during manipulation. This is a preview; the PDF remains unchanged.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jine.voditko.c31a0f77a4": {
+      "cs": "Jiné vodítko",
+      "en": "Another guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.okraj.stranky.ee1682c17e": {
+      "cs": "Okraj stránky",
+      "en": "Page edge",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.hrana.objektu.3c22f1f5ee": {
+      "cs": "Hrana objektu",
+      "en": "Object edge",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stred.objektu.90e6de2765": {
+      "cs": "Střed objektu",
+      "en": "Object center",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytit.0c5f74e269": {
+      "cs": "Přichytit:",
+      "en": "Snap to:",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nova.17347ee911": {
+      "cs": "Nová",
+      "en": "New",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nova.poznamka.55157e6d52": {
+      "cs": "Nová poznámka",
+      "en": "New note",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pridat.poznamku.c83a323340": {
+      "cs": "Přidat poznámku",
+      "en": "Add note",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prejit.na.pole.6105ec4207": {
+      "cs": "Přejít na pole",
+      "en": "Go to field",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prejit.na.problem.dd74eea27d": {
+      "cs": "Přejít na problém",
+      "en": "Go to problem",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prejit.koleckem.na.dalsi.stranku.05de3c897f": {
+      "cs": "Přejít kolečkem na další stránku na okraji",
+      "en": "Scroll to the next page at the edge",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pamatovat.posledni.stranku.da8fdb61ec": {
+      "cs": "Pamatovat poslední stránku",
+      "en": "Remember last page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.otevreni.obnovit.posledni.zo.e32513d62b": {
+      "cs": "Při otevření obnovit poslední zobrazení",
+      "en": "Restore last view on opening",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prubezne.nacitat.okolni.stranky.0d2ebfe3cd": {
+      "cs": "Průběžně načítat okolní stránky",
+      "en": "Progressively load nearby pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.zpusob.zobrazeni.d69edf5ad5": {
+      "cs": "Výchozí způsob zobrazení",
+      "en": "Default view mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.stav.strana.1.d6b4fada69": {
+      "cs": "Výchozí stav · strana 1",
+      "en": "Initial state · page 1",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.na.stred.cb28c201ca": {
+      "cs": "Na střed",
+      "en": "Center",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.k.levemu.okraji.326190e8d2": {
+      "cs": "K levému okraji",
+      "en": "Left edge",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zarovnani.58a1d76a23": {
+      "cs": "Zarovnání",
+      "en": "Alignment",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.formular.neni.dokoncen.4ab22d3756": {
+      "cs": "Formulář není dokončen",
+      "en": "Form is incomplete",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bez.zmen.249bf45ea6": {
+      "cs": "Bez změn",
+      "en": "No changes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.centralni.historie.skutecnych.up.6bdc61d4e8": {
+      "cs": "Centrální historie skutečných úprav podle SEL-03; samotná navigace a hover historii nemění.",
+      "en": "History tracks actual edits; navigation and hover do not add history steps.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zvol.prikaz.a.klikni.na.217baaab6c": {
+      "cs": "Zvol příkaz a klikni na",
+      "en": "Choose a command and click",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.zkratka.73624c1378": {
+      "cs": "Vlastní zkratka",
+      "en": "Custom shortcut",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prikaz.cba5cb40d9": {
+      "cs": "Příkaz",
+      "en": "Command",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zkratka.2b6ce015d7": {
+      "cs": "Zkratka",
+      "en": "Shortcut",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.globalni.eb389d2231": {
+      "cs": "Globální",
+      "en": "Global",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.platno.5b9406a98c": {
+      "cs": "Plátno",
+      "en": "Canvas",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.navrh.platno.6031d3feda": {
+      "cs": "Návrh · Plátno",
+      "en": "Planned · Canvas",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stiskni.klavesy.3b520afa3d": {
+      "cs": "Stiskni klávesy…",
+      "en": "Press keys…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.rezimu.e8df32db51": {
+      "cs": "Zobrazení režimu",
+      "en": "View mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.puvodni.predloha.05fde8f0c5": {
+      "cs": "Původní předloha",
+      "en": "Original source",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podoba.vysledneho.textu.33ad7c853a": {
+      "cs": "Podoba výsledného textu",
+      "en": "Reconstructed text appearance",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prekryti.7add0e3651": {
+      "cs": "Překrytí",
+      "en": "Overlay",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vedle.sebe.727b60c855": {
+      "cs": "Vedle sebe",
+      "en": "Side by side",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.font.vyber.z.kandidatu.0558a11cc6": {
+      "cs": "Font – výběr z kandidátů",
+      "en": "Font – select candidates",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.opravit.rozpoznany.text.6c8ce267b4": {
+      "cs": "Opravit rozpoznaný text",
+      "en": "Correct recognized text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.posun.ucari.4d93d53e8b": {
+      "cs": "Posun účaří",
+      "en": "Baseline offset",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.proklad.4e999ca707": {
+      "cs": "Proklad",
+      "en": "Tracking",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.radkovani.240bc87244": {
+      "cs": "Řádkování",
+      "en": "Line spacing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.velikost.1e43115716": {
+      "cs": "Velikost",
+      "en": "Size",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sirka.25323aa8d2": {
+      "cs": "Šířka",
+      "en": "Width",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kandidatni.pisma.98c78e5586": {
+      "cs": "Kandidátní písma",
+      "en": "Font candidates",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.simulovany.vysledek.28d0b43ab8": {
+      "cs": "Simulovaný výsledek",
+      "en": "Simulated result",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kontrola.prekrytim.6df11bafbf": {
+      "cs": "Kontrola překrytím",
+      "en": "Overlay comparison",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozeni.vysledku.b289a1548a": {
+      "cs": "Uložení výsledku",
+      "en": "Save result",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zopakovat.rozpoznani.ukazka.10f5b08203": {
+      "cs": "Zopakovat rozpoznání (ukázka)",
+      "en": "Re-run recognition (demo)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.potvrdit.navrh.ukazka.0fda124f84": {
+      "cs": "Potvrdit návrh (ukázka)",
+      "en": "Confirm preview (demo)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vektorove.krivky.9e250b6c07": {
+      "cs": "Vektorové křivky",
+      "en": "Vector outlines",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rastrovy.obrazek.36cf151f8f": {
+      "cs": "Rastrový obrázek",
+      "en": "Raster image",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.krivky.rastrovy.obsah.645d8bce9f": {
+      "cs": "Křivky + rastrový obsah",
+      "en": "Outlines + raster",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahradit.vybrany.vektorovy.obsah.35d37fd0a2": {
+      "cs": "Nahradit vybraný vektorový obsah",
+      "en": "Replace selected vector content",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.rekonstrukci.ponechat.origin.582cd84443": {
+      "cs": "Při rekonstrukci ponechat originál do potvrzení",
+      "en": "Keep original until reconstruction is approved",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.upravy.se.promitaji.do.nahledu.f9cfe8695d": {
+      "cs": "Úpravy se promítají do náhledu",
+      "en": "Changes update the preview",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vektory.ea577f84a2": {
+      "cs": "Vektory",
+      "en": "Vectors",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstavec.ea49fdff2b": {
+      "cs": "Odstavec",
+      "en": "Paragraph",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zvyraznit.vyplnitelna.pole.dfd92ce784": {
+      "cs": "Zvýraznit vyplnitelná pole",
+      "en": "Highlight fillable fields",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dalsi.vysledek.hledani.ed24b781bd": {
+      "cs": "Další výsledek hledání",
+      "en": "Next search result",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predchozi.vysledek.hledani.9c3603adf5": {
+      "cs": "Předchozí výsledek hledání",
+      "en": "Previous search result",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.nastroje.c3a4e9316f": {
+      "cs": "Zobrazení nástroje",
+      "en": "Tool view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahled.68c447bc27": {
+      "cs": "Náhled",
+      "en": "Preview",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.8fb522043b": {
+      "cs": "Vybrat",
+      "en": "Select",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skupina.31c9d0ef47": {
+      "cs": "Skupina",
+      "en": "Group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.datum.9135882d32": {
+      "cs": "Datum",
+      "en": "Date",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktualni.strana.e5bc8052eb": {
+      "cs": "Aktuální strana",
+      "en": "Current page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktualni.dokument.9a90be557d": {
+      "cs": "Aktuální dokument",
+      "en": "Current document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.strany.8e2330fc34": {
+      "cs": "Všechny strany",
+      "en": "All pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrany.rozsah.60a8a4f0e6": {
+      "cs": "Vybraný rozsah",
+      "en": "Selected range",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.vyber.422b1f1158": {
+      "cs": "Vlastní výběr",
+      "en": "Custom selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrane.nahledy.e8b71a8bf7": {
+      "cs": "Vybrané náhledy",
+      "en": "Selected thumbnails",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozsah.363a995374": {
+      "cs": "Rozsah",
+      "en": "Range",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.doplnit.cbc81a1e49": {
+      "cs": "Doplnit",
+      "en": "Add",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podrobnosti.a.zabezpeceni.8ec124e213": {
+      "cs": "Podrobnosti a zabezpečení",
+      "en": "Details and security",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zabezpeceni.28d745f855": {
+      "cs": "Zabezpečení",
+      "en": "Security",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barevne.prostory.icc.d16e1c0e5e": {
+      "cs": "Barevné prostory / ICC",
+      "en": "Color spaces / ICC",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.certifikat.20efa89ab3": {
+      "cs": "Certifikát",
+      "en": "Certificate",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.certifikaty.a.duvera.e673d916e9": {
+      "cs": "Certifikáty a důvěra",
+      "en": "Certificates and trust",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.overit.podpisy.23bad6f728": {
+      "cs": "Ověřit podpisy",
+      "en": "Verify signatures",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podepsat.dokument.bb07a5d6ed": {
+      "cs": "Podepsat dokument",
+      "en": "Sign document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pracovni.poznamky.5688827926": {
+      "cs": "Pracovní poznámky",
+      "en": "Work notes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kontrola.korektur.fdb02acc01": {
+      "cs": "Kontrola korektur",
+      "en": "Proofreading",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pisma.3a17199bf0": {
+      "cs": "Písma",
+      "en": "Fonts",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predloha.2102de2255": {
+      "cs": "Předloha",
+      "en": "Source",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.informace.efa539f4b7": {
+      "cs": "Zobrazit informace",
+      "en": "Show information",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.kopii.4bb6de4087": {
+      "cs": "Uložit kopii",
+      "en": "Save copy",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zarovnat.vlevo.49f20a229f": {
+      "cs": "Zarovnat vlevo",
+      "en": "Align left",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zarovnat.vpravo.564917d6d5": {
+      "cs": "Zarovnat vpravo",
+      "en": "Align right",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zarovnat.na.stred.51aa316a97": {
+      "cs": "Zarovnat na střed",
+      "en": "Center align",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.duplikovat.3ae147bed5": {
+      "cs": "Duplikovat",
+      "en": "Duplicate",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozit.d24832d822": {
+      "cs": "Vložit",
+      "en": "Paste",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kopirovat.89c0199fee": {
+      "cs": "Kopírovat",
+      "en": "Copy",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyjmout.19e5fbdb1c": {
+      "cs": "Vyjmout",
+      "en": "Cut",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.seskupit.d010aa87b1": {
+      "cs": "Seskupit",
+      "en": "Group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozdelit.d2a6f4f94f": {
+      "cs": "Rozdělit",
+      "en": "Ungroup",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otocit.163e1f0d62": {
+      "cs": "Otočit",
+      "en": "Rotate",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nazev.dokumentu.5c7c5a5d91": {
+      "cs": "Název dokumentu",
+      "en": "Document name",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.autor.metadata.05617782d4": {
+      "cs": "Autor (metadata)",
+      "en": "Author (metadata)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.priblizit.d5195d8843": {
+      "cs": "Přiblížit",
+      "en": "Zoom in",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.oddalit.2ca97714a5": {
+      "cs": "Oddálit",
+      "en": "Zoom out",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.automaticka.obnova.autorecover.a88e5c38da": {
+      "cs": "Automatická obnova (AutoRecover)",
+      "en": "Automatic recovery (AutoRecover)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zapnout.automatickou.obnovu.rozp.00934fbf74": {
+      "cs": "Zapnout automatickou obnovu rozpracované práce",
+      "en": "Enable automatic recovery of unsaved work",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.po.necinnosti.ed802f4985": {
+      "cs": "Po nečinnosti",
+      "en": "After inactivity",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nejpozdeji.behem.souvisle.prace.7a7403167a": {
+      "cs": "Nejpozději během souvislé práce",
+      "en": "At latest during continuous work",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.uchovavat.poslednich.verzi.42407ba4b7": {
+      "cs": "Uchovávat posledních verzí",
+      "en": "Keep latest versions",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.uspesne.ulozenou.kopii.v.8ede559430": {
+      "cs": "Otevřít úspěšně uloženou kopii ve stejné záložce",
+      "en": "Open saved copy in the same tab",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.jazyk.ocr.5f3e3d5087": {
+      "cs": "Výchozí jazyk OCR",
+      "en": "Default OCR language",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.prevodu.pokud.mozno.zachovat.36a8da35a6": {
+      "cs": "Při převodu pokud možno zachovat písma",
+      "en": "Preserve fonts during conversion when possible",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zakladni.profil.nahledu.c9aff79442": {
+      "cs": "Základní profil náhledu",
+      "en": "Default proofing profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.bezne.uprave.zachovat.puvodn.9e63cb75f9": {
+      "cs": "Při běžné úpravě zachovat původní barevný prostor",
+      "en": "Preserve the original color space during ordinary edits",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.informace.o.skutecnem.vydani.bui.130df539db": {
+      "cs": "Informace o skutečném vydání, build identifikátor a licence budou převzaty z aplikace.",
+      "en": "Actual release details, build ID and licenses will be taken from the installed app.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktualni.verze.tohoto.html.proto.72fe0692ae": {
+      "cs": "Aktuální verze tohoto HTML prototypu:",
+      "en": "Current version of this HTML prototype:",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouze.nahled.nastaveni.potvrzeni.4c6eab75d9": {
+      "cs": "Pouze náhled nastavení. Potvrzení se uloží do paměti otevřeného HTML, nikoli do instalované aplikace. V produkčním okně zobrazovat jen funkční volby.",
+      "en": "Settings preview only. Values are stored in the open HTML session, not in the installed app.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukazka.stavu.html.ve.skutecnosti.1d2da7327b": {
+      "cs": "Ukázka stavu. HTML ve skutečnosti obnovovací kopie nevytváří.",
+      "en": "Preview only. This HTML does not create recovery copies.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zadost.o.spolupraci.pdf.fc981e1e87": {
+      "cs": "Žádost_o_spolupráci.pdf",
+      "en": "Žádost_o_spolupráci.pdf",
+      "context": "interface",
+      "status": "review"
+    },
+    "ui.barvy.rozhrani.733a07be19": {
+      "cs": "Barvy rozhraní",
+      "en": "Interface colors",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tema.a.barevny.akcent.jsou.nezav.6b5387c4cf": {
+      "cs": "Téma a barevný akcent jsou nezávislé. Změny se zobrazí jako náhled; Zrušit obnoví předchozí vzhled.",
+      "en": "Theme and accent colors are independent. Changes are previewed; Cancel restores the previous appearance.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rezim.vzhledu.6b3c7e00b3": {
+      "cs": "Režim vzhledu",
+      "en": "Appearance mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vinova.2cccbed079": {
+      "cs": "Vínová",
+      "en": "Burgundy",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.neutralni.seda.568b123513": {
+      "cs": "Neutrální šedá",
+      "en": "Neutral gray",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.modra.c48077eff1": {
+      "cs": "Modrá",
+      "en": "Blue",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zelena.951781996b": {
+      "cs": "Zelená",
+      "en": "Green",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.7d9a55ddf0": {
+      "cs": "Vlastní",
+      "en": "Custom",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.zvyrazneni.625d672a92": {
+      "cs": "Vlastní zvýraznění",
+      "en": "Custom accent",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.barva.panelu.fcbb2bd74e": {
+      "cs": "Vlastní barva panelů",
+      "en": "Custom panel color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozbalit.skupinu.d0903673cc": {
+      "cs": "Rozbalit skupinu",
+      "en": "Expand group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sbalit.skupinu.a1944766d4": {
+      "cs": "Sbalit skupinu",
+      "en": "Collapse group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouzit.barvu.na.skupinu.8bd6a00377": {
+      "cs": "Použít barvu na skupinu",
+      "en": "Apply group color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouzit.barvu.7190356511": {
+      "cs": "Použít barvu",
+      "en": "Apply color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.byla.pouzita.5c6b42a545": {
+      "cs": "Barva byla použita.",
+      "en": "Color applied.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.voditka.byla.pouzita.384a5208ac": {
+      "cs": "Barva vodítka byla použita.",
+      "en": "Guide color applied.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.skupiny.byla.pouzita.6b0a157ac6": {
+      "cs": "Barva skupiny byla použita.",
+      "en": "Group color applied.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ctverec.410ecb62ac": {
+      "cs": "Čtverec",
+      "en": "Square",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.oval.f6f90ef7db": {
+      "cs": "Ovál",
+      "en": "Oval",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kruh.74b14ff22d": {
+      "cs": "Kruh",
+      "en": "Circle",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pomer.stran.724c98bbea": {
+      "cs": "Poměr stran",
+      "en": "Aspect ratio",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.volny.910c3400de": {
+      "cs": "Volný",
+      "en": "Free",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.a.upravy.df788ace1b": {
+      "cs": "Výběr a úpravy",
+      "en": "Selection and editing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.typografie.24bd75c0cb": {
+      "cs": "Typografie",
+      "en": "Typography",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrany.radek.editovatelny.text.763ab2d4ba": {
+      "cs": "Vybraný řádek – editovatelný text",
+      "en": "Selected line – editable text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrany.odstavec.editovatelny.te.6ab4c3400b": {
+      "cs": "Vybraný odstavec – editovatelný text",
+      "en": "Selected paragraph – editable text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.radek.pouze.oznacene.znaky.c95f2ff78b": {
+      "cs": "Řádek · pouze označené znaky",
+      "en": "Line · selected characters only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.uchovat.zdroj.pro.krok.zpet.7c5261770b": {
+      "cs": "Uchovat zdroj pro krok Zpět",
+      "en": "Keep source for Undo",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukazkovy.vyber.v.dokumentu.d5b97b57f9": {
+      "cs": "Ukázkový výběr v dokumentu",
+      "en": "Demo document selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bez.oznaceneho.obsahu.kurzor.210ffcc03f": {
+      "cs": "Bez označeného obsahu (kurzor)",
+      "en": "No selection (cursor)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrany.rozsah.navrh.7d2f7f2447": {
+      "cs": "Vybraný rozsah · návrh",
+      "en": "Selected range · demo",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bez.vyberu.na.strance.lze.vybrat.b5d6d9b275": {
+      "cs": "Bez výběru · na stránce lze vybrat text i grafiku",
+      "en": "Nothing selected · you can select text and graphics on the page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.v.html.vybiras.pouze.prednastave.c18fb4cfac": {
+      "cs": "V HTML vybíráš pouze přednastavený testovací scénář; žádné PDF se nezmění.",
+      "en": "You are choosing a predefined test scenario. The PDF is not modified.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prikazy.nad.vyberem.eb3b75f82e": {
+      "cs": "Příkazy nad výběrem",
+      "en": "Selection actions",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.profil.dokumentu.3c028efbb0": {
+      "cs": "Výchozí profil dokumentu",
+      "en": "Document default profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predloha.je.ilustrace.nebyly.nac.9b5ef95837": {
+      "cs": "Předloha je ilustrace; nebyly načteny skutečné PDF cesty.",
+      "en": "The source is illustrative; no real PDF paths were loaded.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.obdelnikem.stavajici.rezim.7f787272fc": {
+      "cs": "Výběr obdélníkem (stávající režim)",
+      "en": "Rectangle selection (current mode)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rastrovy.obrazek.sipka.0d762e3a6a": {
+      "cs": "Rastrový obrázek – šipka",
+      "en": "Raster image – pointer",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.upravy.obrazku.37854b5427": {
+      "cs": "Úpravy obrázku",
+      "en": "Image editing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.najit.v.pdf.b75578bbb9": {
+      "cs": "Najít v PDF…",
+      "en": "Find in PDF…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.zkratky.odpovidaji.navrh.57cc6d1f9c": {
+      "cs": "Výchozí zkratky odpovídají návrhu; změny se ukládají jen v tomto HTML náhledu.",
+      "en": "Default shortcuts reflect the proposal. Changes only apply to this HTML demo.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrany.soubor.zadny.74261c9e26": {
+      "cs": "Vybraný soubor: žádný",
+      "en": "Selected file: none",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vystupni.soubory.5fda23bc39": {
+      "cs": "Výstupní soubory",
+      "en": "Output files",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vypln.411b397a00": {
+      "cs": "Výplň",
+      "en": "Fill",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cerna.95fcc7e3c2": {
+      "cs": "Černá",
+      "en": "Black",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bila.ff9e69c188": {
+      "cs": "Bílá",
+      "en": "White",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.barva.94ec5925e3": {
+      "cs": "Vlastní barva",
+      "en": "Custom color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukon.b1c1f60719": {
+      "cs": "Úkon",
+      "en": "Action",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zpusob.77cc682dd1": {
+      "cs": "Způsob",
+      "en": "Method",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.velke.d82c7e6f4d": {
+      "cs": "Velké",
+      "en": "Large",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.male.ca185da432": {
+      "cs": "Malé",
+      "en": "Small",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.radek.d81ffeea19": {
+      "cs": "Řádek",
+      "en": "Line",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ucari.7d943351b4": {
+      "cs": "Účaří",
+      "en": "Baseline",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozdeleni.pdf.51a2feb3b5": {
+      "cs": "Rozdělení PDF",
+      "en": "Split PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skupina.poznamek.eea52134db": {
+      "cs": "Skupina poznámek",
+      "en": "Notes group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhledane.vyskyty.7bf2c5f71d": {
+      "cs": "Vyhledané výskyty",
+      "en": "Search matches",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozpoznavani.7947810591": {
+      "cs": "Rozpoznávání",
+      "en": "Recognition",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.oznacit.sipkami.d7b538cb69": {
+      "cs": "Označit šipkami",
+      "en": "Mark with arrows",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sipkove.nalepky.k.vyskytum.e98b57ea51": {
+      "cs": "Šipkové nálepky k výskytům",
+      "en": "Arrow tags for matches",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.poznamky.d19ad0bfec": {
+      "cs": "Všechny poznámky",
+      "en": "All notes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zalozky.v.aktualnim.pdf.85cb006ff2": {
+      "cs": "Záložky v aktuálním PDF",
+      "en": "Bookmarks in current PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dve.pdf.vedle.sebe.ff67e5a24e": {
+      "cs": "Dvě PDF vedle sebe",
+      "en": "Two PDFs side by side",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.panely.a.nahledy.43281fe8e6": {
+      "cs": "Panely a náhledy",
+      "en": "Panels and previews",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.budouci.nastroje.778c897308": {
+      "cs": "Budoucí nástroje",
+      "en": "Future tools",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.plan.9145ebd898": {
+      "cs": "plán",
+      "en": "planned",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.navrhy.c30568086c": {
+      "cs": "návrhy",
+      "en": "proposals",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.priblizeni.cele.stranky.je.v.htm.fffa911140": {
+      "cs": "Přiblížení celé stránky je v HTML interaktivní.",
+      "en": "Fit-to-page zoom is interactive in this HTML demo.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.100.v.pdf.prohlizeci.neznamena.a.6ea23637d7": {
+      "cs": "100 % v PDF prohlížeči neznamená automaticky fyzické měřítko na každém monitoru.",
+      "en": "100% zoom does not necessarily represent physical size on every monitor.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.prizpusobit.strance.3f4367a486": {
+      "cs": "Zobrazení → Přizpůsobit stránce",
+      "en": "View → Fit page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.prizpusobit.sirce.47fd995814": {
+      "cs": "Zobrazení → Přizpůsobit šířce",
+      "en": "View → Fit width",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.po.strankach.62987eba9d": {
+      "cs": "Zobrazení → Po stránkách",
+      "en": "View → Page by page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.souvisle.zobrazeni.ecf322e214": {
+      "cs": "Zobrazení → Souvislé zobrazení",
+      "en": "View → Continuous view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.pomucky.rozvrzeni.ffaa77128f": {
+      "cs": "Zobrazení → Pomůcky rozvržení",
+      "en": "View → Layout aids",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.zobrazeni.1.1.100.345c7ae27b": {
+      "cs": "Zobrazení → Zobrazení 1:1 (100 %)",
+      "en": "View → Actual size (100%)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skutecne.presuny.stranek.vzdy.vy.35a656ef47": {
+      "cs": "Skutečné přesuny stránek vždy vyžadují potvrzení a musí jít vrátit Ctrl+Z.",
+      "en": "Real page moves require confirmation and must be undoable with Ctrl+Z.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dokument.se.roztahne.na.maximaln.f9bd0977a1": {
+      "cs": "Dokument se roztáhne na maximální šířku nezabraného prostoru mezi bočními panely.",
+      "en": "The document fits the space available between the side panels.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovat.stred.stranky.pri.zmene.b4f5b112cb": {
+      "cs": "Zachovat střed stránky při změně zoomu",
+      "en": "Keep page center when changing zoom",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prepnout.na.vlastni.priblizeni.8063d8f728": {
+      "cs": "Přepnout na vlastní přiblížení",
+      "en": "Switch to custom zoom",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pocet.stranek.6917ca7cfc": {
+      "cs": "Počet stránek",
+      "en": "Page count",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.z.vystupniho.zameru.pdf.9a34d572dc": {
+      "cs": "Z výstupního záměru PDF",
+      "en": "From PDF output intent",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vypnout.vsechny.89b7da9c9b": {
+      "cs": "Vypnout všechny",
+      "en": "Disable all",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jen.tato.f14935fefe": {
+      "cs": "Jen tato",
+      "en": "Only this",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tento.ukazkovy.dokument.nema.dig.99a9782cfe": {
+      "cs": "Tento ukázkový dokument nemá digitální podpis.",
+      "en": "This demo PDF has no digital signature.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozi.graficky.objekt.na.soucasn.7ea40457ae": {
+      "cs": "Vloží grafický objekt na současnou stránku. Není to vložení celé stránky; HTML skutečný PDF objekt nevytvoří.",
+      "en": "Inserts a graphic object onto the current page (preview only; this HTML does not create real PDF objects).",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nejprve.vyberte.rastrovy.obrazek.c5c04ac266": {
+      "cs": "Nejprve vyberte rastrový obrázek.",
+      "en": "Select a raster image first.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.poznamky.jsou.samostatne.pdf.ano.c005521381": {
+      "cs": "Poznámky jsou samostatné PDF anotace, nikoliv formulářová pole. V tomto HTML se zapisují jen do ukázkového seznamu.",
+      "en": "Notes are PDF annotations, not form fields; this demo uses a sample list only.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.historie.je.soucasti.nabidky.upr.b75301947c": {
+      "cs": "Historie je součástí nabídky Úpravy a sdílí jedno místo s Výsledky, Záložkami a Poznámkami.",
+      "en": "History is accessible from Edit and shares one slot with Results, Bookmarks and Notes.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ilustrace.soucasneho.stromu.zalo.e8d2946383": {
+      "cs": "Ilustrace současného stromu záložek a editace. Tyto údaje v HTML nemění obsah PDF.",
+      "en": "Illustrative bookmark tree. Editing these values does not change the PDF.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyskyty.se.zobrazi.pri.psani.dafc88ffb4": {
+      "cs": "Výskyty se zobrazí při psaní.",
+      "en": "Matches appear as you type.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vysledky.patri.k.aktualnimu.pdf..4109559420": {
+      "cs": "Výsledky patří k aktuálnímu PDF. Tento HTML prototyp hledá jen v ilustračním textu stránky.",
+      "en": "Results refer to the current PDF; this HTML searches only demo page text.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhledavani.bezi.okamzite.pri.ps.8239e9b719": {
+      "cs": "Vyhledávání běží okamžitě při psaní. Kliknutí do horního pole otevře tento nástroj i jeho nastavení.",
+      "en": "Search runs while typing. The top search field opens this tool and its settings.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.skutecnem.rozpoznani.se.kand.b6042c896b": {
+      "cs": "Při skutečném rozpoznání se kandidáti seřadí podle shody tvarů, metrik a dostupnosti fontů. Neověřený font se nebude označovat jako původní.",
+      "en": "Actual recognition ranks candidates by shape, metrics and availability. An unverified font will not be marked as the original.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevest.na.krivky.meni.jen.vybra.cc0fd5ad8b": {
+      "cs": "Převést na křivky mění jen vybrané editovatelné znaky. Obdélník a laso nesmí nechtěně uříznout část glyfu; nevhodné objekty ve smíšené oblasti ignorovat.",
+      "en": "Convert to outlines acts on selected editable glyphs only. Rectangle or lasso selection must not cut glyph shapes.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rekonstruovat.text.zpracovava.kr.5f5adf74bf": {
+      "cs": "Rekonstruovat text zpracovává křivky i obrazové oblasti stejným rozpoznávacím jádrem jako nástroj OCR. Nativní editovatelný text znovu nerozpoznávat.",
+      "en": "Text reconstruction uses the same recognition engine as OCR for outlines and raster regions. Do not re-recognize native editable text.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahled.je.pouze.ilustrativni.nep.d088be311e": {
+      "cs": "Náhled je pouze ilustrativní; neproběhlo OCR ani úprava PDF.",
+      "en": "Illustrative preview only; no OCR or PDF edit has occurred.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.otevreni.pdf.se.zobrazi.prip.5f3b9f9efa": {
+      "cs": "Při otevření PDF se zobrazí případná výzva k zadání hesla; HTML hesla neukládá.",
+      "en": "Protected PDFs may request a password. This HTML does not store passwords.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.otevreni.vyzadat.heslo.9df2d0d9c1": {
+      "cs": "Při otevření vyžádat heslo",
+      "en": "Ask for password on open",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.naposledy.otevrene.pdf.najeti.zo.6d1d479611": {
+      "cs": "Naposledy otevřené PDF. Najetí zobrazí plnou cestu, pravé tlačítko otevře nabídku.",
+      "en": "Recently opened PDFs. Hover to show the full path; right-click for a menu.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jak.nalozit.s.predlohou.6bf6b68d98": {
+      "cs": "Jak naložit s předlohou",
+      "en": "How to handle the source",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.editovatelna.kopie.original.zach.526dadcd10": {
+      "cs": "Editovatelná kopie; originál zachovat",
+      "en": "Editable copy; preserve original",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.original.se.zachovava.az.do.potv.e445442445": {
+      "cs": "Originál se zachovává až do potvrzení. Změny zde nejsou skutečně provedeny.",
+      "en": "The original is preserved until confirmation. No actual changes are made here.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.editovatelna.rekonstrukce.1577de9147": {
+      "cs": "Editovatelná rekonstrukce",
+      "en": "Editable reconstruction",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zdroj.a.rozpoznavani.2581789e06": {
+      "cs": "Zdroj a rozpoznávání",
+      "en": "Source and recognition",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zdroj.a.rozsah.jsou.simulovane.z.d280d3a332": {
+      "cs": "Zdroj a rozsah jsou simulované; žádná analýza PDF neproběhla",
+      "en": "Source and range are simulated; no PDF analysis has occurred",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.porovnani.predlohy.a.vysledku.e0a263ab29": {
+      "cs": "Porovnání předlohy a výsledku",
+      "en": "Source and result comparison",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ruzova.upravovana.sazba.d3abd1c63c": {
+      "cs": "Růžová = upravovaná sazba",
+      "en": "Pink = edited typesetting",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pruhlednost.rekonstruovaneho.tex.dd40fd4066": {
+      "cs": "Průhlednost rekonstruovaného textu",
+      "en": "Reconstructed text opacity",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyzaduje.pozornost.3.problemy.4252858a15": {
+      "cs": "Vyžaduje pozornost · 3 problémy",
+      "en": "Needs attention · 3 issues",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.potvrzeni.89e041640d": {
+      "cs": "Potvrzení",
+      "en": "Confirmation",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.souhrn.kontroly.udaju.tento.html.ee053c5982": {
+      "cs": "Souhrn kontroly údajů. Tento HTML prototyp nenahrazuje skutečné ukládání PDF.",
+      "en": "Data review summary. This HTML does not replace PDF saving.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obnovovaci.kopie.c02953c08b": {
+      "cs": "Obnovovací kopie:",
+      "en": "Recovery copies:",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukladani.dokumentu.b21031d632": {
+      "cs": "Ukládání dokumentů",
+      "en": "Saving documents",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obnova.nesmi.bez.potvrzeni.preps.676baca22e": {
+      "cs": "Obnova nesmí bez potvrzení přepsat původní PDF. Po pádu nabídnout obnovu; po vědomém „Neuložit“ související obnovovací data smazat. Toto HTML na disk nic neukládá.",
+      "en": "Recovery must never overwrite original PDFs without permission. This HTML does not save recovery files.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pozor.zmeny.zde.nepremapuji.fung.527273e94b": {
+      "cs": "Pozor: změny zde nepřemapují fungující klávesy Go aplikace. Ctrl+L/E/R/J zůstává vyhrazeno typografii; T/V/M/L mají existující význam, dokud nebude schválená migrace výběru. Zkratky jsou rozlišeny dle kontextu fokusu.",
+      "en": "Caution: this preview does not remap shortcuts in the Go application. Existing shortcuts remain reserved until migration is approved.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.shoda.formatovani.a86dea833d": {
+      "cs": "Shoda formátování",
+      "en": "Formatting matches",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyberte.profil.7d7d0f95b1": {
+      "cs": "Vyberte profil",
+      "en": "Select a profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybira.se.postup.skutecny.prevod.8e288e18cc": {
+      "cs": "Vybírá se postup; skutečný převod a použití ICC profilu jsou mimo tuto HTML demonstraci.",
+      "en": "The process can be selected here; actual conversion and ICC handling are not implemented in this HTML demo.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tloustka.pt.b58060e0c8": {
+      "cs": "Tloušťka (pt)",
+      "en": "Stroke weight (pt)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyska.mm.022da79683": {
+      "cs": "Výška (mm)",
+      "en": "Height (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sirka.mm.cfd156dfbe": {
+      "cs": "Šířka (mm)",
+      "en": "Width (mm)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.poznamka.k.vyskytu.762208d257": {
+      "cs": "Poznámka k výskytu",
+      "en": "Match note",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.html.navrh.v3.18.pouze.vizualni..35c81e8ce3": {
+      "cs": "HTML návrh v3.18 · pouze vizuální prototyp",
+      "en": "HTML design v3.17 · visual prototype only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bezpecna.prace.9172e14d93": {
+      "cs": "Bezpečná práce:",
+      "en": "Safe workflow:",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.automaticka.obnova.44f817eee1": {
+      "cs": "Automatická obnova:",
+      "en": "Automatic recovery:",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.po.vytvoreni.otevrit.skupinu.poz.918c86a851": {
+      "cs": "Po vytvoření otevřít skupinu poznámek",
+      "en": "Open notes group after creation",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pridat.hledane.slovo.do.nazvu.si.73270efc23": {
+      "cs": "Přidat hledané slovo do názvu šipky",
+      "en": "Add search term to arrow label",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovat.100.cernou.k.34adb52ad9": {
+      "cs": "Zachovat 100% černou K",
+      "en": "Preserve 100% black K",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vizualni.radek.04bb95733b": {
+      "cs": "Vizuální řádek.",
+      "en": "Visual line.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozsiri.znakovy.vyber.od.kotvy.5deefa5826": {
+      "cs": "Rozšíří znakový výběr od kotvy.",
+      "en": "Extend character selection from the anchor.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.shodne.formatovani.v.segmentu.deea189d52": {
+      "cs": "Shodné formátování v segmentu.",
+      "en": "Uniform formatting within segment.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.v.tomto.zvolenem.rezimu.levym.ta.ca686e9545": {
+      "cs": "V tomto zvoleném režimu levým tažením vymezí textovou oblast.",
+      "en": "Drag with the left button to define a text area.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.v.tomto.zvolenem.rezimu.levymi.k.8abe61963f": {
+      "cs": "V tomto zvoleném režimu levými kliky vymezí polygon; dvojklik nebo Enter jej dokončí.",
+      "en": "Left-click to trace a polygon; double-click or press Enter to finish.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.levym.tazenim.vytvori.ramec.odst.f529695c92": {
+      "cs": "Levým tažením vytvoří rámec odstavcového textu; klik bez tažení nic nevloží.",
+      "en": "Drag to create a paragraph text frame; clicking alone inserts nothing.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.levy.klik.do.textu.editace.klik..3d1192a43e": {
+      "cs": "Levý klik do textu = editace. Klik na volné místo = nový bodový text. Levé tažení v textu vybere znaky.",
+      "en": "Click existing text to edit; click empty space to add point text; drag to select characters.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pevna.voditka.souradnice.prvnich.417d85124a": {
+      "cs": "Pevná vodítka – souřadnice prvních čar",
+      "en": "Fixed guides – first line coordinates",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.voditka.jsou.uzamcena.a3377d3e78": {
+      "cs": "Vodítka jsou uzamčená.",
+      "en": "Guides are locked.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytit.mrizka.1242a5c711": {
+      "cs": "Přichytit: Mřížka",
+      "en": "Snap to: Grid",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.rozsah.7bdb7c161c": {
+      "cs": "Vlastní rozsah",
+      "en": "Custom range",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.voditka.na.strane.a3ffd964f2": {
+      "cs": "Vodítka na straně",
+      "en": "Guides on page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.samostatna.voditka.1dbd5acad4": {
+      "cs": "Samostatná vodítka",
+      "en": "Ungrouped guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.oznacit.celou.skupinu.b79dd6f2fb": {
+      "cs": "Označit celou skupinu",
+      "en": "Select entire group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skupina.voditek.356b456d5c": {
+      "cs": "Skupina vodítek",
+      "en": "Guide group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skupina.1.f0364f0715": {
+      "cs": "Skupina 1",
+      "en": "Group 1",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skupina.2.ad8f410b71": {
+      "cs": "Skupina 2",
+      "en": "Group 2",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barva.cele.skupiny.d765406f0b": {
+      "cs": "Barva celé skupiny",
+      "en": "Group color",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.skupinu.40f3a076d8": {
+      "cs": "Zobrazit skupinu",
+      "en": "Show group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skryt.skupinu.e15c0509f8": {
+      "cs": "Skrýt skupinu",
+      "en": "Hide group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odemknout.skupinu.45a46cdb95": {
+      "cs": "Odemknout skupinu",
+      "en": "Unlock group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zamknout.skupinu.c42710cc80": {
+      "cs": "Zamknout skupinu",
+      "en": "Lock group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.smazat.skupinu.a.jeji.voditka.9f9c27668e": {
+      "cs": "Smazat skupinu a její vodítka",
+      "en": "Delete group and guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.seskupit.oznacena.fe068747ed": {
+      "cs": "Seskupit označená",
+      "en": "Group selected",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.oddelit.ze.skupiny.4ec538e9e9": {
+      "cs": "Oddělit ze skupiny",
+      "en": "Ungroup selected",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.voditko.2355cd5b52": {
+      "cs": "Zobrazit vodítko",
+      "en": "Show guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skryt.voditko.711cb45148": {
+      "cs": "Skrýt vodítko",
+      "en": "Hide guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.oznacit.voditko.d5c383d16b": {
+      "cs": "Označit vodítko",
+      "en": "Select guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytit.formularova.pole.1f1bbcffcb": {
+      "cs": "Přichytit: Formulářová pole",
+      "en": "Snap to: form fields",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.formularova.pole.69ea0d55f1": {
+      "cs": "Formulářová pole",
+      "en": "Form fields",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predely.a.oddelovace.b8dc92bb7a": {
+      "cs": "Předěly a oddělovače",
+      "en": "Rules and separators",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stred.stranky.951992581f": {
+      "cs": "Střed stránky",
+      "en": "Page center",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.okraje.stranky.ba78b503a8": {
+      "cs": "Okraje stránky",
+      "en": "Page edges",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textove.ramce.13798d5568": {
+      "cs": "Textové rámce",
+      "en": "Text frames",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.hrana.formularoveho.pole.1fdd5f5722": {
+      "cs": "Hrana formulářového pole",
+      "en": "Form field edge",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predel.fd77cd249a": {
+      "cs": "Předěl",
+      "en": "Separator",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textovy.ramec.aed53ac01e": {
+      "cs": "Textový rámec",
+      "en": "Text frame",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kliknuti.na.radek.vybira.jedno.v.b7d819557d": {
+      "cs": "Kliknutí na řádek vybírá jedno vodítko. Zaškrtávací políčka slouží pro výběr více vodítek. Barvu nových vodítek nastavíš výše.",
+      "en": "Click a row to select one guide. Use checkboxes to select multiple guides. Set the color for new guides above.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.skupinu.voditek.05c86ef67c": {
+      "cs": "Zobrazit skupinu vodítek",
+      "en": "Show guide group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skryt.skupinu.voditek.89c5522d8f": {
+      "cs": "Skrýt skupinu vodítek",
+      "en": "Hide guide group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nacist.dokument.1ef628cabc": {
+      "cs": "Načíst dokument",
+      "en": "Load document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.2.pridat.dalsi.pdf.ae6770f2b9": {
+      "cs": "2. Přidat další PDF…",
+      "en": "2. Add another PDF…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.3.stranky.ukazkovy.interaktivni..5baf52e894": {
+      "cs": "3 stránky · ukázkový interaktivní AcroForm",
+      "en": "3 pages · sample interactive AcroForm",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.html.navrh.v3.18.preklady.skupin.0c4a417fc8": {
+      "cs": "HTML návrh v3.18: překlady, skupiny vodítek, přichytávání a kontextový výběr; skutečné PDF se nemění.",
+      "en": "HTML design v3.18: translations, guide groups, snapping and contextual selection; the actual PDF remains unchanged.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.adaptivni.ea97212120": {
+      "cs": "Adaptivní",
+      "en": "Adaptive",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.docasne.sbalit.nahledy.a.pravy.p.6f9753933d": {
+      "cs": "Dočasně sbalit náhledy a pravý panel",
+      "en": "Temporarily collapse thumbnails and the right panel",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.davkove.zpracovani.c4adb25443": {
+      "cs": "Dávkové zpracování",
+      "en": "Batch processing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.hledat.v.pdf.aktivuje.nastroj.na.29900a5550": {
+      "cs": "Hledat v PDF – aktivuje nástroj Najít v PDF",
+      "en": "Search PDF – activates the Find in PDF tool",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kategorie.nastaveni.3393c4114c": {
+      "cs": "Kategorie Nastavení",
+      "en": "Settings categories",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kvalita.vykreslovani.f206641269": {
+      "cs": "Kvalita vykreslování",
+      "en": "Rendering quality",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kvalita.zobrazeni.a0ff378c61": {
+      "cs": "Kvalita zobrazení",
+      "en": "Display quality",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.mereni.ec0f2bd448": {
+      "cs": "Měření",
+      "en": "Measurements",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.najit.v.pdf.ctrl.f.9d6e4442ae": {
+      "cs": "Najít v PDF (Ctrl+F)",
+      "en": "Find in PDF (Ctrl+F)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nastaveni.aplikace.3ccc176ec6": {
+      "cs": "Nastavení aplikace",
+      "en": "Application settings",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nastaveni.vykonu.a.kvality.je.zd.9748f01248": {
+      "cs": "Nastavení výkonu a kvality je zde ilustrační; skutečný PDF prohlížeč zachovává původní vektory.",
+      "en": "Performance and quality settings are illustrative; the actual PDF viewer preserves original vector data.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nove.pdf.4914d3791f": {
+      "cs": "Nové PDF",
+      "en": "New PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nyni.po.strankach.kliknutim.souv.f53c94c36a": {
+      "cs": "Nyní: po stránkách · Kliknutím souvislé zobrazení",
+      "en": "Current: page-by-page · Click for continuous view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nyni.sipka.kliknutim.textovy.kur.7883b5716e": {
+      "cs": "Nyní: šipka · Kliknutím textový kurzor",
+      "en": "Current: pointer · Click for text cursor",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahledy.stranek.zobrazit.skryt.df4ecb13eb": {
+      "cs": "Náhledy stránek – zobrazit / skrýt",
+      "en": "Page thumbnails – show / hide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.napoveda.249ae863e9": {
+      "cs": "Nápověda",
+      "en": "Help",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nasledujici.strana.2765ab8c6f": {
+      "cs": "Následující strana",
+      "en": "Next page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevreny.vzorovy.dokument.34589a4fba": {
+      "cs": "Otevřený vzorový dokument",
+      "en": "Open sample document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ouska.levych.pomocnych.panelu.7c6da41cb2": {
+      "cs": "Ouška levých pomocných panelů",
+      "en": "Left auxiliary panel tabs",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.plan.navrh.panelu.neimplementova.2ad1af20bd": {
+      "cs": "PLÁN – návrh panelu, neimplementováno",
+      "en": "PLANNED – panel concept, not implemented",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.planovany.nastroj.pouze.navrh.vz.49c3610fd6": {
+      "cs": "Plánovaný nástroj – pouze návrh vzhledu",
+      "en": "Planned tool – visual concept only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podrobnosti.a.vysvetleni.86b8fcb925": {
+      "cs": "Podrobnosti a vysvětlení",
+      "en": "Details and explanations",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouze.ukazkovy.nahled.12d5fb35f2": {
+      "cs": "Pouze ukázkový náhled",
+      "en": "Sample preview only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predchozi.strana.597f2deff1": {
+      "cs": "Předchozí strana",
+      "en": "Previous page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prepnout.na.souvisle.zobrazeni.59582bbe8d": {
+      "cs": "Přepnout na souvislé zobrazení",
+      "en": "Switch to continuous view",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prepnout.na.textovy.kurzor.aa66b63cdf": {
+      "cs": "Přepnout na textový kurzor",
+      "en": "Switch to text cursor",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytavani.magnet.76a89238ea": {
+      "cs": "Přichytávání (magnet)",
+      "en": "Snapping (magnet)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prikazy.nabidky.soubor.2ed46dec17": {
+      "cs": "Příkazy nabídky Soubor",
+      "en": "File menu commands",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prikazy.nabidky.zobrazeni.d9c7a1727e": {
+      "cs": "Příkazy nabídky Zobrazení",
+      "en": "View menu commands",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.puvodni.logo.kovadlina.svg.geome.b412b9c110": {
+      "cs": "Původní logo – kovadlina SVG (geometrie zachována)",
+      "en": "Original anvil SVG logo (geometry preserved)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sbalit.levou.skupinu.panelu.4f5ed198df": {
+      "cs": "Sbalit levou skupinu panelů",
+      "en": "Collapse left panel group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skutecne.priblizeni.100.9c98785521": {
+      "cs": "Skutečné přiblížení 100 %",
+      "en": "Actual zoom at 100%",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sloucit.a.otevrit.1de586b51c": {
+      "cs": "Sloučit a otevřít",
+      "en": "Merge and open",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.soubor.rozbalit.nabidku.akci.1a1e8c2497": {
+      "cs": "Soubor – rozbalit nabídku akcí",
+      "en": "File – expand actions menu",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.systemova.maximalizace.b14950d968": {
+      "cs": "Systémová maximalizace",
+      "en": "System maximize",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.systemove.minimalizovani.neni.so.076050418b": {
+      "cs": "Systémové minimalizování není součástí HTML",
+      "en": "System minimize is not available in this HTML",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.systemove.zavreni.32f64c7aa4": {
+      "cs": "Systémové zavření",
+      "en": "System close",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.ukazkovy.dialog.b6bf8bb283": {
+      "cs": "Uložit (ukázkový dialog)",
+      "en": "Save (sample dialog)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.univerzalni.vyber.lasem.72b0bc102f": {
+      "cs": "Univerzální výběr lasem",
+      "en": "Universal lasso selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.univerzalni.vyber.obdelnikem.f66b7ad37f": {
+      "cs": "Univerzální výběr obdélníkem",
+      "en": "Universal rectangular selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhlazeni.textu.f17bba7d06": {
+      "cs": "Vyhlazení textu",
+      "en": "Text antialiasing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyhlazeni.vektoru.3cf29932f3": {
+      "cs": "Vyhlazení vektorů",
+      "en": "Vector antialiasing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vykreslovani.pdf.830b131d43": {
+      "cs": "Vykreslování PDF",
+      "en": "PDF rendering",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vysoka.355170622d": {
+      "cs": "Vysoká",
+      "en": "High",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.lasem.text.objekty.nebo.sm.533d0cc45b": {
+      "cs": "Výběr lasem – text, objekty nebo smíšený obsah",
+      "en": "Lasso selection – text, objects or mixed content",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.obdelnikem.text.objekty.ne.db467dd947": {
+      "cs": "Výběr obdélníkem – text, objekty nebo smíšený obsah",
+      "en": "Rectangle selection – text, objects or mixed content",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zapnout.nebo.vypnout.prichytavan.8919341313": {
+      "cs": "Zapnout nebo vypnout přichytávání",
+      "en": "Enable or disable snapping",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zavrit.nastaveni.bez.dalsich.zme.3961554bb2": {
+      "cs": "Zavřít Nastavení bez dalších změn",
+      "en": "Close Settings without further changes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zmensit.8e9a997469": {
+      "cs": "Zmenšit",
+      "en": "Zoom out",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazeni.rozbalit.nabidku.75ae326517": {
+      "cs": "Zobrazení – rozbalit nabídku",
+      "en": "View – expand menu",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.vysvetleni.teto.casti.046e06db2c": {
+      "cs": "Zobrazit vysvětlení této části",
+      "en": "Show explanation of this section",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zrusit.zmeny.a.zavrit.nastaveni.ba93fa8db6": {
+      "cs": "Zrušit změny a zavřít Nastavení",
+      "en": "Discard changes and close Settings",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zvyraznit.velmi.tenke.cary.9d4c348435": {
+      "cs": "Zvýraznit velmi tenké čáry",
+      "en": "Enhance very thin lines",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zvetsit.ea5caa4443": {
+      "cs": "Zvětšit",
+      "en": "Zoom in",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.usporna.fd183620a1": {
+      "cs": "Úsporná",
+      "en": "Economy",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.univerzalni.laso.c75556b1d5": {
+      "cs": "Univerzální laso",
+      "en": "Universal lasso",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.univerzalni.obdelnikovy.vyber.c477bc698f": {
+      "cs": "Univerzální obdélníkový výběr",
+      "en": "Universal rectangular selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sipka.nebo.textovy.kurzor.prepin.9ecab11b80": {
+      "cs": "Šipka nebo textový kurzor (přepínání nahoře)",
+      "en": "Pointer or text cursor (switch in toolbar)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.automaticky.prizpusobit.po.zmene.441acebcfc": {
+      "cs": "Automaticky přizpůsobit po změně velikosti okna",
+      "en": "Fit automatically when window is resized",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cele.strany.8d3b4fc39c": {
+      "cs": "Celé strany",
+      "en": "Whole pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.heslem.chranene.pdf.fe71a698f6": {
+      "cs": "Heslem chráněné PDF",
+      "en": "Password-protected PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jazyk.spolecneho.rozpoznavani.te.1edbee76a3": {
+      "cs": "Jazyk společného rozpoznávání textu",
+      "en": "Shared text-recognition language",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jemne.deleni.mrizky.f5a26a59e5": {
+      "cs": "Jemné dělení mřížky",
+      "en": "Grid subdivisions",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nova.barva.oznacenych.voditek.1bce58c819": {
+      "cs": "Nová barva označených vodítek",
+      "en": "New color for selected guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstranit.voditko.23df600435": {
+      "cs": "Odstranit vodítko",
+      "en": "Delete guide",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.jen.nechranene.pdf.7f35e0063d": {
+      "cs": "Otevřít jen nechráněné PDF",
+      "en": "Open unprotected PDFs only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.pouze.pro.cteni.576ab07065": {
+      "cs": "Otevřít pouze pro čtení",
+      "en": "Open read-only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pridat.pdf.5e43bfdb5b": {
+      "cs": "Přidat PDF",
+      "en": "Add PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.seznam.voditek.ee981b50ba": {
+      "cs": "Seznam vodítek",
+      "en": "Guide list",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stejne.rozpoznavaci.jadro.jako.t.27fa6817c1": {
+      "cs": "Stejné rozpoznávací jádro jako Text → Výběr → Rekonstruovat text. Podporuje rastrové oblasti i vektorové obrysy; existující textovou vrstvu bez potřeby znovu nečíst.",
+      "en": "Uses the same recognition engine as Text → Selection → Reconstruct Text. Handles raster regions and vector outlines; do not reprocess an existing text layer unnecessarily.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.typ.docasne.cary.14448d323a": {
+      "cs": "Typ dočasné čáry",
+      "en": "Temporary line style",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vcera.11.48.886.kb.7063bfc75f": {
+      "cs": "Včera 11:48 · 886 kB",
+      "en": "Yesterday 11:48 · 886 KB",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vcera.20.14.12.5.mb.f0cdf28c4f": {
+      "cs": "Včera 20:14 · 12,5 MB",
+      "en": "Yesterday 20:14 · 12.5 MB",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.podporovane.pdf.68f270fc0d": {
+      "cs": "Všechny podporované PDF",
+      "en": "All supported PDFs",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovat.puvodni.barvy.c15f4cba34": {
+      "cs": "Zachovat původní barvy",
+      "en": "Preserve original colors",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.vysvetleni.d8914de08f": {
+      "cs": "Zobrazit vysvětlení",
+      "en": "Show explanation",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nejde.o.cislo.verze.instalovane..299dfb39dd": {
+      "cs": ". Nejde o číslo verze instalované aplikace.",
+      "en": ". This is not the installed application's version number.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.navrh.uzivatelskeho.rozhrani.7a61d40e1d": {
+      "cs": "— návrh uživatelského rozhraní",
+      "en": "— user interface concept",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ktery.ma.vlastni.ousko.2587660eeb": {
+      "cs": ", který má vlastní ouško.",
+      "en": ", which has its own tab.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pak.stiskni.pozadovanou.kombinac.bd636ab7fa": {
+      "cs": ", pak stiskni požadovanou kombinaci. Duplicitní či vyhrazené zkratky budou odmítnuty.",
+      "en": ", then press the desired combination. Duplicate or reserved shortcuts will be rejected.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.prijima.jen.pdf.importov.18095ffe15": {
+      "cs": ". Otevřít přijímá jen PDF, Importovat vytváří nové PDF.",
+      "en": ". Open accepts PDFs only; Import creates a new PDF.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktualni.26f37eb09f": {
+      "cs": "Aktuální",
+      "en": "Current",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktualni.rezim.po.strankach.navi.2b1979b2dd": {
+      "cs": "Aktuální režim: po stránkách. Navigace a obsah PDF se nemění.",
+      "en": "Current mode: page by page. PDF navigation and content are unchanged.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barevny.prostor.59eab89b76": {
+      "cs": "Barevný prostor",
+      "en": "Color space",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barevny.vystup.04223ecd18": {
+      "cs": "Barevný výstup",
+      "en": "Color output",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.barvy.vlozenych.stran.d7c2c25479": {
+      "cs": "Barvy vložených stran",
+      "en": "Colors of inserted pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.bez.vyplne.c49b6910ba": {
+      "cs": "Bez výplně",
+      "en": "No fill",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.celoobrazovkove.zobrazeni.0037eac7bb": {
+      "cs": "Celoobrazovkové zobrazení",
+      "en": "Full-screen display",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cilova.slozka.8e56b9d519": {
+      "cs": "Cílová složka",
+      "en": "Destination folder",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.digitalni.pdf.mensi.soubor.bdbe630ae8": {
+      "cs": "Digitální PDF – menší soubor",
+      "en": "Digital PDF – smaller file",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dokument.2.ukazka.86d74121f3": {
+      "cs": "Dokument 2 (ukázka)",
+      "en": "Document 2 (sample)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dolu.539ff166ac": {
+      "cs": "Dolů",
+      "en": "Move down",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.doplnkove.panely.70ad71f18d": {
+      "cs": "Doplňkové panely",
+      "en": "Auxiliary panels",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.druhy.dokument.84b7565abe": {
+      "cs": "Druhý dokument",
+      "en": "Second document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dvojice.dokumentu.157522f018": {
+      "cs": "Dvojice dokumentů",
+      "en": "Document pair",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.dve.pdf.vedle.sebe.jsou.existuji.b9eab1a837": {
+      "cs": "Dvě PDF vedle sebe jsou existující funkcí aplikace; HTML zde jejich uspořádání pouze naznačuje.",
+      "en": "Side-by-side PDFs are an existing feature; this HTML only illustrates the layout.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.davkove.zpracovani.pdf.9d6ba7a467": {
+      "cs": "Dávkové zpracování PDF",
+      "en": "Batch PDF processing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.formularova.pole.nejsou.pracovni.cbe9842011": {
+      "cs": "Formulářová pole nejsou pracovní poznámky. Výchozí tisk pracovní poznámky nezahrnuje.",
+      "en": "Form fields are not working notes. Printing excludes working notes by default.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.grafika.nebo.obrazek.9dbd78024e": {
+      "cs": "Grafika nebo obrázek",
+      "en": "Graphic or image",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.importovat.vytvori.nove.pdf.ze.z.8cfbc3f449": {
+      "cs": "Importovat vytvoří nové PDF ze zdrojového dokumentu a otevře ho v nové záložce. Nevkládá stránky do právě otevřeného PDF.",
+      "en": "Import creates a new PDF from the source document and opens it in a new tab. It does not insert pages into the currently open PDF.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.jednotlive.vyskyty.jsou.pristupn.52dd9ba5f8": {
+      "cs": "Jednotlivé výskyty jsou přístupné v doplňkovém panelu",
+      "en": "Individual matches are available in the auxiliary panel",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kancelarsky.dokument.2243501dfd": {
+      "cs": "Kancelářský dokument",
+      "en": "Office document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kazdou.stranu.zvlast.6018169d9f": {
+      "cs": "Každou stranu zvlášť",
+      "en": "Each page separately",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kazde.gesto.patri.prave.jednomu..0d167591fc": {
+      "cs": "Každé gesto patří právě jednomu aktivnímu handleru. Text, Objekty a miniatury stránek mají oddělené množiny výběru. Kliknutí na hlavní výběrovou lištu zrcadlí aktivní nástroj, není to další souběžný režim. HTML slouží jako demonstrace; skutečný obsah PDF nemění.",
+      "en": "Each gesture belongs to exactly one active handler. Text, Objects and page thumbnails have separate selections. The main selection toolbar reflects the active tool; it is not a second concurrent selection mode. This HTML does not modify the PDF.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kliknete.na.cisla.v.mrizce.nize.9dfd5bf08c": {
+      "cs": "Klikněte na čísla v mřížce níže",
+      "en": "Click page numbers in the grid below",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kontrola.pdf.pred.tiskem.68b9bd043d": {
+      "cs": "Kontrola PDF před tiskem",
+      "en": "PDF preflight",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kontrola.pisem.obrazku.pretisku..9930e78154": {
+      "cs": "Kontrola písem, obrázků, přetisků, spadávky a dalších parametrů čeká na samostatné upřesnění.",
+      "en": "Checking fonts, images, overprints, bleed and other parameters requires separate specification.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.kontrolni.profil.85d4f87e94": {
+      "cs": "Kontrolní profil",
+      "en": "Preflight profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.laso.stavajici.rezim.53bcd6d4d0": {
+      "cs": "Laso (stávající režim)",
+      "en": "Lasso (existing mode)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.laso.editovatelny.text.645ca915df": {
+      "cs": "Laso – editovatelný text",
+      "en": "Lasso – editable text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.laso.rastrovy.text.a1563eb819": {
+      "cs": "Laso – rastrový text",
+      "en": "Lasso – raster text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.liche.stranky.zdrojoveho.dokumen.cfb8bf8523": {
+      "cs": "Liché stránky zdrojového dokumentu",
+      "en": "Odd pages from source document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.listovani.491604c18e": {
+      "cs": "Listování",
+      "en": "Page navigation",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.microsoft.print.to.pdf.ukazka.e0099620b4": {
+      "cs": "Microsoft Print to PDF (ukázka)",
+      "en": "Microsoft Print to PDF (sample)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.meritko.310f6a831e": {
+      "cs": "Měřítko",
+      "en": "Scale",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.meritko.zobrazeni.08b631d856": {
+      "cs": "Měřítko zobrazení",
+      "en": "Display scale",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.mrizka.zobrazit.0f2f199844": {
+      "cs": "Mřížka – zobrazit",
+      "en": "Show grid",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.na.zacatek.738e9dd7ec": {
+      "cs": "Na začátek",
+      "en": "At beginning",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.napr.1.3.5.9.75cdcee69b": {
+      "cs": "Např. 1, 3–5, 9",
+      "en": "E.g. 1, 3–5, 9",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nejdrive.prevest.word.excel.powe.2a98623ce1": {
+      "cs": "Nejdříve převést Word, Excel, PowerPoint, grafiku nebo jiný podporovaný formát na dočasné PDF",
+      "en": "First convert Word, Excel, PowerPoint, graphics or other supported formats to a temporary PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nova.kopie.pdf.380ecf2358": {
+      "cs": "Nová kopie PDF",
+      "en": "New PDF copy",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nyni.bez.neulozenych.zmen.2e87de18c5": {
+      "cs": "Nyní bez neuložených změn.",
+      "en": "No unsaved changes currently.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahled.vysledneho.poradi.3f6e793aa2": {
+      "cs": "Náhled výsledného pořadí",
+      "en": "Preview of resulting page order",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nahled.zdrojovych.stran.ukazka.88028637b9": {
+      "cs": "Náhled zdrojových stran · ukázka",
+      "en": "Source pages preview · sample",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.napoveda.k.prevodum.vybraneho.ob.ba80b569c5": {
+      "cs": "Nápověda k převodům vybraného obsahu",
+      "en": "Help for converting selected content",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.napoveda.k.vyberu.textu.0020310815": {
+      "cs": "Nápověda k výběru textu",
+      "en": "Text selection help",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.napoveda.zakladni.a.rozsireny.vy.e5c77c17ad": {
+      "cs": "Nápověda: základní a rozšířený výběr",
+      "en": "Help: basic and extended selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nazev.souboru.b0793c1a12": {
+      "cs": "Název souboru",
+      "en": "File name",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.nazvy.vystupnich.souboru.vychaze.1077ad4863": {
+      "cs": "Názvy výstupních souborů vycházejí z originálu a čísla strany.",
+      "en": "Output file names are based on the original and page number.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obdelnik.editovatelny.text.30bc706ccc": {
+      "cs": "Obdélník – editovatelný text",
+      "en": "Rectangle – editable text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obdelnik.text.krivky.i.rastr.2e9037d236": {
+      "cs": "Obdélník – text, křivky i rastr",
+      "en": "Rectangle – text, paths and raster",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obdelnik.vektorove.krivky.51fe042458": {
+      "cs": "Obdélník – vektorové křivky",
+      "en": "Rectangle – vector outlines",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obdelnikovy.vyber.textu.levym.ta.21ecef7725": {
+      "cs": "Obdélníkový výběr textu – levým tažením vymezit oblast",
+      "en": "Rectangular text selection – drag with left mouse button to define an area",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obnovit.vychozi.prirazeni.23bb3669ef": {
+      "cs": "Obnovit výchozí přiřazení",
+      "en": "Restore default assignment",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.obrazek.grafika.adaf92d2ad": {
+      "cs": "Obrázek / grafika…",
+      "en": "Image / graphic…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstavcovy.textovy.blok.vymezit..5b43b430fa": {
+      "cs": "Odstavcový textový blok – vymezit rámec tažením",
+      "en": "Paragraph text frame – drag to define frame",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.odstavec.opakovanim.sloupec.e34077f804": {
+      "cs": "Odstavec, opakováním sloupec.",
+      "en": "Paragraph, then column on repeated action.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.opakovane.zpracovani.vice.pdf.a..474a8faaa4": {
+      "cs": "Opakované zpracování více PDF a profily exportu jsou zatím plánované.",
+      "en": "Repeated processing of multiple PDFs and export profiles are planned.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otevrit.tisk.a539b0fd69": {
+      "cs": "Otevřít tisk…",
+      "en": "Open Print…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otocit.vlevo.0ee9474c45": {
+      "cs": "Otočit vlevo",
+      "en": "Rotate left",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otocit.vpravo.2a1784a847": {
+      "cs": "Otočit vpravo",
+      "en": "Rotate right",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.overit.3798d01a20": {
+      "cs": "Ověřit",
+      "en": "Verify",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pdf.pro.dalsi.zpracovani.bdda26970f": {
+      "cs": "PDF pro další zpracování",
+      "en": "PDF for further processing",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pdf.a.samostatna.exportni.predvo.80d0606d3e": {
+      "cs": "PDF/A (samostatná exportní předvolba)",
+      "en": "PDF/A (separate export preset)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.po.prevodu.otevrit.nove.pdf.v.sa.0a2d5543bf": {
+      "cs": "Po převodu otevřít nové PDF v samostatné záložce",
+      "en": "Open converted PDF in a separate tab",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.po.slouceni.otevrit.vysledne.pdf.e390badaa9": {
+      "cs": "Po sloučení otevřít výsledné PDF v nové kartě",
+      "en": "Open merged PDF in a new tab",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.po.ulozeni.otevrit.novou.kopii.v.049a626fae": {
+      "cs": "Po uložení otevřít novou kopii ve stejné kartě",
+      "en": "Open new saved copy in the same tab",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podepsane.pdf.vyzaduje.opatrne.u.afa9ddb0c3": {
+      "cs": "Podepsané PDF vyžaduje opatrné ukládání; prototyp podpis nevytváří.",
+      "en": "Signed PDFs must be saved carefully; this prototype does not create signatures.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podle.posledni.volby.ecec533270": {
+      "cs": "Podle poslední volby",
+      "en": "Use last selected mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podle.schvaleneho.navrhu.po.uspe.a822d2590c": {
+      "cs": "Podle schváleného návrhu po úspěšném uložení kopie nová kopie nahradí původní dokument v téže kartě.",
+      "en": "As agreed, a successfully saved copy replaces the original in the same tab.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podpora.wordu.excelu.powerpointu.da71804ed8": {
+      "cs": "Podpora Wordu, Excelu, PowerPointu, PSD/AI a open-source formátů je cílový požadavek; převodní moduly se musí teprve ověřit.",
+      "en": "Support for Word, Excel, PowerPoint, PSD/AI and open formats is a goal; conversion modules still need verification.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.podrobnosti.k.obema.prevodum.cc57a20a23": {
+      "cs": "Podrobnosti k oběma převodům",
+      "en": "Details on both conversions",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pokryti.b465e52979": {
+      "cs": "Pokrytí",
+      "en": "Ink coverage",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.porovnani.pdf.3aff1e80d8": {
+      "cs": "Porovnání PDF",
+      "en": "Compare PDFs",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.potvrdit.prepsani.existujiciho.s.84dadd60df": {
+      "cs": "Potvrdit přepsání existujícího souboru",
+      "en": "Confirm overwriting an existing file",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouze.liche.524838769e": {
+      "cs": "Pouze liché",
+      "en": "Odd pages only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouze.male.vzorniky.vedle.desek..cde0276478": {
+      "cs": "Pouze malé vzorníky vedle desek; rozložení stávajícího nástroje Separace nesmí být reorganizováno.",
+      "en": "Only small swatches beside plates; preserve the existing Separations tool layout.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pouze.sude.41e1c2ee6c": {
+      "cs": "Pouze sudé",
+      "en": "Even pages only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pocet.kopii.bae0620ea7": {
+      "cs": "Počet kopií",
+      "en": "Number of copies",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pracovni.plocha.3cd157a7ec": {
+      "cs": "Pracovní plocha",
+      "en": "Workspace",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pravitka.zobrazit.9c5a9ee2f8": {
+      "cs": "Pravítka – zobrazit",
+      "en": "Show rulers",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prostredni.tazeni.9de27e348e": {
+      "cs": "Prostřední tažení",
+      "en": "Middle-button drag",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pred.aktualni.stranku.22d6c9ba87": {
+      "cs": "Před aktuální stránku",
+      "en": "Before current page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pred.prvni.stranku.c7b5403311": {
+      "cs": "Před první stránku",
+      "en": "Before first page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pred.stranu.c.e157b10742": {
+      "cs": "Před stranu č.",
+      "en": "Before page no.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pred.ulozenim.zkontrolovat.stav..2153f6c54a": {
+      "cs": "Před uložením zkontrolovat stav formuláře",
+      "en": "Check form state before saving",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prednost.maleho.souboru.2c178edd56": {
+      "cs": "Přednost malého souboru",
+      "en": "Prioritize smaller file size",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prednost.vzhledu.originalu.b8dfd59661": {
+      "cs": "Přednost vzhledu originálu",
+      "en": "Prioritize original appearance",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predvolby.25640f0e40": {
+      "cs": "Předvolby",
+      "en": "Presets",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.predvolby.prevodu.b282a66133": {
+      "cs": "Předvolby převodu",
+      "en": "Conversion presets",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prehled.ukazuje.jen.navrh.skutec.61877191d2": {
+      "cs": "Přehled ukazuje jen návrh. Skutečné PDF se nemění. Při produkční implementaci musí platit Ctrl+Z/Y, AutoRecover a ochrana anotací i podpisů.",
+      "en": "This overview is a mockup. The actual PDF remains unchanged. Production must preserve Undo/Redo, AutoRecover, annotations and signatures.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.presne.mereni.7b2bad83d8": {
+      "cs": "Přesné měření",
+      "en": "Precise measurement",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pretisk.cf35bcfeae": {
+      "cs": "Přetisk",
+      "en": "Overprint",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevod.dokumentu.na.pdf.c59ee4f7e4": {
+      "cs": "Převod dokumentu na PDF",
+      "en": "Convert document to PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevest.do.barevneho.prostoru.ci.2dd0548ff7": {
+      "cs": "Převést do barevného prostoru cíle",
+      "en": "Convert to target color space",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevest.do.profilu.cile.c6a1d98fd5": {
+      "cs": "Převést do profilu cíle",
+      "en": "Convert to target profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prevest.na.krivky.pouze.vybrane..0cd4978fa4": {
+      "cs": "Převést na křivky: pouze vybrané editovatelné glyfy",
+      "en": "Convert to outlines: selected editable glyphs only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pri.chybejicich.povinnych.polich.8aa7bea335": {
+      "cs": "Při chybějících povinných polích se nabídne „Uložit přesto“. AutoRecover zůstává nezávislý.",
+      "en": "If required fields are missing, offer “Save anyway”. AutoRecover remains separate.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prichytavani.magnet.7f76832c29": {
+      "cs": "Přichytávání – magnet",
+      "en": "Snapping – magnet",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pridat.soubory.960e2f55c6": {
+      "cs": "Přidat soubory…",
+      "en": "Add files…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prida.cele.stranky.do.ecacf21637": {
+      "cs": "Přidá celé stránky do",
+      "en": "Inserts entire pages into",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.prizpusobit.tiskove.oblasti.99a58a1945": {
+      "cs": "Přizpůsobit tiskové oblasti",
+      "en": "Fit to printable area",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rekonstruovat.text.vektorove.kri.94e815f999": {
+      "cs": "Rekonstruovat text: vektorové křivky, rastrový obraz nebo kombinace",
+      "en": "Reconstruct text: vector outlines, raster image or both",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rezim.cele.obrazovky.193e142e05": {
+      "cs": "Režim celé obrazovky",
+      "en": "Full-screen mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozdily.bfb36f4c41": {
+      "cs": "Rozdíly",
+      "en": "Differences",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.rozvrzeni.stran.4fe4f78045": {
+      "cs": "Rozvržení stran",
+      "en": "Page layout",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sestava.dokumentu.1bdf05d9db": {
+      "cs": "Sestava dokumentů",
+      "en": "Document assembly",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sestava.prijima.2.a.vice.pdf.i.d.84aad3f24f": {
+      "cs": "Sestava přijímá 2 a více PDF i další podporované dokumenty. Ne-PDF vstupy se nejprve převedou; soubory se spojí ve zvoleném pořadí. HTML simuluje pouze přehled.",
+      "en": "Assembly accepts two or more PDFs and other supported documents. Non-PDF inputs are converted first; files are merged in the chosen order. This HTML shows only a preview.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.shodne.formatovani.ve.sloupci.d880e273e9": {
+      "cs": "Shodné formátování ve sloupci.",
+      "en": "Consistent formatting in column.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skryt.postranni.panely.1913f287b0": {
+      "cs": "Skrýt postranní panely",
+      "en": "Hide side panels",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.skutecna.velikost.100.498ea622bc": {
+      "cs": "Skutečná velikost / 100 %",
+      "en": "Actual size / 100%",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.slouceni.a.otevreni.e8a2d7f478": {
+      "cs": "Sloučení a otevření",
+      "en": "Merge and open",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.slouceni.a.profil.39f0c801b7": {
+      "cs": "Sloučení a profil",
+      "en": "Merge and profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sloucit.a.otevrit.aff771bbf6": {
+      "cs": "Sloučit a otevřít…",
+      "en": "Merge and open…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sloucit.do.noveho.pdf.aa75936a5b": {
+      "cs": "Sloučit do nového PDF",
+      "en": "Merge into a new PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.slovo.segment.veta.odstavec.jen..04861b75ee": {
+      "cs": "Slovo → segment → věta → odstavec; jen v režimu I-kurzoru / textové editace.",
+      "en": "Word → run → sentence → paragraph; only in I-beam / text-editing mode.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.slozena.cerna.k.100.e5b2270b76": {
+      "cs": "Složená černá → K 100 %",
+      "en": "Rich black → K 100%",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.smiseny.vyber.text.a.obrazek.407ee24941": {
+      "cs": "Smíšený výběr – text a obrázek",
+      "en": "Mixed selection – text and image",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stranky.abf779a41b": {
+      "cs": "Stránky",
+      "en": "Pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stupne.sedi.icc.5f3220e6fc": {
+      "cs": "Stupně šedi (ICC)",
+      "en": "Grayscale (ICC)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.stupne.sedi.zvoleny.profil.319b1fe9dd": {
+      "cs": "Stupně šedi – zvolený profil",
+      "en": "Grayscale – selected profile",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sude.stranky.zdrojoveho.dokument.9a8b56e818": {
+      "cs": "Sudé stránky zdrojového dokumentu",
+      "en": "Even pages from source document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.synchronizovat.posun.stranek.410927657c": {
+      "cs": "Synchronizovat posun stránek",
+      "en": "Synchronize page scrolling",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.synchronizovat.priblizeni.5348a7d19a": {
+      "cs": "Synchronizovat přiblížení",
+      "en": "Synchronize zoom",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textove.laso.levymi.kliky.vymezi.6d17aba5ac": {
+      "cs": "Textové laso – levými kliky vymezit oblast",
+      "en": "Text lasso – define area with left clicks",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textovy.blok.51bf533fda": {
+      "cs": "Textový blok",
+      "en": "Text frame",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textovy.kurzor.upravit.text.nebo.99b8f48a05": {
+      "cs": "Textový kurzor – upravit text nebo na volné stránce vytvořit bodový text",
+      "en": "Text cursor – edit text or create point text on a blank area",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textovy.nastroj.stavajici.rezim.6a8193a774": {
+      "cs": "Textový nástroj (stávající režim)",
+      "en": "Text tool (existing mode)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tisknout.formularova.pole.vcetne.d36b6065ed": {
+      "cs": "Tisknout formulářová pole včetně hodnot",
+      "en": "Print form fields with values",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tiskove.pdf.bb987f4567": {
+      "cs": "Tiskové PDF",
+      "en": "Print-ready PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tiskove.nastaveni.84dbd5cd25": {
+      "cs": "Tiskové nastavení",
+      "en": "Print settings",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tiskarna.09145dece3": {
+      "cs": "Tiskárna",
+      "en": "Printer",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.toto.je.pouze.ukazka.ovladacich..ac54ed8172": {
+      "cs": "Toto je pouze ukázka ovládacích prvků. HTML dokument neotevírá, neupravuje, neslučuje ani netiskne skutečná PDF.",
+      "en": "This is only a control preview. This HTML cannot open, edit, merge or print real PDFs.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.typ.vybraneho.obsahu.pouze.html..57cad6130e": {
+      "cs": "Typ vybraného obsahu – pouze HTML simulace",
+      "en": "Selected content type – HTML simulation only",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.typ.pdf.formularova.pole.16.text.09fcd16a84": {
+      "cs": "Typ: PDF · Formulářová pole: 16 · Textová vrstva: ano · PDF/X: nezjištěno (ukázka)",
+      "en": "Type: PDF · Form fields: 16 · Text layer: yes · PDF/X: unknown (sample)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tyto.dve.akce.nejsou.rezimy.vybe.19265ae836": {
+      "cs": "Tyto dvě akce nejsou režimy výběru, výběr nemění. Celou stránku či dokument bude možné dávkově zpracovat až v další etapě.",
+      "en": "These two commands are not selection modes and do not alter the selection. Batch processing of a page or document belongs to a later phase.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.tyto.volby.znazornuji.stavajici..62a4204944": {
+      "cs": "Tyto volby znázorňují stávající exportní možnosti. Jejich přesný rozsah má Codex ověřit ve zdrojovém kódu.",
+      "en": "These choices illustrate existing export options. Codex must verify their exact scope in the source code.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukazka.nastaveni.plynuleho.proch.5ed8b85bc0": {
+      "cs": "Ukázka nastavení plynulého procházení. Přesné vykreslování musí zajistit aplikace.",
+      "en": "Continuous scrolling settings preview. Accurate rendering must be handled by the application.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukazkovy.zdroj.12.stranek.pdf.95fafa2d4d": {
+      "cs": "Ukázkový zdroj: 12 stránek PDF",
+      "en": "Sample source: 12 PDF pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.do.skupiny.02670ce7d0": {
+      "cs": "Uložit do skupiny",
+      "en": "Save to group",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.dokument.d36bf20c7b": {
+      "cs": "Uložit dokument…",
+      "en": "Save document…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ulozit.jako.a16a9a41f9": {
+      "cs": "Uložit jako…",
+      "en": "Save as…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.umisteni.ve.stavajicim.pdf.e2ca6df2b8": {
+      "cs": "Umístění ve stávajícím PDF",
+      "en": "Position in existing PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.upozornit.na.chybejici.fonty.a.n.c307ae740b": {
+      "cs": "Upozornit na chybějící fonty a nepodporované efekty",
+      "en": "Warn about missing fonts and unsupported effects",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.usporadani.39d242ed33": {
+      "cs": "Uspořádání",
+      "en": "Arrangement",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.v.textu.veta.v.objektech.prochaz.7acbf6f18a": {
+      "cs": "V Textu věta. V Objektech procházení překryvů; v miniaturách výběr stránek.",
+      "en": "In Text: sentence selection. In Objects: cycle through overlapping objects. In thumbnails: select pages.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.v.aplikaci.pouzit.f11.ukazka.nez.c2877f1148": {
+      "cs": "V aplikaci použít F11; ukázka nezmění systémové okno.",
+      "en": "Use F11 in the application; this preview does not change the system window.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.icc.2dfa023fee": {
+      "cs": "Vlastní ICC",
+      "en": "Custom ICC",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.meritko.e80896bf26": {
+      "cs": "Vlastní měřítko",
+      "en": "Custom scale",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.operace.slouceni.navazuj.0fa0a5206f": {
+      "cs": "Vlastní operace sloučení navazuje na existující nástroj Sloučit PDF; nevytváříme druhý nezávislý proces.",
+      "en": "Merge operations use the existing Merge PDF tool; do not create a separate merge process.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.pravidla.2340afb673": {
+      "cs": "Vlastní pravidla",
+      "en": "Custom rules",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.predvolba.81cba91d79": {
+      "cs": "Vlastní předvolba",
+      "en": "Custom preset",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlastni.rozsah.je.li.zvolen.cd5c37e0f0": {
+      "cs": "Vlastní rozsah (je-li zvolen)",
+      "en": "Custom range (if selected)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozit.pred.stranku.se.zadanym.c.0e8aca5965": {
+      "cs": "Vložit před stránku se zadaným číslem",
+      "en": "Insert before specified page number",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vlozit.strany.ukazka.e9b9edfcfe": {
+      "cs": "Vložit strany (ukázka)",
+      "en": "Insert pages (sample)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.voditka.zobrazit.4460e93d54": {
+      "cs": "Vodítka – zobrazit",
+      "en": "Show guides",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrane.stranky.f613ed4883": {
+      "cs": "Vybrané stránky",
+      "en": "Selected pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrane.v.nahledech.7bc3068bd6": {
+      "cs": "Vybrané v náhledech",
+      "en": "Selected thumbnails",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.certifikat.423d71f33b": {
+      "cs": "Vybrat certifikát",
+      "en": "Choose certificate",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.druhy.pdf.c67af80167": {
+      "cs": "Vybrat druhý PDF",
+      "en": "Select second PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.otevrene.pdf.3f422a7c65": {
+      "cs": "Vybrat otevřené PDF…",
+      "en": "Select an open PDF…",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.soubor.pdf.a.jeho.stranky.42b082348d": {
+      "cs": "Vybrat soubor PDF a jeho stránky",
+      "en": "Choose PDF file and its pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.ukazkovy.obrazek.e0ecdfdddf": {
+      "cs": "Vybrat ukázkový obrázek",
+      "en": "Select sample image",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vybrat.zdrojovy.soubor.pro.demon.d5f74a2176": {
+      "cs": "Vybrat zdrojový soubor pro demonstraci (skutečný obsah se nečte)",
+      "en": "Choose sample source file (actual content is not read)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vzdalenost.71970fad55": {
+      "cs": "Vzdálenost",
+      "en": "Distance",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.stran.54fb8c6360": {
+      "cs": "Výběr stran",
+      "en": "Page selection",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyberove.nastroje.textu.8b9e7a705f": {
+      "cs": "Výběrové nástroje textu",
+      "en": "Text selection tools",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vychozi.tiskarna.ukazka.712efc5052": {
+      "cs": "Výchozí tiskárna (ukázka)",
+      "en": "Default printer (sample)",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vystupni.predvolba.79e1591f0a": {
+      "cs": "Výstupní předvolba",
+      "en": "Output preset",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vystupni.zamer.z.pdf.a0c16b441f": {
+      "cs": "Výstupní záměr z PDF",
+      "en": "PDF output intent",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.29b40bac0d": {
+      "cs": "Všechny",
+      "en": "All",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.strany.z.kazdeho.souboru.a12540cce0": {
+      "cs": "Všechny strany z každého souboru",
+      "en": "All pages from each file",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vsechny.stranky.4a2d761248": {
+      "cs": "Všechny stránky",
+      "en": "All pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vzdy.obdelnikovy.vyber.oblasti.p.b3b936f178": {
+      "cs": "Vždy obdélníkový výběr oblasti podle aktivního nástroje, bez přepínání ikon.",
+      "en": "Always select a rectangle based on the active tool, without switching icons.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.z.jineho.pdf.cbca71e3f6": {
+      "cs": "Z jiného PDF",
+      "en": "From another PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.z.jineho.dokumentu.160d2f1b76": {
+      "cs": "Z jiného dokumentu",
+      "en": "From another document",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.za.aktualni.stranku.65ffef7cb6": {
+      "cs": "Za aktuální stránku",
+      "en": "After current page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.za.posledni.stranku.929e73b3fe": {
+      "cs": "Za poslední stránku",
+      "en": "After last page",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovat.editovatelne.vektory.a..c6c027d639": {
+      "cs": "Zachovat editovatelné vektory a text, pokud to předvolba dovoluje",
+      "en": "Preserve editable vector objects and text when the preset allows it",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovani.puvodnich.barev.a.upoz.950060f62c": {
+      "cs": "Zachování původních barev a upozornění na nevratné změny mají přednost.",
+      "en": "Preserving original colors and warning about irreversible changes take priority.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zachovani.vzhledu.9d1585a6d9": {
+      "cs": "Zachování vzhledu",
+      "en": "Appearance preservation",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zahrnout.pracovni.poznamky.c3a065f8ca": {
+      "cs": "Zahrnout pracovní poznámky",
+      "en": "Include working notes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zahrnout.pracovni.poznamky.do.ex.0878deb4c3": {
+      "cs": "Zahrnout pracovní poznámky do exportu",
+      "en": "Include working notes in export",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zavrit.opet.otaznik.nebo.esc.36f23bc0bf": {
+      "cs": "Zavřít: opět otazník nebo Esc.",
+      "en": "Close with ? again or Esc.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zdroj.pro.prevod.zadny.a812d51914": {
+      "cs": "Zdroj pro převod: žádný",
+      "en": "Conversion source: none",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zdroj.vkladanych.stranek.a89988bd4e": {
+      "cs": "Zdroj vkládaných stránek",
+      "en": "Source of inserted pages",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zdrojove.dokumenty.f0aa20ee45": {
+      "cs": "Zdrojové dokumenty",
+      "en": "Source documents",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.navigaci.po.pohybu.mysi.fe405a8ce7": {
+      "cs": "Zobrazit navigaci po pohybu myší",
+      "en": "Show navigation on mouse movement",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.oddelovac.stranek.6b2246e7b2": {
+      "cs": "Zobrazit oddělovač stránek",
+      "en": "Show page dividers",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zobrazit.vysledky.a56741035c": {
+      "cs": "Zobrazit výsledky",
+      "en": "Show results",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zakladni.a.rozsireny.vyber.napov.e481fcdcef": {
+      "cs": "Základní a rozšířený výběr – nápověda",
+      "en": "Basic and extended selection – help",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zalozky.a.poznamky.jsou.samostat.52cb60a210": {
+      "cs": "Záložky a Poznámky jsou samostatné doplňkové panely vedle Vlastností.",
+      "en": "Bookmarks and Notes are separate auxiliary panels beside Properties.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zalozky.a.odkazy.03c6773b43": {
+      "cs": "Záložky a odkazy",
+      "en": "Bookmarks and links",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.aktualne.otevreneho.pdf.72b88d0dbc": {
+      "cs": "aktuálně otevřeného PDF",
+      "en": "the currently open PDF",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.editovatelny.text.5bd9b76aa3": {
+      "cs": "editovatelný text",
+      "en": "editable text",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.uhel.989067c0fa": {
+      "cs": "Úhel",
+      "en": "Angle",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.uloziste.duvery.155aa4a22e": {
+      "cs": "Úložiště důvěry",
+      "en": "Trust store",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ucel.689f4d2c1f": {
+      "cs": "Účel",
+      "en": "Purpose",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.cestina.english.86d5995765": {
+      "cs": "Čeština + English",
+      "en": "Czech + English",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.casti.nastroje.text.3451cae9f0": {
+      "cs": "Části nástroje Text",
+      "en": "Text tool sections",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sipka.funguje.jako.poznamka.muze.3d04954143": {
+      "cs": "Šipka funguje jako poznámka: může obsahovat text, vlastní komentář i křížek pro odstranění. Ukládá se do samostatné skupiny poznámek „Vyhledané výskyty“.",
+      "en": "The arrow is a note that may include text, a comment and a close button. It is saved in the separate “Search matches” notes group.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.sirka.dokumentu.161b3d7584": {
+      "cs": "Šířka dokumentu",
+      "en": "Document width",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.pdf.blacksmith.pracovni.nahled.86b1b8adf4": {
+      "cs": "PDF BLACKSMITH · PRACOVNÍ NÁHLED",
+      "en": "PDF BLACKSMITH · WORKING PREVIEW",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.porovnej.puvodni.vzhled.a.navrze.cc19f5dcbe": {
+      "cs": "Porovnej původní vzhled a navrženou sazbu. Rozpoznávání je v HTML pouze simulováno.",
+      "en": "Compare the original appearance with the proposed typesetting. Recognition is simulated in this HTML.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukazkovy.zdroj.volitelna.zmena.p.102564b550": {
+      "cs": "Ukázkový zdroj – volitelná změna pro test",
+      "en": "Sample source – optional test edit",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vektorove.krivky.rozpoznat.obrys.105f8e5816": {
+      "cs": "Vektorové křivky: rozpoznat obrysy a řádkovou strukturu; OCR jako záloha. Zde jde pouze o ukázkový režim.",
+      "en": "Vector outlines: recognize glyph shapes and line structure, with OCR as a fallback. This is a demonstration only.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.otoceni.dca80c8604": {
+      "cs": "Otočení",
+      "en": "Rotation",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.textova.vrstva.zachovat.vzhled.8c3ae0d5aa": {
+      "cs": "Textová vrstva; zachovat vzhled",
+      "en": "Text layer; preserve appearance",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vytvorit.upravitelny.textovy.obj.76dd0f6fce": {
+      "cs": "Vytvořit upravitelný textový objekt, původní obsah ponechat odděleně. U rastru nebude automaticky vymazán text z obrázku. Žádný PDF soubor se v HTML nemění.",
+      "en": "Create an editable text object while keeping the original content separate. With raster images, text is not automatically removed from the image. No PDF is changed in this HTML.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.krivky.ukazka.a3f6208427": {
+      "cs": "Křivky · ukázka",
+      "en": "Outlines · sample",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.puvodni.vzhled.demonstrace.9e26e1623e": {
+      "cs": "PŮVODNÍ VZHLED – DEMONSTRACE",
+      "en": "ORIGINAL APPEARANCE – DEMO",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.upravovany.text.demonstrace.d2d6cabbf6": {
+      "cs": "UPRAVOVANÝ TEXT – DEMONSTRACE",
+      "en": "EDITED TEXT – DEMO",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.geometricke.porovnani.pouze.ukaz.cad1cb9ac2": {
+      "cs": "GEOMETRICKÉ POROVNÁNÍ – POUZE UKÁZKA",
+      "en": "GEOMETRIC COMPARISON – DEMO ONLY",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ilustracni.seznam.nikoli.vyslede.42bba7dc5f": {
+      "cs": "Ilustrační seznam, nikoli výsledek analýzy",
+      "en": "Illustrative list, not an analysis result",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.puvodni.krivky.ani.obrazky.se.pr.54cc33b8ad": {
+      "cs": "původní křivky ani obrázky se před potvrzením nemění. OCR a vyhledání fontu mají standardně běžet lokálně.",
+      "en": "original outlines and images are not modified before confirmation. OCR and font identification should normally run locally.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zavrit.bez.zmen.0abf1b5ae9": {
+      "cs": "Zavřít bez změn",
+      "en": "Close without changes",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zavrit.rekonstrukci.05c0f420ac": {
+      "cs": "Zavřít rekonstrukci",
+      "en": "Close reconstruction",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.vyber.pouze.vymezuje.oblast.obsa.0ede322168": {
+      "cs": "Výběr pouze vymezuje oblast. Obsah je potřeba rozdělit na textové objekty, křivky a rastr; OCR se použije až podle potřeby.",
+      "en": "Selection only defines an area. Its content must be separated into text objects, vector outlines and raster data; OCR is used only when necessary.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.napoveda.k.rozpoznavani.6965212f69": {
+      "cs": "Nápověda k rozpoznávání",
+      "en": "Recognition help",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.zpusob.porovnani.a3a01887e0": {
+      "cs": "Způsob porovnání",
+      "en": "Comparison mode",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.ukazkove.alternativy.pisma.1dbed79299": {
+      "cs": "Ukázkové alternativy písma",
+      "en": "Sample font alternatives",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.smiseny.obsah.cist.textova.metad.788ff6b624": {
+      "cs": "Smíšený obsah: číst textová metadata, segmentovat křivky i obraz a výsledky spojit. Zde jde pouze o ukázkový režim.",
+      "en": "Mixed content: read text metadata, segment vector outlines and image regions, then combine results. Demonstration mode only.",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.smisene.ukazka.4af759f9ac": {
+      "cs": "Smíšené · ukázka",
+      "en": "Mixed · sample",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.neplatny.format.e.mailu.1001bca1da": {
+      "cs": ": Neplatný formát e-mailu",
+      "en": ": Invalid email format",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    },
+    "ui.povinne.pole.neni.vyplneno.8e578a82b5": {
+      "cs": ": Povinné pole není vyplněno",
+      "en": ": Required field is empty",
+      "context": "interface",
+      "status": "reviewed-in-html"
+    }
+  }
+}
