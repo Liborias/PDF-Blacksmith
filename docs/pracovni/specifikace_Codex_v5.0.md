@@ -1,7 +1,7 @@
 # PDF Blacksmith – specifikace oprav a rozšíření pro Codex
 
 **Verze:** 5.0 – F-Q9 schváleno (21. 11. 2026); nejnovější pracovní upřesnění UI v3.9 (24. 11. 2026)
-**Poslední úprava ikon (24. 11. 2026):** [HTML v3.12](rozhrani/cely_vizual_v3.12.html) a [mapa ikon v4.8](mapa_ikon_v4.8.md) nyní používají přímo uživatelem nakreslený podkovový magnet ze SVG; vyplněné tělo a obrysové póly zachovávají geometrii předlohy, barva je výhradně `currentColor` podle ostatních ikon. Jiné funkce v3.11 se nemění.\n**Nejnovější doplněk UI (24. 11. 2026):** [UI v3.11 – Separace, pomocné panely, vodítka a snap](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md), [HTML v3.11](rozhrani/cely_vizual_v3.11.html), [mapa ikon v4.7](mapa_ikon_v4.7.md), [mapa klávesových zkratek v1.0](mapa_klavesovych_zkratek_v1.0.md). Starší upřesnění zůstávají v platnosti, pokud nejsou novější verzí výslovně změněna. **Nejde o povolení hromadné implementace.**
+**Nejnovější UI doplnění v3.13 (24. 11. 2026):** [UI Pomůcky rozvržení a vlastní zkratky](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md), [HTML v3.13](rozhrani/cely_vizual_v3.13.html), [mapa zkratek v1.1](mapa_klavesovych_zkratek_v1.1.md). Pravítka jsou vně listu; v Zobrazení přibyl podnástroj s vlastním panelem nastavení; Nastavení umožňuje demo vlastní klávesové přiřazení s varováním při kolizi. Vše je jen návrh UI, ne povolení automatické implementace.\n**Poslední úprava ikon (24. 11. 2026):** [HTML v3.12](rozhrani/cely_vizual_v3.12.html) a [mapa ikon v4.8](mapa_ikon_v4.8.md) nyní používají přímo uživatelem nakreslený podkovový magnet ze SVG; vyplněné tělo a obrysové póly zachovávají geometrii předlohy, barva je výhradně `currentColor` podle ostatních ikon. Jiné funkce v3.11 se nemění.\n**Nejnovější doplněk UI (24. 11. 2026):** [UI v3.11 – Separace, pomocné panely, vodítka a snap](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md), [HTML v3.11](rozhrani/cely_vizual_v3.11.html), [mapa ikon v4.7](mapa_ikon_v4.7.md), [mapa klávesových zkratek v1.0](mapa_klavesovych_zkratek_v1.0.md). Starší upřesnění zůstávají v platnosti, pokud nejsou novější verzí výslovně změněna. **Nejde o povolení hromadné implementace.**
 **Aktuální UI a pokyny pro Codex (24. 11. 2026):** [aktuální HTML v3.10](rozhrani/cely_vizual_v3.10.html), [doplněk Přichytávání v3.10](rozhrani/UI_PRICHYTAVANI_v3.10.md), [mapa ikon v4.6](mapa_ikon_v4.6.md), [předchozí úplná konsolidace UI v3.9](rozhrani/AKTUALNI_UI_CODEX_v3.9.md). Doplněk v3.10 mění pouze magnet, vodítka a menu „Přichytávat k:“; ostatní schválené chování v3.9 a původní bezpečnostní pravidla zůstávají platná.\n**Zdroj:** https://github.com/Liborias/PDF-Blacksmith (`main`)  
 **Stav:** NEZADÁVAT HROMADNOU IMPLEMENTACI bez schválení sporných rozhodnutí.  
 **Zaměření:** Windows desktop; stávající rozhraní Go/Win32, PDFium, Python/Ghostscript.
@@ -1274,3 +1274,12 @@ Doplněk je závazný **pro návrh rozhraní**, nevyžaduje okamžitou implement
 - Mřížka má nastavitelnou rozteč a jemné dělení; zobrazení mřížky, přichytávání k mřížce a globální magnet jsou oddělené stavy. Magnet je vínově vyplněná podkova s **obrysovými koncovými póly**.
 - Konkrétní stávající zkratky a jejich konflikty ověřeny ve zdrojích: `document_commands_windows.go`, `workspace_windows.go`, `viewer_windows.go`. Nové zkratky jsou **jen návrhy** v [mapě v1.0](mapa_klavesovych_zkratek_v1.0.md); bez schválené migrace neměnit současné `T/V/M/L`.
 - Změna nastavení viditelnosti/rozvržení nemění PDF, nemá vytvářet Undo krok ani dirty; návrh SnapEngine implementovat až po zvláštním souhlasu.
+
+
+---
+
+## Doplňující pravidlo UI v3.13 (24. 11. 2026)
+
+- Pravítka a jejich popisky se kreslí mimo stránku PDF. Vodítka přecházejí od objektů přes okraj stránky ke stupnicím. Pomůcky rozvržení mají vlastní položku pod Zobrazení, vlastní panel vlastností a společný stav s nabídkou Zobrazení a horní lištou.
+- Nastavení → Klávesové zkratky obsahuje tlačítko Vlastní zkratka u jednotlivých akcí, režim zachycení, reset, upozornění a **odmítnutí** konfliktní kombinace v překrývajícím se kontextu. Neztratit stávající význam zkratek a nevázat nové klávesy přímo na produktové handlery bez explicitního souhlasu.
+- [Plný návrh a testy](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md), [mapa zkratek](mapa_klavesovych_zkratek_v1.1.md). Před implementací do Go/Win32 nejprve analyzovat dispatcher, fokus, český AltGr a kontexty.
