@@ -6,7 +6,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.11** ([HTML](rozhrani/cely_vizual_v3.11.html), [pokyny pro Codex](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md), [mapa ikon v4.7](mapa_ikon_v4.7.md), [mapa klávesových zkratek v1.0](mapa_klavesovych_zkratek_v1.0.md)). Schválené změny v3.9 a v3.10 nadále platí tam, kde je novější dodatek výslovně nenahrazuje. V Go/Win32 nebyly nové funkce implementovány.
+**Aktuální návrh:** **v3.12** ([HTML](rozhrani/cely_vizual_v3.12.html), [pokyny pro Codex](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md), [mapa ikon v4.8](mapa_ikon_v4.8.md), [mapa klávesových zkratek v1.0](mapa_klavesovych_zkratek_v1.0.md)). Schválené změny v3.9 a v3.10 nadále platí tam, kde je novější dodatek výslovně nenahrazuje. V Go/Win32 nebyly nové funkce implementovány.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,7 +18,8 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML návrh v3.11: Separace, pomocné panely, mřížka a vodítka](rozhrani/cely_vizual_v3.11.html)** – pracovní prototyp, nemění skutečné PDF.
+7. **[Aktuální HTML v3.12: autorský magnet + všechna pravidla v3.11](rozhrani/cely_vizual_v3.12.html)** – pracovní prototyp, nemění skutečné PDF.
+   - [Předchozí HTML v3.11](rozhrani/cely_vizual_v3.11.html) pro porovnání.
    - **[Pokyny pro Codex – UI v3.11](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md)** – nové závazné upřesnění.
    - **[Mapa klávesových zkratek v1.0](mapa_klavesovych_zkratek_v1.0.md)** – existující Go vs. návrhy a kolize.
    - [Předchozí HTML v3.10](rozhrani/cely_vizual_v3.10.html) pro historii.
