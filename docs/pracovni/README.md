@@ -6,7 +6,7 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 
 ## Nejnovější stav rozhraní (24. listopadu 2026)
 
-**Aktuální návrh:** **v3.13** ([HTML](rozhrani/cely_vizual_v3.13.html), [pokyny pro Codex v3.13](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md), [mapa ikon v4.8](mapa_ikon_v4.8.md), [mapa zkratek v1.1](mapa_klavesovych_zkratek_v1.1.md)). Oproti v3.12 jsou pravítka vně listu, nová volba Pomůcky rozvržení má vlastní pravý panel a Nastavení nabízí vlastní zkratku s upozorněním při kolizi. Historické verze a ostatní schválená pravidla zůstávají zachované. Nejde o implementaci v Go/Win32.
+**Aktuální návrh:** **v3.14** ([HTML](rozhrani/cely_vizual_v3.14.html), [pokyny pro Codex v3.14](rozhrani/UI_VODITKA_INTERAKCE_v3.14.md), [mapa ikon v4.8](mapa_ikon_v4.8.md), [mapa klávesových zkratek v1.2](mapa_klavesovych_zkratek_v1.2.md)). Interaktivní vodítka lze vytahovat z pravítek, přesouvat, zamknout, číselně nastavit a odstranit. Inteligentní zarovnání a měření vzdáleností jsou v HTML pouze vizuální simulací nad ukázkovými objekty. Produkční Go/Win32 nebyl měněn; předchozí schválená pravidla zůstávají zachována.
 
 **Dvoufunkční tlačítka:** společný šipka/textový kurzor a po stránkách/souvisle zobrazují ikonu příští akce; další kliknutí ji přepne. V produkční Go/Win32 aplikaci ještě není implementováno.
 
@@ -18,14 +18,16 @@ Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje 
 4. [Formuláře F1 – rozhodnutí F-Q1 až F-Q9](formulare/F1_rozhodnuti.md)
 5. [Formuláře F1 – detailní specifikace v1.9](formulare/F1_specifikace_v1.9.md)
 6. [Formuláře F1 – implementační postup](formulare/F1_plan_implementace.md)
-7. **[Aktuální HTML v3.13 – Pomůcky rozvržení, vnější pravítka a vlastní zkratky](rozhrani/cely_vizual_v3.13.html)** – pracovní prototyp, nikoli hotové funkce PDF.
+7. **[Aktuální HTML v3.14 – interaktivní vodítka, pravítka a měření](rozhrani/cely_vizual_v3.14.html)** – pracovní prototyp, nikoli hotové funkce PDF.
+   - **[Nové pokyny pro Codex v3.14](rozhrani/UI_VODITKA_INTERAKCE_v3.14.md)** – jen interakce, geometrii PDF nepřepisovat.
+   - [Předchozí HTML v3.13](rozhrani/cely_vizual_v3.13.html) – vzhled pravítek, Pomůcky rozvržení a vlastní zkratky.
    - **[Nové pokyny pro Codex v3.13](rozhrani/UI_POMUCKY_ZKRATKY_v3.13.md)** – pouze poslední schválené změny.
    - [Předchozí HTML v3.12](rozhrani/cely_vizual_v3.12.html) – autorský magnet s currentColor.
    - **[V3.11: Separace, pomocné panely, vodítka](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md)**.
    - **[Předchozí HTML v3.12: autorský magnet + všechna pravidla v3.11](rozhrani/cely_vizual_v3.12.html)** – pracovní prototyp, nemění skutečné PDF.
    - [Předchozí HTML v3.11](rozhrani/cely_vizual_v3.11.html) pro porovnání.
    - **[Pokyny pro Codex – UI v3.11](rozhrani/UI_SEPARACE_PANELY_VODITKA_v3.11.md)** – nové závazné upřesnění.
-   - **[Mapa klávesových zkratek v1.1](mapa_klavesovych_zkratek_v1.1.md)** – existující Go vs. návrhy a kolize.
+   - **[Mapa klávesových zkratek v1.2](mapa_klavesovych_zkratek_v1.2.md)** – existující Go vs. návrhy a kolize.
    - [Předchozí HTML v3.10](rozhrani/cely_vizual_v3.10.html) pro historii.
    - **[Nové pokyny pro Codex v3.10: přesné změny přichytávání](rozhrani/UI_PRICHYTAVANI_v3.10.md)** – mají přednost před v3.9 jen v popsaných třech změnách.
    - [Předchozí HTML v3.9: univerzální výběr, OCR, obrázky a dvoustavové zobrazení](rozhrani/cely_vizual_v3.9.html) pro porovnání.
