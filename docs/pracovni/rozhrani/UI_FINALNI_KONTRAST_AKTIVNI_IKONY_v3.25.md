@@ -16,3 +16,7 @@ Uživatelská data, obsah PDF, miniatury jako obsah, ICC, uživatelské barvy š
 
 ## Testy
 Všech šest schémat × light/dark, rozhraní pro pět vyobrazených panelů, textové hlavní menu vs ikonová lišta, přepínání ikon a hover; porovnat vypočtené barvy a WCAG kontrasty. Statický zápis CSS není náhradou za end-to-end browser test.
+
+## Dodatečná korekce v3.25 – navigační položky bez rámečků (24. 11. 2026)
+
+Na výslovné přání autora byla opravena **přímo stávající verze HTML v3.25**, bez vytváření v3.26. Dřívější společné pravidlo pro tlačítka barvilo i navigační řádky v levém panelu Nástroje, ve vnořených nabídkách Soubor/Zobrazení a v plovoucích rozevíracích nabídkách. Nově tyto navigační položky nemají trvalé výplně, obdélníková ohraničení ani stíny. Na hover mají jemně zvýrazněný podklad a tenkou 2px linku vlevo; aktivní/vybraná položka má zvýrazněný podklad a stejnou linku. Barva linky se odvozuje z akcentu aktuální palety (vínová pouze ve vínovém schématu). Stav klávesového fokusu zůstává viditelný. **Nedotýkat se** ikonových tlačítek druhé lišty ani textových položek hlavního menu, dalších formulářových ovladačů, zkratek, funkcí výběru či ukládání. Regresní kontrola: obě submenu vlevo, plovoucí menu, světlo/tma a všech šest palet; kontrolovat skutečný vypočtený CSS vzhled v prohlížeči.
