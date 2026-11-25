@@ -1172,6 +1172,12 @@ body[data-app-theme] .inline-help summary:hover{background:var(--ui-hover)!impor
 #help{border-radius:3px}
 
 /* v3.26: page overview and preview form designer; scoped behavior only. */
+.form-mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px}
+.form-mode-tabs button{font-size:10px}
+.app.flow-mode .pdf-page{user-select:none}
+.app.flow-mode .pdf-page input,.app.flow-mode .pdf-page select{user-select:none}
+body[data-app-theme] .form-create-view .p-block,body[data-app-theme] .data-import-view .p-block{border-color:var(--ui-border)}
+
 .app.flow-mode #editor{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;align-items:flex-start;gap:18px}
 .app.flow-mode #editor>.canvas-note{flex:0 0 100%;margin:0 0 4px}
 .app.flow-mode .pdf-page{display:block;flex:0 0 auto;margin:0!important;cursor:pointer;outline:none!important}
@@ -1471,7 +1477,7 @@ body[data-app-theme] .inline-help summary:hover{background:var(--ui-hover)!impor
 <div class="statrow"><div class="stat"><strong id="countTotal">16</strong><span>celkem</span></div><div class="stat"><strong id="countFilled">0</strong><span>vyplněno</span></div><div class="stat"><strong id="countIssues">0</strong><span>k doplnění</span></div></div>
 <button class="sectiontoggle" id="collapseFieldList">Přehled polí <span>▾</span></button><div class="fieldlist" id="fieldList"></div><div class="validation-summary" id="issueSummary"></div>
 <div class="props-actions"><button class="btn" id="validate">Zkontrolovat</button><button class="btn" id="goIssue">Přejít na problém</button></div><div class="props-actions"><button class="btn primary" id="save"><svg class="ico " aria-hidden="true"><use href="#i-save"/></svg> Uložit…</button></div>
-</div></div><div id="formCreateView" class="form-create-view" hidden></div><div id="formDataView" class="data-import-view" hidden></div><div id="otherProps" class="hidden"></div></div><div class="props-footer">HTML návrh v3.26 · interaktivní prototyp</div></aside><button type="button" class="dock-toggle dock-toggle-right" id="rightDockToggle" data-group-side="right" aria-controls="rightDock" aria-expanded="true" title="Sbalit pravou skupinu panelů: Vlastnosti a pomocné panely" aria-label="Sbalit pravou skupinu panelů"><span id="rightDockGlyph" aria-hidden="true">»</span></button></section></div>
+</div><div id="formCreateView" class="form-create-view" hidden></div><div id="formDataView" class="data-import-view" hidden></div></div><div id="otherProps" class="hidden"></div></div><div class="props-footer">HTML návrh v3.26 · interaktivní prototyp</div></aside><button type="button" class="dock-toggle dock-toggle-right" id="rightDockToggle" data-group-side="right" aria-controls="rightDock" aria-expanded="true" title="Sbalit pravou skupinu panelů: Vlastnosti a pomocné panely" aria-label="Sbalit pravou skupinu panelů"><span id="rightDockGlyph" aria-hidden="true">»</span></button></section></div>
 <footer class="statusbar"><button data-page-nav="prev" title="Předchozí strana">‹</button><span class="page-chooser" id="pageCountBottom">1 / 3</span><button data-page-nav="next" title="Další strana">›</button><span class="divider"></span><span id="zoomBottom">100 %</span><span class="divider"></span><span id="viewModeStatus">Po stránkách</span><span class="spacer"></span><span id="bottomDirty">Bez změn</span><span class="status-pill" id="activeToolLabel">Formuláře → Vyplnit</span></footer></div>
 <div class="floating-icon-tooltip" id="iconTooltip" role="tooltip" hidden></div><div class="menu-float" id="menuFloat" aria-label="Rozbalovací nabídka" role="navigation"></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="modal-overlay" id="modal"><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle">Formulář není dokončen</h2><p>Souhrn kontroly údajů. Tento HTML prototyp nenahrazuje skutečné ukládání PDF.</p><ul id="modalIssues"></ul><div class="actions"><button class="btn" id="cancelSave">Zrušit</button><button class="btn" id="goIssueModal">Přejít na pole</button><button class="btn primary" id="saveAnyway">Uložit přesto (ukázka)</button></div></div></div>
