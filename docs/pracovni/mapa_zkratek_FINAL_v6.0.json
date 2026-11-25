@@ -1,0 +1,397 @@
+{
+  "schema": "pdf-blacksmith.shortcuts.v6.0",
+  "date": "2026-11-25",
+  "version": "6.0",
+  "authoritative": true,
+  "source_map": "mapa_klavesovych_zkratek_v1.4.md",
+  "notes": "A=statický zdroj historické inventury; vyžaduje Windows recheck. U=požadavek na UI, D=HTML demo, P=návrh. Jedna fyzická událost nesmí spustit dva konfliktní handlery.",
+  "bindings": [
+    {
+      "shortcut": "Ctrl+O",
+      "action": "Otevřít PDF",
+      "scope": "global/workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+F",
+      "action": "Najít v PDF",
+      "scope": "global/workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+W",
+      "action": "Zavřít dokument",
+      "scope": "global/workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+S",
+      "action": "Uložit",
+      "scope": "global/workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Shift+S",
+      "action": "Uložit jako",
+      "scope": "global/workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+P",
+      "action": "Tisk",
+      "scope": "global/workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Tab",
+      "action": "Další dokumentová karta",
+      "scope": "workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Shift+Tab",
+      "action": "Předchozí dokumentová karta",
+      "scope": "workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "F3",
+      "action": "Další výsledek vyhledávání",
+      "scope": "search",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Shift+F3",
+      "action": "Předchozí výsledek vyhledávání",
+      "scope": "search",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "F11",
+      "action": "Celá obrazovka",
+      "scope": "workspace",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Esc",
+      "action": "Návrat z celého zobrazení / zrušení aktivního gesta",
+      "scope": "fullscreen/active gesture",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Z",
+      "action": "Zpět",
+      "scope": "document",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Y",
+      "action": "Znovu",
+      "scope": "document",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Shift+Z",
+      "action": "Znovu (alternativa)",
+      "scope": "document",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+X",
+      "action": "Vyjmout",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+C",
+      "action": "Kopírovat",
+      "scope": "inline text/canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+V",
+      "action": "Vložit",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+A",
+      "action": "Vybrat vše",
+      "scope": "inline text/canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+Enter",
+      "action": "Použít úpravu textu",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+B",
+      "action": "Tučné",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+I",
+      "action": "Kurzíva",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+U",
+      "action": "Podtržené",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+L",
+      "action": "Zarovnat vlevo",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+E",
+      "action": "Zarovnat na střed",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+R",
+      "action": "Zarovnat vpravo",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+J",
+      "action": "Zarovnat do bloku",
+      "scope": "inline text",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl++",
+      "action": "Přiblížit",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+-",
+      "action": "Oddálit",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+0",
+      "action": "Přizpůsobit stránce",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "T / V / M / L",
+      "action": "Původní režimy textového výběru — NEMIGROVAT AUTOMATICKY",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Home / End",
+      "action": "První / poslední stránka",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Page Up / Page Down",
+      "action": "Posun o stránku",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Šipka vlevo / vpravo",
+      "action": "Předchozí / následující stránka",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Mezerník",
+      "action": "Posun plátna dle fokusu",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Prostřední tlačítko + tažení",
+      "action": "Původní obdélníkový výběr, ověřit proti Q1",
+      "scope": "canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
+      "shortcut": "Ctrl+kolečko",
+      "action": "Lokální zoom PDF (HTML), přibližně pod kurzorem",
+      "scope": "editor",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Ctrl+kolečko",
+      "action": "Lokální změna velikosti miniatur, bez změny PDF zoomu",
+      "scope": "thumbnails",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Ctrl+kolečko",
+      "action": "Mimo editor a miniatury NEBLOKOVAT browser zoom",
+      "scope": "outside",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Levé tlačítko + kolečko",
+      "action": "Normální svislé listování, na okraji další/předchozí stránka",
+      "scope": "pages",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Klik",
+      "action": "Vybrat jednu stránku",
+      "scope": "page overview",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Ctrl+levý klik",
+      "action": "Přidat/odebrat stránku ze sdíleného stránkového výběru",
+      "scope": "page overview/thumbnails",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Shift+klik",
+      "action": "Souvislý rozsah stránek",
+      "scope": "page overview/thumbnails",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Enter",
+      "action": "Vybranou stránku otevřít na výšku pracovní plochy",
+      "scope": "page overview; canvas focus only",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Tažení stran",
+      "action": "Přesouvat vybraný seznam; HTML pouze simulace",
+      "scope": "page overview",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Klik vodítko",
+      "action": "Jediné vodítko + dočasné Pomůcky rozvržení",
+      "scope": "guide hit-test",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Ctrl+klik vodítko",
+      "action": "Přidat/odebrat označené vodítko",
+      "scope": "guide hit-test",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Ctrl+tažení vodítka >7px",
+      "action": "Duplikovat vodítko, nové ID; žádná duplicita při pouhém kliknutí",
+      "scope": "guide",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Tažení vodítka >7px",
+      "action": "Přesunout odemčené vodítko",
+      "scope": "guide",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Pravý klik vodítko",
+      "action": "Barva/zámek/koš, NE hover menu",
+      "scope": "guide",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Delete",
+      "action": "Smazat vybrané nezamčené vodítko jen v jeho kontextu",
+      "scope": "guide selection",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Esc",
+      "action": "Zrušit právě rozpracované tažení/kreslení, jinak původní význam",
+      "scope": "active gesture",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Enter / dvojklik",
+      "action": "Dokončit laso (ne v editačním poli)",
+      "scope": "lasso active",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Klik volné plochy I-kurzorem",
+      "action": "Nový bodový text",
+      "scope": "text caret",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Tažení textovým rámcem",
+      "action": "Nový odstavcový text",
+      "scope": "text box",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Klik/tažení nového pole",
+      "action": "Vložit/posunout demo F2 widget, nikoliv skutečný PDF záznam",
+      "scope": "form design HTML",
+      "status": "U_approved_UI_or_D_HTML_demo_not_verified_product"
+    },
+    {
+      "shortcut": "Ctrl+Shift+M",
+      "action": "Magnet zapnout/vypnout",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    },
+    {
+      "shortcut": "F9",
+      "action": "Zobrazit/skryt mřížku",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    },
+    {
+      "shortcut": "Ctrl+Shift+H",
+      "action": "Zobrazit/skryt vodítka",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    },
+    {
+      "shortcut": "Ctrl+Shift+R",
+      "action": "Zobrazit/skryt pravítka",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    },
+    {
+      "shortcut": "Shift+F9",
+      "action": "Volitelně přichytit k mřížce",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    },
+    {
+      "shortcut": "Ctrl+1",
+      "action": "100 % zobrazení",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    },
+    {
+      "shortcut": "A / T / M / L",
+      "action": "Navržená migrace univerzálních výběrových režimů; původní T/V/M/L zachovat do schválení",
+      "scope": "canvas only after compatibility audit",
+      "status": "P_proposal_not_product_implemented"
+    }
+  ],
+  "conflict_rules": [
+    "Modal and active input/IME before canvas shortcuts",
+    "Specific hit-test guides/forms/text before page overview",
+    "Native browser zoom outside editor and thumbnails is not blocked",
+    "Existing T/V/M/L behavior is NOT silently remapped",
+    "AltGr protection in CZ/EN",
+    "User-custom overrides only with conflict validation and Apply/OK",
+    "Escape cancels active gesture; F1 form widgets retain Enter/Delete as required"
+  ]
+}
