@@ -366,7 +366,7 @@ func (v *documentView) showPageDragPreview() {
 		} else {
 			paper := rect{int32(x), int32(y), int32(x + pictureW), int32(y + pictureH)}
 			fillColor(dc, paper, paletteColor{235, 234, 232})
-			drawText(dc, strconv.Itoa(drag.page+1), paper, v.app.labelFont, canvasColor, 1)
+			drawText(dc, strconv.Itoa(drag.page+1), paper, v.app.labelFont, paperInkColor, 1)
 		}
 		if count > 1 {
 			label := strconv.Itoa(count)

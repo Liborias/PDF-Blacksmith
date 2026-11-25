@@ -9,6 +9,7 @@ const idFileMenuFirst = 410
 
 type fileMenu struct {
 	handle  uintptr
+	anchor  uintptr
 	buttons []uintptr
 	open    bool
 }
@@ -68,16 +69,23 @@ func (a *app) buildFileMenu(className *uint16) bool {
 }
 
 func (a *app) showFileMenu() {
-	if a.saveInlineBefore(a.showFileMenu) {
+	a.showFileMenuAt(a.toolButtons[idFileTab])
+}
+
+func (a *app) showFileMenuAt(anchor uintptr) {
+	if anchor == 0 || a.saveInlineBefore(func() { a.showFileMenuAt(anchor) }) {
 		return
 	}
 	m := &a.fileMenu
 	if m.open {
-		a.hideFileMenu(true)
-		return
+		same := anchor == m.anchor
+		a.hideFileMenu(same)
+		if same {
+			return
+		}
 	}
 	a.activate(idFileTab)
-	if a.full || a.toolsCollapsed {
+	if a.full || a.toolsCollapsed && anchor == a.toolButtons[idFileTab] {
 		return
 	}
 	d := a.scale
@@ -97,9 +105,17 @@ func (a *app) showFileMenu() {
 			gdiDelete.Call(region)
 		}
 	}
-	m.open = true
-	top := int(a.viewport.top) + d(10) + d(34)
-	user32.NewProc("SetWindowPos").Call(m.handle, 0, 0, uintptr(top), uintptr(width), uintptr(height), 0x0040) // SWP_SHOWWINDOW
+	var anchorBounds rect
+	user32.NewProc("GetWindowRect").Call(anchor, uintptr(unsafe.Pointer(&anchorBounds)))
+	pos := point{anchorBounds.left, anchorBounds.bottom}
+	user32.NewProc("ScreenToClient").Call(a.window, uintptr(unsafe.Pointer(&pos)))
+	left := 0
+	if anchor != a.toolButtons[idFileTab] {
+		left = max(0, min(int(pos.x), a.width-width))
+	}
+	m.open, m.anchor = true, anchor
+	user32.NewProc("SetWindowPos").Call(m.handle, 0, uintptr(left), uintptr(pos.y), uintptr(width), uintptr(height), 0x0040) // SWP_SHOWWINDOW
+	invalidate(anchor)
 	a.focusFileMenu(-1, 1)
 	user32.NewProc("RedrawWindow").Call(m.handle, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
 }
@@ -111,9 +127,11 @@ func (a *app) hideFileMenu(restoreFocus bool) {
 	}
 	m.open = false
 	showControl(m.handle, false)
+	invalidate(m.anchor)
 	if restoreFocus {
-		setFocus.Call(a.toolButtons[idFileTab])
+		setFocus.Call(m.anchor)
 	}
+	m.anchor = 0
 }
 
 func (a *app) focusFileMenu(from, step int) {
@@ -135,7 +153,7 @@ func (a *app) fileMenuInput(msg *winMessage) bool {
 	switch msg.message {
 	case 0x0201, 0x0204, 0x0207, 0x00a1: // Mouse down, including the title bar.
 		parent, _, _ := user32.NewProc("GetParent").Call(msg.window)
-		if msg.window != m.handle && parent != m.handle && msg.window != a.toolButtons[idFileTab] {
+		if msg.window != m.handle && parent != m.handle && msg.window != m.anchor {
 			a.hideFileMenu(false)
 		}
 	case 0x0100: // WM_KEYDOWN
@@ -144,8 +162,9 @@ func (a *app) fileMenuInput(msg *winMessage) bool {
 			a.hideFileMenu(true)
 			return true
 		case 9:
+			anchor := m.anchor
 			a.hideFileMenu(true)
-			msg.window = a.toolButtons[idFileTab]
+			msg.window = anchor
 		case 0x0d, 0x26, 0x28: // Enter, up and down.
 			for index, button := range m.buttons {
 				if msg.window == button {

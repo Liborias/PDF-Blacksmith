@@ -1296,6 +1296,9 @@ func (v *documentView) updatePageList() {
 
 func (v *documentView) updateActions() {
 	loaded := v.ready()
+	if !v.secondary {
+		v.app.updateCommandBar()
+	}
 	editing := loaded && !v.app.busy
 	v.app.updateMergeInputButtons()
 	v.updateBookmarkActions()
@@ -1513,7 +1516,7 @@ func (v *documentView) command(id, notification int) bool {
 
 func (v *documentView) paintCanvas(dc uintptr) {
 	viewport := v.viewport
-	fillColor(dc, viewport, inputColor)
+	fillColor(dc, viewport, editorColor)
 	if len(v.spread.sheets) == 0 {
 		text := "Otevřít PDF"
 		if v.describing {
@@ -1550,7 +1553,7 @@ func (v *documentView) paintCanvas(dc uintptr) {
 		}
 		if !details && bitmap == nil {
 			fillColor(dc, bounds, paletteColor{235, 234, 232})
-			drawText(dc, "Stránku nelze vykreslit.", bounds, v.app.normalFont, canvasColor, 1)
+			drawText(dc, "Stránku nelze vykreslit.", bounds, v.app.normalFont, paperInkColor, 1)
 		} else if !details {
 			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
 		}

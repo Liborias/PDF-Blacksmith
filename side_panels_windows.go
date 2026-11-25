@@ -14,7 +14,7 @@ const (
 	idToggleRightPanels   = 232
 )
 
-var sidebarRailColor = paletteColor{28, 27, 32}
+var sidebarRailColor = uiColors["surface"]
 
 func showControl(handle uintptr, visible bool) {
 	show := uintptr(0)
@@ -69,7 +69,7 @@ func (a *app) layoutDocumentPanels() {
 		a.settingsWidth = min(a.preferredSettingsWidth(), limit)
 		right -= a.settingsWidth
 	}
-	top, bottom := int32(d(headerHeight)), int32(max(d(headerHeight+1), a.height-d(footerHeight)))
+	top, bottom := int32(d(workspaceTop)), int32(max(d(workspaceTop+1), a.height-d(footerHeight)))
 	room := right - left - 2*rail
 	minimumPreview := max(d(minimumDocumentWidth), min(d(265), room-reserved))
 	room = max(0, room-minimumPreview)
@@ -131,12 +131,16 @@ func (a *app) layoutSidebars() {
 	toolsVisible := !a.full && !a.toolsCollapsed
 	detailsVisible := !a.full && !a.detailsCollapsed
 	y := int(a.viewport.top) + d(10)
+	step := d(39)
+	if a.documentTools {
+		step = min(step, max(d(27), (int(a.viewport.bottom)-y)/len(workspaceTabs)))
+	}
 	for _, tab := range workspaceTabs {
 		button := a.toolButtons[tab.id]
 		show := toolsVisible && (!tab.needsPDF || a.documentTools)
 		if show {
-			place(button, d(10), y, a.toolsWidth-d(20), d(34))
-			y += d(39)
+			place(button, d(10), y, a.toolsWidth-d(20), step-d(5))
+			y += step
 		}
 		showControl(button, show)
 		invalidate(button)
@@ -250,12 +254,12 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	d := a.scale
 	bounds.left += int32(d(2))
 	bounds.right -= int32(d(2))
-	buttonColor, foreground := sidebarRailColor, selectionColor
+	buttonColor, foreground := uiColors["panelTabActive"], textColor
 	if collapsed {
-		buttonColor, foreground = paletteColor{47, 43, 50}, textColor
+		buttonColor = uiColors["panelTabIdle"]
 	}
 	if item.state&1 != 0 {
-		buttonColor = divider
+		buttonColor = uiColors["panelTabHover"]
 	}
 	rounded(item.dc, bounds, d(5), buttonColor, divider)
 	arrowBounds := rect{bounds.left, bounds.top + int32(d(1)), bounds.right, bounds.top + int32(d(18))}

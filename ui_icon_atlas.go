@@ -1,0 +1,77 @@
+package main
+
+import (
+	"bytes"
+	_ "embed"
+	"encoding/json"
+	"image"
+	"image/png"
+)
+
+// These masks are generated from the v3.26 SVG symbols by tools/generate_ui_icons.py.
+//
+//go:embed assets/ui_icons.png
+var uiIconImage []byte
+
+//go:embed assets/ui_icons.json
+var uiIconIndex []byte
+
+type uiIconAtlas struct {
+	pixels image.Image
+	tile   int
+	slots  map[string]int
+}
+
+func loadUIIconAtlas() uiIconAtlas {
+	var index struct {
+		Tile    int      `json:"tile_size"`
+		Symbols []string `json:"symbols"`
+	}
+	if err := json.Unmarshal(uiIconIndex, &index); err != nil {
+		panic(err)
+	}
+	pixels, err := png.Decode(bytes.NewReader(uiIconImage))
+	if err != nil {
+		panic(err)
+	}
+	if index.Tile <= 0 || pixels.Bounds().Dy() != index.Tile || pixels.Bounds().Dx() != index.Tile*len(index.Symbols) {
+		panic("invalid UI icon atlas dimensions")
+	}
+	atlas := uiIconAtlas{pixels: pixels, tile: index.Tile, slots: make(map[string]int, len(index.Symbols))}
+	for i, name := range index.Symbols {
+		if _, ok := atlas.slots[name]; ok {
+			panic("duplicate UI icon: " + name)
+		}
+		atlas.slots[name] = i
+	}
+	return atlas
+}
+
+func (atlas uiIconAtlas) mask(name string, size int) []byte {
+	slot, ok := atlas.slots[name]
+	if !ok || size <= 0 {
+		return nil
+	}
+	mask := make([]byte, size*size)
+	tile, left := atlas.tile, slot*atlas.tile
+	// Average coverage of the larger source sprite at the actual device size.
+	for y := range size {
+		top, bottom := y*tile/size, (y+1)*tile/size
+		bottom = max(top+1, bottom)
+		for x := range size {
+			first, last := x*tile/size, (x+1)*tile/size
+			last = max(first+1, last)
+			sum := 0
+			for row := top; row < bottom; row++ {
+				for col := first; col < last; col++ {
+					_, _, _, alpha := atlas.pixels.At(left+col, row).RGBA()
+					sum += int(alpha >> 8)
+				}
+			}
+			mask[y*size+x] = byte(sum / ((last - first) * (bottom - top)))
+		}
+	}
+	return mask
+}
+
+var uiIcons = loadUIIconAtlas()

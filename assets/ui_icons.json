@@ -1,0 +1,28 @@
+{
+  "tile_size": 96,
+  "symbols": [
+    "i-fit_page",
+    "i-fit_width",
+    "i-nav_file",
+    "i-nav_merge_pdf",
+    "i-nav_objects",
+    "i-nav_ocr",
+    "i-nav_page_order",
+    "i-nav_search_pdf",
+    "i-nav_separations",
+    "i-nav_signature",
+    "i-nav_split_pdf",
+    "i-nav_text",
+    "i-nav_view",
+    "i-panel_right",
+    "i-redo",
+    "i-save",
+    "i-search",
+    "i-side_by_side",
+    "i-undo",
+    "i-view_continuous",
+    "i-view_pages",
+    "i-zoom_in",
+    "i-zoom_out"
+  ]
+}

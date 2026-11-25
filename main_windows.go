@@ -133,6 +133,7 @@ type app struct {
 	brand                                              *printBitmap
 	windowButtons                                      [3]uintptr
 	historyButtons                                     [2]uintptr
+	commandBar                                        commandBar
 	tabs                                               []*documentTab
 	activeTab                                          *documentTab
 	tabList                                             uintptr

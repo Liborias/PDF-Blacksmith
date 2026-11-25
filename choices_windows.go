@@ -52,7 +52,7 @@ func (a *app) drawChoice(item *buttonDraw) bool {
 	bounds := item.bounds
 	color := inputColor
 	if item.state&1 != 0 {
-		color = paletteColor{38, 35, 40}
+		color = uiColors["hover"]
 	}
 	fillColor(item.dc, bounds, a.background(item.handle))
 	rounded(item.dc, bounds, a.scale(5), color, divider)
@@ -163,7 +163,7 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 func (a *app) paintPopupEntry(dc uintptr, bounds rect, entry popupItem, highlighted bool) {
 	color := panelColor
 	if highlighted && !entry.disabled && !entry.separator {
-		color = divider
+		color = uiColors["hover"]
 	}
 	fillColor(dc, bounds, color)
 	if entry.separator {
@@ -172,7 +172,7 @@ func (a *app) paintPopupEntry(dc uintptr, bounds rect, entry popupItem, highligh
 		return
 	}
 	foreground := textColor
-	if entry.checked {
+	if entry.checked && !highlighted {
 		foreground = selectionColor
 	}
 	if entry.disabled {

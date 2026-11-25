@@ -52,7 +52,7 @@ func (s *viewportSurface) ensure(reference uintptr, width, height int32) bool {
 	}
 	complete := false
 	if s.complete {
-		fillColor(dc, rect{0, 0, width, height}, inputColor)
+		fillColor(dc, rect{0, 0, width, height}, editorColor)
 		copied, _, _ := copySurface.Call(dc, 0, 0, uintptr(min(width, s.width)), uintptr(min(height, s.height)),
 			s.dc, 0, 0, 0x00cc0020)
 		complete = copied != 0
@@ -131,7 +131,7 @@ func (s *viewportSurface) blit(dc uintptr, bounds rect) {
 }
 
 func (v *documentView) paintLoading(dc uintptr) {
-	fillColor(dc, v.viewport, inputColor)
+	fillColor(dc, v.viewport, editorColor)
 	message := "Načítám stránku…"
 	if v.describing {
 		message = "Načítám dokument…"

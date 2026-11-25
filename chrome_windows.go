@@ -66,9 +66,6 @@ func (a *app) layoutHeader() {
 	d := a.scale
 	a.headerBrand = 200
 	a.windowButtonStart = a.width - d(windowButtonsWidth)
-	for i, handle := range a.historyButtons {
-		place(handle, d(a.headerBrand+7+i*34), d(8), d(32), d(33))
-	}
 	for i, handle := range a.windowButtons {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
 		invalidate(handle)
@@ -77,7 +74,7 @@ func (a *app) layoutHeader() {
 
 func (a *app) layoutDocumentTabs() {
 	d := a.scale
-	left, right := d(a.headerBrand+80), a.windowButtonStart-d(4)
+	left, right := d(a.headerBrand+14), a.windowButtonStart-d(4)
 	widths := make([]int, len(a.tabs))
 	names := make(map[string]int, len(a.tabs))
 	for _, tab := range a.tabs {
@@ -149,12 +146,12 @@ func (a *app) drawDocumentTab(item *buttonDraw) bool {
 			if item.handle != tab.button && item.handle != tab.close {
 				continue
 			}
-			body, foreground := sidebarRailColor, mutedColor
+			body, foreground := uiColors["tabIdle"], mutedColor
 			if tab == a.activeTab {
-				body, foreground = panelColor, textColor
+				body, foreground = uiColors["tabActive"], textColor
 			}
 			if item.state&1 != 0 {
-				body = divider
+				body, foreground = uiColors["tabHover"], textColor
 			}
 			r := item.bounds
 			fillColor(item.dc, r, body)
@@ -181,89 +178,36 @@ func (a *app) drawDocumentTab(item *buttonDraw) bool {
 	return true
 }
 
-var pagesIcon = [][]point{
-	{{4, 3}, {12, 3}, {16, 7}, {16, 16}, {4, 16}, {4, 3}},
-	{{12, 3}, {12, 7}, {16, 7}},
-	{{1, 13}, {1, 1}, {10, 1}},
+var toolIconSymbols = map[int]string{
+	idFileTab:        "i-nav_file",
+	idSearchTab:      "i-nav_search_pdf",
+	idTextTab:        "i-nav_text",
+	idObjectsTab:     "i-nav_objects",
+	idOCRTab:         "i-nav_ocr",
+	idBrowseTab:      "i-nav_view",
+	idPagesTab:       "i-view_pages",
+	idPageOrderTool:  "i-nav_page_order",
+	idProofTab:       "i-nav_separations",
+	idSignTab:        "i-nav_signature",
+	idFullscreen:     "i-panel_right",
+	idSplitTab:       "i-nav_split_pdf",
+	idMergeTab:       "i-nav_merge_pdf",
 }
 
-var toolIcons = map[int][][]point{
-	idFileTab: {
-		{{1, 4}, {6, 4}, {8, 6}, {17, 6}, {17, 16}, {1, 16}, {1, 4}},
-	},
-	idSearchTab: {
-		{{8, 2}, {12, 4}, {14, 8}, {12, 12}, {8, 14}, {4, 12}, {2, 8}, {4, 4}},
-		{{4, 4}, {8, 2}}, {{12, 12}, {17, 17}},
-	},
-	idTextTab: {{{3, 5}, {3, 2}, {15, 2}, {15, 5}}, {{9, 2}, {9, 16}}, {{6, 16}, {12, 16}}},
-	idObjectsTab: {{{2, 1}, {13, 10}, {8, 10}, {11, 15}, {8, 17}, {5, 12}, {2, 15}, {2, 1}}},
-	idOCRTab: {
-		{{1, 5}, {1, 1}, {5, 1}}, {{13, 1}, {17, 1}, {17, 5}},
-		{{17, 13}, {17, 17}, {13, 17}}, {{5, 17}, {1, 17}, {1, 13}},
-		{{5, 13}, {9, 5}, {13, 13}}, {{7, 10}, {11, 10}},
-	},
-	idBrowseTab: {
-		{{1, 9}, {5, 5}, {9, 4}, {13, 5}, {17, 9}},
-		{{1, 9}, {5, 13}, {9, 14}, {13, 13}, {17, 9}},
-		{{7, 9}, {9, 7}, {11, 9}, {9, 11}, {7, 9}},
-	},
-	idPagesTab:      pagesIcon,
-	idPageOrderTool: pagesIcon,
-	idProofTab: {
-		{{1, 5}, {9, 1}, {17, 5}, {9, 9}, {1, 5}},
-		{{1, 9}, {9, 13}, {17, 9}},
-		{{1, 13}, {9, 17}, {17, 13}},
-	},
-	idSignTab: {
-		{{3, 12}, {13, 2}, {16, 5}, {6, 15}, {2, 16}, {3, 12}},
-		{{11, 4}, {14, 7}},
-		{{9, 16}, {17, 16}},
-	},
-	idFullscreen: {
-		{{1, 6}, {1, 1}, {6, 1}},
-		{{12, 1}, {17, 1}, {17, 6}},
-		{{17, 12}, {17, 17}, {12, 17}},
-		{{6, 17}, {1, 17}, {1, 12}},
-	},
-	idSplitTab: {
-		{{2, 2}, {12, 2}, {16, 6}, {16, 8}},
-		{{12, 2}, {12, 6}, {16, 6}},
-		{{2, 2}, {2, 8}},
-		{{2, 12}, {2, 16}, {16, 16}, {16, 12}},
-		{{1, 10}, {4, 10}}, {{7, 10}, {10, 10}}, {{13, 10}, {17, 10}},
-	},
-	idMergeTab: {
-		{{1, 2}, {7, 2}, {7, 7}, {1, 7}, {1, 2}},
-		{{1, 11}, {7, 11}, {7, 16}, {1, 16}, {1, 11}},
-		{{7, 5}, {12, 9}}, {{7, 13}, {12, 9}}, {{10, 7}, {12, 9}, {10, 11}},
-		{{14, 5}, {17, 5}, {17, 13}, {14, 13}},
-	},
-}
-
-func (a *app) drawToolIconLabel(item *buttonDraw, color paletteColor) bool {
-	paths := toolIcons[int(item.controlID)]
-	if len(paths) == 0 {
+func (a *app) drawToolIconLabel(item *buttonDraw, color, body paletteColor) bool {
+	id := int(item.controlID)
+	symbol := toolIconSymbols[id]
+	if symbol == "" {
 		return false
 	}
 	bounds := item.bounds
 	size := int32(a.scale(18))
 	left := bounds.left + int32(a.scale(9))
 	top := (bounds.top + bounds.bottom - size) / 2
-	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(1))), color.win())
-	old, _, _ := gdiSelect.Call(item.dc, pen)
-	polyline := gdi32.NewProc("Polyline")
-	for _, path := range paths {
-		var shape [8]point
-		for index, vertex := range path {
-			shape[index] = point{left + int32(a.scale(int(vertex.x))), top + int32(a.scale(int(vertex.y)))}
-		}
-		polyline.Call(item.dc, uintptr(unsafe.Pointer(&shape[0])), uintptr(len(path)))
-	}
-	gdiSelect.Call(item.dc, old)
-	gdiDelete.Call(pen)
+	drawUIIcon(item.dc, symbol, int(left), int(top), int(size), color, body)
 	bounds.left = left + size + int32(a.scale(7))
 	bounds.right -= int32(a.scale(5))
-	if int(item.controlID) == idFileTab {
+	if id == idFileTab {
 		a.arrow(item.dc, int(bounds.right)-a.scale(8), int(bounds.top+bounds.bottom)/2, color)
 		bounds.right -= int32(a.scale(20))
 	}
@@ -298,18 +242,18 @@ func (a *app) drawWindowButton(item *buttonDraw) bool {
 	if (id < idMinimize || id > idCloseWindow) && id != idClosePDF {
 		return false
 	}
-	body := titleColor
+	body, color := titleColor, textColor
 	if item.state&1 != 0 {
-		body = divider
+		body = uiColors["hover"]
 		if id == idCloseWindow {
 			body = paletteColor{133, 35, 53}
+			color = paletteColor{255, 255, 255}
 		}
 	}
 	fillColor(item.dc, item.bounds, body)
 	bounds := item.bounds
 	x, y := int((bounds.left+bounds.right)/2), int((bounds.top+bounds.bottom)/2)
 	d := a.scale(5)
-	color := textColor
 	if id == idClosePDF {
 		d = a.scale(4)
 		color = mutedColor

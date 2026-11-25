@@ -1,0 +1,52 @@
+"""Build 4× alpha masks for Win32 from the original v3.26 SVG symbols."""
+
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import json
+import re
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT / "docs" / "pracovni"
+ATLAS = ROOT / "assets" / "ui_icons"
+TILE_SIZE = 96
+SYMBOLS = (
+    "fit_page", "fit_width", "nav_file", "nav_merge_pdf", "nav_objects",
+    "nav_ocr", "nav_page_order", "nav_search_pdf", "nav_separations",
+    "nav_signature", "nav_split_pdf", "nav_text", "nav_view", "panel_right",
+    "redo", "save", "search", "side_by_side", "undo", "view_continuous", "view_pages",
+    "zoom_in", "zoom_out",
+)
+
+
+def main():
+    reference = (DOCS / "rozhrani" / "cely_vizual_v3.26.html").read_text(encoding="utf-8")
+    original_tags = {
+        re.search(r'\bid="(i-[^"]+)"', item)[1]: item
+        for item in re.findall(r'<symbol\b[^>]*\bid="i-[^"]+"[^>]*>.*?</symbol>', reference, re.S)
+    }
+    ids = ["i-" + name for name in SYMBOLS]
+    registry = json.loads((DOCS / "mapa_ikon_FINAL_v6.0.json").read_text(encoding="utf-8"))
+    approved = {item["symbol"] for item in registry["icons"]}
+    for name in ids:
+        if name not in original_tags or name not in approved:
+            raise ValueError(f"Missing or unapproved icon: {name}")
+    width = 24 * len(ids)
+    definitions = "".join(original_tags[name] for name in ids)
+    tiles = "".join(f'<use x="{24 * index}" width="24" height="24" xlink:href="#{name}"/>'
+                    for index, name in enumerate(ids))
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+           f'width="{width}" height="24" viewBox="0 0 {width} 24">'
+           f'<defs>{definitions}</defs>{tiles}</svg>')
+    with TemporaryDirectory() as folder:
+        source = Path(folder) / "atlas.svg"
+        source.write_text(svg, encoding="utf-8")
+        subprocess.run(["inkscape", str(source), "--export-type=png",
+                        f"--export-filename={ATLAS.with_suffix('.png')}",
+                        f"--export-width={TILE_SIZE * len(ids)}"], check=True)
+    ATLAS.with_suffix(".json").write_text(
+        json.dumps({"tile_size": TILE_SIZE, "symbols": ids}, indent=2) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

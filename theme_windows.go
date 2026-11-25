@@ -18,22 +18,23 @@ const (
 	bsOwnerDraw    = 0x000b
 )
 
-type paletteColor struct{ red, green, blue uint8 }
-
 func (color paletteColor) win() uintptr {
 	return uintptr(color.red) | uintptr(color.green)<<8 | uintptr(color.blue)<<16
 }
 
 var (
-	titleColor     = paletteColor{22, 22, 24}
-	canvasColor    = paletteColor{26, 26, 29}
-	panelColor     = paletteColor{33, 33, 39}
-	inputColor     = paletteColor{19, 19, 23}
-	textColor      = paletteColor{245, 242, 244}
-	mutedColor     = paletteColor{186, 178, 188}
-	disabledColor  = paletteColor{119, 114, 122}
-	selectionColor = paletteColor{205, 120, 148}
-	divider        = paletteColor{65, 61, 70}
+	uiColors       = uiPalettes.colors(uiPalettes.Default)
+	titleColor     = uiColors["top"]
+	canvasColor    = uiColors["base"]
+	panelColor     = uiColors["panel"]
+	editorColor    = uiColors["editor"]
+	inputColor     = uiColors["input"]
+	textColor      = uiColors["text"]
+	mutedColor     = uiColors["muted"]
+	disabledColor  = mutedColor
+	selectionColor = uiColors["accent"]
+	divider        = uiColors["border"]
+	paperInkColor  = paletteColor{26, 26, 29} // Text on fixed light paper placeholders.
 
 	gdiDelete     = gdi32.NewProc("DeleteObject")
 	gdiSelect     = gdi32.NewProc("SelectObject")
@@ -107,7 +108,7 @@ func drawCheck(dc uintptr, bounds rect, color paletteColor) {
 func (a *app) drawFocus(dc uintptr, bounds rect) {
 	inset := int32(a.scale(5))
 	line := bounds.bottom - int32(a.scale(3))
-	fillColor(dc, rect{bounds.left + inset, line, bounds.right - inset, line + 1}, mutedColor)
+	fillColor(dc, rect{bounds.left + inset, line, bounds.right - inset, line + 1}, uiColors["focus"])
 }
 
 func drawText(dc uintptr, text string, bounds rect, font uintptr, color paletteColor, align uintptr) {
@@ -142,7 +143,10 @@ func (a *app) applyTheme() {
 	a.logo, _, _ = user32.NewProc("LoadImageW").Call(a.instance, appIconID, 1, 128, 128, 0)
 	dwm := syscall.NewLazyDLL("dwmapi.dll").NewProc("DwmSetWindowAttribute")
 	if dwm.Find() == nil {
-		dark, round, caption := uint32(1), uint32(2), uint32(canvasColor.win())
+		dark, round, caption := uint32(0), uint32(2), uint32(titleColor.win())
+		if uiPalettes.Default.Mode == "dark" {
+			dark = 1
+		}
 		dwm.Call(a.window, 20, uintptr(unsafe.Pointer(&dark)), 4)
 		dwm.Call(a.window, 33, uintptr(unsafe.Pointer(&round)), 4)
 		dwm.Call(a.window, 35, uintptr(unsafe.Pointer(&caption)), 4)
@@ -156,6 +160,9 @@ func (a *app) paint(hwnd uintptr) {
 	if !a.full {
 		fillColor(dc, rect{0, 0, int32(a.width), int32(a.scale(headerHeight))}, titleColor)
 		fillColor(dc, rect{0, int32(a.scale(headerHeight)) - 1, int32(a.width), int32(a.scale(headerHeight))}, divider)
+		barTop, barBottom := int32(a.scale(headerHeight)), int32(a.scale(workspaceTop))
+		fillColor(dc, rect{0, barTop, int32(a.width), barBottom}, titleColor)
+		fillColor(dc, rect{0, barBottom - 1, int32(a.width), barBottom}, divider)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), int32(a.height)}, canvasColor)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
 		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
@@ -194,7 +201,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	if item.controlType != 4 { // ODT_BUTTON
 		return false
 	}
-	if a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) || a.drawTextIcon(item) {
+	if a.drawCommandBarButton(item) || a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) || a.drawTextIcon(item) {
 		return true
 	}
 	bounds := item.bounds
@@ -214,7 +221,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		offset, edge := int32(a.scale(2)), int32(a.scale(17))
 		top := bounds.top + (bounds.bottom-bounds.top-edge)/2
 		box := rect{bounds.left + offset, top, bounds.left + offset + edge, top + edge}
-		rounded(item.dc, box, a.scale(5), inputColor, disabledColor)
+		rounded(item.dc, box, a.scale(5), inputColor, divider)
 		if a.checked(item.handle) {
 			if item.state&4 == 0 {
 				foreground = selectionColor
@@ -230,7 +237,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		}
 		active := (tool && id == a.tool) || (a.detailButtons[id] == item.handle && id == selectedDetail) ||
 			a.primaryButtons[item.handle] || (id == idReaderDeletePages && a.view.pageDrag.overDelete)
-		body, edge := paletteColor{42, 42, 47}, divider
+		body, edge := uiColors["control"], divider
 		if tool {
 			body, edge = background, background
 		}
@@ -238,13 +245,15 @@ func (a *app) drawButton(item *buttonDraw) bool {
 			foreground = selectionColor
 		}
 		if item.state&1 != 0 {
-			body = divider
+			body = uiColors["hover"]
+			foreground = textColor
 		}
 		if item.state&4 != 0 {
 			body, edge = background, divider
+			foreground = disabledColor
 		}
 		rounded(item.dc, bounds, a.scale(5), body, edge)
-		if !a.drawToolIconLabel(item, foreground) {
+		if !a.drawToolIconLabel(item, foreground, body) {
 			align := uintptr(1)
 			if id == idCompareTitleLeft || id == idCompareTitleRight {
 				align |= 0x8000 // DT_END_ELLIPSIS

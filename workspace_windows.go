@@ -219,8 +219,7 @@ func (a *app) setupWorkspace() bool {
 	a.beginPanel(idTextTab)
 	a.buildTextPanel()
 	a.addingTab, a.controlParent = 0, 0
-	a.historyButtons[0] = a.textIconButton("Zpět (Ctrl+Z)", idHeaderUndo, 0, 0, 32)
-	a.historyButtons[1] = a.textIconButton("Znovu (Ctrl+Y)", idHeaderRedo, 0, 0, 32)
+	a.buildCommandBar()
 	a.beginPanel(idObjectsTab)
 	a.buildObjectPanel()
 	a.beginPanel(idOCRTab)
@@ -482,9 +481,7 @@ func (a *app) layout() {
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}
-	for _, handle := range a.historyButtons {
-		showWindow.Call(handle, chrome)
-	}
+	a.layoutCommandBar()
 	a.layoutDocumentTabs()
 	a.view.showToolbar(chrome)
 	active := a.layoutComparison()
@@ -805,6 +802,9 @@ func (a *app) command(id, notification int) {
 	}
 	if choice := a.choiceCommands[id]; choice != nil && notification == 0 {
 		a.openChoice(choice)
+		return
+	}
+	if a.commandBarCommand(id, notification) {
 		return
 	}
 	if notification == 0 && (id == idHeaderUndo || id == idHeaderRedo) {
