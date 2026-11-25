@@ -45,9 +45,25 @@ Při ukládání zachovej `/AcroForm`, `/Fields`, `/Widget`, `/V`, `/AP`, podpis
 
 **Zatím nic neimplementuj, nepřepisuj soubory, nevytvářej commit ani push.**
 
-## ÚPLNĚ POSLEDNÍ BOD – odložený experimentální adaptivní režim stránek
+## Aktualizace 25. 11. 2026 – HTML v3.26 a formální formáty importu
 
-Toto je poslední bod zadání, nikoliv současná implementační priorita. **Pouze analyzuj proveditelnost**, návrh samostatně schválíme později.
+Před prvním návrhem jakékoli implementace **povinně přečíst**:
+- [aktuální v3.26](cely_vizual_v3.26.html) – interaktivní HTML, navazuje na v3.25 včetně poslední korekce OCR, okrajů stránek, kompaktních panelů a nápovědy;
+- [UI_ZOOM_FORM_DESIGN_v3.26.md](UI_ZOOM_FORM_DESIGN_v3.26.md) – lokální Ctrl+kolečko, pružný přehled stránek, návrh polí F2 (pouze demonstrace), ošetření kontextů;
+- [DATA_IMPORT_FORMULARE_v1.0.md](DATA_IMPORT_FORMULARE_v1.0.md) – pravidla CSV (včetně UTF-8, středníku a uvozovek), XLSX, Google Tabulek, mapování, validace, exportních hodnot, databázové identity a dávkových výstupů;
+- [mapa_klavesovych_zkratek_v1.4.md](../mapa_klavesovych_zkratek_v1.4.md) – kontextový Ctrl+wheel, Enter, Ctrl+klik, Shift+klik, tažení a interakce polí.
+
+**Co již ukazuje HTML v3.26:**
+- Ctrl+kolečko ve `#editor` mění jen zoom dokumentu. V `#thumbPane` jen velikost náhledů. Mimo tyto zóny prohlížeč stále může měnit měřítko HTML. Vyžaduje prohlížečové ověření prohlížečů Chrome/Edge.
+- Samostatný režim Zobrazení → Pružný přehled stran s flex-wrap, sdíleným výběrem podle stávajícího modelu miniatur, Enter na výšku a demonstračním přetažením pořadí. PDF obsah se tím nemění.
+- Formuláře → Vyplnit zůstává původní a funkčně oddělené. Přibyla vizuální ukázka Návrh polí F2 (vkládání, seznam, vlastnosti, Tab pořadí, výběr možností) a záložka Z dat s náhledem CSV a mapováním sloupců na pole.
+- XLSX a Google Tabulky **nejsou v HTML napojeny**; integrace vyžaduje samostatný XLSX parser, bezpečný OAuth / Google Sheets API a produkční workflow. HTML nyní jen ukazuje koncepci. Ani CSV náhled nevytváří skutečně vyplněná PDF.
+
+**Priorita a bezpečnost:** První úkol Codexu nadále pouze analýza, bez změn kódu a commitů. Nepřeskakovat schválené F1 etapy. **F2 ani batch import nejsou schváleny pro implementaci produkční Go/Win32 aplikace**, dokud autor nepotvrdí rozsah a etapu. Ve výstupu analýzy odliš skutečně funkční produkci od HTML demonstrace a zaznamenej rizika zásahů do `/AcroForm`, `/Fields`, `/Widget`, `/V`, `/AP`, výběru, Undo/Redo, textu, podpisů a anotací.
+
+## ÚPLNĚ POSLEDNÍ BOD – budoucí produkční implementace pružného přehledu stránek
+
+Toto je poslední bod zadání a týká se **produkční Go/Win32 implementace**, nikoliv HTML v3.26, kde je nyní interaktivní demonstrace. **Pouze analyzuj proveditelnost a regresní rizika**; produkční řešení samostatně schválíme později.
 
 - Nový režim pro více stran na pracovní ploše, podobný `flex-wrap`: při oddálení a větším dostupném prostoru se stránky skládají vedle sebe i pod sebou; při vhodném měřítku mohou být zobrazené všechny. Nepřekládat obyčejný scroll na bezpodmínečné oddálení; rozlišit scroll, přiblížení a výběr.
 - Klik zvolí jednu stránku; `Enter` vybranou okamžitě přizpůsobí výšce pracovní plochy.
