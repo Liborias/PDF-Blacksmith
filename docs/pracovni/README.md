@@ -4,7 +4,10 @@
 
 Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje stávající implementaci** v Go/Win32 a Pythonu; přítomnost návrhu neznamená, že byl implementován.
 
-## Nejnovější stav rozhraní (24. listopadu 2026)
+## Nejnovější stav rozhraní (25. listopadu 2026)
+
+**Nový dodatek 25. 11.:** [zobrazení, OCR, panely a odložený adaptivní režim](rozhrani/UI_ZOBRAZENI_OCR_PANELY_2026-11-25.md). HTML **v3.25** bylo aktualizováno přímo: odstranění dekorativního obrysu stránek, kolečkové listování po stránkách na hraně, vysvětlivka OCR pod otazníkem, odlehčení dlouhých prázdných slotů a sbalitelné skupiny. Poslední plánovaný adaptivní režim patří výhradně na konec [iniciačního zadání Codexu](rozhrani/CODEX_INICIALIZACE_2026-11-25.md); implementace zatím není povolena. Produkční Go/Win32 kód nebyl měněn.
+
 
 **Předání Codexu na 25. 11. 2026:** [finální iniciační pokyn](rozhrani/CODEX_INICIALIZACE_2026-11-25.md). **Mapa ikon v4.7:** [mapa](mapa_ikon_v4.7.md) · [nové SVG Nastavení → Rozhraní](rozhrani/ikony/settings_interface.svg). HTML zůstává v3.25 (navigační položky bez rámečků, nová ikona Rozhraní); produkční Go/Win32 se neměnilo.
 
