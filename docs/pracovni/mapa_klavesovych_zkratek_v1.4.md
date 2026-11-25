@@ -1,6 +1,6 @@
-# PDF Blacksmith — mapa klávesových zkratek v1.0
+# PDF Blacksmith — mapa klávesových zkratek v1.4
 
-**Datum:** 24. listopadu 2026 · **Status:** inventura skutečných zkratek + návrh pro nové funkce, **není to automatický příkaz měnit produktový kód**.
+**Datum:** 25. listopadu 2026 · **Status:** inventura skutečných zkratek + návrh pro nové funkce, **není to automatický příkaz měnit produktový kód**.
 
 **Pro Codex:** Oddělovat (A) zkratku **skutečně obsluhovanou současným Go handlerem**, (B) **textový popisek** v UI, jehož funkčnost se ověřuje zvlášť, a (C) **nový návrh** bez implementace. Nepovažovat vše v tabulkách za již fungující. Uplatnit pouze tehdy, má-li fokus relevantní plátno nebo textový editor; při fokusu v políčku zadávání zachovat běžné vstupy.
 
