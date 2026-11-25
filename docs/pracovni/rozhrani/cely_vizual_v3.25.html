@@ -1125,6 +1125,51 @@ body[data-app-theme] .menu-float > button:focus-visible{
   outline:2px solid var(--theme-focus)!important;
   outline-offset:-2px!important;
 }
+
+/* UI polish 25 Nov – main document pages have no decorative selection outline. */
+body[data-app-theme] .editor .pdf-page,
+body[data-app-theme] .editor .pdf-page.active,
+body[data-app-theme] .app.continuous-mode .pdf-page.active,
+body[data-app-theme] .editor .pdf-page:focus,
+body[data-app-theme] .editor .pdf-page:focus-visible{
+  outline:none!important;outline-offset:0!important;border-color:transparent!important;
+}
+/* Explanations take space only when populated. No fixed empty 59/64px placeholders. */
+body[data-app-theme] :is(.section-hover-help,.section-hover-help:not(:empty),.icon-box-group .icon-help,.icon-box-group .icon-help:not(:empty),.text-selection-hover,.text-size-help){
+  height:auto!important;min-height:0!important;max-height:none!important;
+}
+body[data-app-theme] :is(.section-hover-help:empty,.icon-box-group .icon-help:empty,.text-selection-hover:empty,.text-size-help:empty){
+ display:none!important;margin:0!important;padding:0!important;border:0!important;
+}
+body[data-app-theme] .props-body .p-block{padding-bottom:8px;margin-bottom:8px}
+body[data-app-theme] .props-body .p-block .p-head{margin:1px 0 6px}
+body[data-app-theme] .props-body .p-block .compact-row{margin-block:5px}
+body[data-app-theme] .props-body .p-block .tool-muted{margin:3px 0 5px}
+/* Collapsible group: divider and narrow chevron at end, not a boxed toolbar button. */
+body[data-app-theme] .p-section-toggle{
+ margin-left:auto;flex:none;min-width:22px;width:22px;height:21px;padding:0;
+ border:0!important;border-radius:2px;background:transparent!important;
+ color:var(--ui-muted)!important;cursor:pointer;font-size:15px;line-height:1;
+}
+body[data-app-theme] .p-section-toggle:hover{background:var(--ui-hover)!important;color:var(--ui-ink)!important}
+body[data-app-theme] .p-section-toggle:focus-visible{outline:2px solid var(--theme-focus)!important}
+body[data-app-theme] .p-block.collapsed{padding-bottom:4px}
+body[data-app-theme] .p-block.collapsed>.p-head{margin-bottom:0}
+body[data-app-theme] .p-block.collapsed>.p-section-content{display:none}
+body[data-app-theme] .p-block>.p-section-content{min-width:0}
+body[data-app-theme] .p-head>.section-help{margin-left:auto}
+body[data-app-theme] .p-head>.section-help+.p-section-toggle{margin-left:0}
+/* Shared round help marker in panels; top toolbar help uses its own button and plain question mark. */
+body[data-app-theme] .section-help summary,
+body[data-app-theme] .inline-help summary{
+ width:21px;height:21px;min-width:21px;border-radius:50%!important;
+ border:1px solid var(--ui-border)!important;background:transparent!important;
+ color:var(--ui-ink)!important;font-weight:700;
+}
+body[data-app-theme] .section-help summary:hover,
+body[data-app-theme] .inline-help summary:hover{background:var(--ui-hover)!important}
+#help .toolbar-help-glyph{display:block;font-weight:500;font-family:Arial,sans-serif;font-size:19px;line-height:20px}
+#help{border-radius:3px}
 </style></head>
 <body><svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true"><defs><symbol id="i-nav_file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(1.59328 1.59328) scale(0.867227)" stroke-width="2.0756"><path d="M3 7V5h7l2 2h9v12H3z"/><path d="M3 9h18"/>
 </g></symbol><symbol id="i-nav_view" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g xmlns="http://www.w3.org/2000/svg" transform="translate(2.54656 2.54656) scale(0.787786)" stroke-width="2.2849"><path d="M2 12s3.7-6 10-6 10 6 10 6-3.7 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>
@@ -1314,7 +1359,7 @@ body[data-app-theme] .menu-float > button:focus-visible{
 <div class="commandbar"><nav class="menus" aria-label="Hlavní nabídka"><button class="menubtn" data-menu="0" aria-haspopup="true" aria-expanded="false" title="Nabídka Soubor – najetím nebo kliknutím">Soubor</button><button class="menubtn" data-menu="1" aria-haspopup="true" aria-expanded="false" title="Nabídka Zobrazení – najetím nebo kliknutím">Zobrazení</button><button class="menubtn" data-menu="2">Nástroje</button><button class="menubtn" data-menu="3">Úpravy</button><button class="menubtn" data-menu="4">Formuláře</button><button class="menubtn" data-menu="5">Pomoc</button></nav><div class="divider"></div>
 <div class="toolbar"><button type="button" class="toolbtn active" id="selectPointer" data-select-mode="pointer" aria-label="Přepnout na textový kurzor" title="Nyní: šipka · Kliknutím textový kurzor" aria-pressed="true"><svg class="ico" aria-hidden="true"><use href="#i-text_caret"/></svg></button><button type="button" class="toolbtn" id="selectRect" data-select-mode="rect" title="Univerzální výběr obdélníkem" aria-label="Výběr obdélníkem – text, objekty nebo smíšený obsah"><svg class="ico" aria-hidden="true"><use href="#i-rect_select"/></svg></button><button type="button" class="toolbtn" id="selectLasso" data-select-mode="lasso" title="Univerzální výběr lasem" aria-label="Výběr lasem – text, objekty nebo smíšený obsah"><svg class="ico" aria-hidden="true"><use href="#i-lasso"/></svg></button><span class="toolbar-divider"></span><button type="button" class="toolbtn" id="magnetToggle" aria-label="Zapnout nebo vypnout přichytávání" aria-pressed="true" title="Přichytávání (magnet)"><svg class="ico" aria-hidden="true"><use href="#i-snap_magnet"/></svg></button><button type="button" class="toolbtn hide-small" id="gridToggle" aria-label="Zobrazit mřížku" aria-pressed="false" title="Zobrazit mřížku"><svg class="ico" aria-hidden="true"><use href="#i-toggle_grid"/></svg></button><button type="button" class="toolbtn hide-small" id="rulerToggle" aria-label="Zobrazit pravítka" aria-pressed="false" title="Zobrazit pravítka"><svg class="ico" aria-hidden="true"><use href="#i-toggle_rulers"/></svg></button><span class="toolbar-divider"></span><button type="button" class="toolbtn squared" id="viewModeCycle" aria-label="Přepnout na souvislé zobrazení" title="Nyní: po stránkách · Kliknutím souvislé zobrazení"><svg class="ico" aria-hidden="true"><use href="#i-view_continuous"/></svg></button><span class="toolbar-divider"></span>
 <button class="toolbtn squared" data-zoom="-10" title="Zmenšit"><svg class="ico " aria-hidden="true"><use href="#i-zoom_out"/></svg></button><select class="zoom-select" id="zoomTop" aria-label="Přiblížení"><option value="30">30 %</option><option value="50">50 %</option><option value="65">65 %</option><option value="75">75 %</option><option value="90">90 %</option><option selected value="100">100 %</option><option value="110">110 %</option><option value="125">125 %</option><option value="150">150 %</option><option value="160">160 %</option></select><button class="toolbtn squared" data-zoom="10" title="Zvětšit"><svg class="ico " aria-hidden="true"><use href="#i-zoom_in"/></svg></button><button class="toolbtn squared" data-zoom="1:1" title="Skutečné přiblížení 100 %"><svg class="ico " aria-hidden="true"><use href="#i-zoom_1_1"/></svg></button><button class="toolbtn squared hide-small" id="fitPage" title="Přizpůsobit stránce"><svg class="ico " aria-hidden="true"><use href="#i-fit_page"/></svg></button><button class="toolbtn squared hide-small" id="fitWidth" title="Přizpůsobit šířce"><svg class="ico " aria-hidden="true"><use href="#i-fit_width"/></svg></button><span class="toolbar-divider"></span><label class="toolbar-search" for="quickSearch" title="Najít v PDF (Ctrl+F)"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input id="quickSearch" type="search" placeholder="Najít v PDF…" autocomplete="off" spellcheck="false" aria-label="Hledat v PDF – aktivuje nástroj Najít v PDF"></label><span class="toolbar-divider"></span>
-<button class="toolbtn" data-page-nav="prev" title="Předchozí strana">‹</button><div class="page-nav" id="pageCountTop">1 / 3</div><button class="toolbtn" data-page-nav="next" title="Následující strana">›</button><button class="toolbtn hide-small" id="fullWidth" title="Dočasně sbalit náhledy a pravý panel"><svg class="ico " aria-hidden="true"><use href="#i-side_by_side"/></svg></button><button class="toolbtn" id="saveToolbar" title="Uložit (ukázkový dialog)"><svg class="ico " aria-hidden="true"><use href="#i-save"/></svg></button><button class="toolbtn theme-quick-toggle" type="button" id="themeQuickToggle" title="Přepnout světlý / tmavý režim" aria-label="Přepnout světlý / tmavý režim" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button><button class="toolbtn hide-small" type="button" id="settingsToolbar" title="Nastavení aplikace" aria-label="Nastavení aplikace" aria-haspopup="dialog"><svg class="ico" aria-hidden="true"><use href="#i-nav_settings"/></svg></button><button class="toolbtn hide-small" id="help" title="Nápověda"><svg class="ico " aria-hidden="true"><use href="#i-nav_help"/></svg></button></div></div>
+<button class="toolbtn" data-page-nav="prev" title="Předchozí strana">‹</button><div class="page-nav" id="pageCountTop">1 / 3</div><button class="toolbtn" data-page-nav="next" title="Následující strana">›</button><button class="toolbtn hide-small" id="fullWidth" title="Dočasně sbalit náhledy a pravý panel"><svg class="ico " aria-hidden="true"><use href="#i-side_by_side"/></svg></button><button class="toolbtn" id="saveToolbar" title="Uložit (ukázkový dialog)"><svg class="ico " aria-hidden="true"><use href="#i-save"/></svg></button><button class="toolbtn theme-quick-toggle" type="button" id="themeQuickToggle" title="Přepnout světlý / tmavý režim" aria-label="Přepnout světlý / tmavý režim" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button><button class="toolbtn hide-small" type="button" id="settingsToolbar" title="Nastavení aplikace" aria-label="Nastavení aplikace" aria-haspopup="dialog"><svg class="ico" aria-hidden="true"><use href="#i-nav_settings"/></svg></button><button class="toolbtn hide-small" id="help" title="Nápověda" aria-label="Nápověda"><span class="toolbar-help-glyph" aria-hidden="true">?</span></button></div></div>
 <!-- three-column + panel ears -->
 <div class="workarea"><section class="panel-dock left-dock" id="leftDock" aria-label="Levá skupina panelů"><nav class="toolpane" aria-label="Nástroje"><div class="pane-label">Nástroje</div><button class="tool" data-tool="nav_file" title="Soubor – rozbalit nabídku akcí" aria-controls="fileSubmenu" aria-expanded="false"><svg class="ico " aria-hidden="true"><use href="#i-nav_file"/></svg><span>Soubor</span><span class="file-chevron" aria-hidden="true">▸</span></button><div class="file-submenu" id="fileSubmenu" aria-label="Příkazy nabídky Soubor" hidden></div><button class="tool" data-tool="nav_view" title="Zobrazení – rozbalit nabídku" aria-controls="viewSubmenu" aria-expanded="false"><svg class="ico " aria-hidden="true"><use href="#i-nav_view"/></svg><span>Zobrazení</span><span class="file-chevron" aria-hidden="true">▸</span></button><div class="file-submenu view-submenu" id="viewSubmenu" aria-label="Příkazy nabídky Zobrazení" hidden></div><div class="pane-sep"></div><button class="tool" data-tool="nav_search_pdf" title="Najít v PDF"><svg class="ico " aria-hidden="true"><use href="#i-nav_search_pdf"/></svg><span>Najít v PDF</span></button><button class="tool" data-tool="nav_objects" title="Objekty"><svg class="ico " aria-hidden="true"><use href="#i-nav_objects"/></svg><span>Objekty</span></button><button class="tool" data-tool="nav_text" title="Text"><svg class="ico " aria-hidden="true"><use href="#i-nav_text"/></svg><span>Text</span></button><button class="tool" data-tool="nav_ocr" title="OCR"><svg class="ico " aria-hidden="true"><use href="#i-nav_ocr"/></svg><span>OCR</span></button><button class="tool" data-tool="form_text" title="Formuláře"><svg class="ico " aria-hidden="true"><use href="#i-nav_forms"/></svg><span>Formuláře</span></button><button class="tool" data-tool="nav_separations" title="Separace"><svg class="ico " aria-hidden="true"><use href="#i-nav_separations"/></svg><span>Separace</span></button><button class="tool" data-tool="nav_signature" title="Digitální podpis"><svg class="ico " aria-hidden="true"><use href="#i-nav_signature"/></svg><span>Digitální podpis</span></button><div class="pane-sep"></div><button class="tool" data-tool="nav_split_pdf" title="Rozdělit PDF"><svg class="ico " aria-hidden="true"><use href="#i-nav_split_pdf"/></svg><span>Rozdělit PDF</span></button><button class="tool" data-tool="nav_page_order" title="Pořadí stránek"><svg class="ico " aria-hidden="true"><use href="#i-nav_page_order"/></svg><span>Pořadí stránek</span></button><div class="pane-sep"></div><details class="future-tools"><summary>Budoucí nástroje <span class="planned-tag">návrhy</span></summary>
 <button class="tool planned-tool" data-tool="nav_preflight" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_preflight"/></svg><span>Preflight</span><small>plán</small></button><button class="tool planned-tool" data-tool="nav_compare" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_compare"/></svg><span>Porovnat PDF</span><small>plán</small></button><button class="tool planned-tool" data-tool="nav_measure" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_measure"/></svg><span>Měření</span><small>plán</small></button><button class="tool planned-tool" data-tool="nav_batch" title="Plánovaný nástroj – pouze návrh vzhledu"><svg class="ico" aria-hidden="true"><use href="#i-nav_batch"/></svg><span>Dávkové zpracování</span><small>plán</small></button></details></nav>
@@ -2267,7 +2312,7 @@ function renderToolPanel(key){
   block('Vzhled','stroke_width',rowInput('Tloušťka (pt)','0,75')+rowSelect('Výplň',['Bez výplně','Černá','Bílá','Vlastní barva']));
  case 'nav_text':return renderTypographyPanel();
  case 'nav_ocr':return block('Výběr oblasti OCR','rect_select',universalSelectionPanel())+block('Rozpoznávání textu','nav_ocr',`<label class="text-setting-row"><span class="text-setting-label">${miniIcon('nav_ocr')}<span>Jazyk OCR</span></span><select class="control-input" data-recognition-language aria-label="Jazyk společného rozpoznávání textu"><option value="ces" ${recognitionPreferences.language==='ces'?'selected':''}>Čeština</option><option value="eng" ${recognitionPreferences.language==='eng'?'selected':''}>Angličtina</option><option value="ces+eng" ${recognitionPreferences.language==='ces+eng'?'selected':''}>Čeština + angličtina</option></select></label>`+rowSelect('Strany',['Všechny strany','Aktuální strana','Vybrané náhledy','Vlastní výběr'])+rowInput('Vlastní rozsah','1, 3–5'))+
-  block('Režim OCR','ocr_region',boxes([['ocr_region','Oblast','ocr-area'],['nav_ocr','Celé strany','ocr-pages']])+`<div class="ocr-unified-note">Stejné rozpoznávací jádro jako Text → Výběr → Rekonstruovat text. Podporuje rastrové oblasti i vektorové obrysy; existující textovou vrstvu bez potřeby znovu nečíst.</div>`)+
+  block('Režim OCR','ocr_region',boxes([['ocr_region','Oblast','ocr-area'],['nav_ocr','Celé strany','ocr-pages']])+`<p class="ocr-unified-note tool-muted">Stejné rozpoznávací jádro jako Text → Výběr → Rekonstruovat text. Podporuje rastrové oblasti i vektorové obrysy; existující textovou vrstvu bez potřeby znovu nečíst.</p>`)+
   `<div class="compact-row">${uiButton('nav_ocr','Rozpoznat text','ocr-run','primary')}</div>`;
  case 'nav_separations':return block('Náhled tiskových desek','nav_separations',
   rowSelect('Simulační profil',['Z výstupního záměru PDF','FOGRA39','FOGRA51','FOGRA52'])+
@@ -2393,6 +2438,40 @@ function updateCommandBarLayout(){
  bar.classList.toggle('toolbar-overflow',needed()>available+1);
 }
 
+
+// 25 Nov: collapse groups without rebuilding or destroying their controls.
+// Remember collapse state during any renderProps() refresh; group sections are independent.
+const foldedPropertyGroups=new Set();
+function preparePropertyGroups(root){
+ if(!root)return;
+ [...root.querySelectorAll('.p-block')].forEach((block,index)=>{
+  const head=block.querySelector(':scope > .p-head');
+  if(!head||block.querySelector(':scope > .p-section-content'))return;
+  const label=(head.textContent||'').trim().replace(/\s+/g,' ').slice(0,80);
+  const key=(state.tool||'unknown')+'|'+label+'|'+index;
+  const content=document.createElement('div');
+  content.className='p-section-content';
+  while(head.nextSibling)content.appendChild(head.nextSibling);
+  block.appendChild(content);
+  const btn=document.createElement('button');btn.type='button';
+  btn.className='p-section-toggle';btn.dataset.sectionKey=key;
+  btn.title='Sbalit nebo rozbalit skupinu';btn.setAttribute('aria-label','Sbalit nebo rozbalit '+label);
+  btn.setAttribute('aria-expanded',String(!foldedPropertyGroups.has(key)));
+  btn.textContent=foldedPropertyGroups.has(key)?'▸':'▾';
+  block.classList.toggle('collapsed',foldedPropertyGroups.has(key));
+  head.appendChild(btn);
+ });
+}
+document.addEventListener('click',event=>{
+ const btn=event.target.closest('.p-section-toggle');
+ if(!btn)return;
+ const block=btn.closest('.p-block'),key=btn.dataset.sectionKey;
+ if(!block||!key)return;
+ const closed=block.classList.toggle('collapsed');
+ if(closed)foldedPropertyGroups.add(key);else foldedPropertyGroups.delete(key);
+ btn.setAttribute('aria-expanded',String(!closed));btn.textContent=closed?'▸':'▾';
+});
+
 function renderProps(){
   const [toolName,toolIcon]=toolInfo[state.tool]||['Nástroj','nav_file'];
   const fileSelected=state.tool==='nav_file',action=fileEntry(state.fileAction);
@@ -2403,7 +2482,7 @@ function renderProps(){
   $('activeToolLabel').textContent=name+(state.tool==='form_text'?' → Vyplnit':'');
  $('formsProps').classList.toggle('hidden',state.tool!=='form_text');
  $('otherProps').classList.toggle('hidden',state.tool==='form_text');if(state.tool==='form_text')compactExplanations($('formsProps'));
- if(state.tool!=='form_text'){$('otherProps').innerHTML=renderToolPanel(state.tool);compactExplanations($('otherProps'));bindSearchDemo();decorateControlLabels($('otherProps'));bindRecentDocuments();renderInsertPreview();if(state.tool==='nav_text')updateTextPreview();}
+ if(state.tool!=='form_text'){$('otherProps').innerHTML=renderToolPanel(state.tool);compactExplanations($('otherProps'));preparePropertyGroups($('otherProps'));bindSearchDemo();decorateControlLabels($('otherProps'));bindRecentDocuments();renderInsertPreview();if(state.tool==='nav_text')updateTextPreview();}
  formView();
  renderSearchArrowMarkers();
 }
@@ -2453,6 +2532,28 @@ function renderFieldList(){const container=$('fieldList');let out='';for(const p
  container.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>focusField(b.dataset.focus)));
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* Page-by-page wheel behavior: scroll within a tall page first, then move at its edge.
+   This is intentionally separate from the proposed future adaptive multi-page layout. */
+let lastPageWheelSwitch=0;
+$('editor').addEventListener('wheel',event=>{
+ if(event.ctrlKey||event.metaKey||state.viewMode!=='pages')return;
+ if(event.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+ const editor=$('editor'),direction=Math.sign(event.deltaY);
+ if(!direction||Math.abs(event.deltaY)<1)return;
+ const atTop=editor.scrollTop<=2;
+ const atBottom=editor.scrollTop+editor.clientHeight>=editor.scrollHeight-3;
+ const canFlip=direction>0?atBottom:atTop;
+ const next=state.page+direction;
+ if(!canFlip||next<1||next>document.querySelectorAll('.pdf-page').length)return;
+ event.preventDefault();
+ const now=performance.now();
+ if(now-lastPageWheelSwitch<300)return;
+ lastPageWheelSwitch=now;
+ switchPage(next);
+ if(direction<0)editor.scrollTop=Math.max(0,editor.scrollHeight-editor.clientHeight);
+},{passive:false});
+
 function switchPage(num){const incomingPage=Math.min(3,Math.max(1,num));if(state.page!==incomingPage&&(selectedGuideId!==null||selectedGuideIds.size))clearGuideSelectionAndRestore();state.page=incomingPage;document.querySelectorAll('.pdf-page').forEach(p=>p.classList.toggle('active',Number(p.dataset.page)===state.page));document.querySelectorAll('[data-thumb]').forEach(t=>t.classList.toggle('active',Number(t.dataset.thumb)===state.page));$('pageCountTop').textContent=state.page+' / 3';$('pageCountBottom').textContent=state.page+' / 3';$('pageCue').textContent='Strana '+state.page+' · ukázkový formulář';$('editor').scrollTop=0;syncPageThumbSelection();setZoom(state.zoom,false,true);if(state.viewMode==='continuous')document.querySelector('.pdf-page.active')?.scrollIntoView({block:'start'});scheduleFitReflow();if(state.tool==='nav_file'&&state.fileAction==='insert_pages')renderProps()}
 function focusField(id){if(state.tool!=='form_text')selectTool('form_text');const pg=pageOf(id);state.groups[pg]=true;switchPage(pg);renderFieldList();const el=$(id);el.scrollIntoView({behavior:'smooth',block:'center'});el.focus({preventScroll:true});document.querySelectorAll('.frow').forEach(b=>b.classList.toggle('selected',b.dataset.focus===id))}
 // v3.5: toolbar is a contextual shortcut, not a competing selection state.
