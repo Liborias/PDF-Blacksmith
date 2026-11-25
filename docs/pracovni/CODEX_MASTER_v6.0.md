@@ -187,3 +187,6 @@ Preflight nad existujícím PDF/X, vizuální diff dokumentů, pokročilá měř
 6. Veřejné repo: žádná zákaznická PDF, neveřejná data, certifikáty, hesla ani přístupové tokeny. Výstupní logy anonymizovat.
 
 **První očekávaná odpověď Codexu:** „Audit existujícího UI, seznam toho, co je skutečně hotové, seznam rozpracovaných změn včetně formulářů, konfliktní místa, návrh Etapy 1 – nejmenší samostatné UI změny a testy. Žádné změny kódu ani commity před schválením.“
+## 15. Známé nedokončené kontrolní body prototypu
+
+HTML v3.26 prošlo dříve jen syntax checkem, **ne kompletními prohlížečovými a Windows testy**. Navíc se našly **použité, ale nedefinované SVG symboly** `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single`. Tyto chybějící vazby patří do **úvodního UI auditu**, nikoli do produkční F1 nebo do samočinného generování nových ikon. Nejprve ověřit původní atlas, pak po schválení opravit bez změny command ID. Pokud se najdou další chyby HTML, uvést je jako B/D/U problémy s reprodukcí a testy; aktuální v3.26 nepovažovat za bezchybný hotový editor.
