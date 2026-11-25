@@ -1143,5 +1143,32 @@
       "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
       "externalSource": null
     }
+  ],
+  "known_missing_html_symbols": [
+    {
+      "requested": "i-panel_left",
+      "currently_defined": false,
+      "status": "needs_html_audit_not_a_product_command"
+    },
+    {
+      "requested": "i-arrow_line",
+      "currently_defined": false,
+      "status": "needs_html_audit_not_a_product_command"
+    },
+    {
+      "requested": "i-transform_object",
+      "currently_defined": false,
+      "status": "needs_html_audit_not_a_product_command"
+    },
+    {
+      "requested": "i-plate_all",
+      "currently_defined": false,
+      "status": "needs_html_audit_not_a_product_command"
+    },
+    {
+      "requested": "i-plate_single",
+      "currently_defined": false,
+      "status": "needs_html_audit_not_a_product_command"
+    }
   ]
 }
