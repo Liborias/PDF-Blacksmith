@@ -33,10 +33,11 @@
 | 27 | Nápovědné poznámky byly některými CSS přesunuty do černých boxů ve světlém motivu | **Paletové info bannery a text**, žádná tvrdá černá/burgundy v nesouvisejících paletách. |
 | 28 | Knihovní SVG atlas a mapa v5.1 vs nová ikonka Nastavení → Rozhraní | Nová **i-settings_interface** v inline HTML a samostatný settings_interface.svg; chybějící **i-panel_left se nepoužívá jako ikona Rozhraní**. |
 
+| 29 | V HTML v3.26 jsou některé UI ikonové reference bez definice SVG symbolu | **Zachovat existující ikonovou sadu, ověřit chybějící `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single` při prvním UI auditu; neprohlašovat prototyp za kompletně ověřený.** |
+
 ## Stav ověření a provenance
 - Prošel jsem **dostupné odkazy předchozích rozhovorů a pracovní instrukce skutečně uložené v repozitáři**. Starší soubory často uvádějí status „schválené UI“ i u operací, které byly v HTML jen simulované; v master je to výslovně rozlišeno.
 - Základní relevantní originály: hlavní specifikace v5.0, konsolidace UI v3.9, jednotlivé UI změny v3.11–v3.26, pravidla souborových operací z 22. 11., formulářová F-Q1–F-Q9, mapa ikon v5.1 a pozdější v4.7 (interface icon), mapa barev v1.4, mapa kláves v1.4, katalog i18n v1.1.
 - Toto je **dokumentační konsolidace**, nikoli kompletní runtime audit produkční aplikace, ani důkaz, že v3.26 nemá chybné handlery či vizuální nedostatky. Fyzický Windows build/test a Chrome/Edge integrační test zůstává v Etapě 0/1.
 
 **Pokud se Codex setká s historickým dokumentem označeným „aktuální“, není to další závazný plán. Má použít master v6.0, finální mapy a implementační plán v6.0.**
-| 29 | V HTML v3.26 jsou některé UI ikonové reference bez definice SVG symbolu | **Zachovat existující ikonovou sadu, ověřit chybějící `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single` při prvním UI auditu; neprohlašovat prototyp za kompletně ověřený.** |
