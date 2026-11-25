@@ -1,6 +1,6 @@
 # PDF Blacksmith – pracovní podklady pro Codex
 
-**Aktualizováno:** 24. listopadu 2026 · **Stav:** návrh rozhraní F1, implementace F1 schválena po etapách; ostatní položky jen plán.
+**Aktualizováno:** 25. listopadu 2026 · **Stav:** návrh rozhraní F1, implementace F1 schválena po etapách; ostatní položky jen plán.
 
 Tato složka je centrální rozcestník průběžné dokumentace. **Nenahrazuje stávající implementaci** v Go/Win32 a Pythonu; přítomnost návrhu neznamená, že byl implementován.
 
