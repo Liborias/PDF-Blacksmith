@@ -71,6 +71,8 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 		return
 	}
 	a.storeActiveTab()
+	a.layoutAids.temporary = false
+	a.rightAux.syncSearch(false, &a.rightDock)
 	if a.comparisonKeeps(tab) {
 		a.setComparisonTab(nil)
 	} else if a.comparison.tabs[0] != nil {
@@ -106,6 +108,7 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 		v.refreshBookmarks(tab.selection)
 		v.updatePageList()
 	}
+	a.syncSearchAuxiliary()
 	a.updateActions()
 	a.layout()
 	if scope, _ := a.scopeControls(); comboIndex(scope) == exportAllPages {

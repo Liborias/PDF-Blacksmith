@@ -17,11 +17,66 @@ func (dock *dockVisibility) revealPrimary() {
 	dock.collapsed, dock.primaryCollapsed = false, false
 }
 
+type auxiliaryPanel uint8
+
+const (
+	auxiliaryNone auxiliaryPanel = iota
+	auxiliaryBookmarks
+	auxiliaryResults
+)
+
+type rightAuxiliary struct {
+	panel        auxiliaryPanel
+	beforeSearch *rightDockSnapshot
+}
+
+type rightDockSnapshot struct {
+	panel auxiliaryPanel
+	dock  dockVisibility
+}
+
+func (aux *rightAuxiliary) syncSearch(active bool, dock *dockVisibility) {
+	if active && aux.beforeSearch == nil {
+		aux.beforeSearch = &rightDockSnapshot{aux.panel, *dock}
+		aux.panel = auxiliaryResults
+		dock.revealPrimary()
+	}
+	if !active && aux.beforeSearch != nil {
+		aux.panel, *dock = aux.beforeSearch.panel, aux.beforeSearch.dock
+		aux.beforeSearch = nil
+	}
+}
+
+func (aux *rightAuxiliary) togglePanel(panel auxiliaryPanel) {
+	if aux.panel == panel {
+		aux.panel = auxiliaryNone
+	} else {
+		aux.panel = panel
+	}
+	if aux.beforeSearch != nil {
+		aux.beforeSearch.panel = aux.panel
+	}
+}
+
+func (aux *rightAuxiliary) setGroupCollapsed(dock *dockVisibility, collapsed bool) {
+	dock.collapsed = collapsed
+	if aux.beforeSearch != nil {
+		aux.beforeSearch.dock.collapsed = collapsed
+	}
+}
+
+func (aux *rightAuxiliary) setPropertiesCollapsed(dock *dockVisibility, collapsed bool) {
+	dock.primaryCollapsed = collapsed
+	if aux.beforeSearch != nil {
+		aux.beforeSearch.dock.primaryCollapsed = collapsed
+	}
+}
+
 const (
 	dockTools = iota
 	dockProperties
 	dockThumbnails
-	dockBookmarks
+	dockRightAuxiliary
 	dockPanelCount
 )
 

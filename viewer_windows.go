@@ -1552,11 +1552,10 @@ func (v *documentView) paintCanvas(dc uintptr) {
 	gdi32.NewProc("IntersectClipRect").Call(dc, uintptr(viewport.left), uintptr(viewport.top), uintptr(viewport.right), uintptr(viewport.bottom))
 	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
 	cache := v.activeCache()
+	grid := v.app.checked(v.app.layoutAids.grid)
 	for _, page := range v.spread.visible(v.scrollY, height) {
 		number := v.order[page.index]
 		bounds := v.pageBounds(page)
-		shadow := rect{bounds.left + 3, bounds.top + 4, bounds.right + 5, bounds.bottom + 6}
-		fillColor(dc, shadow, paletteColor{10, 10, 12})
 		bitmap := cache.frames[number].image
 		details := v.fullPreviewTarget(page) == 0
 		if details {
@@ -1575,6 +1574,9 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
 		}
 		v.paintDetails(dc, number, bounds)
+		if grid && (details || bitmap != nil) {
+			v.paintLayoutGrid(dc, bounds, v.pageDimensions(number, v.box()))
+		}
 		if !v.secondary {
 			v.paintSearchHighlights(dc, number, bounds)
 			v.app.paintTextSelection(dc, number, bounds)

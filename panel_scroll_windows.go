@@ -313,6 +313,17 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
 		bar.setPosition(bar.position - rows)
 		return
 	}
+	if hood := a.searchSidebar; hover == hood || parent == hood {
+		bar := a.scrollbars[hover]
+		if pane := a.scrollPanes[hover]; pane != nil {
+			bar = pane.bar
+		}
+		if bar == nil {
+			bar = a.scrollPanes[a.view.search.list].bar
+		}
+		bar.setPosition(bar.position - rows)
+		return
+	}
 	if a.settingsWidth == 0 {
 		return
 	}

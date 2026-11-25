@@ -31,20 +31,20 @@ func TestFitDockWidthsKeepsPanelsAndDocumentUsable(t *testing.T) {
 
 func TestFitDockWidthsLeavesHiddenPanelsOutOfTheLayout(t *testing.T) {
 	const space = 980 - 2*28
-	minimum := dockWidths{dockProperties: 350, dockBookmarks: 145}
-	preferred := dockWidths{dockProperties: 454, dockBookmarks: 330}
+	minimum := dockWidths{dockProperties: 350, dockRightAuxiliary: 145}
+	preferred := dockWidths{dockProperties: 454, dockRightAuxiliary: 330}
 	got := fitDockWidths(space, 176, 265, minimum, preferred)
 	if got[dockTools] != 0 || got[dockThumbnails] != 0 {
 		t.Fatalf("the collapsed dock still takes space: %v", got)
 	}
-	if remaining := space - got[dockProperties] - got[dockBookmarks]; remaining != 265 {
+	if remaining := space - got[dockProperties] - got[dockRightAuxiliary]; remaining != 265 {
 		t.Errorf("document width after panel growth = %d, want 265", remaining)
 	}
 
 	minimum = dockWidths{168, 350, 70, 145}
 	preferred = dockWidths{195, 454, 220, 330}
 	got = fitDockWidths(600, 176, 265, minimum, preferred)
-	if got[dockThumbnails] != 0 || got[dockBookmarks] != 0 || got[dockTools]+got[dockProperties] != 600-176 {
+	if got[dockThumbnails] != 0 || got[dockRightAuxiliary] != 0 || got[dockTools]+got[dockProperties] != 600-176 {
 		t.Errorf("limited space should preserve the document and main panels first: %v", got)
 	}
 }
@@ -69,5 +69,60 @@ func TestDockCollapsePreservesIndividualPanels(t *testing.T) {
 		if !dock.showsPrimary() || dock.showsAuxiliary(true) != !auxiliaryCollapsed {
 			t.Error("revealing the primary panel should preserve the auxiliary panel's own setting")
 		}
+	}
+}
+
+func TestSearchRestoresRightDock(t *testing.T) {
+	for _, panel := range []auxiliaryPanel{auxiliaryNone, auxiliaryBookmarks, auxiliaryResults} {
+		for _, collapsed := range []bool{false, true} {
+			for _, primaryCollapsed := range []bool{false, true} {
+				original := dockVisibility{collapsed: collapsed, primaryCollapsed: primaryCollapsed}
+				dock, aux := original, rightAuxiliary{panel: panel}
+				aux.syncSearch(true, &dock)
+				if aux.panel != auxiliaryResults || !dock.showsPrimary() {
+					t.Fatalf("search did not reveal its fields and results: %+v, panel %d", dock, aux.panel)
+				}
+				aux.syncSearch(true, &dock)
+				aux.syncSearch(false, &dock)
+				if dock != original || aux.panel != panel || aux.beforeSearch != nil {
+					t.Fatalf("leaving search did not restore %+v, panel %d: got %+v, panel %d", original, panel, dock, aux.panel)
+				}
+			}
+		}
+	}
+}
+
+func TestSearchKeepsManualPanelChanges(t *testing.T) {
+	tests := []struct {
+		name  string
+		edit  func(*rightAuxiliary, *dockVisibility)
+		panel auxiliaryPanel
+		dock  dockVisibility
+	}{
+		{"bookmarks then results", func(aux *rightAuxiliary, dock *dockVisibility) {
+			aux.togglePanel(auxiliaryBookmarks)
+			aux.togglePanel(auxiliaryResults)
+		}, auxiliaryResults, dockVisibility{}},
+		{"close results", func(aux *rightAuxiliary, dock *dockVisibility) {
+			aux.togglePanel(auxiliaryResults)
+		}, auxiliaryNone, dockVisibility{}},
+		{"change the whole dock", func(aux *rightAuxiliary, dock *dockVisibility) {
+			aux.setGroupCollapsed(dock, true)
+		}, auxiliaryBookmarks, dockVisibility{collapsed: true}},
+		{"change properties only", func(aux *rightAuxiliary, dock *dockVisibility) {
+			aux.setPropertiesCollapsed(dock, true)
+		}, auxiliaryBookmarks, dockVisibility{primaryCollapsed: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dock, aux := dockVisibility{}, rightAuxiliary{panel: auxiliaryBookmarks}
+			aux.syncSearch(true, &dock)
+			tt.edit(&aux, &dock)
+			aux.syncSearch(true, &dock)
+			aux.syncSearch(false, &dock)
+			if dock != tt.dock || aux.panel != tt.panel {
+				t.Fatalf("manual choice was lost: got %+v, panel %d, want %+v, panel %d", dock, aux.panel, tt.dock, tt.panel)
+			}
+		})
 	}
 }

@@ -133,7 +133,9 @@ func (a *app) setupWorkspace() bool {
 		wsChild|0x02000000|0x04000000, 0, 0, 1, 1, a.window, 0, a.instance, 0) // Clip the File menu above it.
 	a.bookmarkSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
-	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 {
+	a.searchSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
+		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 || a.searchSidebar == 0 {
 		return false
 	}
 	a.sideScroll = a.addPanelScrollbar(a.sidebar, func(offset int) {
@@ -161,6 +163,7 @@ func (a *app) setupWorkspace() bool {
 	a.detailsToggle = a.shellButton(uiProperties, idToggleDetails, sidebarRailWidth, 0)
 	a.thumbnailsToggle = a.shellButton(uiThumbnails, idToggleThumbnails, sidebarRailWidth, 0)
 	a.bookmarksToggle = a.shellButton(uiBookmarks, idToggleBookmarks, sidebarRailWidth, 0)
+	a.resultsToggle = a.shellButton(uiResults, idToggleSearchResults, sidebarRailWidth, 0)
 	a.leftPanelsToggle = a.button("", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
 	a.rightPanelsToggle = a.button("", idToggleRightPanels, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.shellButton(uiMinimize, idMinimize, 36, 0)
@@ -200,6 +203,8 @@ func (a *app) setupWorkspace() bool {
 	a.password = a.edit(16, 365, 298, true)
 	a.uiButton(uiReloadPassword, idReload, 16, 403, 298, 0)
 
+	a.beginPanel(idLayoutAids)
+	a.buildLayoutAidsPanel()
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
 	a.beginPanel(idProofTab)
@@ -226,6 +231,8 @@ func (a *app) setupWorkspace() bool {
 	a.buildMergePanel()
 	a.addingTab, a.controlParent = 0, a.bookmarkSidebar
 	a.view.buildBookmarkPanel()
+	a.controlParent = a.searchSidebar
+	a.view.buildSearchResults()
 	a.controlParent = a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
@@ -416,12 +423,11 @@ func (a *app) activate(id int) {
 			return
 		}
 		a.tool, a.mode = idFileTab, id
-		a.rightDock.revealPrimary()
 		if id == idFileSign {
 			a.mode = idSignTab
 		}
-	case idBrowseTab, idPagesTab:
-		if id == idPagesTab && !a.documentTools {
+	case idBrowseTab, idPagesTab, idLayoutAids:
+		if id != idBrowseTab && !a.documentTools {
 			return
 		}
 		a.tool, a.mode = idBrowseTab, id
@@ -437,6 +443,11 @@ func (a *app) activate(id int) {
 			return
 		}
 		a.tool, a.mode = id, id
+	}
+	a.layoutAids.temporary = false
+	a.syncSearchAuxiliary()
+	if id == idExportTab || id == idFileSign || id == idLayoutAids {
+		a.rightDock.revealPrimary()
 	}
 	if (old == idProofTab) != (id == idProofTab) {
 		a.view.reframe()
@@ -474,7 +485,7 @@ func (a *app) layout() {
 		return
 	}
 	d := a.scale
-	a.thumbnailArea, a.bookmarkArea = rect{}, rect{}
+	a.thumbnailArea, a.rightAuxArea = rect{}, rect{}
 	if a.full {
 		a.viewport = size
 	} else {
@@ -503,10 +514,6 @@ func (a *app) layout() {
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
-	if item.handle == a.view.search.list {
-		item.height = max(100, int(a.detailsArea.bottom-a.detailsArea.top)*96/a.dpi-item.y-18)
-		return item, true
-	}
 	if tab == idFileDetails {
 		return a.recentItemLayout(item)
 	}
@@ -644,7 +651,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		} else {
 			fillColor(dc, bounds, panelColor)
 		}
-		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar ||
+		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar || hwnd == a.searchSidebar ||
 			(a.comparison.view != nil && hwnd == a.comparison.view.thumbnailSidebar) {
 			fillColor(dc, rect{right: 1, bottom: bounds.bottom}, divider)
 		}
@@ -919,8 +926,10 @@ func (a *app) command(id, notification int) {
 		a.showFileMenu()
 	case idSearchTab:
 		a.showSearch()
-	case idBrowseTab, idPagesTab, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab, idTextTab, idObjectsTab:
+	case idBrowseTab, idPagesTab, idLayoutAids, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab, idTextTab, idObjectsTab:
 		a.activate(id)
+	case idToggleLayoutGrid:
+		a.toggleLayoutGrid()
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.runFileOption(id)
 	case idRecentMore:
@@ -929,7 +938,9 @@ func (a *app) command(id, notification int) {
 		a.leftDock.primaryCollapsed = !a.leftDock.primaryCollapsed
 		a.layout()
 	case idToggleDetails:
-		a.rightDock.primaryCollapsed = !a.rightDock.primaryCollapsed
+		hidden := !a.effectiveRightDock().primaryCollapsed
+		a.layoutAids.temporary = false
+		a.rightAux.setPropertiesCollapsed(&a.rightDock, hidden)
 		a.layout()
 		a.view.schedule()
 	case idToggleThumbnails:
@@ -940,9 +951,12 @@ func (a *app) command(id, notification int) {
 	case idToggleLeftPanels, idToggleRightPanels:
 		a.togglePanelSide(id == idToggleLeftPanels)
 	case idToggleBookmarks:
-		a.rightDock.auxiliaryCollapsed = !a.rightDock.auxiliaryCollapsed
-		a.layout()
-		a.view.schedule()
+		a.toggleRightAuxiliary(auxiliaryBookmarks)
+	case idToggleSearchResults, idCloseSearchResults:
+		a.toggleRightAuxiliary(auxiliaryResults)
+		if id == idCloseSearchResults {
+			setFocus.Call(a.resultsToggle)
+		}
 	case idFullscreen:
 		a.toggleFullscreen()
 	case idMinimize:
@@ -1124,13 +1138,18 @@ func (a *app) updateActions() {
 	documentReady := a.view.ready()
 	if a.documentTools != documentReady {
 		a.documentTools = documentReady
-		if !documentReady && (a.mode == idProofTab || a.mode == idSignTab || a.mode == idExportTab || a.mode == idSplitTab || a.mode == idPagesTab || a.mode == idSearchTab || a.mode == idOCRTab || a.mode == idTextTab || a.mode == idObjectsTab) {
-			if a.tool == idFileTab {
-				a.mode = idFileDetails
-			} else {
-				a.tool, a.mode = idBrowseTab, idBrowseTab
+		if !documentReady {
+			a.layoutAids.temporary = false
+			switch a.mode {
+			case idProofTab, idSignTab, idExportTab, idSplitTab, idPagesTab, idLayoutAids, idSearchTab, idOCRTab, idTextTab, idObjectsTab:
+				if a.tool == idFileTab {
+					a.mode = idFileDetails
+				} else {
+					a.tool, a.mode = idBrowseTab, idBrowseTab
+				}
 			}
 		}
+		a.syncSearchAuxiliary()
 		a.layout()
 	}
 	setEnabled(a.detailButtons[idPagesTab], documentReady)
@@ -1418,7 +1437,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 			a.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
 			return true
 		}
-		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.comparison.thumbnailArea, pos.x, pos.y) || contains(a.bookmarkArea, pos.x, pos.y) {
+		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.comparison.thumbnailArea, pos.x, pos.y) || contains(a.rightAuxArea, pos.x, pos.y) {
 			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
 		}
@@ -1458,7 +1477,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 		a.view.goToBookmark()
 		return true
 	}
-	if msg.wParam == 0x0d && a.mode == idSearchTab {
+	if msg.wParam == 0x0d {
 		p := &a.view.search
 		switch msg.window {
 		case p.input:
@@ -1504,7 +1523,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	switch msg.wParam {
 	case 0x72: // F3
-		if a.mode == idSearchTab {
+		if a.mode == idSearchTab || msg.window == a.view.search.list {
 			shift, _, _ := user32.NewProc("GetKeyState").Call(0x10)
 			step := 1
 			if shift&0x8000 != 0 {
@@ -1519,6 +1538,15 @@ func (a *app) handleInput(msg *winMessage) bool {
 	case 0x1b: // Escape
 		if a.full {
 			a.toggleFullscreen()
+			return true
+		}
+		if a.dismissLayoutAids() {
+			setFocus.Call(a.window)
+			return true
+		}
+		if a.mode == idSearchTab {
+			a.activate(idBrowseTab)
+			setFocus.Call(a.window)
 			return true
 		}
 	}

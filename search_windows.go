@@ -21,9 +21,16 @@ const (
 	idSearchPrevious
 	idSearchNext
 	idSearchList
+	idToggleSearchResults
+	idCloseSearchResults
 )
 
 const wmSearchUpdate = 0x8004
+
+const (
+	uiResults      uiMessage = "ui.vysledky.83e98906cc"
+	uiSearchPrompt uiMessage = "ui.zadejte.hledany.vyraz.ac8cfc6638"
+)
 
 type searchRequest struct {
 	Input    string `json:"input"`
@@ -61,13 +68,14 @@ type searchTask struct {
 }
 
 type searchPanel struct {
-	input, start, clear, previous, next, status, list uintptr
-	events                                            chan searchUpdate
-	task                                              *searchTask
-	query, pending                                    string
-	widest                                            int
-	pages                                             map[int]*searchPage
-	rows                                              []searchRow
+	input, start, clear, previous, next, status uintptr
+	heading, close, term, resultStatus, list    uintptr
+	events                                      chan searchUpdate
+	task                                        *searchTask
+	query, pending                              string
+	widest                                      int
+	pages                                       map[int]*searchPage
+	rows                                        []searchRow
 }
 
 func (v *documentView) buildSearchPanel() {
@@ -82,12 +90,70 @@ func (v *documentView) buildSearchPanel() {
 	p.previous = a.uiButton(uiPreviousMatch, idSearchPrevious, 16, 119, 145, 0)
 	p.next = a.uiButton(uiNextMatch, idSearchNext, 169, 119, 145, 0)
 	p.status = a.readout(16, 161, 298, 52)
-	a.addingSection = 0
+}
+
+func (v *documentView) buildSearchResults() {
+	a, p := v.app, &v.search
+	p.heading = a.uiLabel(uiResults, 0, 0, 1, true)
+	a.panelLabels[p.heading] = true
+	p.close = a.button("×", idCloseSearchResults, 0, 0, 1, 0)
+	a.panelButtons[p.close] = true
+	a.bindUIHelp(p.close, uiClose)
+	p.term = a.readout(0, 0, 1, 1)
+	p.resultStatus = a.readout(0, 0, 1, 1)
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100
-	p.list = a.add("LISTBOX", "", idSearchList, 16, 221, 298, 116, wsTabstop|listStyle, 0, a.normalFont)
+	p.list = a.add("LISTBOX", "", idSearchList, 0, 0, 1, 1, wsTabstop|listStyle, 0, a.normalFont)
 	a.bindUILabel(p.list, uiSearchResults)
 	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(26))) // LB_SETITEMHEIGHT
 	a.addScrollPane(p.list, a.scale(26), true)
+	a.setUIMessage(p.term, uiSearchPrompt)
+}
+
+func (v *documentView) preferredSearchWidth() int {
+	d := v.app.scale
+	return min(d(330), max(d(216), v.search.widest+d(36)))
+}
+
+func (v *documentView) layoutSearchResults() {
+	a, p := v.app, &v.search
+	area := a.rightAuxArea
+	width, height := int(area.right-area.left), int(area.bottom-area.top)
+	show := width > 0 && a.visibleRightAuxiliary() == auxiliaryResults
+	term, status, list := a.scrollPanes[p.term], a.scrollPanes[p.resultStatus], a.scrollPanes[p.list]
+	if !show {
+		term.arrange(rect{}, false)
+		status.arrange(rect{}, false)
+		list.arrange(rect{}, false)
+		showControl(a.searchSidebar, false)
+		return
+	}
+	place(a.searchSidebar, int(area.left), int(area.top), width, height)
+	d := a.scale
+	margin := min(d(12), width/10)
+	available := width - 2*margin
+	place(p.heading, margin, d(8), available-d(34), d(22))
+	place(p.close, width-margin-d(26), d(6), d(26), d(24))
+	left, right := int32(margin), int32(width-margin)
+	term.arrange(rect{left, int32(d(37)), right, int32(d(82))}, true)
+	status.arrange(rect{left, int32(d(86)), right, int32(d(133))}, p.query != "")
+	list.arrange(rect{left, int32(d(137)), right, int32(height - margin)}, len(p.rows) > 0)
+	showControl(a.searchSidebar, true)
+	user32.NewProc("RedrawWindow").Call(a.searchSidebar, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
+}
+
+func (a *app) syncSearchAuxiliary() {
+	a.rightAux.syncSearch(a.mode == idSearchTab && a.view.ready(), &a.rightDock)
+}
+
+func (v *documentView) setSearchStatus(key uiMessage, args ...any) {
+	for _, handle := range [...]uintptr{v.search.status, v.search.resultStatus} {
+		if key == "" {
+			setText(handle, "")
+		} else {
+			v.app.setUIMessage(handle, key, args...)
+		}
+		v.app.scrollPanes[handle].reflow()
+	}
 }
 
 func (a *app) showSearch() {
@@ -100,7 +166,10 @@ func (a *app) showSearch() {
 	if a.full {
 		a.toggleFullscreen()
 	}
-	a.rightDock.revealPrimary()
+	// A second Ctrl+F returns to the query without reopening a manually closed Results panel.
+	if a.mode == idSearchTab && !a.rightDock.showsPrimary() {
+		a.rightDock.revealPrimary()
+	}
 	a.activate(idSearchTab)
 	input := a.view.search.input
 	a.revealPropertyControl(input)
@@ -133,7 +202,7 @@ func (v *documentView) cancelSearch() {
 	p.pending = ""
 	if p.task != nil {
 		p.task.cancel()
-		v.app.setUIMessage(p.status, uiSearchStopped)
+		v.setSearchStatus(uiSearchStopped)
 	}
 }
 
@@ -142,8 +211,10 @@ func (v *documentView) resetSearch() {
 	v.cancelSearch()
 	p.query = ""
 	setText(p.input, "")
-	setText(p.status, "")
+	v.setSearchStatus("")
+	v.app.setUIMessage(p.term, uiSearchPrompt)
 	v.clearSearchResults()
+	v.layoutSearchResults()
 }
 
 func (v *documentView) queueSearch(query string) {
@@ -159,7 +230,10 @@ func (v *documentView) queueSearch(query string) {
 	v.cancelSearch()
 	p.query, p.pending = query, query
 	v.clearSearchResults()
-	v.app.setUIMessage(p.status, uiSearchingDocument)
+	setText(p.term, query)
+	v.app.scrollPanes[p.term].reflow()
+	v.setSearchStatus(uiSearchingDocument)
+	v.layoutSearchResults()
 	v.launchSearch()
 }
 
@@ -243,7 +317,7 @@ func (v *documentView) receiveSearch(event searchUpdate) {
 			if event.Page != nil {
 				v.addSearchPage(event.Page)
 			}
-			v.app.setUIMessage(p.status, uiSearchProgress, event.Scanned, len(v.order), event.Total)
+			v.setSearchStatus(uiSearchProgress, event.Scanned, len(v.order), event.Total)
 		}
 		return
 	}
@@ -255,18 +329,21 @@ func (v *documentView) receiveSearch(event searchUpdate) {
 		case "ok":
 			switch {
 			case event.Total == 0:
-				v.app.setUIMessage(p.status, uiNoSearchMatch)
+				v.setSearchStatus(uiNoSearchMatch)
 			case event.Total > len(p.rows):
-				v.app.setUIMessage(p.status, uiSearchLimit, event.Total, len(p.rows))
+				v.setSearchStatus(uiSearchLimit, event.Total, len(p.rows))
 			default:
-				v.app.setUIMessage(p.status, uiSearchCount, event.Total)
+				v.setSearchStatus(uiSearchCount, event.Total)
 			}
 		case "error", "changed":
 			v.clearSearchResults()
-			setText(p.status, multiline(event.Message))
+			for _, handle := range [...]uintptr{p.status, p.resultStatus} {
+				setText(handle, multiline(event.Message))
+				v.app.scrollPanes[handle].reflow()
+			}
 		}
-		if a := v.app; a.mode == idSearchTab && !a.full && p.widest == 0 && a.settingsWidth > a.scale(panelWidth) {
-			a.layout()
+		if p.widest == 0 && v.app.visibleRightAuxiliary() == auxiliaryResults {
+			v.app.layout()
 		}
 	}
 	v.launchSearch()
@@ -276,7 +353,7 @@ func (v *documentView) receiveSearch(event searchUpdate) {
 func (v *documentView) addSearchPage(page *searchPage) {
 	p := &v.search
 	firstResult := len(p.rows) == 0
-	oldWidth := p.widest
+	oldWidth := v.preferredSearchWidth()
 	if p.pages == nil {
 		p.pages = make(map[int]*searchPage)
 	}
@@ -291,8 +368,8 @@ func (v *documentView) addSearchPage(page *searchPage) {
 	for index, hit := range page.Hits {
 		p.rows = append(p.rows, searchRow{current, first + index})
 		label := fmt.Sprintf("%d · %s", page.Position, hit.Text)
-		if p.widest < v.app.scale(374) {
-			p.widest = max(p.widest, min(v.app.scale(374), v.app.captionWidth(label, v.app.normalFont)))
+		if p.widest < v.app.scale(294) {
+			p.widest = max(p.widest, min(v.app.scale(294), v.app.captionWidth(label, v.app.normalFont)))
 		}
 		sendMessage.Call(p.list, 0x0180, 0, uintptr(unsafe.Pointer(wideString(label)))) // LB_ADDSTRING
 	}
@@ -304,15 +381,13 @@ func (v *documentView) addSearchPage(page *searchPage) {
 	pane.reflow()
 	invalidate(p.list)
 	v.updateSearchActions()
-	if v.app.mode == idSearchTab {
-		if oldWidth != p.widest && v.app.settingsWidth > 0 && !v.app.full {
-			v.app.layout()
-		}
-		if firstResult {
-			v.jumpToSearch(0)
-		} else {
-			v.invalidateCanvas()
-		}
+	if v.app.visibleRightAuxiliary() == auxiliaryResults && (firstResult || oldWidth != v.preferredSearchWidth()) {
+		v.app.layout()
+	}
+	if firstResult && v.app.mode == idSearchTab {
+		v.jumpToSearch(0)
+	} else {
+		v.invalidateCanvas()
 	}
 }
 
@@ -332,6 +407,13 @@ func (v *documentView) jumpToSearch(row int) {
 	item := p.rows[row]
 	position := item.page.Position - 1
 	if position < 0 || position >= len(v.order) || v.order[position] != item.page.Number {
+		return
+	}
+	if v.app.saveInlineBefore(func() {
+		if position < len(v.order) && v.order[position] == item.page.Number {
+			v.gotoPage(position, false)
+		}
+	}) {
 		return
 	}
 	sendMessage.Call(p.list, 0x0186, uintptr(row), 0) // LB_SETCURSEL
@@ -414,7 +496,7 @@ var alphaBlend = syscall.NewLazyDLL("msimg32.dll").NewProc("AlphaBlend")
 func (v *documentView) paintSearchHighlights(dc uintptr, number int, bounds rect) {
 	p := &v.search
 	page := p.pages[number]
-	if page == nil || v.app.mode != idSearchTab {
+	if page == nil || (v.app.mode != idSearchTab && v.app.visibleRightAuxiliary() != auxiliaryResults) {
 		return
 	}
 	mask, _, _ := createSurfaceDC.Call(dc)

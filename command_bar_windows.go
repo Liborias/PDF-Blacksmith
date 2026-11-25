@@ -264,6 +264,8 @@ func (a *app) showHeaderMenu(id int) {
 			run(idHeaderFitWidth, a.uiText(uiFitWidth), ready, v.ready() && v.fitMode == 2),
 			run(idFullscreen, a.uiText(uiFullscreen), !a.busy, false),
 			run(idCompareOpen, getText(a.comparison.button), !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1), a.comparisonVisible()),
+			run(idLayoutAids, a.uiText(uiLayoutAids), ready, a.mode == idLayoutAids),
+			run(idToggleLayoutGrid, a.uiText(uiShowLayoutGrid), ready, a.checked(a.layoutAids.grid)),
 		}
 	case idHeaderTools:
 		for _, tab := range workspaceTabs {

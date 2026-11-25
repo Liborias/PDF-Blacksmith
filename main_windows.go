@@ -111,7 +111,8 @@ type app struct {
 	toolsWidth, preferredToolsWidth, settingsWidth      int
 	tool, mode                                         int
 	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent uintptr
-	detailsArea, thumbnailArea, bookmarkArea             rect
+	searchSidebar                                       uintptr
+	detailsArea, thumbnailArea, rightAuxArea            rect
 	panelItems                                         map[int][]panelItem
 	panelScroll                                        map[int]int
 	sideScroll                                         *panelScrollbar
@@ -125,6 +126,8 @@ type app struct {
 	headerBrand, windowButtonStart                     int
 	tabBounds                                          rect
 	leftDock, rightDock                                 dockVisibility
+	rightAux                                            rightAuxiliary
+	layoutAids                                         layoutAidsPanel
 	full                                               bool
 	placement                                          windowPlacement
 	savedStyle                                         uintptr
@@ -158,6 +161,7 @@ type app struct {
 	view                                               *documentView
 	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
 	thumbnailsToggle, bookmarksToggle, railFont        uintptr
+	resultsToggle                                      uintptr
 	leftPanelsToggle, rightPanelsToggle                 uintptr
 	recent                                             recentPanel
 	exportScope, exportRange                           uintptr
@@ -211,7 +215,6 @@ func main() {
 	preferences := loadInterfacePreferences()
 	window = &app{
 		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idFileTab, mode: idFileDetails,
-		rightDock: dockVisibility{auxiliaryCollapsed: true},
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
@@ -245,15 +248,18 @@ func main() {
 		if int32(result) <= 0 {
 			break
 		}
-		if window.handleInput(&msg) {
-			continue
+		layoutContext := window.layoutAidsOutsideClick(&msg)
+		if !window.handleInput(&msg) {
+			handled, _, _ := isDialogMsg.Call(window.window, uintptr(unsafe.Pointer(&msg)))
+			if handled == 0 {
+				translateMsg.Call(uintptr(unsafe.Pointer(&msg)))
+				dispatchMsg.Call(uintptr(unsafe.Pointer(&msg)))
+			} else if msg.message == 0x0100 && msg.wParam == 9 {
+				window.revealFocusedControl()
+			}
 		}
-		handled, _, _ := isDialogMsg.Call(window.window, uintptr(unsafe.Pointer(&msg)))
-		if handled == 0 {
-			translateMsg.Call(uintptr(unsafe.Pointer(&msg)))
-			dispatchMsg.Call(uintptr(unsafe.Pointer(&msg)))
-		} else if msg.message == 0x0100 && msg.wParam == 9 {
-			window.revealFocusedControl()
+		if layoutContext != 0 && window.layoutAids.revision == layoutContext {
+			window.dismissLayoutAids()
 		}
 	}
 }

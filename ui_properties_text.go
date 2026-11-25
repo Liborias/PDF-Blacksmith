@@ -45,6 +45,10 @@ const (
 	uiExpandSection                 uiMessage = "win32.properties.ExpandSection"
 	uiViewMode                      uiMessage = "win32.properties.ViewMode"
 	uiViewModeHelp                  uiMessage = "win32.properties.ViewModeHelp"
+	uiLayoutAids                    uiMessage = "ui.pomucky.rozvrzeni.6ad91743f5"
+	uiLayoutGrid                    uiMessage = "ui.mrizka.862e4fe064"
+	uiShowLayoutGrid                uiMessage = "ui.zobrazit.mrizku.8cfde93724"
+	uiLayoutGridHelp                uiMessage = "win32.properties.LayoutGridHelp"
 	uiDocumentPassword              uiMessage = "win32.properties.DocumentPassword"
 	uiDocumentPasswordHelp          uiMessage = "win32.properties.DocumentPasswordHelp"
 	uiViewFullscreen                uiMessage = "win32.properties.ViewFullscreen"
@@ -287,6 +291,7 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiExpandSection:                 {Czech: "rozbalit", English: "expand"},
 	uiViewMode:                      {Czech: "Režim zobrazení", English: "View mode"},
 	uiViewModeHelp:                  {Czech: "Ctrl + kolečko přiblíží PDF pod kurzorem. Tiskový rámeček určuje oblast zobrazenou v náhledu.", English: "Ctrl + mouse wheel zooms at the pointer. The page box determines the area shown in the preview."},
+	uiLayoutGridHelp:                {Czech: "Hlavní čáry jsou po 5 mm a jemné po 1 mm. Mřížka se zobrazuje jen v náhledu.", English: "Main lines are spaced 5 mm apart and minor lines 1 mm apart. The grid appears only in the preview."},
 	uiDocumentPassword:              {Czech: "Heslo k otevření PDF", English: "PDF open password"},
 	uiDocumentPasswordHelp:          {Czech: "Zadejte heslo a načtěte otevřený dokument znovu.", English: "Enter the password and reload the open document."},
 	uiViewFullscreen:                {Czech: "Zobrazit na celou obrazovku · F11", English: "Full screen · F11"},

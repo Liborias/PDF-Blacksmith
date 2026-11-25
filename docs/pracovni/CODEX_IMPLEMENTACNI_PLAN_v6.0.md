@@ -53,10 +53,16 @@ Třetí díl přidává Nastavení → Rozhraní se šesti paletami a světlým 
 
 **2D. Kontextové pomocné panely:** automatické Výsledky při hledání a korektní návrat, dočasné Pomůcky rozvržení při interakci s vodítkem. Uživatelova manuální volba má přednost. Nereplikovat další pravý dock.
 
+První díl 2D přidává Výsledky do společného prostoru se Záložkami. Při aktivaci hledání se Výsledky otevřou. Změna nástroje nebo Esc obnoví předchozí stav panelů a zohlední ruční volby provedené během hledání. Přepnutí karty vyprázdní výsledky předchozího PDF.
+
+Druhý díl 2D přidává do Vlastností Pomůcky rozvržení. Přepnutí mřížky v nabídce Zobrazení je otevře dočasně. Kliknutí mimo panel nebo Esc obnoví Vlastnosti dosavadního nástroje a předchozí sbalení panelů. Přímá volba Pomůcek rozvržení v nabídce Zobrazení je otevře trvale pro zvolený nástroj. Mřížka s hlavními čarami po 5 mm a dělením po 1 mm patří náhledu. Napojení na výběr vodítka navazuje v 4C.
+
 **Done:** zachování všech stávajících ikon i kláves; návrat z vyhledávání; žádné zbytkové tmavé plochy; přístupný focus.
 
 ## Fáze 3 – zobrazení stránek a interaktivní plátno
 **3A. Žádné dekorativní rámy stránky:** zcela odstranit externí vínový outline v hlavní ploše ve stránkovém, souvislém i šířkovém režimu; skutečný obsah PDF nerušit.
+
+Společné vykreslení hlavního náhledu ve Win32 má holou hranu stránky. List od okolí odděluje barevný kontrast aktuálního motivu. Čáry v PDF i zvýraznění při práci s objekty a hledáním se nadále vykreslují.
 
 **3B. Normální navigace:** po stránkách scroll uvnitř listu → při dosažení kraje další/předchozí, ochrana před několikanásobným přeskokem, souvislý režim bez přerušení.
 

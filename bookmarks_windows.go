@@ -71,10 +71,10 @@ func (v *documentView) buildBookmarkPanel() {
 
 func (v *documentView) layoutBookmarkPanel() {
 	a, panel := v.app, &v.bookmarkPanel
-	area := a.bookmarkArea
+	area := a.rightAuxArea
 	width, height := int(area.right-area.left), int(area.bottom-area.top)
 	pane := a.scrollPanes[panel.list]
-	if width <= 0 || !v.ready() || a.full {
+	if width <= 0 || a.visibleRightAuxiliary() != auxiliaryBookmarks {
 		pane.arrange(rect{}, false)
 		showControl(a.bookmarkSidebar, false)
 		return
@@ -215,7 +215,7 @@ func (v *documentView) refreshBookmarks(selected int) {
 		selected = -1
 	}
 	v.showBookmark(selected)
-	if a := v.app; v.ready() && !a.full && a.bookmarkArea.right > a.bookmarkArea.left && oldWidth != v.preferredBookmarkWidth() {
+	if a := v.app; a.visibleRightAuxiliary() == auxiliaryBookmarks && oldWidth != v.preferredBookmarkWidth() {
 		a.layout()
 	} else {
 		v.layoutBookmarkPanel()

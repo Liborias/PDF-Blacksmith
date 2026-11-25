@@ -29,6 +29,9 @@ func (a *app) addDetailButton(id int, label uiMessage) {
 }
 
 func (a *app) detailsTab() int {
+	if a.layoutAids.temporary {
+		return idLayoutAids
+	}
 	if a.tool == idFileTab {
 		switch a.mode {
 		case idExportTab, idSignTab:
@@ -47,6 +50,20 @@ func (a *app) sidebarRails() (rect, rect) {
 		rect{right - width, top, right, bottom}
 }
 
+func (a *app) visibleRightAuxiliary() auxiliaryPanel {
+	if a.full || a.effectiveRightDock().collapsed || !a.view.ready() {
+		return auxiliaryNone
+	}
+	return a.rightAux.panel
+}
+
+func (a *app) toggleRightAuxiliary(panel auxiliaryPanel) {
+	a.rightAux.togglePanel(panel)
+	a.layout()
+	a.view.invalidateCanvas()
+	a.view.schedule()
+}
+
 func (a *app) layoutDocumentPanels() {
 	d := a.scale
 	var minimum, preferred dockWidths
@@ -54,7 +71,7 @@ func (a *app) layoutDocumentPanels() {
 		minimum[dockTools] = d(168)
 		preferred[dockTools] = a.preferredToolsWidth
 	}
-	if a.rightDock.showsPrimary() {
+	if a.effectiveRightDock().showsPrimary() {
 		minimum[dockProperties] = d(panelWidth)
 		preferred[dockProperties] = a.preferredSettingsWidth()
 	}
@@ -63,9 +80,13 @@ func (a *app) layoutDocumentPanels() {
 		minimum[dockThumbnails] = d(70)
 		preferred[dockThumbnails] = a.preferredThumbnailsWidth()
 	}
-	if a.rightDock.showsAuxiliary(ready) {
-		minimum[dockBookmarks] = d(145)
-		preferred[dockBookmarks] = a.view.preferredBookmarkWidth()
+	switch a.visibleRightAuxiliary() {
+	case auxiliaryBookmarks:
+		minimum[dockRightAuxiliary] = d(145)
+		preferred[dockRightAuxiliary] = a.view.preferredBookmarkWidth()
+	case auxiliaryResults:
+		minimum[dockRightAuxiliary] = d(145)
+		preferred[dockRightAuxiliary] = a.view.preferredSearchWidth()
 	}
 	preferredDocument := d(265)
 	if compare {
@@ -76,9 +97,9 @@ func (a *app) layoutDocumentPanels() {
 	a.toolsWidth, a.settingsWidth = widths[dockTools], widths[dockProperties]
 	top, bottom := int32(d(workspaceTop)), int32(max(d(workspaceTop+1), a.height-d(footerHeight)))
 	left, right := a.toolsWidth+rail, a.width-a.settingsWidth-rail
-	docLeft, docRight := left+widths[dockThumbnails], right-widths[dockBookmarks]
+	docLeft, docRight := left+widths[dockThumbnails], right-widths[dockRightAuxiliary]
 	a.thumbnailArea = rect{int32(left), top, int32(docLeft), bottom}
-	a.bookmarkArea = rect{int32(docRight), top, int32(right), bottom}
+	a.rightAuxArea = rect{int32(docRight), top, int32(right), bottom}
 	a.viewport = rect{int32(docLeft), top, int32(docRight), bottom}
 }
 
@@ -94,9 +115,6 @@ func (a *app) preferredThumbnailsWidth() int {
 func (a *app) preferredSettingsWidth() int {
 	d, tab := a.scale, a.detailsTab()
 	width := d(panelWidth)
-	if tab == idSearchTab {
-		width = max(width, a.view.search.widest+d(80))
-	}
 	if tab == idFileDetails {
 		for _, path := range a.recent.files[:min(recentFilePreview, len(a.recent.files))] {
 			width = max(width, a.captionWidth(filepath.Base(path), a.normalFont)+d(80))
@@ -140,12 +158,13 @@ func (a *app) layoutSidebars() {
 	}
 	leftRail, rightRail := a.sidebarRails()
 	ready := a.view.ready()
-	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.thumbnailsToggle, a.leftDock, ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft)
-	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.bookmarksToggle, a.rightDock, ready, uiCollapseRight, uiExpandRight)
+	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.leftDock, ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft, a.thumbnailsToggle)
+	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.effectiveRightDock(), ready, uiCollapseRight, uiExpandRight, a.resultsToggle, a.bookmarksToggle)
 
 	x, top := a.width-a.settingsWidth, int(a.viewport.top)
 	gridWidth := max(1, d(145)+(a.settingsWidth-d(panelWidth))/2)
-	viewOptionsVisible := detailsVisible && a.tool == idBrowseTab
+	tab := a.detailsTab()
+	viewOptionsVisible := detailsVisible && a.tool == idBrowseTab && tab != idLayoutAids
 	for index, id := range [...]int{idBrowseTab, idPagesTab} {
 		button := a.detailButtons[id]
 		if viewOptionsVisible {
@@ -155,23 +174,27 @@ func (a *app) layoutSidebars() {
 		invalidate(button)
 	}
 	if detailsVisible {
-		for _, tab := range workspaceTabs {
-			if tab.id == a.tool {
-				setText(a.sidebarTitle, a.uiText(tab.name))
-				break
+		if tab == idLayoutAids {
+			setText(a.sidebarTitle, a.uiText(uiLayoutAids))
+		} else {
+			for _, tool := range workspaceTabs {
+				if tool.id == a.tool {
+					setText(a.sidebarTitle, a.uiText(tool.name))
+					break
+				}
 			}
 		}
 		place(a.sidebarTitle, x+d(16), top+d(9), max(1, a.settingsWidth-d(52)), d(22))
 		detailY := top + d(38)
 		switch {
-		case a.detailsTab() == idFileDetails:
+		case tab == idFileDetails:
 			detailY = top
 		case viewOptionsVisible:
 			detailY = top + d(76)
 		}
 		a.detailsArea = rect{int32(x), int32(detailY), int32(a.width), a.viewport.bottom}
 	}
-	showControl(a.sidebarTitle, detailsVisible && a.detailsTab() != idFileDetails)
+	showControl(a.sidebarTitle, detailsVisible && tab != idFileDetails)
 	showControl(a.sidebar, detailsVisible)
 	thumb := a.thumbnailArea
 	show := thumb.right > thumb.left && !a.full
@@ -185,10 +208,11 @@ func (a *app) layoutSidebars() {
 		user32.NewProc("RedrawWindow").Call(a.thumbnailSidebar, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
 	}
 	a.view.layoutBookmarkPanel()
+	a.view.layoutSearchResults()
 	a.layoutPanel()
 }
 
-func (a *app) layoutRail(rail rect, group, primary, auxiliary uintptr, dock dockVisibility, auxiliaryAvailable bool, collapse, expand uiMessage) {
+func (a *app) layoutRail(rail rect, group, primary uintptr, dock dockVisibility, auxiliaryAvailable bool, collapse, expand uiMessage, auxiliary ...uintptr) {
 	d := a.scale
 	x, y, width := int(rail.left), int(rail.top)+d(10), int(rail.right-rail.left)
 	visible := !a.full && width > 0
@@ -204,18 +228,17 @@ func (a *app) layoutRail(rail rect, group, primary, auxiliary uintptr, dock dock
 		}
 		place(group, x, y, width, d(30))
 	}
-	if panels {
-		height := max(d(88), a.captionWidth(getText(primary), a.labelFont)+d(28))
-		place(primary, x, y+d(36), width, height)
-		if auxiliaryAvailable {
-			auxHeight := max(d(88), a.captionWidth(getText(auxiliary), a.labelFont)+d(28))
-			place(auxiliary, x, y+d(42)+height, width, auxHeight)
-		}
-	}
 	showControl(group, visible)
-	showControl(primary, panels)
-	showControl(auxiliary, panels && auxiliaryAvailable)
-	for _, handle := range [...]uintptr{group, primary, auxiliary} {
+	invalidate(group)
+	y += d(36)
+	for _, handle := range append([]uintptr{primary}, auxiliary...) {
+		show := panels && (handle == primary || auxiliaryAvailable)
+		if show {
+			height := max(d(88), a.captionWidth(getText(handle), a.labelFont)+d(28))
+			place(handle, x, y, width, height)
+			y += height + d(6)
+		}
+		showControl(handle, show)
 		invalidate(handle)
 	}
 }
@@ -237,15 +260,17 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	case a.leftPanelsToggle:
 		collapsed, onLeft, group = a.leftDock.collapsed, true, true
 	case a.rightPanelsToggle:
-		collapsed, group = a.rightDock.collapsed, true
+		collapsed, group = a.effectiveRightDock().collapsed, true
 	case a.toolsToggle:
 		collapsed, onLeft = a.leftDock.primaryCollapsed, true
 	case a.detailsToggle:
-		collapsed = a.rightDock.primaryCollapsed
+		collapsed = a.effectiveRightDock().primaryCollapsed
 	case a.thumbnailsToggle:
 		collapsed, onLeft = a.leftDock.auxiliaryCollapsed, true
 	case a.bookmarksToggle:
-		collapsed = a.rightDock.auxiliaryCollapsed
+		collapsed = a.rightAux.panel != auxiliaryBookmarks
+	case a.resultsToggle:
+		collapsed = a.rightAux.panel != auxiliaryResults
 	default:
 		return false
 	}
@@ -294,14 +319,16 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 }
 
 func (a *app) togglePanelSide(left bool) {
-	dock := &a.rightDock
 	if left {
-		dock = &a.leftDock
+		a.leftDock.collapsed = !a.leftDock.collapsed
 		if !a.comparisonVisible() {
 			a.view.endPageDrag()
 		}
+	} else {
+		hidden := !a.effectiveRightDock().collapsed
+		a.layoutAids.temporary = false
+		a.rightAux.setGroupCollapsed(&a.rightDock, hidden)
 	}
-	dock.collapsed = !dock.collapsed
 	a.layout()
 	a.view.schedule()
 }
