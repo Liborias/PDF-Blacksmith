@@ -1,3 +1,7 @@
+> **ARCHIV / NAHRAZENO 25. 11. 2026:** Tento dokument slouží pouze k dohledání historie rozhodnutí. **NENÍ samostatným aktuálním pokynem pro Codex.** Jediné závazné zadání: [CODEX_START.md](/Liborias/PDF-Blacksmith/blob/main/docs/pracovni/CODEX_START.md) a [CODEX_MASTER_v6.0.md](/Liborias/PDF-Blacksmith/blob/main/docs/pracovni/CODEX_MASTER_v6.0.md). **Nová priorita: nejprve rozhraní, F1 až později po schválení.** Platí finální mapy v6.0. Původní historický obsah níže zůstává zachován.
+
+---
+
 # Pracovní postup – ChatGPT, GitHub, Codex
 
 1. V chatu probereme nové požadavky a uživatel schválí přesné varianty.
