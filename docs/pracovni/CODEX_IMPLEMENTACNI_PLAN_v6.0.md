@@ -22,7 +22,7 @@
 ## Fáze 1 – design systém a nejzákladnější rozhraní
 **1A. Tokeny a palety:** 6×light/dark, žádné pevné vínové relikty, tmavé inputy ve světlých profilech, sémantika swatch vs UI. Ověřit v native Win32 způsob barvení; uvést screenshoty, pokud běží na Windows. **Nevylepšovat automaticky render PDF**.
 
-**1B. Ikonový systém:** normativní mapování symbolů a statusů; první horní lišta a druhá menu/ikony, logo a magnet z původních autorských kreseb, bez změny command ID. Zkontrolovat 150/200 % DPI a přístupnost.
+**1B. Ikonový systém:** Součástí je ověření chybějících SVG symbolů `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all` a `i-plate_single` (v aktuálním HTML jsou některé volány, ale nejsou definované); prověřit původní atlas, nekreslit náhrady bez souhlasu.  normativní mapování symbolů a statusů; první horní lišta a druhá menu/ikony, logo a magnet z původních autorských kreseb, bez změny command ID. Zkontrolovat 150/200 % DPI a přístupnost.
 
 **1C. Základní docky:** Nástroje vlevo, Vlastnosti vpravo, miniatury a jeden pomocný panel; korektně se skládat, změna šířky a vracení stavu, práce v malém okně. Neodpojovat stávající OCR/separace.
 
