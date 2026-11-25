@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+	"slices"
 	"strconv"
 	"unsafe"
 )
@@ -82,7 +84,8 @@ func (v *documentView) zoomThumbnails(screen point, delta int) {
 	if delta == 0 || !v.ready() || v.pageDrag.pressed {
 		return
 	}
-	scale := max(10, min(v.thumbnailScale+5*thumbnailWheelSteps(delta), 60))
+	scale, remainder := stepThumbnailZoom(v.thumbnailScale, delta, v.thumbnailZoomRemainder)
+	v.thumbnailZoomRemainder = remainder
 	if scale == v.thumbnailScale {
 		return
 	}
@@ -117,45 +120,60 @@ func (v *documentView) thumbnailBudget() int64 {
 	return min(thumbnailCacheSize, v.cacheLimit/16)
 }
 
-func (v *documentView) trimThumbnails(budget int64) {
+func (v *documentView) thumbnailCandidates() []int {
 	first, last := v.thumbnailRange()
+	if !v.overview {
+		return v.order[first:last]
+	}
+	start, end := v.overviewVisiblePages()
+	start, end = min(start, len(v.order)), min(end, len(v.order))
+	numbers := slices.Clone(v.order[start:end])
+	for index := first; index < last; index++ {
+		if index < start || index >= end {
+			numbers = append(numbers, v.order[index])
+		}
+	}
+	return numbers
+}
+
+func (v *documentView) trimThumbnails(budget int64) {
+	if v.thumbnails.bytes <= budget {
+		return
+	}
+	visible := v.thumbnailCandidates()
 	for number := range v.thumbnails.frames {
 		if v.thumbnails.bytes <= budget {
 			return
 		}
-		keep := false
-		for _, visible := range v.order[first:last] {
-			if visible == number {
-				keep = true
-				break
-			}
-		}
-		if !keep || budget == 0 {
+		if budget == 0 || !slices.Contains(visible, number) {
 			v.thumbnails.remove(number)
 		}
 	}
 }
 
 func (v *documentView) scheduleThumbnails() bool {
-	first, last := v.thumbnailRange()
-	if first == last {
+	numbers := v.thumbnailCandidates()
+	if len(numbers) == 0 {
 		return false
 	}
 	v.updateCacheLimit()
 	pixels := 640
-	rowHeight := v.app.scrollPanes[v.pageList].lineHeight
+	rowHeight := max(v.app.scrollPanes[v.pageList].lineHeight, v.overviewGrid.cardHeight)
 	for _, size := range []int{128, 256, 400} {
 		if rowHeight <= size {
 			pixels = size
 			break
 		}
 	}
-	estimate := int64((pixels + 2) * (pixels + 2) * 4)
 	budget := v.thumbnailBudget()
+	if v.overview {
+		// Leave room to cache the visible cards concurrently at small overview zooms.
+		pixels = min(pixels, max(24, int(math.Sqrt(float64(budget)/4/float64(len(numbers))))-2))
+	}
+	estimate := int64((pixels + 2) * (pixels + 2) * 4)
 	if budget < estimate {
 		return false
 	}
-	numbers := v.order[first:last]
 	if number := v.draggedPage(); number != 0 && number != numbers[0] {
 		numbers = append([]int{number}, numbers...)
 	}

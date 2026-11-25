@@ -7,6 +7,50 @@ import (
 
 type pageSize struct{ width, height float64 }
 
+type readingZoomMode int
+
+const (
+	readingZoomManual readingZoomMode = iota
+	readingZoomFitPage
+	readingZoomFitWidth
+	readingZoomActual
+)
+
+func pixelsPerPDFPoint(dpi int) float64 {
+	return float64(dpi) / 72
+}
+
+func readingZoomScale(mode readingZoomMode, current, width, height, margin float64, page pageSize, dpi int) float64 {
+	switch {
+	case mode == readingZoomActual:
+		return pixelsPerPDFPoint(dpi)
+	case mode == readingZoomManual && current > 0:
+		return current
+	}
+	fitWidth := max(0.02, (width-2*margin)/page.width)
+	if mode == readingZoomFitWidth {
+		return fitWidth
+	}
+	return min(fitWidth, max(0.02, (height-2*margin)/page.height))
+}
+
+func stepReadingZoom(current, steps float64, dpi int) float64 {
+	actual := pixelsPerPDFPoint(dpi)
+	// Fit modes may need to go beyond the manual range to show an entire page.
+	return min(max(current*math.Pow(1.2, steps), min(current, actual*0.30)), max(current, actual*9))
+}
+
+func stepThumbnailZoom(scale, delta, remainder int) (int, int) {
+	const minimum, maximum = 10, 60
+	remainder += 5 * delta
+	scale = min(maximum, max(minimum, scale+remainder/wheelDetent))
+	remainder %= wheelDetent
+	if (scale == minimum && remainder < 0) || (scale == maximum && remainder > 0) {
+		remainder = 0
+	}
+	return scale, remainder
+}
+
 type sheet struct {
 	index                    int
 	left, top, width, height float64
@@ -98,4 +142,57 @@ func (layout readingLayout) restore(anchor readingAnchor, cursorX, cursorY float
 func clampReadingOffset(value, content, viewport float64) float64 {
 	edge := content - viewport
 	return math.Max(math.Min(0, edge), math.Min(math.Max(0, edge), value))
+}
+
+func readingPageTurn(offset, content, viewport, distance float64) int {
+	edge := content - viewport
+	switch {
+	case distance > 0 && (edge <= 0 || offset >= edge-0.5):
+		return 1
+	case distance < 0 && (edge <= 0 || offset <= 0.5):
+		return -1
+	default:
+		return 0
+	}
+}
+
+const (
+	wheelDetent     = 120
+	pageWheelIdleMS = 300
+)
+
+type pageWheelGesture struct {
+	lastTick  uint32
+	direction int
+	edgeDelta int
+	turned    bool
+}
+
+// Preserve one page turn per same-direction burst of Win32 wheel messages.
+// Only deltas received at the edge count toward a turn.
+func (gesture *pageWheelGesture) allow(delta int, tick uint32, atEdge bool) bool {
+	if delta == 0 {
+		return false
+	}
+	direction := 1
+	if delta < 0 {
+		direction, delta = -1, -delta
+	}
+	if gesture.direction != direction || tick-gesture.lastTick >= pageWheelIdleMS {
+		*gesture = pageWheelGesture{direction: direction}
+	}
+	gesture.lastTick = tick
+	if !atEdge {
+		gesture.edgeDelta = 0
+		return true
+	}
+	if gesture.turned {
+		return false
+	}
+	gesture.edgeDelta += delta
+	if gesture.edgeDelta < wheelDetent {
+		return false
+	}
+	gesture.turned = true
+	return true
 }

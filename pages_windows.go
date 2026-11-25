@@ -13,6 +13,7 @@ const (
 	lbGetSelCount    = 0x0190
 	lbGetSelItems    = 0x0191
 	lbSetAnchorIndex = 0x019c
+	lbGetAnchorIndex = 0x019d
 	lbSetCaretIndex  = 0x019e
 	lbGetCaretIndex  = 0x019f
 )
@@ -37,7 +38,8 @@ func (v *documentView) buildPagePanel() {
 }
 
 func (v *documentView) updatePageEditActions(editing bool) {
-	selected := max(1, len(v.pageSelection))
+	selected := len(v.selectedPagePositions())
+	editing = editing && selected > 0
 	last := len(v.order) - selected + 1
 	a := v.app
 	message := localizedMessage{key: uiTargetPosition}
@@ -53,7 +55,7 @@ func (v *documentView) updatePageEditActions(editing bool) {
 }
 
 func (v *documentView) selectedPagePositions() []int {
-	if len(v.pageSelection) > 0 {
+	if v.overview || len(v.pageSelection) > 0 {
 		return v.pageSelection
 	}
 	return []int{v.page}
@@ -69,7 +71,7 @@ func (v *documentView) selectedSourcePages() []int {
 }
 
 func (v *documentView) inPageSelection(index int) bool {
-	if len(v.pageSelection) > 0 {
+	if v.overview || len(v.pageSelection) > 0 {
 		_, found := slices.BinarySearch(v.pageSelection, index)
 		return found
 	}
@@ -80,16 +82,25 @@ func (v *documentView) resetPageListSelection() {
 	if len(v.order) == 0 {
 		return
 	}
-	sendMessage.Call(v.pageList, lbSetSel, 0, ^uintptr(0))
-	for _, index := range v.selectedPagePositions() {
-		sendMessage.Call(v.pageList, lbSetSel, 1, uintptr(index))
+	selected := v.selectedPagePositions()
+	if len(selected) == len(v.order) {
+		sendMessage.Call(v.pageList, lbSetSel, 1, ^uintptr(0))
+	} else {
+		sendMessage.Call(v.pageList, lbSetSel, 0, ^uintptr(0))
+		for _, index := range selected {
+			sendMessage.Call(v.pageList, lbSetSel, 1, uintptr(index))
+		}
 	}
-	sendMessage.Call(v.pageList, lbSetAnchorIndex, uintptr(v.page), 0)
+	anchor := v.page
+	if v.overview {
+		anchor = min(max(v.overviewAnchor, 0), len(v.order)-1)
+	}
+	sendMessage.Call(v.pageList, lbSetAnchorIndex, uintptr(anchor), 0)
 	sendMessage.Call(v.pageList, lbSetCaretIndex, uintptr(v.page), 1)
 }
 
 func (v *documentView) syncPageListSelection() {
-	if len(v.pageSelection) > 0 {
+	if v.overview || len(v.pageSelection) > 0 {
 		return
 	}
 	count, _, _ := sendMessage.Call(v.pageList, lbGetSelCount, 0, 0)
@@ -106,6 +117,10 @@ func (v *documentView) readPageSelection() {
 	count, _, _ := sendMessage.Call(v.pageList, lbGetSelCount, 0, 0)
 	caret, _, _ := sendMessage.Call(v.pageList, lbGetCaretIndex, 0, 0)
 	index := min(max(int(int32(caret)), 0), len(v.order)-1)
+	if v.overview {
+		anchor, _, _ := sendMessage.Call(v.pageList, lbGetAnchorIndex, 0, 0)
+		v.overviewAnchor = min(max(int(int32(anchor)), 0), len(v.order)-1)
+	}
 	v.pageSelection = nil
 	if count > 0 && count <= uintptr(len(v.order)) {
 		items := make([]int32, int(count))
@@ -116,7 +131,7 @@ func (v *documentView) readPageSelection() {
 				selected[i] = int(item)
 			}
 			slices.Sort(selected)
-			if _, found := slices.BinarySearch(selected, index); !found {
+			if _, found := slices.BinarySearch(selected, index); !found && !v.overview {
 				index = selected[0]
 			}
 			v.pageSelection = selected
@@ -125,7 +140,7 @@ func (v *documentView) readPageSelection() {
 	if !v.secondary {
 		v.app.applyThumbnailScope()
 	}
-	if index != v.page {
+	if v.overview || index != v.page {
 		v.gotoPage(index, false)
 	} else if !v.secondary {
 		v.updateActions()
@@ -134,6 +149,9 @@ func (v *documentView) readPageSelection() {
 
 func (v *documentView) selectOnlyPage(index int) {
 	v.pageSelection = []int{index}
+	if v.overview {
+		v.overviewAnchor = index
+	}
 	if !v.secondary {
 		v.app.applyThumbnailScope()
 	}
@@ -185,7 +203,11 @@ func (v *documentView) moveToPosition() {
 	if !v.ready() || v.app.busy {
 		return
 	}
-	limit := len(v.order) - len(v.selectedPagePositions()) + 1
+	selected := len(v.selectedPagePositions())
+	if selected == 0 {
+		return
+	}
+	limit := len(v.order) - selected + 1
 	if limit <= 1 {
 		return
 	}
@@ -204,7 +226,7 @@ func (v *documentView) moveToPosition() {
 
 func (v *documentView) deleteSelectedPages() {
 	selected := v.selectedPagePositions()
-	if !v.ready() || v.app.busy || len(selected) >= len(v.order) {
+	if !v.ready() || v.app.busy || len(selected) == 0 || len(selected) >= len(v.order) {
 		return
 	}
 	order := make([]int, 0, len(v.order)-len(selected))

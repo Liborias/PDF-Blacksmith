@@ -110,7 +110,7 @@ func (a *app) documentKey(msg *winMessage) bool {
 		return true
 	}
 	if ctrl&0x8000 == 0 {
-		if !inline && !a.busy && a.view.ready() && !hasShift {
+		if !inline && !a.busy && a.view.ready() && !hasShift && !a.focusedDocumentView().overview {
 			mode, ok := map[uintptr]int{'T': idTextSelectObject, 'V': idTextSelectParagraph, 'M': idTextSelectRectangle, 'L': idTextSelectLasso}[msg.wParam]
 			if ok && !a.full {
 				a.activate(idTextTab)
@@ -303,6 +303,10 @@ func (a *app) doDocumentCommand(v *documentView, command documentCommand, editin
 	case docApplyText:
 		a.startTextEdit()
 	case docFind, docSave, docPrint, docSelectAll:
+		if command == docSelectAll && v.overview {
+			v.selectAllOverviewPages()
+			return
+		}
 		action := a.showSearch
 		if command == docSelectAll {
 			action = func() {
@@ -343,11 +347,7 @@ func (a *app) doDocumentCommand(v *documentView, command documentCommand, editin
 	case docFullscreen:
 		a.toggleFullscreen()
 	case docFitPage:
-		v.fitMode = 1
-		v.reference = v.page
-		chooseCombo(v.fit, 0)
-		v.rebuild(false)
-		v.changedViewport()
+		v.setZoomMode(readingZoomFitPage)
 	case docZoomIn, docZoomOut:
 		width, height := v.viewportSize()
 		delta := 1.

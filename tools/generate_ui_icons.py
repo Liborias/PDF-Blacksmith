@@ -13,7 +13,7 @@ TILE_SIZE = 96
 SYMBOLS = (
     "fit_page", "fit_width", "language", "nav_file", "nav_merge_pdf", "nav_objects",
     "nav_ocr", "nav_page_order", "nav_search_pdf", "nav_separations",
-    "nav_settings", "nav_signature", "nav_split_pdf", "nav_text", "nav_view", "panel_right",
+    "nav_settings", "nav_signature", "nav_split_pdf", "nav_text", "nav_thumbnails", "nav_view", "panel_right",
     "redo", "save", "search", "settings_interface", "side_by_side", "undo", "view_continuous", "view_pages",
     "zoom_in", "zoom_out",
 )

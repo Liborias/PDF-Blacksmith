@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	comctl32         = syscall.NewLazyDLL("comctl32.dll")
-	defSubclass      = comctl32.NewProc("DefSubclassProc")
+	comctl32    = syscall.NewLazyDLL("comctl32.dll")
+	defSubclass = comctl32.NewProc("DefSubclassProc")
 )
 
 const trackClassName = "PDFBlacksmithScrollTrack"
@@ -286,15 +286,9 @@ func (pane *scrollPane) arrange(frame rect, shown bool) {
 	}
 }
 
-func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
+func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) bool {
 	screen := point{int32(int16(location)), int32(int16(location >> 16))}
 	hover, _, _ := user32.NewProc("WindowFromPoint").Call(uintptr(uint32(screen.x)) | uintptr(uint32(screen.y))<<32)
-	rows := delta / 40
-	if delta > 0 {
-		rows = max(1, rows)
-	} else if delta < 0 {
-		rows = min(-1, rows)
-	}
 	parent, _, _ := user32.NewProc("GetParent").Call(hover)
 	for _, v := range []*documentView{a.view, a.comparison.view} {
 		if v == nil || (hover != v.thumbnailSidebar && parent != v.thumbnailSidebar) {
@@ -304,14 +298,24 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
 		if ctrl {
 			v.zoomThumbnails(screen, delta)
 		} else {
+			v.thumbnailZoomRemainder = 0
 			thumbs.bar.setPosition(thumbs.bar.position - thumbnailWheelSteps(delta))
 		}
-		return
+		return true
+	}
+	if ctrl {
+		return false
+	}
+	rows := delta / 40
+	if delta > 0 {
+		rows = max(1, rows)
+	} else if delta < 0 {
+		rows = min(-1, rows)
 	}
 	if hood := a.bookmarkSidebar; hover == hood || parent == hood {
 		bar := a.scrollPanes[a.view.bookmarkPanel.list].bar
 		bar.setPosition(bar.position - rows)
-		return
+		return true
 	}
 	if hood := a.searchSidebar; hover == hood || parent == hood {
 		bar := a.scrollbars[hover]
@@ -322,17 +326,18 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
 			bar = a.scrollPanes[a.view.search.list].bar
 		}
 		bar.setPosition(bar.position - rows)
-		return
+		return true
 	}
 	if a.settingsWidth == 0 {
-		return
+		return true
 	}
 	bar := a.scrollbars[hover]
 	if pane := a.scrollPanes[hover]; pane != nil {
 		bar = pane.bar
 	}
 	if bar != nil && bar != a.sideScroll && delta != 0 && bar.setPosition(bar.position-rows) {
-		return
+		return true
 	}
 	a.sideScroll.setPosition(a.sideScroll.position - delta*62/120)
+	return true
 }

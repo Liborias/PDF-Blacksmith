@@ -99,7 +99,7 @@ func (v *documentView) detailFor(tile screenTile, width, height int) screenTile 
 
 func (v *documentView) syncDetails() {
 	var visible []screenTile
-	if v.ready() && !v.proofMode() {
+	if v.ready() && !v.overview && !v.proofMode() {
 		_, viewportHeight := v.viewportSize()
 		for _, page := range v.spread.visible(v.scrollY, viewportHeight) {
 			if v.fullPreviewTarget(page) != 0 {

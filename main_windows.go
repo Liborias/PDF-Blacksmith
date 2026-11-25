@@ -108,6 +108,7 @@ type profileChoice struct {
 type app struct {
 	window, instance, normalFont, titleFont, labelFont uintptr
 	dpi, width, height                                 int
+	displayDPI                                         int
 	toolsWidth, preferredToolsWidth, settingsWidth      int
 	tool, mode                                         int
 	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent uintptr
@@ -207,6 +208,7 @@ func main() {
 			dpi = value
 		}
 	}
+	displayDPI := dpi
 	screenWidth, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
 	screenHeight, _, _ := user32.NewProc("GetSystemMetrics").Call(1)
 	if screenWidth > 100 && screenHeight > 100 {
@@ -214,7 +216,7 @@ func main() {
 	}
 	preferences := loadInterfacePreferences()
 	window = &app{
-		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idFileTab, mode: idFileDetails,
+		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), displayDPI: int(displayDPI), tool: idFileTab, mode: idFileDetails,
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),

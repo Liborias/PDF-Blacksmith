@@ -127,11 +127,7 @@ func (v *documentView) syncReadingControls() {
 		flow = 0
 	}
 	chooseCombo(v.flow, flow)
-	if v.fitMode == 0 {
-		chooseCombo(v.fit, 2)
-	} else {
-		chooseCombo(v.fit, v.fitMode-1)
-	}
+	v.syncZoomChoice()
 }
 
 func (a *app) addDocumentTab(path, password string, info os.FileInfo) {

@@ -81,6 +81,12 @@ const (
 	uiFullscreen           uiMessage = "ui.cela.obrazovka.c44c09e551"
 	uiFitPage              uiMessage = "ui.prizpusobit.strance.1656c87fd6"
 	uiFitWidth             uiMessage = "ui.prizpusobit.sirce.8bca0aacbe"
+	uiActualSize           uiMessage = "ui.skutecna.velikost.100.498ea622bc"
+	uiZoom100              uiMessage = "win32.Zoom100"
+	uiPageOverview         uiMessage = "win32.PageOverview"
+	uiOverviewFit          uiMessage = "win32.OverviewFit"
+	uiOverviewSelection    uiMessage = "win32.OverviewSelection"
+	uiOverviewEmpty        uiMessage = "win32.OverviewEmpty"
 	uiZoomIn               uiMessage = "ui.priblizit.d5195d8843"
 	uiZoomOut              uiMessage = "ui.oddalit.2ca97714a5"
 	uiContinuous           uiMessage = "ui.souvisle.zobrazeni.00efb2eec0"
@@ -148,6 +154,11 @@ var win32Translations = map[uiMessage]uiTranslation{
 	uiWholePage:            {Czech: "Celá stránka", English: "Whole page"},
 	uiPageWidth:            {Czech: "Šířka stránky", English: "Page width"},
 	uiCustomZoom:           {Czech: "Vlastní zoom", English: "Custom zoom"},
+	uiZoom100:              {Czech: "100 %", English: "100%"},
+	uiPageOverview:         {Czech: "Přehled stran", English: "Page overview"},
+	uiOverviewFit:          {Czech: "Na výšku (Enter)", English: "Fit page (Enter)"},
+	uiOverviewSelection:    {Czech: "Přehled stran · Vybráno %d", English: "Page overview · %d selected"},
+	uiOverviewEmpty:        {Czech: "Vyberte alespoň jednu stránku.", English: "Select at least one page."},
 	uiMinimize:             {Czech: "Minimalizovat", English: "Minimize"},
 	uiMaximize:             {Czech: "Maximalizovat nebo obnovit", English: "Maximize or restore"},
 	uiClose:                {Czech: "Zavřít", English: "Close"},

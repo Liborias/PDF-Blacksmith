@@ -678,8 +678,9 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		a.command(int(wParam&0xffff), int(wParam>>16&0xffff))
 		return 0
 	case 0x020a: // WM_MOUSEWHEEL
-		a.wheelSettings(lParam, int(int16(wParam>>16)), wParam&8 != 0)
-		return 0
+		if a.wheelSettings(lParam, int(int16(wParam>>16)), wParam&8 != 0) {
+			return 0
+		}
 	}
 	result, _, _ := defWindowProc.Call(hwnd, uintptr(msg), wParam, lParam)
 	return result
@@ -930,6 +931,8 @@ func (a *app) command(id, notification int) {
 		a.activate(id)
 	case idToggleLayoutGrid:
 		a.toggleLayoutGrid()
+	case idFitOverviewPage:
+		a.view.fitOverviewSelection()
 	case idOpen, idRecentFiles, idShowOutput, idSaveDocument, idSaveDocumentAs, idExportTab, idFileSign, idPrintDocument:
 		a.runFileOption(id)
 	case idRecentMore:
@@ -1025,7 +1028,12 @@ func (a *app) selectPages(req *request, scope, pageRange uintptr) bool {
 	case exportCurrentPage:
 		req.View.Pages = []int{a.view.page + 1}
 	case exportThumbnails:
-		for _, position := range a.view.selectedPagePositions() {
+		selected := a.view.selectedPagePositions()
+		if len(selected) == 0 {
+			a.reportUI(uiOverviewEmpty)
+			return false
+		}
+		for _, position := range selected {
 			req.View.Pages = append(req.View.Pages, position+1)
 		}
 	case exportPageRanges:
@@ -1429,22 +1437,29 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.message == 0x020a { // WM_MOUSEWHEEL
 		pos := point{int32(int16(msg.lParam)), int32(int16(msg.lParam >> 16))}
 		user32.NewProc("ScreenToClient").Call(a.window, uintptr(unsafe.Pointer(&pos)))
-		if a.comparisonVisible() && contains(a.comparison.view.viewport, pos.x, pos.y) {
-			a.comparison.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
+		delta, control := int(int16(msg.wParam>>16)), msg.wParam&8 != 0
+		var reader *documentView
+		switch {
+		case a.comparisonVisible() && contains(a.comparison.view.viewport, pos.x, pos.y):
+			reader = a.comparison.view
+		case contains(a.view.viewport, pos.x, pos.y):
+			reader = a.view
+		}
+		if reader != nil {
+			if !control && a.wheelTargetsEdit(msg.window) {
+				reader.pageWheel = pageWheelGesture{}
+				return false
+			}
+			reader.wheel(delta, control, pos, msg.time)
 			return true
 		}
-		if contains(a.view.viewport, pos.x, pos.y) {
-			a.view.wheel(float64(int16(msg.wParam>>16))/120, msg.wParam&8 != 0, pos)
-			return true
+		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.comparison.thumbnailArea, pos.x, pos.y) {
+			return a.wheelSettings(msg.lParam, delta, control)
 		}
-		if contains(a.thumbnailArea, pos.x, pos.y) || contains(a.comparison.thumbnailArea, pos.x, pos.y) || contains(a.rightAuxArea, pos.x, pos.y) {
-			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
-			return true
-		}
-		if !a.full && a.settingsWidth > 0 && pos.x >= a.detailsArea.left && pos.x < int32(a.width) &&
-			pos.y >= a.viewport.top && pos.y < a.viewport.bottom {
-			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
-			return true
+		if !control && (contains(a.rightAuxArea, pos.x, pos.y) ||
+			(!a.full && a.settingsWidth > 0 && pos.x >= a.detailsArea.left && pos.x < int32(a.width) &&
+				pos.y >= a.viewport.top && pos.y < a.viewport.bottom)) {
+			return a.wheelSettings(msg.lParam, delta, false)
 		}
 	}
 	if msg.message != 0x0100 {
@@ -1453,6 +1468,12 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.wParam == 0x1b && (a.view.cancelMiddleSelection() ||
 		a.comparison.view.cancelMiddleSelection() || a.cancelPageDrag()) {
 		return true
+	}
+	if msg.wParam == 0x0d && msg.window == a.window && !keyDown(0x11) && !keyDown(0x12) {
+		if v := a.focusedDocumentView(); v.overview {
+			v.fitOverviewSelection()
+			return true
+		}
 	}
 	if a.objectKey(msg) || a.textKey(msg) || a.documentKey(msg) {
 		return true
@@ -1557,4 +1578,21 @@ func (a *app) handleInput(msg *winMessage) bool {
 		return a.view.key(msg.wParam)
 	}
 	return false
+}
+
+func (a *app) wheelTargetsEdit(receiver uintptr) bool {
+	focus, _, _ := user32.NewProc("GetFocus").Call()
+	return a.writableEdit(focus) || (receiver != focus && a.writableEdit(receiver))
+}
+
+func (a *app) writableEdit(handle uintptr) bool {
+	if handle == 0 || handle == a.window || a.readOnlyFields[handle] {
+		return false
+	}
+	if handle == a.textTool.inline.handle {
+		return true
+	}
+	var name [16]uint16
+	user32.NewProc("GetClassNameW").Call(handle, uintptr(unsafe.Pointer(&name[0])), uintptr(len(name)))
+	return strings.EqualFold(syscall.UTF16ToString(name[:]), "Edit")
 }

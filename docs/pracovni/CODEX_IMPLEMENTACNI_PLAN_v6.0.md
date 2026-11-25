@@ -66,9 +66,15 @@ Společné vykreslení hlavního náhledu ve Win32 má holou hranu stránky. Lis
 
 **3B. Normální navigace:** po stránkách scroll uvnitř listu → při dosažení kraje další/předchozí, ochrana před několikanásobným přeskokem, souvislý režim bez přerušení.
 
+Ve stránkovém režimu běžné kolečko nejprve posouvá obsah aktuálního listu. Na hraně jedno souvislé gesto přejde nejvýš o jednu stránku. Jemné události kolečka se na hraně sčítají do jednoho kroku. Pauza nejméně 300 ms nebo změna směru zahájí nové gesto. V souvislém režimu posuv pokračuje přes hranice listů. Během editace textového pole běžné kolečko náhled neposouvá.
+
 **3C. Zoom:** přizpůsobit stránce, šířce, 100 %; Ctrl+kolečko v PDF mění dokument, v miniaturách pouze jejich velikost, mimo obě zóny bez zachycení. V HTML Chromium/Edge ověřit wheel capture/passive false/preventDefault; produkční Win32 mít lokální obsluhu bez globálních zásahů.
 
+Volba 100 % je v nabídce Zobrazení a v dolním přepínači měřítka. Přepočet velikosti PDF vychází ze systémového DPI. Ruční zoom má rozsah 30–900 % a automatické přizpůsobení se dál řídí rozměry stránky a plochy. Ctrl+kolečko v náhledu zachovává bod pod kurzorem a v miniaturách mění jejich velikost v rozsahu 10–60 % šířky panelu. Mimo tyto dvě oblasti přenechává aplikace událost běžnému zpracování Win32.
+
 **3D. Adaptivní Přehled stran:** až po dokončení 3A–3C a schválení. Samostatný třetí režim (dvoustavové tlačítko pages/continuous zůstává jen dvoustavové), flex-wrap, výběr klik/Ctrl/Shift, Enter fit vybrané na výšku, sdílený výběr s miniaturami. **Skutečné přetahování a hromadné transformace** řešit zvlášť po zajištění Undo/Redo/page modelu. Současné HTML v3.26 mění jen ukázkové pořadí.
+
+Přehled stran má samostatnou ikonu a volbu v nabídce Zobrazení. Při změně šířky a zoomu se karty přeskupují. Kliknutí, Ctrl, Shift a Vybrat vše používají jeden výběr s miniaturami a navazujícími volbami rozsahu. Enter v plátně nebo tlačítko Na výšku otevře vybranou stránku v režimu Po stránkách. Náhledy viditelných karet se načítají postupně ze společné mezipaměti.
 
 **Done:** testy 3 stránek + velký soubor, zoom 30–900 % podle návrhu, DPI, focus, scroll anchoring, otáčení stran a dual view.
 

@@ -72,6 +72,9 @@ func (v *documentView) canvasReady() bool {
 	if v.describing || v.invalidSource {
 		return false
 	}
+	if v.overview {
+		return true
+	}
 	cache := v.activeCache()
 	_, height := v.viewportSize()
 	for _, page := range v.spread.visible(v.scrollY, height) {

@@ -21,6 +21,8 @@ const (
 	idHeaderSave
 	idHeaderSettings
 	idHeaderThemeMode
+	idHeaderActualSize
+	idHeaderOverview
 )
 
 type commandBarButton struct {
@@ -36,8 +38,10 @@ type commandBarControl struct {
 }
 
 type commandBar struct {
-	controls          []commandBarControl
-	openMenu, fitMode int
+	controls []commandBarControl
+	openMenu int
+	fitMode  readingZoomMode
+	overview bool
 }
 
 var headerButtons = []commandBarButton{
@@ -50,6 +54,7 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderUndo, label: uiUndo, symbol: "i-undo", shortcut: "Ctrl+Z"},
 	{id: idHeaderRedo, label: uiRedo, symbol: "i-redo", shortcut: "Ctrl+Y"},
 	{id: idHeaderFlow, label: uiSwitchToContinuous, symbol: "i-view_continuous"},
+	{id: idHeaderOverview, label: uiPageOverview, symbol: "i-nav_thumbnails"},
 	{id: idReaderZoomOut, label: uiZoomOut, symbol: "i-zoom_out"},
 	{id: idReaderZoomIn, label: uiZoomIn, symbol: "i-zoom_in"},
 	{id: idHeaderFitPage, label: uiFitPage, symbol: "i-fit_page"},
@@ -141,20 +146,21 @@ func (a *app) layoutCommandBar() {
 func (a *app) updateCommandBar() {
 	v := a.view
 	ready := v.ready() && !a.busy
-	fitChanged := a.commandBar.fitMode != v.fitMode
+	fitChanged := a.commandBar.fitMode != v.fitMode || a.commandBar.overview != v.overview
 	a.commandBar.fitMode = v.fitMode
+	a.commandBar.overview = v.overview
 	for _, control := range a.commandBar.controls {
 		switch control.id {
 		case idHeaderSave:
 			setEnabled(control.handle, a.canDocumentCommand(v, docSave, false))
 		case idCompareOpen:
 			setEnabled(control.handle, !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1))
-		case idHeaderFlow, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idSearchTab:
+		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idSearchTab:
 			setEnabled(control.handle, ready)
 		case idHeaderEdit:
 			setEnabled(control.handle, ready)
 		}
-		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth) {
+		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth || control.id == idHeaderOverview || control.id == idHeaderFlow) {
 			invalidate(control.handle)
 		}
 		if control.id == idHeaderFlow {
@@ -185,14 +191,16 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		case idHeaderFlow:
 			if a.view.continuous {
 				symbol = "i-view_pages"
-				active = true
+				active = !a.view.overview
 			}
+		case idHeaderOverview:
+			active = a.view.overview
 		case idCompareOpen:
 			active = a.comparisonVisible()
 		case idHeaderFitPage:
-			active = a.view.fitMode == 1
+			active = !a.view.overview && a.view.fitMode == readingZoomFitPage
 		case idHeaderFitWidth:
-			active = a.view.fitMode == 2
+			active = !a.view.overview && a.view.fitMode == readingZoomFitWidth
 		case idSearchTab:
 			active = a.mode == idSearchTab && a.settingsWidth > 0
 		}
@@ -258,10 +266,12 @@ func (a *app) showHeaderMenu(id int) {
 	switch id {
 	case idHeaderView:
 		entries = []headerMenuItem{
-			{popupItem{label: a.uiText(uiPageByPage), checked: !v.continuous, disabled: !ready}, func() { a.setHeaderFlow(false) }},
-			{popupItem{label: a.uiText(uiContinuous), checked: v.continuous, disabled: !ready}, func() { a.setHeaderFlow(true) }},
-			run(idHeaderFitPage, a.uiText(uiFitPage), ready, v.ready() && v.fitMode == 1),
-			run(idHeaderFitWidth, a.uiText(uiFitWidth), ready, v.ready() && v.fitMode == 2),
+			{popupItem{label: a.uiText(uiPageByPage), checked: !v.overview && !v.continuous, disabled: !ready}, func() { a.setHeaderFlow(false) }},
+			{popupItem{label: a.uiText(uiContinuous), checked: !v.overview && v.continuous, disabled: !ready}, func() { a.setHeaderFlow(true) }},
+			run(idHeaderFitPage, a.uiText(uiFitPage), ready, ready && !v.overview && v.fitMode == readingZoomFitPage),
+			run(idHeaderFitWidth, a.uiText(uiFitWidth), ready, ready && !v.overview && v.fitMode == readingZoomFitWidth),
+			run(idHeaderActualSize, a.uiText(uiActualSize), ready, ready && !v.overview && v.fitMode == readingZoomActual),
+			run(idHeaderOverview, a.uiText(uiPageOverview), ready, v.overview),
 			run(idFullscreen, a.uiText(uiFullscreen), !a.busy, false),
 			run(idCompareOpen, getText(a.comparison.button), !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1), a.comparisonVisible()),
 			run(idLayoutAids, a.uiText(uiLayoutAids), ready, a.mode == idLayoutAids),
@@ -322,7 +332,11 @@ func (a *app) headerControl(id int) uintptr {
 }
 
 func (a *app) setHeaderFlow(continuous bool) {
-	if !a.view.ready() || a.busy || a.view.continuous == continuous {
+	if !a.view.ready() || a.busy {
+		return
+	}
+	a.view.setPageOverview(false)
+	if a.view.continuous == continuous {
 		return
 	}
 	index := 1
@@ -348,15 +362,14 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		a.showHeaderMenu(id)
 	case idHeaderFlow:
 		a.setHeaderFlow(!a.view.continuous)
-	case idHeaderFitPage, idHeaderFitWidth:
-		if a.view.ready() && !a.busy {
-			mode := 0
-			if id == idHeaderFitWidth {
-				mode = 1
-			}
-			chooseCombo(a.view.fit, mode)
-			a.command(idReaderFit, 1)
-		}
+	case idHeaderOverview:
+		a.togglePageOverview()
+	case idHeaderFitPage:
+		a.view.setZoomMode(readingZoomFitPage)
+	case idHeaderFitWidth:
+		a.view.setZoomMode(readingZoomFitWidth)
+	case idHeaderActualSize:
+		a.view.setZoomMode(readingZoomActual)
 	case idHeaderSave:
 		a.doDocumentCommand(a.view, docSave, false)
 	default:

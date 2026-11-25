@@ -250,14 +250,18 @@ type documentContent struct {
 	bookmarks, savedBookmarks                    []pdfBookmark
 	page, reference                              int
 	pageSelection                                []int
-	thumbnailScale, fitMode                      int
+	overview                                     bool
+	overviewScale                                float64
+	overviewScroll, overviewAnchor               int
+	thumbnailScale                               int
+	fitMode                                      readingZoomMode
 	continuous, describing, invalidSource        bool
 	zoom                                         float64
 	hidden                                       map[string]bool
 }
 
 func emptyDocument() documentContent {
-	return documentContent{fitMode: 1, thumbnailScale: 32, hidden: make(map[string]bool)}
+	return documentContent{fitMode: readingZoomFitPage, thumbnailScale: 32, overviewScale: 1, hidden: make(map[string]bool)}
 }
 
 type documentView struct {
@@ -277,12 +281,16 @@ type documentView struct {
 	search                                                                     searchPanel
 	pageDrag                                                                   thumbnailDrag
 	thumbnailPanelPixels                                                       int
+	thumbnailZoomRemainder                                                     int
+	overviewGrid                                                               overviewLayout
+	overviewBar                                                                *panelScrollbar
+	overviewFit                                                                uintptr
 	viewport                                                                   rect
 	spread                                                                     readingLayout
 	scrollX, scrollY                                                           float64
 	dragging                                                                   bool
 	dragX, dragY                                                               int32
-	wheelRemainder                                                             float64
+	pageWheel                                                                  pageWheelGesture
 	generation                                                                 int
 	running                                                                    bool
 	reading, printPreview, thumbnails                                          pageCache
@@ -315,6 +323,8 @@ func newDocumentView(a *app) *documentView {
 	return &documentView{app: a, documentContent: emptyDocument(), proofPage: -1, jobs: make(chan readerJob, 2)}
 }
 
+var readingZoomChoices = [...]readingZoomMode{readingZoomFitPage, readingZoomFitWidth, readingZoomActual, readingZoomManual}
+
 func (v *documentView) buildToolbar() {
 	a := v.app
 	v.previous = a.button("‹", idReaderPrevious, 0, 0, 35, 0)
@@ -325,7 +335,9 @@ func (v *documentView) buildToolbar() {
 	v.zoomOut = a.button("−", idReaderZoomOut, 0, 0, 36, 0)
 	v.zoomLabel = a.label("", 0, 0, 56, false)
 	v.zoomIn = a.button("+", idReaderZoomIn, 0, 0, 36, 0)
-	v.fit = a.combo(idReaderFit, 0, 0, 158, []string{a.uiText(uiWholePage), a.uiText(uiPageWidth), a.uiText(uiCustomZoom)})
+	v.fit = a.uiCombo(idReaderFit, 0, 0, 158, []uiMessage{uiWholePage, uiPageWidth, uiZoom100, uiCustomZoom})
+	v.overviewFit = a.shellButton(uiOverviewFit, idFitOverviewPage, 156, 0)
+	v.overviewBar = a.addPanelScrollbar(a.window, v.scrollOverview)
 	a.localizeReaderHelp()
 }
 
@@ -339,10 +351,6 @@ func (a *app) localizeReaderHelp() {
 		{v.zoomOut, uiZoomOut}, {v.zoomIn, uiZoomIn}, {v.fit, uiView},
 	} {
 		a.setTooltip(entry.handle, a.uiText(entry.key))
-	}
-	if fit := a.choices[v.fit]; fit != nil {
-		fit.names = []string{a.uiText(uiWholePage), a.uiText(uiPageWidth), a.uiText(uiCustomZoom)}
-		setText(v.fit, fit.names[fit.index])
 	}
 }
 
@@ -358,12 +366,19 @@ func (v *documentView) layoutToolbar() {
 	place(v.zoomLabel, d(350), y+d(7), d(56), d(22))
 	place(v.zoomIn, d(408), y, d(36), d(32))
 	place(v.fit, d(461), y+d(3), d(156), d(28))
+	place(v.overviewFit, d(461), y+d(3), d(156), d(28))
 }
 
 func (v *documentView) showToolbar(show uintptr) {
-	for _, h := range []uintptr{v.previous, v.next, v.jump, v.pageInput, v.location, v.zoomOut, v.zoomIn, v.zoomLabel, v.fit} {
+	for _, h := range []uintptr{v.previous, v.next, v.jump, v.pageInput, v.location, v.zoomOut, v.zoomIn, v.zoomLabel} {
 		showWindow.Call(h, show)
 	}
+	v.syncOverviewFooter()
+}
+
+func (v *documentView) syncOverviewFooter() {
+	showControl(v.fit, !v.app.full && !v.overview)
+	showControl(v.overviewFit, !v.app.full && v.overview)
 }
 
 func (v *documentView) buildProofPanel(catalog []profileChoice) {
@@ -482,7 +497,9 @@ func (v *documentView) resetRendering() {
 	v.clearDetails()
 	v.closeReaders()
 	v.prefetchFailed = make(map[int]bool)
-	v.wheelRemainder = 0
+	v.pageWheel = pageWheelGesture{}
+	v.thumbnailZoomRemainder = 0
+	v.overviewGrid = overviewLayout{}
 	if released >= 32<<20 {
 		go debug.FreeOSMemory()
 	}
@@ -617,6 +634,7 @@ func (v *documentView) viewportSize() (float64, float64) {
 }
 
 func (v *documentView) rebuild(keep bool) {
+	v.pageWheel = pageWheelGesture{}
 	width, height := v.viewportSize()
 	anchor, have := v.spread.anchor(v.scrollX+width/2, v.scrollY+height/2)
 	v.buildLayout()
@@ -625,6 +643,7 @@ func (v *documentView) rebuild(keep bool) {
 	} else {
 		v.centerPage(false)
 	}
+	v.rebuildOverview()
 }
 
 func (v *documentView) buildLayout() {
@@ -636,19 +655,39 @@ func (v *documentView) buildLayout() {
 	}
 	gap := float64(v.app.scale(18))
 	ref := sizes[min(max(v.reference, 0), len(sizes)-1)]
-	if v.fitMode != 0 || v.zoom <= 0 {
-		v.zoom = max(0.02, (width-2*gap)/ref.width)
-		if v.fitMode != 2 {
-			v.zoom = min(v.zoom, max(0.02, (height-2*gap)/ref.height))
-		}
-	}
+	v.zoom = readingZoomScale(v.fitMode, v.zoom, width, height, gap, ref, v.app.displayDPI)
 	v.spread = layoutPages(sizes, v.page, v.continuous, v.zoom, gap)
+}
+
+func (v *documentView) zoomPercent() float64 {
+	return v.zoom * 100 / pixelsPerPDFPoint(v.app.displayDPI)
+}
+
+func (v *documentView) setZoomMode(mode readingZoomMode) {
+	if !v.ready() {
+		v.syncZoomChoice()
+		return
+	}
+	v.overview = false
+	v.reference, v.fitMode = v.page, mode
+	v.syncZoomChoice()
+	if mode == readingZoomManual {
+		v.app.updateCommandBar()
+		return
+	}
+	v.rebuild(mode == readingZoomActual)
+	v.changedViewport()
+}
+
+func (v *documentView) syncZoomChoice() {
+	chooseCombo(v.fit, slices.Index(readingZoomChoices[:], v.fitMode))
 }
 
 func (v *documentView) resize(bounds rect) {
 	if v.viewport == bounds {
 		return
 	}
+	v.pageWheel = pageWheelGesture{}
 	oldWidth, oldHeight := v.viewportSize()
 	anchor, ok := v.spread.anchor(v.scrollX+oldWidth/2, v.scrollY+oldHeight/2)
 	v.viewport = bounds
@@ -659,6 +698,7 @@ func (v *documentView) resize(bounds rect) {
 	} else {
 		v.centerPage(false)
 	}
+	v.rebuildOverview()
 	v.changedViewport()
 }
 
@@ -703,7 +743,17 @@ func (v *documentView) gotoPageAt(index int, atEnd bool, anchor *readingAnchor) 
 	if index < 0 || index >= len(v.order) {
 		return
 	}
+	v.pageWheel = pageWheelGesture{}
 	v.page = index
+	if v.overview && anchor != nil {
+		v.overview = false
+		v.rebuildOverview()
+	}
+	if v.overview {
+		v.revealOverviewPage(index)
+		v.changedViewport()
+		return
+	}
 	if !v.continuous {
 		v.reference = index
 		v.buildLayout()
@@ -718,24 +768,21 @@ func (v *documentView) gotoPageAt(index int, atEnd bool, anchor *readingAnchor) 
 }
 
 func (v *documentView) scroll(delta float64) {
-	if !v.ready() {
+	if !v.ready() || delta == 0 {
 		return
 	}
-	_, height := v.viewportSize()
-	if !v.continuous {
-		moveTo := v.scrollY + delta
-		if delta > 0 && (v.spread.height <= height || v.scrollY >= v.spread.height-height-0.5) {
-			v.gotoPage(v.page+1, false)
-			return
-		}
-		if delta < 0 && (v.spread.height <= height || v.scrollY <= 0.5) {
-			v.gotoPage(v.page-1, true)
-			return
-		}
-		v.scrollY = moveTo
-	} else {
-		v.scrollY += delta
+	if v.overview {
+		v.scrollOverview(v.overviewScroll + int(math.Round(delta)))
+		return
 	}
+	if !v.continuous {
+		_, height := v.viewportSize()
+		if direction := readingPageTurn(v.scrollY, v.spread.height, height, delta); direction != 0 {
+			v.gotoPage(v.page+direction, direction < 0)
+			return
+		}
+	}
+	v.scrollY += delta
 	v.clamp()
 	v.updatePageFromCenter()
 	v.changedViewport()
@@ -752,20 +799,24 @@ func (v *documentView) updatePageFromCenter() {
 }
 
 func (v *documentView) zoomAt(delta, x, y float64) {
+	v.pageWheel = pageWheelGesture{}
 	if !v.ready() || v.zoom <= 0 {
+		return
+	}
+	if v.overview {
+		v.zoomOverview(delta, x, y)
 		return
 	}
 	anchor, ok := v.spread.anchor(v.scrollX+x, v.scrollY+y)
 	if !ok {
 		return
 	}
-	base := float64(v.app.dpi) / 72
-	next := min(max(v.zoom*math.Pow(1.2, delta), min(v.zoom, base*0.16)), max(v.zoom, base*8))
+	next := stepReadingZoom(v.zoom, delta, v.app.displayDPI)
 	if math.Abs(next-v.zoom) < 1e-7 {
 		return
 	}
-	v.zoom, v.fitMode = next, 0
-	chooseCombo(v.fit, 2)
+	v.zoom, v.fitMode = next, readingZoomManual
+	v.syncZoomChoice()
 	v.buildLayout()
 	v.restore(anchor, x, y)
 	v.updatePageFromCenter()
@@ -787,36 +838,42 @@ func (v *documentView) finishZoom() {
 	if !v.zoomDeadline.IsZero() && time.Now().Before(v.zoomDeadline) {
 		return
 	}
-	user32.NewProc("KillTimer").Call(v.app.window, v.zoomTimer())
-	v.zoomDeadline = time.Time{}
+	v.finishZoomTimer()
 	v.schedule()
 }
 
-func (v *documentView) wheel(delta float64, control bool, cursor point) {
+func (v *documentView) finishZoomTimer() {
+	user32.NewProc("KillTimer").Call(v.app.window, v.zoomTimer())
+	v.zoomDeadline = time.Time{}
+}
+
+func (v *documentView) wheel(delta int, control bool, cursor point, tick uint32) {
 	if control {
-		v.zoomAt(delta, float64(cursor.x-v.viewport.left), float64(cursor.y-v.viewport.top))
+		v.zoomAt(float64(delta)/wheelDetent, float64(cursor.x-v.viewport.left), float64(cursor.y-v.viewport.top))
 		return
 	}
-	step := float64(v.app.scale(105))
-	if !v.continuous {
-		// Precision trackpads emit partial wheel deltas; do not flip a page on each event.
-		_, height := v.viewportSize()
-		atEdge := v.spread.height <= height || (delta < 0 && v.scrollY >= v.spread.height-height-0.5) ||
-			(delta > 0 && v.scrollY <= 0.5)
-		if atEdge {
-			v.wheelRemainder += delta
-			if math.Abs(v.wheelRemainder) < 1 {
-				return
-			}
-			delta, v.wheelRemainder = math.Copysign(1, v.wheelRemainder), 0
-		} else {
-			v.wheelRemainder = 0
-		}
+	if !v.ready() || delta == 0 {
+		return
 	}
-	v.scroll(-delta * step)
+	distance := -float64(delta) / wheelDetent * float64(v.app.scale(105))
+	if v.overview || v.continuous {
+		v.scroll(distance)
+		return
+	}
+	_, height := v.viewportSize()
+	atEdge := readingPageTurn(v.scrollY, v.spread.height, height, distance) != 0
+	gesture := v.pageWheel
+	if gesture.allow(delta, tick, atEdge) {
+		v.scroll(distance)
+	}
+	// A wheel-driven turn continues the same gesture across the page boundary.
+	v.pageWheel = gesture
 }
 
 func (v *documentView) key(key uintptr) bool {
+	if v.overview {
+		return v.overviewKey(key)
+	}
 	_, height := v.viewportSize()
 	switch key {
 	case 0x25:
@@ -838,6 +895,7 @@ func (v *documentView) key(key uintptr) bool {
 	default:
 		return false
 	}
+	v.pageWheel = pageWheelGesture{}
 	return true
 }
 
@@ -851,6 +909,9 @@ func absTextDrag(value int32) int32 {
 
 func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	x, y := int32(int16(param)), int32(int16(param>>16))
+	if v.overview {
+		return v.overviewPointer(msg, x, y)
+	}
 	if v.middleSelection(msg, x, y) {
 		return true
 	}
@@ -940,6 +1001,12 @@ func (v *documentView) schedule() {
 		return
 	}
 	if !v.ready() || !v.zoomDeadline.IsZero() {
+		return
+	}
+	if v.overview {
+		if !v.app.busy && v.prefetch.page == 0 && !v.scheduleThumbnails() {
+			v.stopPrefetchEngine()
+		}
 		return
 	}
 	if v.scheduleNativeText() || v.scheduleObjects() || (!v.secondary && v.app.scheduleInlineBackground()) {
@@ -1206,6 +1273,9 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 				v.thumbnails.store(job.page, job.frame)
 				v.trimThumbnails(v.thumbnailBudget())
 				invalidate(v.pageList)
+				if v.overview {
+					v.invalidateCanvas()
+				}
 				if job.page == v.draggedPage() {
 					v.showPageDragPreview()
 				}
@@ -1230,7 +1300,7 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 		}
 	}
 	first, last := v.thumbnailRange()
-	if !v.ready() || (v.proofMode() && first == last) || v.app.busy {
+	if !v.ready() || (v.proofMode() && !v.overview && first == last) || v.app.busy {
 		v.stopPrefetchEngine()
 	}
 	v.schedule()
@@ -1325,13 +1395,15 @@ func (v *documentView) updateActions() {
 	}
 	setEnabled(v.previous, loaded && v.page > 0)
 	setEnabled(v.next, loaded && v.page+1 < len(v.order))
-	setEnabled(v.left, editing)
-	setEnabled(v.right, editing)
 	selected := v.selectedPagePositions()
+	setEnabled(v.left, editing && len(selected) > 0)
+	setEnabled(v.right, editing && len(selected) > 0)
+	setEnabled(v.overviewFit, editing && len(v.pageSelection) > 0)
+	v.syncOverviewFooter()
 	single := len(selected) == 1
 	setEnabled(v.back, editing && single && selected[0] > 0)
 	setEnabled(v.ahead, editing && single && selected[0]+1 < len(v.order))
-	setEnabled(v.scanSelection, editing)
+	setEnabled(v.scanSelection, editing && len(selected) > 0)
 	setEnabled(v.undoButton, editing && len(v.history) > 0)
 	setEnabled(v.save, editing && v.changed())
 	v.updatePageEditActions(editing)
@@ -1346,7 +1418,11 @@ func (v *documentView) updateActions() {
 			}
 		}
 		v.app.setUIMessage(v.location, uiPageTotal, len(v.order))
-		setText(v.zoomLabel, fmt.Sprintf("%.0f %%", 100*v.zoom/(float64(v.app.dpi)/72)))
+		percent := v.zoomPercent()
+		if v.overview {
+			percent = 100 * v.overviewScale
+		}
+		setText(v.zoomLabel, fmt.Sprintf("%.0f %%", percent))
 		v.syncPageListSelection()
 	} else {
 		setText(v.pageInput, "")
@@ -1357,6 +1433,9 @@ func (v *documentView) updateActions() {
 
 func (v *documentView) rotate(angle int) {
 	selected := v.selectedPagePositions()
+	if len(selected) == 0 {
+		return
+	}
 	before := make([]pageRotation, 0, len(selected))
 	after := make([]pageRotation, 0, len(selected))
 	for _, position := range selected {
@@ -1423,6 +1502,8 @@ func (v *documentView) command(id, notification int) bool {
 	if notification == 1 {
 		switch id {
 		case idReaderFlow:
+			v.setPageOverview(false)
+			v.pageWheel = pageWheelGesture{}
 			x, y := v.viewportSize()
 			anchor, ok := v.spread.anchor(v.scrollX+x/2, v.scrollY+y/2)
 			v.continuous = comboIndex(v.flow) == 0
@@ -1436,10 +1517,8 @@ func (v *documentView) command(id, notification int) bool {
 			v.changedViewport()
 		case idReaderFit:
 			value := comboIndex(v.fit)
-			if value >= 0 && value < 2 {
-				v.reference, v.fitMode = v.page, value+1
-				v.rebuild(false)
-				v.changedViewport()
+			if value >= 0 && value < len(readingZoomChoices) {
+				v.setZoomMode(readingZoomChoices[value])
 			}
 		case idReaderScreenBox:
 			v.reading.clear()
@@ -1495,6 +1574,9 @@ func (v *documentView) command(id, notification int) bool {
 			req := v.request("scan")
 			if id == idReaderScanSelection {
 				req.View.Order = v.selectedSourcePages()
+				if len(req.View.Order) == 0 {
+					return true
+				}
 			} else {
 				req.View.Order = slices.Clone(v.order)
 			}
@@ -1511,9 +1593,13 @@ func (v *documentView) command(id, notification int) bool {
 		case idReaderRotateRight:
 			v.rotate(90)
 		case idReaderMoveBack:
-			v.moveSelectedPages(v.selectedPagePositions()[0] - 1)
+			if selected := v.selectedPagePositions(); len(selected) == 1 {
+				v.moveSelectedPages(selected[0] - 1)
+			}
 		case idReaderMoveAhead:
-			v.moveSelectedPages(v.selectedPagePositions()[0] + 1)
+			if selected := v.selectedPagePositions(); len(selected) == 1 {
+				v.moveSelectedPages(selected[0] + 1)
+			}
 		case idReaderMoveTo:
 			v.moveToPosition()
 		case idReaderDeletePages:
@@ -1534,6 +1620,10 @@ func (v *documentView) command(id, notification int) bool {
 func (v *documentView) paintCanvas(dc uintptr) {
 	viewport := v.viewport
 	fillColor(dc, viewport, editorColor)
+	if v.overview && v.ready() {
+		v.paintOverview(dc)
+		return
+	}
 	if len(v.spread.sheets) == 0 {
 		text := "Otevřít PDF"
 		if v.describing {

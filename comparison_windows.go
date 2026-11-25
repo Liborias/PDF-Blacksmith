@@ -44,6 +44,7 @@ func (a *app) buildComparison(className *uint16) bool {
 		return false
 	}
 	c.view = v
+	v.overviewBar = a.addPanelScrollbar(a.window, v.scrollOverview)
 	a.controlParent = v.thumbnailSidebar
 	v.buildThumbnails()
 	a.controlParent = 0
@@ -170,6 +171,7 @@ func (a *app) layoutComparison() rect {
 	c.thumbnailArea = rect{}
 	if !show {
 		showControl(c.view.thumbnailSidebar, false)
+		showControl(c.view.overviewBar.handle, false)
 		return a.viewport
 	}
 
@@ -211,6 +213,7 @@ func (a *app) layoutComparison() rect {
 			c.thumbnailArea = thumbs
 			a.layoutComparisonThumbnails(thumbs)
 			c.view.resize(pane)
+			c.view.updateOverviewBar()
 			if attached {
 				c.view.restoreReadingPosition(tab)
 				c.view.changedViewport()
@@ -265,7 +268,7 @@ func (a *app) updateComparisonNavigation() {
 		a.primaryButtons[p.thumbs] = !p.hiddenThumbs
 		location := ""
 		if v.ready() {
-			location = fmt.Sprintf("%d / %d   ·   %.0f %%", v.page+1, len(v.order), 7200*v.zoom/float64(a.dpi))
+			location = fmt.Sprintf("%d / %d   ·   %.0f %%", v.page+1, len(v.order), v.zoomPercent())
 		}
 		a.setComparisonLabel(p.location, location)
 	}
