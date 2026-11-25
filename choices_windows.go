@@ -6,6 +6,7 @@ type choiceControl struct {
 	handle       uintptr
 	notification int
 	names        []string
+	messages     []uiMessage
 	index        int
 }
 
@@ -31,6 +32,18 @@ func (a *app) combo(id, x, y, width int, names []string) uintptr {
 	handle := a.add("BUTTON", names[0], command, x, y, width, 28, wsTabstop|bsOwnerDraw, 0, a.normalFont)
 	choice := &choiceControl{handle: handle, notification: id, names: names}
 	a.choices[handle], a.choiceCommands[command] = choice, choice
+	return handle
+}
+
+func (a *app) uiCombo(id, x, y, width int, messages []uiMessage) uintptr {
+	return a.comboWithMessages(id, x, y, width, make([]string, len(messages)), messages)
+}
+
+// An empty message keeps the supplied display name, for example an ICC profile name.
+func (a *app) comboWithMessages(id, x, y, width int, names []string, messages []uiMessage) uintptr {
+	a.uiLocale.applyChoiceMessages(names, messages)
+	handle := a.combo(id, x, y, width, names)
+	a.choices[handle].messages = messages
 	return handle
 }
 

@@ -1,15 +1,20 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
 
+type exportPagesError struct{ localizedMessage }
+
+func (e exportPagesError) Error() string {
+	return uiCzech.formatMessage(e.localizedMessage)
+}
+
 func parseExportPages(input string, pageCount int) ([]int, error) {
 	input = strings.TrimSpace(input)
 	if input == "" {
-		return nil, fmt.Errorf("Zadejte výběr stran, například 1, 3–5, 8.")
+		return nil, exportPagesError{localizedMessage{key: uiEmptyPageRange}}
 	}
 	input = strings.NewReplacer("–", "-", "—", "-").Replace(input)
 	selected := make([]bool, pageCount)
@@ -21,7 +26,7 @@ func parseExportPages(input string, pageCount int) ([]int, error) {
 		first, firstErr := strconv.Atoi(strings.TrimSpace(firstText))
 		last, lastErr := strconv.Atoi(strings.TrimSpace(lastText))
 		if firstErr != nil || lastErr != nil || first < 1 || last < first || last > pageCount {
-			return nil, fmt.Errorf("Neplatná strana nebo rozsah %q. Zadejte strany od 1 do %d.", strings.TrimSpace(part), pageCount)
+			return nil, exportPagesError{localizedMessage{key: uiInvalidPageRange, args: []any{strings.TrimSpace(part), pageCount}}}
 		}
 		for index := first - 1; index < last; index++ {
 			selected[index] = true

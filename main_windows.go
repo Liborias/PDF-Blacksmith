@@ -135,6 +135,13 @@ type app struct {
 	historyButtons                                     [2]uintptr
 	commandBar                                        commandBar
 	hoveredNavigation                                  uintptr
+	uiLocale                                           uiLocale
+	uiTheme                                            uiTheme
+	uiLabels, uiCues, uiHelpKeys                        map[uintptr]uiMessage
+	uiMessages                                         map[uintptr]localizedMessage
+	interfaceDialog                                    *interfaceDialog
+	tooltip, focusHelp, focusedHelpTarget              uintptr
+	tooltipCaptions                                    map[uintptr]tooltipCaption
 	tabs                                               []*documentTab
 	activeTab                                          *documentTab
 	tabList                                             uintptr
@@ -201,6 +208,7 @@ func main() {
 	if screenWidth > 100 && screenHeight > 100 {
 		dpi = min(dpi, (screenWidth-24)*96/minimumWorkspaceWidth, (screenHeight-72)*96/550)
 	}
+	preferences := loadInterfacePreferences()
 	window = &app{
 		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idFileTab, mode: idFileDetails,
 		rightDock: dockVisibility{auxiliaryCollapsed: true},
@@ -210,7 +218,7 @@ func main() {
 		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
 		panelLabels: make(map[uintptr]bool), panelButtons: make(map[uintptr]bool),
 		primaryButtons: make(map[uintptr]bool), readOnlyFields: make(map[uintptr]bool),
-		export:  loadExportOptions(),
+		export:  loadExportOptions(), uiLocale: preferences.Locale, uiTheme: preferences.Theme,
 		choices: make(map[uintptr]*choiceControl), choiceCommands: make(map[int]*choiceControl),
 	}
 	if !window.create() {
@@ -543,6 +551,13 @@ func (a *app) drawControl(param uintptr) bool {
 }
 
 func setText(handle uintptr, value string) {
+	if window != nil {
+		delete(window.uiMessages, handle)
+	}
+	writeControlText(handle, value)
+}
+
+func writeControlText(handle uintptr, value string) {
 	if window != nil && window.readOnlyFields[handle] {
 		old := getText(handle)
 		if old == value {

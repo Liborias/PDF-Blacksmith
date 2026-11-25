@@ -49,9 +49,29 @@ type uiTheme struct {
 	Mode    string `json:"mode"`
 }
 
+func (theme uiTheme) oppositeMode() uiTheme {
+	if theme.Mode == "light" {
+		theme.Mode = "dark"
+	} else {
+		theme.Mode = "light"
+	}
+	return theme
+}
+
+var uiPaletteOrder = [...]string{"wine", "gray", "cream", "blue", "olive", "teal"}
+
 type uiPaletteVariants struct {
-	Dark  uiPalette `json:"dark"`
-	Light uiPalette `json:"light"`
+	Czech   string    `json:"label"`
+	English string    `json:"en"`
+	Dark    uiPalette `json:"dark"`
+	Light   uiPalette `json:"light"`
+}
+
+func (variants uiPaletteVariants) caption(locale uiLocale) string {
+	if locale == uiEnglish {
+		return variants.English
+	}
+	return variants.Czech
 }
 
 type uiPaletteCatalog struct {

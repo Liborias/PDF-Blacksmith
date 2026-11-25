@@ -24,6 +24,7 @@ func TestUIIconAtlasUsesVisibleApprovedSymbols(t *testing.T) {
 	for _, item := range registry.Icons {
 		approved[item.Symbol] = true
 	}
+	approved[themeToggleIcon] = true // Exact inline SVG of the reference toolbar switch.
 	for name := range uiIcons.slots {
 		if !approved[name] || !strings.HasPrefix(name, "i-") {
 			t.Errorf("unapproved UI icon %q", name)

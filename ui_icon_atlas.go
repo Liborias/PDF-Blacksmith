@@ -8,6 +8,8 @@ import (
 	"image/png"
 )
 
+const themeToggleIcon = "i-theme_quick_inline"
+
 // These masks are generated from the v3.26 SVG symbols by tools/generate_ui_icons.py.
 //
 //go:embed assets/ui_icons.png

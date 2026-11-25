@@ -8,11 +8,11 @@ import (
 )
 
 func (a *app) buildSplitPanel() {
-	a.beginPropertySection("Strany k rozdělení", 61, "Každá vybraná strana se uloží do samostatného PDF ve zvolené složce.")
-	a.splitScope = a.combo(idSplitScope, 16, 86, 145, pageScopeNames)
+	a.beginPropertySection(uiSplitPages, 61, uiSplitPagesHelp)
+	a.splitScope = a.uiCombo(idSplitScope, 16, 86, 145, pageScopeNames)
 	a.splitRange = a.edit(169, 86, 145, false)
-	sendMessage.Call(a.splitRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8"))))
-	a.splitButton = a.button("Vybrat složku a rozdělit PDF…", idSplitRun, 16, 134, 298, 0)
+	a.bindUICue(a.splitRange, uiRangeExample)
+	a.splitButton = a.uiButton(uiSplitToFolder, idSplitRun, 16, 134, 298, 0)
 	a.primaryButtons[a.splitButton] = true
 	a.splitReport = a.readout(16, 184, 298, 170)
 }
@@ -72,7 +72,7 @@ func (a *app) selectFolder(initial string) string {
 	var buffer [32768]uint16
 	ok, _, _ := shell.NewProc("SHGetPathFromIDListEx").Call(id, uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), 0)
 	if ok == 0 {
-		a.report("Vyberte existující složku v souborovém systému.")
+		a.reportUI(uiSelectExistingFolder)
 		return ""
 	}
 	return syscall.UTF16ToString(buffer[:])

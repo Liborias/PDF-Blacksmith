@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unsafe"
 )
 
 const (
@@ -23,15 +22,15 @@ type ocrPanel struct {
 
 func (a *app) buildOCRPanel() {
 	p := &a.ocr
-	a.beginPropertySection("Strany pro OCR", 16, "OCR vyhledává text i v obrázcích a křivkách. Zvolte stránky nebo označte jejich náhledy.")
-	p.scope = a.combo(idOCRScope, 16, 42, 145, pageScopeNames)
+	a.beginPropertySection(uiOCRPages, 16, uiOCRPagesHelp)
+	p.scope = a.uiCombo(idOCRScope, 16, 42, 145, pageScopeNames)
 	p.pageRange = a.edit(169, 42, 145, false)
-	sendMessage.Call(p.pageRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8"))))
-	a.beginPropertySection("Jazyk rozpoznávání", 86, "Zvolte jazyk podle textu na vybraných stránkách.")
-	p.language = a.combo(idOCRLanguage, 16, 112, 298, []string{"Čeština + angličtina", "Čeština", "Angličtina"})
+	a.bindUICue(p.pageRange, uiRangeExample)
+	a.beginPropertySection(uiRecognitionLanguage, 86, uiRecognitionLanguageHelp)
+	p.language = a.uiCombo(idOCRLanguage, 16, 112, 298, []uiMessage{uiCzechEnglish, uiCzechLanguage, uiEnglishLanguage})
 	a.addingSection = 0
-	p.start = a.button("Rozpoznat text", idOCRRun, 16, 154, 145, 0)
-	p.undo = a.button("Vrátit OCR", idOCRUndo, 169, 154, 145, 0)
+	p.start = a.uiButton(uiRecognizeText, idOCRRun, 16, 154, 145, 0)
+	p.undo = a.uiButton(uiUndoOCR, idOCRUndo, 169, 154, 145, 0)
 	a.primaryButtons[p.start] = true
 	p.report = a.readout(16, 205, 298, 104)
 }

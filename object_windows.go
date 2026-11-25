@@ -77,18 +77,19 @@ type objectEditor struct {
 
 func (a *app) buildObjectPanel() {
 	e := &a.objects
-	a.beginPropertySection("Výběr objektů", 16, "Vybraný objekt nebo skupinu přesunete tažením. Laso uzavřete Enterem nebo kliknutím na první bod.")
-	for i, name := range []string{"Výběr kliknutím (V)", "Obdélníkový výběr (M)", "Mnohoúhelníkové laso (L)"} {
-		e.modes[i] = a.textIconButton(name, idObjectPoint+i, 16+i*40, 42, 34)
+	a.beginPropertySection(uiObjectSelection, 16, uiObjectSelectionHelp)
+	for i, name := range []uiMessage{uiSelectByClick, uiRectangleSelection, uiPolygonLassoKey} {
+		e.modes[i] = a.uiTextIconButton(name, idObjectPoint+i, 16+i*40, 42, 34)
 	}
 	a.addingSection = 0
-	e.info = a.label("Vyberte objekt na stránce.", 16, 85, 298, false)
-	a.beginPropertySection("Akce s objekty", 124, "Akce pracují s aktuálním výběrem. Změny lze vrátit klávesami Ctrl + Z.")
-	e.copy = a.button("Kopírovat · Ctrl+C", idObjectCopy, 16, 165, 145, 0)
-	e.paste = a.button("Vložit · Ctrl+V", idObjectPaste, 169, 165, 145, 0)
-	e.duplicate = a.button("Duplikovat · Ctrl+D", idObjectDuplicate, 16, 206, 145, 0)
-	e.remove = a.button("Smazat · Delete", idObjectDelete, 169, 206, 145, 0)
-	e.undo = a.button("Vrátit změnu · Ctrl+Z", idObjectUndo, 16, 247, 298, 0)
+	e.info = a.label("", 16, 85, 298, false)
+	a.setUIMessage(e.info, uiSelectPageObject)
+	a.beginPropertySection(uiObjectActions, 124, uiObjectActionsHelp)
+	e.copy = a.uiButton(uiObjectCopyKey, idObjectCopy, 16, 165, 145, 0)
+	e.paste = a.uiButton(uiObjectPasteKey, idObjectPaste, 169, 165, 145, 0)
+	e.duplicate = a.uiButton(uiObjectDuplicateKey, idObjectDuplicate, 16, 206, 145, 0)
+	e.remove = a.uiButton(uiObjectRemoveKey, idObjectDelete, 169, 206, 145, 0)
+	e.undo = a.uiButton(uiObjectUndoKey, idObjectUndo, 16, 247, 298, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -117,7 +118,7 @@ func (a *app) clearObjectSelection() {
 	e.defining, e.polygon = false, nil
 	e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
 	if e.info != 0 {
-		setText(e.info, "Vyberte objekt na stránce.")
+		a.setUIMessage(e.info, uiSelectPageObject)
 		a.updateObjectActions()
 	}
 }
@@ -264,7 +265,7 @@ func (v *documentView) finishObjects(job readerJob) {
 			if pick.automatic && pick.region() {
 				v.requestNativeText(pick)
 			} else if a.mode == idObjectsTab {
-				setText(e.info, "Objekty na této straně nelze vybrat.")
+				a.setUIMessage(e.info, uiObjectsUnavailable)
 			}
 			return
 		}

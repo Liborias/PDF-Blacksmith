@@ -3,6 +3,7 @@
   "symbols": [
     "i-fit_page",
     "i-fit_width",
+    "i-language",
     "i-nav_file",
     "i-nav_merge_pdf",
     "i-nav_objects",
@@ -10,6 +11,7 @@
     "i-nav_page_order",
     "i-nav_search_pdf",
     "i-nav_separations",
+    "i-nav_settings",
     "i-nav_signature",
     "i-nav_split_pdf",
     "i-nav_text",
@@ -18,11 +20,13 @@
     "i-redo",
     "i-save",
     "i-search",
+    "i-settings_interface",
     "i-side_by_side",
     "i-undo",
     "i-view_continuous",
     "i-view_pages",
     "i-zoom_in",
-    "i-zoom_out"
+    "i-zoom_out",
+    "i-theme_quick_inline"
   ]
 }

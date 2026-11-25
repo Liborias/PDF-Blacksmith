@@ -321,11 +321,29 @@ func (v *documentView) buildToolbar() {
 	v.pageInput = a.edit(0, 0, 48, false)
 	v.next = a.button("›", idReaderNext, 0, 0, 35, 0)
 	v.location = a.label("", 0, 0, 57, false)
-	v.jump = a.button("Přejít", idReaderGo, 0, 0, 65, 0)
+	v.jump = a.shellButton(uiGoToPage, idReaderGo, 65, 0)
 	v.zoomOut = a.button("−", idReaderZoomOut, 0, 0, 36, 0)
 	v.zoomLabel = a.label("", 0, 0, 56, false)
 	v.zoomIn = a.button("+", idReaderZoomIn, 0, 0, 36, 0)
-	v.fit = a.combo(idReaderFit, 0, 0, 158, []string{"Celá stránka", "Šířka stránky", "Vlastní zoom"})
+	v.fit = a.combo(idReaderFit, 0, 0, 158, []string{a.uiText(uiWholePage), a.uiText(uiPageWidth), a.uiText(uiCustomZoom)})
+	a.localizeReaderHelp()
+}
+
+func (a *app) localizeReaderHelp() {
+	v := a.view
+	for _, entry := range []struct {
+		handle uintptr
+		key    uiMessage
+	}{
+		{v.previous, uiPreviousPage}, {v.next, uiNextPage}, {v.pageInput, uiGoToPage},
+		{v.zoomOut, uiZoomOut}, {v.zoomIn, uiZoomIn}, {v.fit, uiView},
+	} {
+		a.setTooltip(entry.handle, a.uiText(entry.key))
+	}
+	if fit := a.choices[v.fit]; fit != nil {
+		fit.names = []string{a.uiText(uiWholePage), a.uiText(uiPageWidth), a.uiText(uiCustomZoom)}
+		setText(v.fit, fit.names[fit.index])
+	}
 }
 
 func (v *documentView) layoutToolbar() {
@@ -350,49 +368,49 @@ func (v *documentView) showToolbar(show uintptr) {
 
 func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	a := v.app
-	a.beginPropertySection("Náhledový profil tisku", 18, "Profil a tisková oblast určují simulaci separací na obrazovce.")
+	a.beginPropertySection(uiProofProfile, 18, uiProofProfileHelp)
 	names := []string{"Podle PDF / výchozí CMYK"}
 	v.profiles = []string{""}
 	for _, profile := range catalog {
 		names = append(names, profile.Name)
 		v.profiles = append(v.profiles, profile.Key)
 	}
-	v.proof = a.combo(idReaderProof, 16, 43, 298, names)
-	a.label("Tisková oblast", 16, 83, 298, false)
-	v.proofBox = a.combo(idReaderProofBox, 16, 104, 298, []string{"Celý arch", "Ořez zobrazení", "Čistý formát", "Spadávka"})
+	v.proof = a.comboWithMessages(idReaderProof, 16, 43, 298, names, []uiMessage{uiDefaultCMYK})
+	a.uiLabel(uiPrintArea, 16, 83, 298, false)
+	v.proofBox = a.uiCombo(idReaderProofBox, 16, 104, 298, []uiMessage{uiMediaBox, uiCropBox, uiTrimBox, uiBleedBox})
 	v.outputInfo = a.readout(16, 142, 298, 78)
-	a.beginPropertySection("Tiskové desky na stránce", 240, "Přepínejte desky v náhledu. Kontrola změří skutečné pokrytí na vybraných stranách nebo v celém dokumentu.")
+	a.beginPropertySection(uiPagePlates, 240, uiPagePlatesHelp)
 	const listStyle = 0x0001 | 0x0008 | 0x0010 | 0x0040 | 0x0100
 	v.list = a.add("LISTBOX", "", idReaderPlateList, 16, 265, 298, 167,
 		wsTabstop|listStyle, 0, a.normalFont)
 	rowHeight := a.scale(24)
 	sendMessage.Call(v.list, 0x01a0, 0, uintptr(rowHeight))
 	a.addScrollPane(v.list, rowHeight, true)
-	v.all = a.button("Všechny desky", idReaderAll, 16, 441, 145, 0)
-	v.none = a.button("Vypnout všechny", idReaderNone, 169, 441, 145, 0)
+	v.all = a.uiButton(uiAllPlates, idReaderAll, 16, 441, 145, 0)
+	v.none = a.uiButton(uiDisablePlates, idReaderNone, 169, 441, 145, 0)
 	v.sample = a.label("", 16, 486, 298, false)
-	a.scanButton = a.button("Zkontrolovat celý dokument", idReaderScan, 16, 519, 298, 0)
-	v.scanSelection = a.button("Zkontrolovat vybrané náhledy", idReaderScanSelection, 16, 559, 298, 0)
+	a.scanButton = a.uiButton(uiCheckDocument, idReaderScan, 16, 519, 298, 0)
+	v.scanSelection = a.uiButton(uiCheckSelected, idReaderScanSelection, 16, 559, 298, 0)
 	v.scanReport = a.readout(16, 602, 298, 133)
-    a.beginPropertySection("Převod barev aktuálního dokumentu", 763, "Zvolte barevný režim a potřebný profil ICC. Převod otevře novou kopii.")
-    v.convertMode = a.combo(idProofColorMode, 16, 789, 298, []string{
-        "Stupně šedi · DeviceGray", "Složená černá → K100", "Pouze K · CMYK C0 M0 Y0",
+    a.beginPropertySection(uiConvertDocumentColors, 763, uiConvertDocumentColorsHelp)
+    v.convertMode = a.uiCombo(idProofColorMode, 16, 789, 298, []uiMessage{
+        uiGrayDevice, uiRichBlackK, uiBlackOnlyCMYK,
     })
     chooseCombo(v.convertMode, defaultIndex(colorModes, a.export.ColorMode, defaults.ColorMode))
-    v.convertGrayLabel = a.label("ICC profil převodu do šedi", 16, 829, 298, false)
-    v.convertGrayProfile = a.combo(idProofGrayProfile, 16, 850, 298, []string{
-        "Automaticky podle dokumentu", "Gray Gamma 2.2", "Gray Gamma 1.8", "Vlastní ICC Gray…",
+    v.convertGrayLabel = a.uiLabel(uiGrayProofICC, 16, 829, 298, false)
+    v.convertGrayProfile = a.uiCombo(idProofGrayProfile, 16, 850, 298, []uiMessage{
+        uiAutomaticFromDocument, uiGrayGamma22, uiGrayGamma18, uiCustomGrayICC,
     })
     chooseCombo(v.convertGrayProfile, defaultIndex(grayProfiles, a.export.GrayProfile, defaults.GrayProfile))
     v.convertGrayICC = a.edit(16, 886, 187, false)
-    v.convertGrayBrowse = a.button("Vybrat ICC…", idProofGrayICC, 212, 883, 102, 0)
-    v.convertKLabel = a.label("Cílový tiskový profil CMYK", 16, 925, 298, false)
+    v.convertGrayBrowse = a.uiButton(uiBrowseICC, idProofGrayICC, 212, 883, 102, 0)
+    v.convertKLabel = a.uiLabel(uiTargetCMYK, 16, 925, 298, false)
     cmykNames := make([]string, 0, len(catalog))
     for _, profile := range catalog { cmykNames = append(cmykNames, profile.Name) }
     v.convertKProfile = a.combo(idProofKProfile, 16, 946, 298, cmykNames)
     index := slices.IndexFunc(catalog, func(p profileChoice) bool { return p.Key == a.export.KProfile })
     chooseCombo(v.convertKProfile, max(index, 0))
-    a.proofApply = a.button("Použít převod a otevřít kopii…", idProofApply, 16, 1000, 298, 0)
+    a.proofApply = a.uiButton(uiConvertAndOpen, idProofApply, 16, 1000, 298, 0)
     a.primaryButtons[a.proofApply] = true
     v.convertReport = a.readout(16, 1047, 298, 112)
 }
@@ -1225,12 +1243,11 @@ func (v *documentView) updateDocumentInfo() {
 	if !v.ready() {
 		return
 	}
-	intent := v.intent
-	if intent == "" {
-		intent = "Neuveden"
+	intent := any(v.intent)
+	if v.intent == "" {
+		intent = uiOutputIntentUnspecified
 	}
-	setText(v.documentInfo, multiline(fmt.Sprintf("%d stran\nVýstupní záměr PDF\n%s\nV paměti %d z %d stran",
-		len(v.order), intent, len(v.reading.frames), len(v.order))))
+	v.app.setUIMessage(v.documentInfo, uiDocumentInfo, len(v.order), intent, len(v.reading.frames), len(v.order))
 }
 
 func (v *documentView) syncProofPanel() {
@@ -1258,12 +1275,12 @@ func (v *documentView) syncProofPanel() {
 	}
 	v.app.scrollPanes[v.list].reflow()
 	v.syncPlateSelection()
-	intent := result.OutputIntent
-	if intent == "" {
-		intent = "Neuveden"
+	intent := any(result.OutputIntent)
+	if result.OutputIntent == "" {
+		intent = uiOutputIntentUnspecified
 	}
-	setText(v.outputInfo, multiline("Výstupní záměr\n"+intent+"\nSimulace  "+result.Simulation))
-	setText(v.sample, fmt.Sprintf("Str. %d · plocha / maximální tón · %d dpi", v.page+1, result.DPI))
+	v.app.setUIMessage(v.outputInfo, uiProofInfo, intent, result.Simulation)
+	v.app.setUIMessage(v.sample, uiPageSample, v.page+1, result.DPI)
 }
 
 func (v *documentView) syncPlateSelection() {
@@ -1328,7 +1345,7 @@ func (v *documentView) updateActions() {
 				setText(v.pageInput, strconv.Itoa(v.page+1))
 			}
 		}
-		setText(v.location, fmt.Sprintf("z %d", len(v.order)))
+		v.app.setUIMessage(v.location, uiPageTotal, len(v.order))
 		setText(v.zoomLabel, fmt.Sprintf("%.0f %%", 100*v.zoom/(float64(v.app.dpi)/72)))
 		v.syncPageListSelection()
 	} else {

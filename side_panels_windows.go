@@ -14,8 +14,6 @@ const (
 	idToggleRightPanels   = 232
 )
 
-var sidebarRailColor = uiColors["surface"]
-
 func showControl(handle uintptr, visible bool) {
 	show := uintptr(0)
 	if visible {
@@ -24,8 +22,8 @@ func showControl(handle uintptr, visible bool) {
 	showWindow.Call(handle, show)
 }
 
-func (a *app) addDetailButton(id int, label string) {
-	handle := a.button(label, id, 0, 0, 145, 0)
+func (a *app) addDetailButton(id int, label uiMessage) {
+	handle := a.shellButton(label, id, 145, 0)
 	a.detailButtons[id] = handle
 	a.panelButtons[handle] = true
 }
@@ -142,8 +140,8 @@ func (a *app) layoutSidebars() {
 	}
 	leftRail, rightRail := a.sidebarRails()
 	ready := a.view.ready()
-	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.thumbnailsToggle, a.leftDock, ready && !a.comparisonVisible(), "levou")
-	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.bookmarksToggle, a.rightDock, ready, "pravou")
+	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.thumbnailsToggle, a.leftDock, ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft)
+	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.bookmarksToggle, a.rightDock, ready, uiCollapseRight, uiExpandRight)
 
 	x, top := a.width-a.settingsWidth, int(a.viewport.top)
 	gridWidth := max(1, d(145)+(a.settingsWidth-d(panelWidth))/2)
@@ -159,7 +157,7 @@ func (a *app) layoutSidebars() {
 	if detailsVisible {
 		for _, tab := range workspaceTabs {
 			if tab.id == a.tool {
-				setText(a.sidebarTitle, tab.name)
+				setText(a.sidebarTitle, a.uiText(tab.name))
 				break
 			}
 		}
@@ -190,26 +188,28 @@ func (a *app) layoutSidebars() {
 	a.layoutPanel()
 }
 
-func (a *app) layoutRail(rail rect, group, primary, auxiliary uintptr, dock dockVisibility, auxiliaryAvailable bool, side string) {
+func (a *app) layoutRail(rail rect, group, primary, auxiliary uintptr, dock dockVisibility, auxiliaryAvailable bool, collapse, expand uiMessage) {
 	d := a.scale
 	x, y, width := int(rail.left), int(rail.top)+d(10), int(rail.right-rail.left)
 	visible := !a.full && width > 0
 	panels := visible && !dock.collapsed
 	if visible {
-		action := "Sbalit "
+		label := a.uiText(collapse)
 		if dock.collapsed {
-			action = "Rozbalit "
+			label = a.uiText(expand)
 		}
-		label := action + side + " skupinu panelů"
 		if getText(group) != label {
 			setText(group, label)
+			a.setTooltip(group, label)
 		}
 		place(group, x, y, width, d(30))
 	}
 	if panels {
-		place(primary, x, y+d(36), width, d(88))
+		height := max(d(88), a.captionWidth(getText(primary), a.labelFont)+d(28))
+		place(primary, x, y+d(36), width, height)
 		if auxiliaryAvailable {
-			place(auxiliary, x, y+d(130), width, d(88))
+			auxHeight := max(d(88), a.captionWidth(getText(auxiliary), a.labelFont)+d(28))
+			place(auxiliary, x, y+d(42)+height, width, auxHeight)
 		}
 	}
 	showControl(group, visible)

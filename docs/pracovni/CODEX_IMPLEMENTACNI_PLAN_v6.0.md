@@ -45,6 +45,12 @@ Vlastnosti mají sbalitelné sekce a kruhové otazníky s metodikou. Po opětovn
 
 **2C. Nápověda + lokalizace:** nativní tooltipy odpovídají CZ/EN, pole popisů podle fokusu, čtení pro klávesnici; volba jazyka v Nastavení/Jazyk, téma v Nastavení/Rozhraní i přes horní půlený přepínač. Lokalizační katalog 809 CZ/EN klíčů, nezasahovat do PDF.
 
+První díl 2C napojuje katalog na hlavní lišty, hlavní a souborovou nabídku a navigaci. Nastavení jazyka umožňuje okamžitý náhled, potvrzení a návrat původní volby. Popisky tlačítek mají nativní tooltip a zobrazují se i při fokusu ve stavové liště.
+
+Druhý díl překládá sekce, nápovědu a ovládání Vlastností, předvolby exportu a vybraná stavová a validační hlášení Win32. Při přepnutí jazyka se přepíšou popisky a již zobrazená hlášení s lokalizačním klíčem. Formáty PDF, ICC názvy, hodnoty polí, dokument a text technických výpisů z backendu zůstávají ve své původní podobě.
+
+Třetí díl přidává Nastavení → Rozhraní se šesti paletami a světlým a tmavým režimem. Vzhled má okamžitý náhled, uložení volby a návrat při zrušení. Půlený přepínač v horní liště uloží změnu režimu stejné palety. Oba ovladače sdílejí nastavení a používají původní ikony z v3.26.
+
 **2D. Kontextové pomocné panely:** automatické Výsledky při hledání a korektní návrat, dočasné Pomůcky rozvržení při interakci s vodítkem. Uživatelova manuální volba má přednost. Nereplikovat další pravý dock.
 
 **Done:** zachování všech stávajících ikon i kláves; návrat z vyhledávání; žádné zbytkové tmavé plochy; přístupný focus.

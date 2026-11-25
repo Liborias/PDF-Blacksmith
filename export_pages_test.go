@@ -16,3 +16,17 @@ func TestParseExportPages(t *testing.T) {
 		}
 	}
 }
+
+func TestExportPageErrorUsesSelectedInterfaceLanguage(t *testing.T) {
+	_, err := parseExportPages("1, 3–20", 9)
+	invalid, ok := err.(exportPagesError)
+	if !ok {
+		t.Fatalf("got %v, want a localized page range error", err)
+	}
+	if got := uiEnglish.formatMessage(invalid.localizedMessage); got != "Invalid page or range \"3-20\". Enter pages from 1 to 9." {
+		t.Errorf("English page range error: %q", got)
+	}
+	if got := invalid.Error(); got != "Neplatná strana nebo rozsah \"3-20\". Zadejte strany od 1 do 9." {
+		t.Errorf("Czech page range error: %q", got)
+	}
+}

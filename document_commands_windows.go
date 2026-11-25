@@ -54,6 +54,18 @@ var documentActions = map[documentCommand]documentAction{
 	docDuplicate: {"Duplikovat", "Ctrl+D"},
 }
 
+var editMenuMessages = map[documentCommand]uiMessage{
+	docUndo: uiUndo, docRedo: uiRedo, docCut: uiCut, docCopy: uiCopy,
+	docPaste: uiPaste, docDelete: uiDelete, docSelectAll: uiSelectAll,
+}
+
+func (a *app) documentActionLabel(command documentCommand) string {
+	if key, exists := editMenuMessages[command]; exists {
+		return a.uiText(key)
+	}
+	return documentActions[command].label
+}
+
 type documentShortcut struct {
 	key   uintptr
 	shift bool
@@ -183,7 +195,7 @@ func (a *app) trackDocumentContext(v *documentView, pos point, editing bool) {
 		for _, command := range group {
 			action := documentActions[command]
 			commands = append(commands, command)
-			items = append(items, popupItem{label: action.label, shortcut: action.shortcut, disabled: !a.canDocumentCommand(v, command, editing)})
+			items = append(items, popupItem{label: a.documentActionLabel(command), shortcut: action.shortcut, disabled: !a.canDocumentCommand(v, command, editing)})
 		}
 	}
 	user32.NewProc("ClientToScreen").Call(a.window, uintptr(unsafe.Pointer(&pos)))

@@ -8,8 +8,6 @@ import (
 var (
 	comctl32         = syscall.NewLazyDLL("comctl32.dll")
 	defSubclass      = comctl32.NewProc("DefSubclassProc")
-	scrollTrackColor = paletteColor{103, 99, 109}
-	scrollThumbColor = paletteColor{140, 136, 147}
 )
 
 const trackClassName = "PDFBlacksmithScrollTrack"
@@ -18,7 +16,7 @@ type panelScrollbar struct {
 	handle                   uintptr
 	total, visible, position int
 	apply                    func(int)
-	dragging                 bool
+	dragging, hovered        bool
 	dragOffset               int
 }
 
@@ -79,8 +77,12 @@ func scrollTrackProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			var info paintInfo
 			dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
 			fillColor(dc, bounds, panelColor)
-			rounded(dc, track, 2, scrollTrackColor, scrollTrackColor)
-			rounded(dc, thumb, window.scale(6), scrollThumbColor, scrollThumbColor)
+			trackColor, thumbColor := uiColors["scrollTrack"], uiColors["scrollThumb"]
+			if bar.hovered || bar.dragging {
+				thumbColor = uiColors["scrollThumbHover"]
+			}
+			rounded(dc, track, 2, trackColor, trackColor)
+			rounded(dc, thumb, window.scale(6), thumbColor, thumbColor)
 			user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
 			return 0
 		case 0x0201: // WM_LBUTTONDOWN
@@ -92,14 +94,23 @@ func scrollTrackProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			default:
 				bar.dragging, bar.dragOffset = true, y-int(thumb.top)
 				user32.NewProc("SetCapture").Call(hwnd)
+				invalidate(hwnd)
 			}
 			return 0
 		case 0x0200: // WM_MOUSEMOVE
+			if !bar.hovered && trackMouseLeave(hwnd) {
+				bar.hovered = true
+				invalidate(hwnd)
+			}
 			if bar.dragging {
 				travel := max(1, int(track.bottom-track.top-thumb.bottom+thumb.top))
 				position := (y - bar.dragOffset - int(track.top)) * (bar.total - bar.visible) / travel
 				bar.setPosition(position)
 			}
+			return 0
+		case 0x02a3: // WM_MOUSELEAVE
+			bar.hovered = false
+			invalidate(hwnd)
 			return 0
 		case 0x0202: // WM_LBUTTONUP
 			if bar.dragging {
@@ -108,6 +119,7 @@ func scrollTrackProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		case 0x0215: // WM_CAPTURECHANGED
 			bar.dragging = false
+			invalidate(hwnd)
 			return 0
 		}
 	}

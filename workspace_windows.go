@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -81,23 +80,23 @@ const (
 
 var workspaceTabs = []struct {
 	id       int
-	name     string
+	name     uiMessage
 	needsPDF bool
 }{
-	{idFileTab, "Soubor", false},
-	{idBrowseTab, "Zobrazení", false},
-	{idSearchTab, "Najít v PDF", true},
-	{idObjectsTab, "Objekty", true},
-	{idTextTab, "Text", true},
-	{idOCRTab, "OCR", true},
-	{idProofTab, "Separace", true},
-	{idSignTab, "Digitální podpis", true},
-	{idSplitTab, "Rozdělit PDF", true},
-	{idMergeTab, "Sloučit PDF", false},
-	{idPageOrderTool, "Pořadí stránek", true},
+	{idFileTab, uiFile, false},
+	{idBrowseTab, uiView, false},
+	{idSearchTab, uiFind, true},
+	{idObjectsTab, uiObjects, true},
+	{idTextTab, uiText, true},
+	{idOCRTab, uiOCR, true},
+	{idProofTab, uiSeparations, true},
+	{idSignTab, uiSignature, true},
+	{idSplitTab, uiSplitPDF, true},
+	{idMergeTab, uiMergePDF, false},
+	{idPageOrderTool, uiPageOrder, true},
 }
 
-var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr", "Vybrané náhledy"}
+var pageScopeNames = []uiMessage{uiAllPages, uiCurrentPage, uiCustomRange, uiSelectedThumbnails}
 
 type point struct{ x, y int32 }
 
@@ -158,48 +157,48 @@ func (a *app) setupWorkspace() bool {
 	}
 
 	a.railFont = a.orientedFont(14, 600, 900)
-	a.toolsToggle = a.button("Nástroje", idToggleTools, 0, 0, sidebarRailWidth, 0)
-	a.detailsToggle = a.button("Vlastnosti", idToggleDetails, 0, 0, sidebarRailWidth, 0)
-	a.thumbnailsToggle = a.button("Náhledy", idToggleThumbnails, 0, 0, sidebarRailWidth, 0)
-	a.bookmarksToggle = a.button("Záložky", idToggleBookmarks, 0, 0, sidebarRailWidth, 0)
-	a.leftPanelsToggle = a.button("Levá strana", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
-	a.rightPanelsToggle = a.button("Pravá strana", idToggleRightPanels, 0, 0, sidebarRailWidth, 0)
-	a.windowButtons[0] = a.button("Minimalizovat", idMinimize, 0, 0, 36, 0)
-	a.windowButtons[1] = a.button("Maximalizovat nebo obnovit", idMaximize, 0, 0, 36, 0)
-	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
-	a.tabList = a.button("Seznam otevřených PDF", idListDocumentTabs, 0, 0, 26, 0)
+	a.toolsToggle = a.shellButton(uiTools, idToggleTools, sidebarRailWidth, 0)
+	a.detailsToggle = a.shellButton(uiProperties, idToggleDetails, sidebarRailWidth, 0)
+	a.thumbnailsToggle = a.shellButton(uiThumbnails, idToggleThumbnails, sidebarRailWidth, 0)
+	a.bookmarksToggle = a.shellButton(uiBookmarks, idToggleBookmarks, sidebarRailWidth, 0)
+	a.leftPanelsToggle = a.button("", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
+	a.rightPanelsToggle = a.button("", idToggleRightPanels, 0, 0, sidebarRailWidth, 0)
+	a.windowButtons[0] = a.shellButton(uiMinimize, idMinimize, 36, 0)
+	a.windowButtons[1] = a.shellButton(uiMaximize, idMaximize, 36, 0)
+	a.windowButtons[2] = a.shellButton(uiClose, idCloseWindow, 36, 0)
+	a.tabList = a.shellButton(uiDocumentList, idListDocumentTabs, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
-	a.preferredToolsWidth = a.scale(168)
+	a.focusHelp = a.add("STATIC", "", 0, 0, 0, 1, 22, 0x400c, 0, a.normalFont)
 	for _, tab := range workspaceTabs {
-		a.preferredToolsWidth = max(a.preferredToolsWidth, a.captionWidth(tab.name, a.labelFont)+a.scale(64))
-		handle := a.button(tab.name, tab.id, 0, 0, 1, 0x04000000) // WS_CLIPSIBLINGS
+		handle := a.shellButton(tab.name, tab.id, 1, 0x04000000) // WS_CLIPSIBLINGS
 		watchNavigationHover(handle)
 		a.toolButtons[tab.id] = handle
 		a.panelButtons[handle] = true
 	}
+	a.measureToolNames()
 	if !a.buildFileMenu(className) {
 		return false
 	}
 	a.sidebarTitle = a.label("", 0, 0, 298, true)
 	a.panelLabels[a.sidebarTitle] = true
-	a.addDetailButton(idBrowseTab, "Náhled")
-	a.addDetailButton(idPagesTab, "Stránky")
+	a.addDetailButton(idBrowseTab, uiPreview)
+	a.addDetailButton(idPagesTab, uiPages)
 
 	a.view = newDocumentView(a)
 	a.view.thumbnailSidebar = a.thumbnailSidebar
 	a.view.buildToolbar()
 	a.beginPanel(idBrowseTab)
-	a.button("Zobrazit na celou obrazovku · F11", idFullscreen, 16, 16, 298, 0)
-	a.comparison.button = a.button("Zobrazit vedle sebe…", idCompareOpen, 16, 56, 298, 0)
-	a.beginPropertySection("Režim zobrazení", 106, "Ctrl + kolečko přiblíží PDF pod kurzorem. Tiskový rámeček určuje oblast zobrazenou v náhledu.")
-	a.view.flow = a.combo(idReaderFlow, 16, 128, 298, []string{"Souvisle", "Po stránkách"})
+	a.uiButton(uiViewFullscreen, idFullscreen, 16, 16, 298, 0)
+	a.comparison.button = a.button(a.uiText(uiStartSideBySide), idCompareOpen, 16, 56, 298, 0)
+	a.beginPropertySection(uiViewMode, 106, uiViewModeHelp)
+	a.view.flow = a.uiCombo(idReaderFlow, 16, 128, 298, []uiMessage{uiFlowContinuous, uiPageByPage})
 	chooseCombo(a.view.flow, 1)
-	a.label("Rámeček PDF v náhledu", 16, 171, 298, false)
-	a.view.screenBox = a.combo(idReaderScreenBox, 16, 193, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
+	a.uiLabel(uiScreenBox, 16, 171, 298, false)
+	a.view.screenBox = a.uiCombo(idReaderScreenBox, 16, 193, 298, []uiMessage{uiCropBox, uiMediaBox, uiTrimBox, uiBleedBox})
 	a.view.documentInfo = a.readout(16, 238, 298, 82)
-	a.beginPropertySection("Heslo k otevření PDF", 342, "Zadejte heslo a načtěte otevřený dokument znovu.")
+	a.beginPropertySection(uiDocumentPassword, 342, uiDocumentPasswordHelp)
 	a.password = a.edit(16, 365, 298, true)
-	a.button("Načíst znovu s heslem", idReload, 16, 403, 298, 0)
+	a.uiButton(uiReloadPassword, idReload, 16, 403, 298, 0)
 
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
@@ -244,30 +243,39 @@ func (a *app) beginPanel(tab int) {
 }
 
 func (a *app) buildExportPanel() {
-	a.runButton = a.button("Uložit exportované PDF…", idRun, 16, 17, 298, 0)
+	a.runButton = a.uiButton(uiSaveExport, idRun, 16, 17, 298, 0)
 	a.primaryButtons[a.runButton] = true
-	a.beginPropertySection("Předvolba PDF", 64, "Předvolba určuje účel a výchozí nastavení exportu. Otevřením nápovědy zobrazíte popis vybrané předvolby.").detail = func() string {
-		return a.selectedExportPreset().Description
+	a.beginPropertySection(uiExportPreset, 64, uiExportPresetHelp).detail = func() string {
+		preset := a.selectedExportPreset()
+		if key := exportPresetMessages[preset.Key].description; key != "" {
+			return a.uiText(key)
+		}
+		return preset.Description
 	}
 	formats := make([]string, 0, len(a.exportPresets))
+	formatMessages := make([]uiMessage, 0, len(a.exportPresets))
 	for _, preset := range a.exportPresets {
 		formats = append(formats, preset.Name)
+		formatMessages = append(formatMessages, exportPresetMessages[preset.Key].name)
 	}
-	a.exportFormat = a.combo(idExportPreset, 16, 86, 298, formats)
+	a.exportFormat = a.comboWithMessages(idExportPreset, 16, 86, 298, formats, formatMessages)
 	a.exportWarning = a.readout(16, 121, 298, 44)
-	a.beginPropertySection("Strany k exportu", 169, "Vyberte rozsah stran nebo použijte strany označené v panelu Náhledy.")
-	a.exportScope = a.combo(idExportScope, 16, 191, 145, pageScopeNames)
+	a.beginPropertySection(uiExportPages, 169, uiExportPagesHelp)
+	a.exportScope = a.uiCombo(idExportScope, 16, 191, 145, pageScopeNames)
 	a.exportRange = a.edit(169, 191, 145, false)
-	sendMessage.Call(a.exportRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8")))) // EM_SETCUEBANNER
-	color := a.beginPropertySection("Barevný výstup", 229, "Výstupní režim a profil ICC určují, jak se při exportu převedou barvy PDF.")
+	a.bindUICue(a.exportRange, uiRangeExample) // EM_SETCUEBANNER
+	color := a.beginPropertySection(uiOutputColor, 229, uiOutputColorHelp)
 	a.exportColorLabel, a.exportColorHelp = color.header, color.help
 	names := make([]string, 0, len(a.profileChoices))
 	for _, p := range a.profileChoices {
 		names = append(names, p.Name)
 	}
-	a.profiles = a.combo(idICCProfile, 16, 251, 298, names)
+	profileMessages := make([]uiMessage, len(names))
+	copy(profileMessages, []uiMessage{uiKeepColors, uiGrayDevice, uiRichBlackK, uiExplicitCMYK})
+	profileMessages[len(profileMessages)-1] = uiCustomOutputICC
+	a.profiles = a.comboWithMessages(idICCProfile, 16, 251, 298, names, profileMessages)
 	chooseCombo(a.profiles, 1+defaultIndex(colorModes, a.export.ColorMode, defaults.ColorMode))
-    a.pressProfiles = a.combo(idPressICC, 16, 251, 298, names[4:])
+    a.pressProfiles = a.comboWithMessages(idPressICC, 16, 251, 298, names[4:], profileMessages[4:])
 	for _, preset := range a.exportPresets {
 		if preset.Profile != "" {
 			index := slices.IndexFunc(a.profileChoices[4:], func(choice profileChoice) bool { return choice.Key == preset.Profile })
@@ -276,57 +284,58 @@ func (a *app) buildExportPanel() {
 		}
 	}
 	a.customICC = a.edit(16, 285, 187, false)
-	a.customBrowse = a.button("Vybrat ICC…", idICCBrowse, 212, 282, 102, 0)
+	a.customBrowse = a.uiButton(uiBrowseICC, idICCBrowse, 212, 282, 102, 0)
 	a.exportManualStart = len(a.panelItems[idExportTab])
-    a.grayProfileLabel = a.label("ICC profil převodu na stupně šedi", 16, 285, 298, false)
-    a.grayProfileCombo = a.combo(idGrayProfile, 16, 307, 298, []string{
-        "Automaticky podle dokumentu", "Gray Gamma 2.2", "Gray Gamma 1.8", "Vlastní ICC Gray…",
+    a.grayProfileLabel = a.uiLabel(uiGrayConversionICC, 16, 285, 298, false)
+    a.grayProfileCombo = a.uiCombo(idGrayProfile, 16, 307, 298, []uiMessage{
+        uiAutomaticFromDocument, uiGrayGamma22, uiGrayGamma18, uiCustomGrayICC,
     })
     chooseCombo(a.grayProfileCombo, defaultIndex(grayProfiles, a.export.GrayProfile, defaults.GrayProfile))
     a.grayCustomICC = a.edit(16, 344, 187, false)
-    a.grayBrowse = a.button("Vybrat ICC…", idGrayICC, 212, 341, 102, 0)
-    a.kOutputLabel = a.label("Výstupní CMYK profil pro K", 16, 376, 298, false)
+    a.grayBrowse = a.uiButton(uiBrowseICC, idGrayICC, 212, 341, 102, 0)
+    a.kOutputLabel = a.uiLabel(uiKOutputProfile, 16, 376, 298, false)
     a.kOutputProfile = a.combo(idKOutputProfile, 16, 398, 298, names[4:len(names)-1])
     kIndex := slices.IndexFunc(a.profileChoices[4:], func(choice profileChoice) bool {return choice.Key == a.export.KProfile})
     chooseCombo(a.kOutputProfile, max(0, kIndex))
-    a.outline = a.button("Převést text na křivky", idOutline, 16, 438, 298, bsAutoCheck)
-	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 470, 298, bsAutoCheck)
-	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 502, 298, bsAutoCheck)
+    a.outline = a.uiButton(uiConvertTextOutlines, idOutline, 16, 438, 298, bsAutoCheck)
+	a.decrypt = a.uiButton(uiRemovePasswordRestrictions, idDecrypt, 16, 470, 298, bsAutoCheck)
+    a.raster = a.button("", idRaster, 16, 502, 298, bsAutoCheck)
+	a.setUIMessage(a.raster, uiAllowKRaster, a.export.RepairDPI)
 	a.exportReport = a.readout(16, 542, 298, 105)
-	a.beginPropertySection("Parametry exportu", 661, "U ručního exportu lze nastavit převod barev, převzorkování obrázků, kompresi a rozlišení kontroly desek.")
-	labels := []string{"Záměr reprodukce", "Černý bod", "Obrázky", "Komprese", "Kontrola desek", "Oprava K"}
-	choices := [][]string{
-		{"Podle PDF", "Perceptuální", "Relativní", "Saturace", "Absolutní"},
-		{"Automaticky", "Zapnout", "Vypnout"},
-		{"Beze změny", "150 dpi", "300 dpi", "600 dpi"},
-		{"Automatická", "Bezeztrátová"},
-		{"75 dpi", "150 dpi", "300 dpi"},
-		{"300 dpi", "600 dpi"},
+	a.beginPropertySection(uiExportParameters, 661, uiExportParametersHelp)
+	labels := []uiMessage{uiRenderingIntent, uiBlackPoint, uiImages, uiCompression, uiPlateCheck, uiKRepair}
+	choices := [][]uiMessage{
+		{uiFromPDF, uiPerceptual, uiRelative, uiSaturation, uiAbsolute},
+		{uiAutomatic, uiTurnOn, uiTurnOff},
+		{uiUnchanged, uiResolution150, uiResolution300, uiResolution600},
+		{uiAutomaticCompression, uiLossless},
+		{uiResolution75, uiResolution150, uiResolution300},
+		{uiResolution300, uiResolution600},
 	}
 	for index, label := range labels {
 		x := 16 + (index%2)*153
 		y := 696 + (index/2)*63
-		a.label(label, x, y, 145, false)
-		a.exportOptionControls[index] = a.combo(idExportOption, x, y+21, 145, choices[index])
+		a.uiLabel(label, x, y, 145, false)
+		a.exportOptionControls[index] = a.uiCombo(idExportOption, x, y+21, 145, choices[index])
 	}
-	a.button("Obnovit výchozí parametry", idResetExportOptions, 16, 892, 298, 0)
+	a.uiButton(uiResetExport, idResetExportOptions, 16, 892, 298, 0)
 	a.applyExportOptions(a.export)
 }
 
 func (a *app) buildSignPanel() {
-	a.beginPropertySection("Podepsat dokument", 18, "K vytvoření podpisu vyberte osobní certifikát PKCS#12, zadejte jeho heslo a uložte podepsanou kopii.")
-	a.label("Certifikát PKCS#12 (.p12 nebo .pfx)", 16, 53, 298, false)
+	a.beginPropertySection(uiSignDocument, 18, uiSignDocumentHelp)
+	a.uiLabel(uiPKCSFile, 16, 53, 298, false)
 	a.cert = a.edit(16, 76, 194, false)
-	a.button("Vybrat…", idCertBrowse, 219, 74, 95, 0)
-	a.label("Heslo k certifikátu", 16, 122, 298, false)
+	a.uiButton(uiChoose, idCertBrowse, 219, 74, 95, 0)
+	a.uiLabel(uiCertificatePassword, 16, 122, 298, false)
 	a.certPass = a.edit(16, 144, 298, true)
-	a.visible = a.button("Viditelný podpis v novém poli", idVisible, 16, 183, 298, bsAutoCheck)
-	a.signButton = a.button("Uložit podepsané PDF…", idSign, 16, 224, 298, 0)
-	a.beginPropertySection("Ověřit podpisy", 284, "Ověření zkontroluje podpisy v otevřeném PDF. Volitelně můžete přidat důvěryhodný kořenový certifikát.")
-	a.label("Doplňkový kořenový certifikát", 16, 318, 298, false)
+	a.visible = a.uiButton(uiVisibleSignature, idVisible, 16, 183, 298, bsAutoCheck)
+	a.signButton = a.uiButton(uiSaveSignedPDF, idSign, 16, 224, 298, 0)
+	a.beginPropertySection(uiVerifySignatures, 284, uiVerifySignatureHelp)
+	a.uiLabel(uiExtraRootCertificate, 16, 318, 298, false)
 	a.trust = a.edit(16, 341, 194, false)
-	a.button("Vybrat…", idTrustBrowse, 219, 339, 95, 0)
-	a.verifyButton = a.button("Ověřit podpisy", idVerify, 16, 384, 298, 0)
+	a.uiButton(uiChoose, idTrustBrowse, 219, 339, 95, 0)
+	a.verifyButton = a.uiButton(uiVerifySignatures, idVerify, 16, 384, 298, 0)
 	a.signReport = a.readout(16, 431, 298, 179)
 }
 
@@ -365,7 +374,7 @@ func (a *app) updateExportOptions() {
 	if err := saveExportOptions(a.export); err != nil {
 		a.report("Předvolby nelze uložit. " + err.Error())
 	}
-	setText(a.raster, fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI))
+	a.setUIMessage(a.raster, uiAllowKRaster, a.export.RepairDPI)
 }
 
 func (a *app) selectedExportPreset() exportPreset {
@@ -472,6 +481,7 @@ func (a *app) layout() {
 		a.layoutDocumentPanels()
 		a.layoutHeader()
 		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
+		place(a.focusHelp, d(628), a.height-d(33), a.width-d(874), d(22))
 		a.view.layoutToolbar()
 	}
 	chrome := uintptr(5)
@@ -479,6 +489,7 @@ func (a *app) layout() {
 		chrome = 0
 	}
 	showWindow.Call(a.status, chrome)
+	showWindow.Call(a.focusHelp, chrome)
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}
@@ -628,8 +639,8 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		if hwnd == a.fileMenu.handle {
 			outline := bounds
 			outline.top -= int32(a.scale(9))
-			rounded(dc, outline, a.scale(9), uiColors["popoverBg"], scrollTrackColor)
-			fillColor(dc, rect{right: bounds.right, bottom: 1}, scrollTrackColor)
+			rounded(dc, outline, a.scale(9), uiColors["popoverBg"], divider)
+			fillColor(dc, rect{right: bounds.right, bottom: 1}, divider)
 		} else {
 			fillColor(dc, bounds, panelColor)
 		}
@@ -857,14 +868,14 @@ func (a *app) command(id, notification int) {
             if err := saveExportOptions(a.export); err != nil { a.report(err.Error()) }
             a.layoutPanel()
 		case idExportPreset:
-			warning := ""
+			var warning uiMessage
 			switch a.selectedExportPreset().Key {
 			case "flatten":
-				warning = "Pozor: text ve zploštěném PDF nepůjde označit."
+				warning = uiWarnFlattenedText
 			case "pdfx-1a", "pdfx-3":
-				warning = "Pozor: průhlednost se při exportu zploští."
+				warning = uiWarnFlattenedTransparency
 			}
-			setText(a.exportWarning, warning)
+			a.setUIMessage(a.exportWarning, warning)
 			a.layoutPanel()
 		case idExportScope:
 			delete(a.thumbnailScopes, a.exportScope)
@@ -1006,7 +1017,11 @@ func (a *app) selectPages(req *request, scope, pageRange uintptr) bool {
 	case exportPageRanges:
 		pages, err := parseExportPages(getText(pageRange), len(a.view.order))
 		if err != nil {
-			a.report(err.Error())
+			if pageError, ok := err.(exportPagesError); ok {
+				a.reportUI(pageError.key, pageError.args...)
+			} else {
+				a.report(err.Error())
+			}
 			setFocus.Call(pageRange)
 			return false
 		}
@@ -1055,12 +1070,12 @@ func (a *app) startAction(id int) {
 		if req.Profile == "custom" {
 			req.CustomICC = strings.Trim(strings.TrimSpace(getText(a.customICC)), "\"")
 			if info, err := os.Stat(req.CustomICC); err != nil || !info.Mode().IsRegular() {
-				a.report("Vyberte soubor s výstupním profilem CMYK ICC nebo ICM.")
+				a.reportUI(uiSelectCMYKFile)
 				return
 			}
 		}
 		if req.Preset == "" && key == "" && !req.Outline && !req.Decrypt && len(req.View.Pages) == 0 {
-			a.report("Vyberte strany k exportu, úpravu nebo výstupní profil.")
+			a.reportUI(uiSelectExportSettings)
 			return
 		}
 		switch {
@@ -1088,7 +1103,7 @@ func (a *app) startAction(id int) {
 		req.Certificate = getText(a.cert)
 		req.CertPassword, req.Visible = getText(a.certPass), a.checked(a.visible)
 		if info, err := os.Stat(req.Certificate); err != nil || !info.Mode().IsRegular() {
-			a.report("Vyberte osobní certifikát.")
+			a.reportUI(uiSelectCertificate)
 			return
 		}
 	case idVerify:
@@ -1145,26 +1160,29 @@ func (a *app) reportStatus(message string) {
 
 func (a *app) report(message string) {
 	a.reportStatus(message)
-	var target uintptr
-	switch a.mode {
-	case idMergeTab:
-		target = a.merge.report
-	case idExportTab:
-		target = a.exportReport
-	case idSignTab:
-		target = a.signReport
-	case idSplitTab:
-        target = a.splitReport
-	case idTextTab:
-		target = a.textTool.report
-    case idOCRTab:
-        target = a.ocr.report
-    case idProofTab:
-        target = a.view.convertReport
-	}
-	if target != 0 {
+	if target := a.activeReportField(); target != 0 {
 		setText(target, multiline(message))
 	}
+}
+
+func (a *app) activeReportField() uintptr {
+	switch a.mode {
+	case idMergeTab:
+		return a.merge.report
+	case idExportTab:
+		return a.exportReport
+	case idSignTab:
+		return a.signReport
+	case idSplitTab:
+		return a.splitReport
+	case idTextTab:
+		return a.textTool.report
+    case idOCRTab:
+		return a.ocr.report
+    case idProofTab:
+		return a.view.convertReport
+	}
+	return 0
 }
 
 func (a *app) run(req request) bool {

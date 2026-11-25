@@ -373,8 +373,8 @@ func (v *documentView) showPageDragPreview() {
 			w := v.app.captionWidth(label, v.app.labelFont) + d(14)
 			right, bottom := width-d(2), height-d(2)
 			badge := rect{int32(max(2, right-w)), int32(bottom - d(22)), int32(right), int32(bottom)}
-			burgundy := paletteColor{133, 42, 75}
-			rounded(dc, badge, d(7), burgundy, burgundy)
+			fill := uiColors["toolbarActive"]
+			rounded(dc, badge, d(7), fill, fill)
 			drawText(dc, label, badge, v.app.labelFont, textColor, 1)
 		}
 	})

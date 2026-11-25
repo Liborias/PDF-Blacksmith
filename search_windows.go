@@ -73,18 +73,19 @@ type searchPanel struct {
 func (v *documentView) buildSearchPanel() {
 	a, p := v.app, &v.search
 	p.events = make(chan searchUpdate, 8)
-	a.beginPropertySection("Text v dokumentu", 15, "Hledání prochází textovou vrstvu PDF včetně textu rozpoznaného nástrojem OCR.")
+	a.beginPropertySection(uiDocumentText, 15, uiDocumentTextHelp)
 	p.input = a.edit(16, 41, 298, false)
 	sendMessage.Call(p.input, 0x00c5, 256, 0) // EM_LIMITTEXT
-	p.start = a.button("Hledat", idSearchRun, 16, 79, 145, 0)
+	p.start = a.uiButton(uiSearch, idSearchRun, 16, 79, 145, 0)
 	a.primaryButtons[p.start] = true
-	p.clear = a.button("Vymazat", idSearchClear, 169, 79, 145, 0)
-	p.previous = a.button("Předchozí shoda", idSearchPrevious, 16, 119, 145, 0)
-	p.next = a.button("Další shoda", idSearchNext, 169, 119, 145, 0)
+	p.clear = a.uiButton(uiClear, idSearchClear, 169, 79, 145, 0)
+	p.previous = a.uiButton(uiPreviousMatch, idSearchPrevious, 16, 119, 145, 0)
+	p.next = a.uiButton(uiNextMatch, idSearchNext, 169, 119, 145, 0)
 	p.status = a.readout(16, 161, 298, 52)
 	a.addingSection = 0
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100
-	p.list = a.add("LISTBOX", "Výsledky hledání", idSearchList, 16, 221, 298, 116, wsTabstop|listStyle, 0, a.normalFont)
+	p.list = a.add("LISTBOX", "", idSearchList, 16, 221, 298, 116, wsTabstop|listStyle, 0, a.normalFont)
+	a.bindUILabel(p.list, uiSearchResults)
 	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(26))) // LB_SETITEMHEIGHT
 	a.addScrollPane(p.list, a.scale(26), true)
 }
@@ -132,7 +133,7 @@ func (v *documentView) cancelSearch() {
 	p.pending = ""
 	if p.task != nil {
 		p.task.cancel()
-		setText(p.status, "Hledání zastaveno.")
+		v.app.setUIMessage(p.status, uiSearchStopped)
 	}
 }
 
@@ -158,7 +159,7 @@ func (v *documentView) queueSearch(query string) {
 	v.cancelSearch()
 	p.query, p.pending = query, query
 	v.clearSearchResults()
-	setText(p.status, "Prohledávám dokument…")
+	v.app.setUIMessage(p.status, uiSearchingDocument)
 	v.launchSearch()
 }
 
@@ -242,7 +243,7 @@ func (v *documentView) receiveSearch(event searchUpdate) {
 			if event.Page != nil {
 				v.addSearchPage(event.Page)
 			}
-			setText(p.status, fmt.Sprintf("Prohledáno %d z %d stran. Shod zatím %d.", event.Scanned, len(v.order), event.Total))
+			v.app.setUIMessage(p.status, uiSearchProgress, event.Scanned, len(v.order), event.Total)
 		}
 		return
 	}
@@ -252,13 +253,14 @@ func (v *documentView) receiveSearch(event searchUpdate) {
 	if !cancelled {
 		switch event.Status {
 		case "ok":
-			message := fmt.Sprintf("Nalezené shody: %d", event.Total)
-			if event.Total == 0 {
-				message = "Žádná shoda v textové vrstvě PDF."
-			} else if event.Total > len(p.rows) {
-				message += fmt.Sprintf("\nZobrazeno prvních %d shod.", len(p.rows))
+			switch {
+			case event.Total == 0:
+				v.app.setUIMessage(p.status, uiNoSearchMatch)
+			case event.Total > len(p.rows):
+				v.app.setUIMessage(p.status, uiSearchLimit, event.Total, len(p.rows))
+			default:
+				v.app.setUIMessage(p.status, uiSearchCount, event.Total)
 			}
-			setText(p.status, multiline(message))
 		case "error", "changed":
 			v.clearSearchResults()
 			setText(p.status, multiline(event.Message))
@@ -452,7 +454,7 @@ func (v *documentView) paintSearchHighlights(dc uintptr, number int, bounds rect
 		}
 	}
 	if selected >= 0 {
-		fillColor(mask, rect{right: 1, bottom: 1}, paletteColor{225, 96, 140})
+		fillColor(mask, rect{right: 1, bottom: 1}, selectionColor)
 		paint(page.Hits[selected], 133)
 	}
 }

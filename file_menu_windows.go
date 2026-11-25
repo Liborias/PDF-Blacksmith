@@ -16,18 +16,18 @@ type fileMenu struct {
 
 type fileOption struct {
 	id    int
-	label string
+	label uiMessage
 }
 
 var fileOptions = []fileOption{
-	{idOpen, "Otevřít soubor"},
-	{idRecentFiles, "Nedávné"},
-	{idShowOutput, "Otevřít výstup"},
-	{idSaveDocument, "Uložit"},
-	{idSaveDocumentAs, "Uložit jako"},
-	{idExportTab, "Export"},
-	{idFileSign, "Podepsaná kopie"},
-	{idPrintDocument, "Tisk"},
+	{idOpen, uiOpenFile},
+	{idRecentFiles, uiRecent},
+	{idShowOutput, uiOpenOutput},
+	{idSaveDocument, uiSave},
+	{idSaveDocumentAs, uiSaveAs},
+	{idExportTab, uiExport},
+	{idFileSign, uiSignedCopy},
+	{idPrintDocument, uiPrint},
 }
 
 func (a *app) fileOptionEnabled(option int) bool {
@@ -62,7 +62,8 @@ func (a *app) buildFileMenu(className *uint16) bool {
 	}
 	a.controlParent = m.handle
 	for index, option := range fileOptions {
-		handle := a.button(option.label, idFileMenuFirst+index, 0, 0, 1, 0)
+		handle := a.button("", idFileMenuFirst+index, 0, 0, 1, 0)
+		a.bindUILabel(handle, option.label)
 		watchNavigationHover(handle)
 		m.buttons = append(m.buttons, handle)
 	}
@@ -93,7 +94,7 @@ func (a *app) showFileMenuAt(anchor uintptr) {
 	d := a.scale
 	width, height := max(a.toolsWidth, d(168)), d(len(m.buttons)*31+8)
 	for index, option := range fileOptions {
-		width = max(width, a.captionWidth(option.label, a.normalFont)+d(42))
+		width = max(width, a.captionWidth(a.uiText(option.label), a.normalFont)+d(42))
 		setEnabled(m.buttons[index], a.fileOptionEnabled(option.id))
 	}
 	width = min(width, a.width)
@@ -195,7 +196,7 @@ func (a *app) drawFileMenuButton(item *buttonDraw) bool {
 	option := fileOptions[index]
 	selected := option.id == a.activeFileOption() || (option.id == idRecentFiles && a.mode == idFileDetails)
 	a.paintPopupEntry(item.dc, item.bounds, popupItem{
-		label: option.label, checked: selected, disabled: !a.fileOptionEnabled(option.id),
+		label: a.uiText(option.label), checked: selected, disabled: !a.fileOptionEnabled(option.id),
 	}, a.navigationHot(item))
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, item.bounds)

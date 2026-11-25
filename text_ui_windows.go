@@ -19,15 +19,6 @@ const (
 	idTextAlignJustify
 )
 
-type nativeTooltip struct {
-	size, flags  uint32
-	owner, id    uintptr
-	bounds       rect
-	instance     uintptr
-	text         *uint16
-	param, extra uintptr
-}
-
 var textIcons = map[int][][]point{
 	idHeaderUndo:          {{{6, 3}, {2, 7}, {6, 11}}, {{2, 7}, {12, 7}, {15, 9}, {15, 13}, {12, 16}}},
 	idHeaderRedo:          {{{12, 3}, {16, 7}, {12, 11}}, {{16, 7}, {6, 7}, {3, 9}, {3, 13}, {6, 16}}},
@@ -61,28 +52,6 @@ func init() {
 	textIcons[idObjectPoint] = [][]point{{{3, 2}, {3, 15}, {7, 12}, {10, 17}, {13, 15}, {10, 10}, {15, 9}, {3, 2}}}
 	textIcons[idObjectRectangle] = textIcons[idTextSelectRectangle]
 	textIcons[idObjectLasso] = textIcons[idTextSelectLasso]
-}
-
-func (a *app) textIconButton(label string, id, x, y, width int) uintptr {
-	h := a.button(label, id, x, y, width, 0)
-	a.addTextTooltip(h, label)
-	return h
-}
-
-func (a *app) addTextTooltip(h uintptr, label string) {
-	p := &a.textTool
-	if p.tooltip == 0 {
-		p.tooltip, _, _ = createWindow.Call(8, uintptr(unsafe.Pointer(wideString("tooltips_class32"))), 0,
-			0x80000003, 0, 0, 0, 0, a.window, 0, a.instance, 0)
-	}
-	if p.tooltip != 0 {
-		name := wideString(label)
-		p.tooltipNames = append(p.tooltipNames, name)
-		parent, _, _ := user32.NewProc("GetParent").Call(h)
-		info := nativeTooltip{flags: 0x11, owner: parent, id: h, text: name} // TTF_SUBCLASS | TTF_IDISHWND
-		info.size = uint32(unsafe.Sizeof(info))
-		sendMessage.Call(p.tooltip, 0x0400+50, 0, uintptr(unsafe.Pointer(&info)))
-	}
 }
 
 func (a *app) drawTextIcon(item *buttonDraw) bool {

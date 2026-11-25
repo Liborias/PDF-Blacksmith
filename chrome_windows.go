@@ -245,10 +245,6 @@ func (a *app) drawWindowButton(item *buttonDraw) bool {
 	body, color := titleColor, textColor
 	if item.state&1 != 0 {
 		body = uiColors["hover"]
-		if id == idCloseWindow {
-			body = paletteColor{133, 35, 53}
-			color = paletteColor{255, 255, 255}
-		}
 	}
 	fillColor(item.dc, item.bounds, body)
 	bounds := item.bounds

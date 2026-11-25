@@ -11,10 +11,10 @@ DOCS = ROOT / "docs" / "pracovni"
 ATLAS = ROOT / "assets" / "ui_icons"
 TILE_SIZE = 96
 SYMBOLS = (
-    "fit_page", "fit_width", "nav_file", "nav_merge_pdf", "nav_objects",
+    "fit_page", "fit_width", "language", "nav_file", "nav_merge_pdf", "nav_objects",
     "nav_ocr", "nav_page_order", "nav_search_pdf", "nav_separations",
-    "nav_signature", "nav_split_pdf", "nav_text", "nav_view", "panel_right",
-    "redo", "save", "search", "side_by_side", "undo", "view_continuous", "view_pages",
+    "nav_settings", "nav_signature", "nav_split_pdf", "nav_text", "nav_view", "panel_right",
+    "redo", "save", "search", "settings_interface", "side_by_side", "undo", "view_continuous", "view_pages",
     "zoom_in", "zoom_out",
 )
 
@@ -31,6 +31,15 @@ def main():
     for name in ids:
         if name not in original_tags or name not in approved:
             raise ValueError(f"Missing or unapproved icon: {name}")
+    # The reference draws this icon inline in the toolbar instead of the SVG registry.
+    quick_mode = re.search(
+        r'<button\b[^>]*\bid="themeQuickToggle"[^>]*>\s*<svg\b[^>]*\bviewBox="([^"]+)"[^>]*>(.*?)</svg>',
+        reference, re.S)
+    if not quick_mode:
+        raise ValueError("Missing the original light/dark icon")
+    mode_id = "i-theme_quick_inline"
+    original_tags[mode_id] = f'<symbol id="{mode_id}" viewBox="{quick_mode[1]}">{quick_mode[2]}</symbol>'
+    ids.append(mode_id)
     width = 24 * len(ids)
     definitions = "".join(original_tags[name] for name in ids)
     tiles = "".join(f'<use x="{24 * index}" width="24" height="24" xlink:href="#{name}"/>'

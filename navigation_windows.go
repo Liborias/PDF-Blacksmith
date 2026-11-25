@@ -11,20 +11,23 @@ func watchNavigationHover(handle uintptr) {
 	comctl32.NewProc("SetWindowSubclass").Call(handle, navigationSubclass, 1, 0)
 }
 
+func trackMouseLeave(hwnd uintptr) bool {
+	track := struct {
+		size, flags uint32
+		window      uintptr
+		hover       uint32
+	}{flags: 2, window: hwnd} // TME_LEAVE
+	track.size = uint32(unsafe.Sizeof(track))
+	ok, _, _ := user32.NewProc("TrackMouseEvent").Call(uintptr(unsafe.Pointer(&track)))
+	return ok != 0
+}
+
 func navigationButtonProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
 	a := window
 	switch message {
 	case 0x0200: // WM_MOUSEMOVE
-		if a.hoveredNavigation != hwnd {
-			track := struct {
-				size, flags uint32
-				window      uintptr
-				hover       uint32
-			}{flags: 2, window: hwnd} // TME_LEAVE
-			track.size = uint32(unsafe.Sizeof(track))
-			if ok, _, _ := user32.NewProc("TrackMouseEvent").Call(uintptr(unsafe.Pointer(&track))); ok != 0 {
-				a.setNavigationHover(hwnd)
-			}
+		if a.hoveredNavigation != hwnd && trackMouseLeave(hwnd) {
+			a.setNavigationHover(hwnd)
 		}
 	case 0x0018, 0x000a: // WM_SHOWWINDOW, WM_ENABLE
 		if wParam == 0 && a.hoveredNavigation == hwnd {

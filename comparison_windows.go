@@ -50,7 +50,7 @@ func (a *app) buildComparison(className *uint16) bool {
 	for i := range c.panes {
 		p := &c.panes[i]
 		p.title = a.button("", idCompareTitleLeft+i, 0, 0, 1, 0)
-		p.thumbs = a.button("Náhledy", idCompareThumbsLeft+i, 0, 0, 1, 0)
+		p.thumbs = a.shellButton(uiThumbnails, idCompareThumbsLeft+i, 1, 0)
 		p.previous = a.button("‹", idComparePrevLeft+i, 0, 0, 1, 0)
 		p.next = a.button("›", idCompareNextLeft+i, 0, 0, 1, 0)
 		p.location = a.label("", 0, 0, 1, false)
@@ -184,10 +184,11 @@ func (a *app) layoutComparison() rect {
 	left, right := a.viewport, a.viewport
 	left.right, right.left = mid-1, mid+1
 	d := a.scale
+	thumbButtonWidth := max(d(70), a.captionWidth(a.uiText(uiThumbnails), a.labelFont)+d(12))
 	for i, pane := range [...]rect{left, right} {
 		p, tab := &c.panes[i], c.tabs[i]
 		x, y, w := int(pane.left), int(pane.top), int(pane.right-pane.left)
-		th := d(70)
+		th := min(thumbButtonWidth, max(1, w-d(32)))
 		a.setComparisonLabel(p.title, filepath.Base(a.contentOf(tab).path))
 		a.primaryButtons[p.title] = tab == a.activeTab
 		place(p.title, x+d(4), y+d(3), max(1, w-th-d(12)), d(26))
@@ -242,9 +243,9 @@ func (a *app) updateComparisonNavigation() {
 	if c.view == nil {
 		return
 	}
-	label := "Zobrazit vedle sebe…"
+	label := a.uiText(uiStartSideBySide)
 	if c.tabs[0] != nil {
-		label = "Ukončit zobrazení vedle sebe"
+		label = a.uiText(uiStopSideBySide)
 	}
 	a.setComparisonLabel(c.button, label)
 	setEnabled(c.button, !a.busy && (c.tabs[0] != nil || a.view.ready() && len(a.tabs) > 1))

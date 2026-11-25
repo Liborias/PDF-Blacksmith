@@ -48,8 +48,6 @@ type textPanel struct {
 	mode, alignment                                   int
 	fonts, fontKeys                                   []string
 	fontNames                                         map[string]string
-	tooltip                                           uintptr
-	tooltipNames                                      []*uint16
 	model                                             *textPage
 	pick, gesture                                     textSelection
 	flow                                              textFlow
@@ -63,46 +61,46 @@ type textPanel struct {
 
 func (a *app) buildTextPanel() {
 	p := &a.textTool
-	a.beginPropertySection("Výběr textu", 16, "Zvolte objekt, odstavec, obdélník nebo laso. Laso dokončete Enterem nebo kliknutím na první bod.")
-	for i, name := range []string{"Textový objekt", "Odstavec", "Obdélník", "Mnohoúhelníkové laso"} {
-		p.modes[i] = a.textIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
+	a.beginPropertySection(uiTextSelection, 16, uiTextSelectionHelp)
+	for i, name := range []uiMessage{uiTextObject, uiParagraph, uiRectangle, uiPolygonLasso} {
+		p.modes[i] = a.uiTextIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
 	}
-	a.beginPropertySection("Formát textu", 91, "Změny se projeví ve výběru přímo v PDF. Proklad je mezera mezi znaky, řádkování určuje vzdálenost mezi řádky.")
+	a.beginPropertySection(uiTextFormat, 91, uiTextFormatHelp)
 	p.original = a.add("STATIC", "", 0, 16, 137, 158, 21, 0x4000, 0, a.normalFont)
-	a.label("Písmo", 16, 161, 205, false)
-	a.label("Velikost (pt)", 236, 161, 78, false)
+	a.uiLabel(uiFont, 16, 161, 205, false)
+	a.uiLabel(uiFontSize, 236, 161, 78, false)
 	p.fonts = a.installedTextFonts()
 	p.fontKeys = p.fonts
 	p.font = a.combo(idTextFont, 16, 183, 210, p.fonts)
 	p.size = a.edit(236, 183, 54, false)
-	p.typography[0] = a.textIconButton("Zmenšit na předchozí typografickou velikost", idTextSmaller, 180, 128, 32)
-	p.typography[1] = a.textIconButton("Zvětšit na následující typografickou velikost", idTextLarger, 216, 128, 32)
-	p.typography[2] = a.textIconButton("Typografické velikosti v bodech", idTextSizes, 291, 183, 23)
-	p.regular = a.textIconButton("Běžný řez (Regular)", idTextRegular, 16, 222, 32)
-	p.bold = a.textIconButton("Tučné", idTextBold, 52, 222, 32)
-	p.italic = a.textIconButton("Kurzíva", idTextItalic, 88, 222, 32)
-	p.underline = a.textIconButton("Podtržené", idTextUnderline, 124, 222, 32)
-	for i, name := range []string{"Zarovnat vlevo", "Zarovnat na střed", "Zarovnat vpravo", "Zarovnat do bloku"} {
-		p.alignments[i] = a.textIconButton(name, idTextAlignLeft+i, 174+i*36, 222, 32)
+	p.typography[0] = a.uiTextIconButton(uiSmallerType, idTextSmaller, 180, 128, 32)
+	p.typography[1] = a.uiTextIconButton(uiLargerType, idTextLarger, 216, 128, 32)
+	p.typography[2] = a.uiTextIconButton(uiTypeSizes, idTextSizes, 291, 183, 23)
+	p.regular = a.uiTextIconButton(uiRegular, idTextRegular, 16, 222, 32)
+	p.bold = a.uiTextIconButton(uiBold, idTextBold, 52, 222, 32)
+	p.italic = a.uiTextIconButton(uiItalic, idTextItalic, 88, 222, 32)
+	p.underline = a.uiTextIconButton(uiUnderline, idTextUnderline, 124, 222, 32)
+	for i, name := range []uiMessage{uiAlignLeft, uiAlignCenter, uiAlignRight, uiJustify} {
+		p.alignments[i] = a.uiTextIconButton(name, idTextAlignLeft+i, 174+i*36, 222, 32)
 	}
-	a.label("Šířka (pt)", 16, 266, 93, false)
-	a.label("Řádkování (×)", 118, 266, 94, false)
-	a.label("Proklad (pt)", 220, 266, 94, false)
+	a.uiLabel(uiTextWidth, 16, 266, 93, false)
+	a.uiLabel(uiLineSpacing, 118, 266, 94, false)
+	a.uiLabel(uiTracking, 220, 266, 94, false)
 	p.width = a.edit(16, 288, 70, false)
 	p.leading = a.edit(118, 288, 70, false)
 	p.tracking = a.edit(220, 288, 70, false)
-	descriptions := [...]string{
-		"Šířka textového bloku v bodech. Automatická šířka zachová původní řádky.",
-		"Vzdálenost mezi účařími řádků jako násobek velikosti písma.",
-		"Přídavná mezera mezi písmeny v bodech. Záporná hodnota písmena přiblíží.",
+	descriptions := [...]uiMessage{
+		uiTextWidthHelp,
+		uiLineSpacingHelp,
+		uiTrackingHelp,
 	}
 	for i, control := range []uintptr{p.width, p.leading, p.tracking} {
-		a.addTextTooltip(control, descriptions[i])
-		p.typography[i+3] = a.textIconButton(descriptions[i], idTextWidths+i, 87+i*102, 288, 23)
+		a.bindUIHelp(control, descriptions[i])
+		p.typography[i+3] = a.uiTextIconButton(descriptions[i], idTextWidths+i, 87+i*102, 288, 23)
 	}
-	p.copy = a.textIconButton("Kopírovat text", idTextCopy, 16, 329, 34)
-	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 56, 329, 34)
-	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 96, 329, 34)
+	p.copy = a.uiTextIconButton(uiCopyText, idTextCopy, 16, 329, 34)
+	p.undo = a.uiTextIconButton(uiUndoTextEdit, idTextUndo, 56, 329, 34)
+	p.ocr = a.uiTextIconButton(uiOCRSelection, idTextOCR, 96, 329, 34)
 	p.report = a.readout(16, 372, 298, 82)
 	a.syncTextSelectionModes()
 }
@@ -433,7 +431,7 @@ func (a *app) startTextEdit() {
 	style := a.inlineStyle()
 	_, trackingOK := readTextNumber(p.tracking, -72, 72)
 	if style.size <= 0 || e.fixedWidth && style.width <= 0 || style.leading <= 0 || !trackingOK {
-		a.report("Zkontrolujte velikost písma, šířku rámečku a řádkování.")
+		a.reportUI(uiInvalidTextMetrics)
 		return
 	}
 	a.layoutInlineEditor()
@@ -515,7 +513,7 @@ func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	if a.mode != idTextTab || a.full || (p.pick.source != source && p.gesture.source != source) {
 		return
 	}
-	color := paletteColor{174, 53, 94}
+	color := uiColors["accentStrong"]
 	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), color.win())
 	old, _, _ := gdiSelect.Call(dc, pen)
 	if p.pick.source == source && p.pick.generation == a.view.generation {

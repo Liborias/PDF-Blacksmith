@@ -23,18 +23,19 @@ func (color paletteColor) win() uintptr {
 }
 
 var (
-	uiColors       = uiPalettes.colors(uiPalettes.Default)
-	titleColor     = uiColors["top"]
-	canvasColor    = uiColors["base"]
-	panelColor     = uiColors["panel"]
-	editorColor    = uiColors["editor"]
-	inputColor     = uiColors["input"]
-	textColor      = uiColors["text"]
-	mutedColor     = uiColors["muted"]
-	disabledColor  = mutedColor
-	selectionColor = uiColors["accent"]
-	divider        = uiColors["border"]
-	paperInkColor  = paletteColor{26, 26, 29} // Text on fixed light paper placeholders.
+	uiColors         = uiPalettes.colors(uiPalettes.Default)
+	titleColor       = uiColors["top"]
+	canvasColor      = uiColors["base"]
+	panelColor       = uiColors["panel"]
+	editorColor      = uiColors["editor"]
+	inputColor       = uiColors["input"]
+	textColor        = uiColors["text"]
+	mutedColor       = uiColors["muted"]
+	disabledColor    = mutedColor
+	selectionColor   = uiColors["accent"]
+	divider          = uiColors["border"]
+	sidebarRailColor = uiColors["surface"]
+	paperInkColor    = paletteColor{26, 26, 29} // Text on fixed light paper placeholders.
 
 	gdiDelete     = gdi32.NewProc("DeleteObject")
 	gdiSelect     = gdi32.NewProc("SelectObject")
@@ -139,19 +140,67 @@ func (a *app) area(left, top, right, bottom int) rect {
 }
 
 func (a *app) applyTheme() {
-	a.canvasBrush, a.panelBrush, a.inputBrush = makeBrush(canvasColor), makeBrush(panelColor), makeBrush(inputColor)
+	a.applyPalette()
 	a.logo, _, _ = user32.NewProc("LoadImageW").Call(a.instance, appIconID, 1, 128, 128, 0)
+	a.loadBrand()
+}
+
+func (a *app) applyPalette() {
+	uiColors = uiPalettes.colors(a.uiTheme)
+	titleColor, canvasColor, panelColor = uiColors["top"], uiColors["base"], uiColors["panel"]
+	editorColor, inputColor = uiColors["editor"], uiColors["input"]
+	textColor, mutedColor = uiColors["text"], uiColors["muted"]
+	disabledColor, selectionColor, divider = mutedColor, uiColors["accent"], uiColors["border"]
+	sidebarRailColor = uiColors["surface"]
+	for _, entry := range []struct {
+		brush *uintptr
+		color paletteColor
+	}{
+		{&a.canvasBrush, canvasColor}, {&a.panelBrush, panelColor}, {&a.inputBrush, inputColor},
+	} {
+		if brush := makeBrush(entry.color); brush != 0 {
+			old := *entry.brush
+			*entry.brush = brush
+			if old != 0 {
+				gdiDelete.Call(old)
+			}
+		}
+	}
+	clear(uiIconBitmaps)
+	a.applyWindowTheme(a.window)
+	a.recolorTooltips()
+}
+
+func (a *app) applyWindowTheme(handle uintptr) {
 	dwm := syscall.NewLazyDLL("dwmapi.dll").NewProc("DwmSetWindowAttribute")
 	if dwm.Find() == nil {
 		dark, round, caption := uint32(0), uint32(2), uint32(titleColor.win())
-		if uiPalettes.Default.Mode == "dark" {
+		if a.uiTheme.Mode == "dark" {
 			dark = 1
 		}
-		dwm.Call(a.window, 20, uintptr(unsafe.Pointer(&dark)), 4)
-		dwm.Call(a.window, 33, uintptr(unsafe.Pointer(&round)), 4)
-		dwm.Call(a.window, 35, uintptr(unsafe.Pointer(&caption)), 4)
+		dwm.Call(handle, 20, uintptr(unsafe.Pointer(&dark)), 4)
+		dwm.Call(handle, 33, uintptr(unsafe.Pointer(&round)), 4)
+		dwm.Call(handle, 35, uintptr(unsafe.Pointer(&caption)), 4)
 	}
-	a.loadBrand()
+}
+
+func (a *app) setUITheme(theme uiTheme) {
+	if theme == a.uiTheme {
+		return
+	}
+	a.uiTheme = theme
+	a.applyPalette()
+	a.updateThemeToggleCaption()
+	a.view.invalidateCanvas()
+	if a.comparison.view != nil {
+		a.comparison.view.invalidateCanvas()
+	}
+	redraw := user32.NewProc("RedrawWindow")
+	redraw.Call(a.window, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
+	if dialog := a.interfaceDialog; dialog != nil && dialog.window != 0 {
+		a.applyWindowTheme(dialog.window)
+		redraw.Call(dialog.window, 0, 0, 0x0085)
+	}
 }
 
 func (a *app) paint(hwnd uintptr) {
@@ -180,6 +229,9 @@ func (a *app) paint(hwnd uintptr) {
 
 func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 	gdiTextColor.Call(dc, textColor.win())
+	if handle == a.focusHelp {
+		gdiTextColor.Call(dc, uiColors["helpText"].win())
+	}
 	if a.scrollPanes[handle] != nil {
 		gdiBkColor.Call(dc, panelColor.win())
 		gdiBkMode.Call(dc, 2)

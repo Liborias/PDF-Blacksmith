@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -20,31 +19,33 @@ const (
 
 func (v *documentView) buildPagePanel() {
 	a := v.app
-	a.beginPropertySection("Přesun stránek", 16, "Strany přesuňte na cílovou pozici nebo tažením v panelu Náhledy.")
-	v.moveLabel = a.label("Cílová pozice", 16, 42, 298, false)
+	a.beginPropertySection(uiMovePages, 16, uiMovePagesHelp)
+	v.moveLabel = a.label("", 16, 42, 298, false)
+	a.setUIMessage(v.moveLabel, uiTargetPosition)
 	v.moveTarget = a.edit(16, 68, 76, false)
-	v.moveButton = a.button("Přesunout", idReaderMoveTo, 100, 66, 214, 0)
-	v.back = a.button("Posunout před", idReaderMoveBack, 16, 106, 145, 0)
-	v.ahead = a.button("Posunout za", idReaderMoveAhead, 169, 106, 145, 0)
-	a.beginPropertySection("Otočení a odstranění", 151, "Otočení a odstranění se použijí na vybrané náhledy. Změny lze vrátit.")
-	v.left = a.button("Otočit vlevo", idReaderRotateLeft, 16, 180, 145, 0)
-	v.right = a.button("Otočit vpravo", idReaderRotateRight, 169, 180, 145, 0)
-	v.deleteButton = a.button("Smazat vybrané", idReaderDeletePages, 16, 220, 145, 0)
-	v.undoButton = a.button("Vrátit změnu", idReaderUndo, 169, 220, 145, 0)
+	v.moveButton = a.uiButton(uiMove, idReaderMoveTo, 100, 66, 214, 0)
+	v.back = a.uiButton(uiMoveBefore, idReaderMoveBack, 16, 106, 145, 0)
+	v.ahead = a.uiButton(uiMoveAfter, idReaderMoveAhead, 169, 106, 145, 0)
+	a.beginPropertySection(uiRotateAndDelete, 151, uiRotateAndDeleteHelp)
+	v.left = a.uiButton(uiRotateLeft, idReaderRotateLeft, 16, 180, 145, 0)
+	v.right = a.uiButton(uiRotateRight, idReaderRotateRight, 169, 180, 145, 0)
+	v.deleteButton = a.uiButton(uiDeleteSelection, idReaderDeletePages, 16, 220, 145, 0)
+	v.undoButton = a.uiButton(uiUndoChange, idReaderUndo, 169, 220, 145, 0)
 	a.addingSection = 0
-	v.save = a.button("Uložit upravenou kopii…", idReaderSave, 16, 260, 298, 0)
+	v.save = a.uiButton(uiSaveEditedCopy, idReaderSave, 16, 260, 298, 0)
 	a.primaryButtons[v.save] = true
 }
 
 func (v *documentView) updatePageEditActions(editing bool) {
 	selected := max(1, len(v.pageSelection))
 	last := len(v.order) - selected + 1
-	label := "Cílová pozice"
+	a := v.app
+	message := localizedMessage{key: uiTargetPosition}
 	if last > 1 {
-		label = fmt.Sprintf("Cílová pozice (1–%d)", last)
+		message = localizedMessage{key: uiTargetPositionRange, args: []any{last}}
 	}
-	if getText(v.moveLabel) != label {
-		setText(v.moveLabel, label)
+	if getText(v.moveLabel) != a.uiLocale.formatMessage(message) {
+		a.setUIMessage(v.moveLabel, message.key, message.args...)
 	}
 	setEnabled(v.moveTarget, editing && last > 1)
 	setEnabled(v.moveButton, editing && last > 1)
@@ -190,7 +191,7 @@ func (v *documentView) moveToPosition() {
 	}
 	position, err := strconv.Atoi(strings.TrimSpace(getText(v.moveTarget)))
 	if err != nil || position < 1 || position > limit {
-		notice(v.app.window, fmt.Sprintf("Zadejte cílovou pozici od 1 do %d.", limit), 0x30)
+		notice(v.app.window, v.app.uiLocale.formatMessage(localizedMessage{key: uiTargetPositionError, args: []any{limit}}), 0x30)
 		setFocus.Call(v.moveTarget)
 		return
 	}

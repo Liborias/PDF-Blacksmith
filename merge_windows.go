@@ -60,28 +60,30 @@ func (m *mergePanel) selected() *mergeEntry {
 func (a *app) buildMergePanel() {
 	m := &a.merge
 	m.active = -1
-	a.beginPropertySection("Zdroje ke sloučení", 16, "Přidejte soubory nebo vybrané stránky a upravte pořadí jejich vložení.")
-	m.add = a.button("Přidat PDF soubory…", idMergeAdd, 16, 42, 298, 0)
-	m.addOpen = a.button("Přidat otevřené PDF", idMergeAddOpen, 16, 80, 145, 0)
-	m.addSelected = a.button("Přidat výběr stran", idMergeAddSelected, 169, 80, 145, 0)
+	a.beginPropertySection(uiMergeSources, 16, uiMergeSourcesHelp)
+	m.add = a.uiButton(uiAddFiles, idMergeAdd, 16, 42, 298, 0)
+	m.addOpen = a.uiButton(uiAddOpenPDF, idMergeAddOpen, 16, 80, 145, 0)
+	m.addSelected = a.uiButton(uiAddSelectedPages, idMergeAddSelected, 169, 80, 145, 0)
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100
-	m.list = a.add("LISTBOX", "Soubory ke sloučení", idMergeList, 16, 122, 298, 96, wsTabstop|listStyle, 0, a.normalFont)
+	m.list = a.add("LISTBOX", "", idMergeList, 16, 122, 298, 96, wsTabstop|listStyle, 0, a.normalFont)
+	a.bindUILabel(m.list, uiFilesToMerge)
 	sendMessage.Call(m.list, 0x01a0, 0, uintptr(a.scale(24))) // LB_SETITEMHEIGHT
 	a.addScrollPane(m.list, a.scale(24), true)
-	m.up = a.button("Nahoru", idMergeUp, 16, 224, 94, 0)
-	m.down = a.button("Dolů", idMergeDown, 118, 224, 94, 0)
-	m.remove = a.button("Odebrat", idMergeRemove, 220, 224, 94, 0)
+	m.up = a.uiButton(uiMoveUp, idMergeUp, 16, 224, 94, 0)
+	m.down = a.uiButton(uiMoveDown, idMergeDown, 118, 224, 94, 0)
+	m.remove = a.uiButton(uiRemove, idMergeRemove, 220, 224, 94, 0)
 	section := a.addingSection
 	a.addingSection = 0
-	m.sourceStatus = a.add("STATIC", "Strany k přidání", 0, 16, 266, 298, 22, 0x4000, 0, a.normalFont)
+	m.sourceStatus = a.add("STATIC", "", 0, 16, 266, 298, 22, 0x4000, 0, a.normalFont)
+	a.setUIMessage(m.sourceStatus, uiPagesToAdd)
 	a.addingSection = section
 	m.pageRange = a.edit(16, 292, 298, false)
-	sendMessage.Call(m.pageRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Všechny strany · např. 1, 3–5"))))
-	a.label("Heslo k otevření vybraného souboru", 16, 335, 298, false)
+	a.bindUICue(m.pageRange, uiMergeRangeExample)
+	a.uiLabel(uiMergeInputPassword, 16, 335, 298, false)
 	m.password = a.edit(16, 359, 145, true)
-	m.inspect = a.button("Načíst počet stran", idMergeInspect, 169, 357, 145, 0)
-	a.beginPropertySection("Výstup", 404, "Sloučený dokument se uloží jako nový soubor.")
-	m.run = a.button("Uložit sloučené PDF…", idMergeRun, 16, 432, 298, 0)
+	m.inspect = a.uiButton(uiInspectPageCount, idMergeInspect, 169, 357, 145, 0)
+	a.beginPropertySection(uiMergeOutput, 404, uiMergeOutputHelp)
+	m.run = a.uiButton(uiSaveMerged, idMergeRun, 16, 432, 298, 0)
 	a.primaryButtons[m.run] = true
 	m.report = a.readout(16, 475, 298, 122)
 }
@@ -127,16 +129,18 @@ func (a *app) selectMergeEntry(index int) {
 	m := &a.merge
 	m.active = index
 	entry := m.selected()
-	status, pages, password := "Strany k přidání", "", ""
+	pages, password := "", ""
 	if entry != nil {
 		pages, password = entry.pageRange, entry.input.Password
-		if entry.info.Pages > 0 {
-			status = fmt.Sprintf("Strany k přidání · ve zdroji %d", entry.info.Pages)
-		} else if entry.info.Message != "" {
-			status = entry.info.Message
-		}
 	}
-	setText(m.sourceStatus, status)
+	switch {
+	case entry != nil && entry.info.Pages > 0:
+		a.setUIMessage(m.sourceStatus, uiMergeSourcePageCount, entry.info.Pages)
+	case entry != nil && entry.info.Message != "":
+		setText(m.sourceStatus, entry.info.Message)
+	default:
+		a.setUIMessage(m.sourceStatus, uiPagesToAdd)
+	}
 	setText(m.pageRange, pages)
 	setText(m.password, password)
 	a.updateMergeActions()
@@ -198,7 +202,7 @@ func (a *app) addMergeFiles(paths []string) {
 	for _, path := range paths {
 		absolute, pathErr := filepath.Abs(path)
 		if pathErr != nil {
-			a.report("Vyberte soubor s platnou cestou.")
+			a.reportUI(uiSelectValidFile)
 			continue
 		}
 		info, err := os.Stat(absolute)
@@ -327,7 +331,7 @@ func (a *app) saveMergedPDF() {
 	for index, entry := range m.entries {
 		input := entry.input
 		if entry.info.Pages == 0 {
-			notice(a.window, "Nejprve načtěte počet stran.\n"+filepath.Base(input.Path), 0x30)
+			notice(a.window, a.uiText(uiReadPageCountFirst)+"\n"+filepath.Base(input.Path), 0x30)
 			return
 		}
 		view := viewRequest{}
@@ -340,7 +344,11 @@ func (a *app) saveMergedPDF() {
 			if err != nil {
 				m.active = index
 				a.refreshMergeList()
-				notice(a.window, filepath.Base(input.Path)+"\n"+err.Error(), 0x30)
+				message := err.Error()
+				if pageError, ok := err.(exportPagesError); ok {
+					message = a.uiLocale.formatMessage(pageError.localizedMessage)
+				}
+				notice(a.window, filepath.Base(input.Path)+"\n"+message, 0x30)
 				setFocus.Call(m.pageRange)
 				return
 			}

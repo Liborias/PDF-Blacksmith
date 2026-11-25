@@ -90,12 +90,13 @@ func (a *app) buildRecentPanel() {
 	if history, err := localAppFile("recent-files.json"); err == nil {
 		p.files = readRecentFiles(history)
 	}
-	p.heading = a.label("Nedávné soubory", 16, 16, 145, true)
-	p.more = a.button("Zobrazit více", idRecentMore, 169, 12, 145, 0)
+	p.heading = a.uiLabel(uiRecentFiles, 16, 16, 145, true)
+	p.more = a.button("", idRecentMore, 169, 12, 145, 0)
 	a.panelButtons[p.more] = true
-	p.empty = a.label("Zatím tu nejsou žádná nedávná PDF.", 16, 49, 298, false)
+	p.empty = a.uiLabel(uiNoRecentPDFs, 16, 49, 298, false)
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100 // Notify, owner-drawn rows with strings.
-	p.list = a.add("LISTBOX", "Nedávno otevřené soubory PDF", idRecentList, 16, 49, 298, 120, wsTabstop|listStyle, 0, a.normalFont)
+	p.list = a.add("LISTBOX", "", idRecentList, 16, 49, 298, 120, wsTabstop|listStyle, 0, a.normalFont)
+	a.bindUILabel(p.list, uiRecentPDFList)
 	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(recentRowHeight))) // LB_SETITEMHEIGHT
 	a.addScrollPane(p.list, a.scale(recentRowHeight), true)
 	a.refreshRecentPanel()
@@ -181,11 +182,11 @@ func (a *app) updateRecentActions() {
 	p := &a.recent
 	setEnabled(p.list, !a.busy)
 	setEnabled(p.more, !a.busy)
-	label := "Zobrazit více"
+	label := uiShowMore
 	if p.expanded {
-		label = "Zobrazit méně"
+		label = uiShowFewer
 	}
-	setText(p.more, label)
+	a.setUIMessage(p.more, label)
 }
 
 func (a *app) openRecentFile() {

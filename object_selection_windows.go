@@ -1,9 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"slices"
-)
+import "slices"
 
 func (e *objectEditor) resetSelection() {
 	e.serial++
@@ -196,11 +193,11 @@ func (v *documentView) matchObjectSelection(page *objectPage, pick textSelection
 	}
 	switch len(e.items) {
 	case 0:
-		setText(e.info, "Na tomto místě není upravitelný objekt.")
+		a.setUIMessage(e.info, uiNoEditableObject)
 	case 1:
-		setText(e.info, map[string]string{"path": "Vektorový tvar", "image": "Obrázek", "form": "Skupina PDF"}[e.selected.Kind])
+		a.setUIMessage(e.info, map[string]uiMessage{"path": uiVectorShape, "image": uiSelectedImage, "form": uiPDFGroup}[e.selected.Kind])
 	default:
-		setText(e.info, fmt.Sprintf("Vybrané objekty: %d", len(e.items)))
+		a.setUIMessage(e.info, uiSelectedObjects, len(e.items))
 	}
 	a.updateObjectActions()
 	v.invalidateCanvas()
