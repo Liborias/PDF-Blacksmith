@@ -8,8 +8,7 @@ import (
 )
 
 func (a *app) buildSplitPanel() {
-	a.label("Jedno PDF pro každou vybranou stranu.", 16, 17, 298, false)
-	a.label("Strany k rozdělení", 16, 61, 298, true)
+	a.beginPropertySection("Strany k rozdělení", 61, "Každá vybraná strana se uloží do samostatného PDF ve zvolené složce.")
 	a.splitScope = a.combo(idSplitScope, 16, 86, 145, pageScopeNames)
 	a.splitRange = a.edit(169, 86, 145, false)
 	sendMessage.Call(a.splitRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8"))))

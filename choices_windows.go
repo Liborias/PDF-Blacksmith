@@ -14,6 +14,13 @@ type menuMeasure struct {
 	data                                          uintptr
 }
 
+type menuInfo struct {
+	size, mask, style, maxHeight uint32
+	background                   uintptr
+	contextHelpID                uint32
+	data                         uintptr
+}
+
 type popupItem struct {
 	label, shortcut              string
 	checked, disabled, separator bool
@@ -115,7 +122,12 @@ func (a *app) trackPopupAt(pos point, width int, items []popupItem) int {
 	if menu == 0 {
 		return -1
 	}
+	brush := makeBrush(uiColors["popoverBg"])
+	defer gdiDelete.Call(brush)
 	defer user32.NewProc("DestroyMenu").Call(menu)
+	info := menuInfo{mask: 2, background: brush} // MIM_BACKGROUND
+	info.size = uint32(unsafe.Sizeof(info))
+	user32.NewProc("SetMenuInfo").Call(menu, uintptr(unsafe.Pointer(&info)))
 	appendItem := user32.NewProc("AppendMenuW")
 	for index, entry := range items {
 		item := uintptr(index + 1)
@@ -161,36 +173,24 @@ func (a *app) drawPopup(item *buttonDraw) bool {
 }
 
 func (a *app) paintPopupEntry(dc uintptr, bounds rect, entry popupItem, highlighted bool) {
-	color := panelColor
-	if highlighted && !entry.disabled && !entry.separator {
-		color = uiColors["hover"]
-	}
-	fillColor(dc, bounds, color)
+	base := uiColors["popoverBg"]
 	if entry.separator {
+		fillColor(dc, bounds, base)
 		y := (bounds.top + bounds.bottom) / 2
 		fillColor(dc, rect{bounds.left + int32(a.scale(10)), y, bounds.right - int32(a.scale(10)), y + 1}, divider)
 		return
 	}
-	foreground := textColor
-	if entry.checked && !highlighted {
-		foreground = selectionColor
-	}
-	if entry.disabled {
-		foreground = disabledColor
-	}
+	style := a.paintNavigation(dc, bounds, base, entry.disabled, entry.checked, highlighted)
 	if entry.checked {
-		box := rect{bounds.left + 5, bounds.top + 5, bounds.left + 23, bounds.bottom - 5}
-		drawCheck(dc, box, foreground)
+		d := a.scale
+		box := rect{bounds.left + int32(d(5)), bounds.top + int32(d(5)), bounds.left + int32(d(23)), bounds.bottom - int32(d(5))}
+		drawCheck(dc, box, style.ink)
 	}
 	bounds.left += int32(a.scale(30))
 	bounds.right -= int32(a.scale(7))
 	if entry.shortcut != "" {
-		shortcutColor := mutedColor
-		if entry.disabled {
-			shortcutColor = foreground
-		}
-		drawText(dc, entry.shortcut, bounds, a.normalFont, shortcutColor, 2)
+		drawText(dc, entry.shortcut, bounds, a.normalFont, mutedColor, 2)
 		bounds.right -= int32(a.scale(112))
 	}
-	drawText(dc, entry.label, bounds, a.normalFont, foreground, 0x8000)
+	drawText(dc, entry.label, bounds, a.normalFont, style.ink, 0x8000)
 }

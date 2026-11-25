@@ -26,6 +26,24 @@ func (color *paletteColor) UnmarshalText(text []byte) error {
 
 type uiPalette map[string]paletteColor
 
+type navigationStyle struct {
+	fill, ink paletteColor
+	accent    bool
+}
+
+func (colors uiPalette) navigation(base paletteColor, disabled, selected, hovered bool) navigationStyle {
+	style := navigationStyle{fill: base, ink: colors["text"]}
+	switch {
+	case disabled:
+		style.ink = colors["muted"]
+	case hovered:
+		style.fill, style.accent = colors["hover"], true
+	case selected:
+		style.fill, style.accent = colors["selected"], true
+	}
+	return style
+}
+
 type uiTheme struct {
 	Palette string `json:"palette"`
 	Mode    string `json:"mode"`

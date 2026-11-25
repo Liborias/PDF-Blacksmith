@@ -350,7 +350,7 @@ func (v *documentView) showToolbar(show uintptr) {
 
 func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	a := v.app
-	a.label("Náhledový profil tisku", 16, 18, 298, true)
+	a.beginPropertySection("Náhledový profil tisku", 18, "Profil a tisková oblast určují simulaci separací na obrazovce.")
 	names := []string{"Podle PDF / výchozí CMYK"}
 	v.profiles = []string{""}
 	for _, profile := range catalog {
@@ -361,7 +361,7 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	a.label("Tisková oblast", 16, 83, 298, false)
 	v.proofBox = a.combo(idReaderProofBox, 16, 104, 298, []string{"Celý arch", "Ořez zobrazení", "Čistý formát", "Spadávka"})
 	v.outputInfo = a.readout(16, 142, 298, 78)
-	a.label("Tiskové desky na stránce", 16, 240, 298, true)
+	a.beginPropertySection("Tiskové desky na stránce", 240, "Přepínejte desky v náhledu. Kontrola změří skutečné pokrytí na vybraných stranách nebo v celém dokumentu.")
 	const listStyle = 0x0001 | 0x0008 | 0x0010 | 0x0040 | 0x0100
 	v.list = a.add("LISTBOX", "", idReaderPlateList, 16, 265, 298, 167,
 		wsTabstop|listStyle, 0, a.normalFont)
@@ -374,7 +374,7 @@ func (v *documentView) buildProofPanel(catalog []profileChoice) {
 	a.scanButton = a.button("Zkontrolovat celý dokument", idReaderScan, 16, 519, 298, 0)
 	v.scanSelection = a.button("Zkontrolovat vybrané náhledy", idReaderScanSelection, 16, 559, 298, 0)
 	v.scanReport = a.readout(16, 602, 298, 133)
-    a.label("Převod barev aktuálního dokumentu", 16, 763, 298, true)
+    a.beginPropertySection("Převod barev aktuálního dokumentu", 763, "Zvolte barevný režim a potřebný profil ICC. Převod otevře novou kopii.")
     v.convertMode = a.combo(idProofColorMode, 16, 789, 298, []string{
         "Stupně šedi · DeviceGray", "Složená černá → K100", "Pouze K · CMYK C0 M0 Y0",
     })

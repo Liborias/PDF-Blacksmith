@@ -31,8 +31,8 @@ type commandBarControl struct {
 }
 
 type commandBar struct {
-	controls []commandBarControl
-	openMenu int
+	controls          []commandBarControl
+	openMenu, fitMode int
 }
 
 var headerButtons = []commandBarButton{
@@ -58,6 +58,7 @@ var headerButtons = []commandBarButton{
 func (a *app) buildCommandBar() {
 	for _, button := range headerButtons {
 		handle := a.button(button.label, button.id, 0, 0, 1, 0x04000000)
+		watchNavigationHover(handle)
 		a.commandBar.controls = append(a.commandBar.controls, commandBarControl{button, handle})
 		switch button.id {
 		case idHeaderUndo:
@@ -93,6 +94,8 @@ func (a *app) layoutCommandBar() {
 func (a *app) updateCommandBar() {
 	v := a.view
 	ready := v.ready() && !a.busy
+	fitChanged := a.commandBar.fitMode != v.fitMode
+	a.commandBar.fitMode = v.fitMode
 	for _, control := range a.commandBar.controls {
 		switch control.id {
 		case idHeaderSave:
@@ -103,6 +106,9 @@ func (a *app) updateCommandBar() {
 			setEnabled(control.handle, ready)
 		case idHeaderEdit:
 			setEnabled(control.handle, ready)
+		}
+		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth) {
+			invalidate(control.handle)
 		}
 		if control.id == idHeaderFlow {
 			label := control.label
@@ -126,7 +132,7 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			continue
 		}
 		body, ink := titleColor, textColor
-		pressed := item.state&(1|64) != 0
+		hovered, disabled := a.navigationHot(item), item.state&4 != 0
 		active := control.id == a.commandBar.openMenu ||
 			control.id == idHeaderFile && a.fileMenu.open && a.fileMenu.anchor == control.handle
 		symbol := control.symbol
@@ -138,23 +144,34 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			}
 		case idCompareOpen:
 			active = a.comparisonVisible()
+		case idHeaderFitPage:
+			active = a.view.fitMode == 1
+		case idHeaderFitWidth:
+			active = a.view.fitMode == 2
+		case idSearchTab:
+			active = a.mode == idSearchTab && a.settingsWidth > 0
 		}
-		if pressed || active && control.menu {
+		if disabled {
+			ink, hovered, active = disabledColor, false, false
+		}
+		activeIcon := active && !control.menu
+		switch {
+		case activeIcon && hovered:
+			body = uiColors["toolbarActiveHover"]
+		case activeIcon:
+			body = uiColors["toolbarActive"]
+		case active || hovered:
 			body = uiColors["hover"]
 		}
-		if active && !control.menu {
-			body = uiColors["toolbarActive"]
-			if pressed {
-				body = uiColors["toolbarActiveHover"]
-			}
-		}
-		if item.state&4 != 0 {
-			ink = disabledColor
-		}
-		fillColor(item.dc, item.bounds, body)
-		if active && !control.menu {
+		if activeIcon {
+			fillColor(item.dc, item.bounds, titleColor)
 			bounds := item.bounds
-			fillColor(item.dc, rect{bounds.left, bounds.bottom - int32(a.scale(2)), bounds.right, bounds.bottom}, selectionColor)
+			rounded(item.dc, bounds, a.scale(5), body, uiColors["accentStrong"])
+			inset, thickness := int32(a.scale(3)), int32(a.scale(2))
+			bottom := bounds.bottom - int32(a.scale(1))
+			fillColor(item.dc, rect{bounds.left + inset, bottom - thickness, bounds.right - inset, bottom}, selectionColor)
+		} else {
+			fillColor(item.dc, item.bounds, body)
 		}
 		if control.menu || symbol == "?" {
 			caption, font := control.label, a.normalFont
@@ -168,7 +185,11 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			drawUIIcon(item.dc, symbol, x, y, size, ink, body)
 		}
 		if item.state&16 != 0 {
-			a.drawFocus(item.dc, item.bounds)
+			focus := item.bounds
+			if activeIcon {
+				focus.bottom -= int32(a.scale(2))
+			}
+			a.drawFocus(item.dc, focus)
 		}
 		return true
 	}
@@ -180,8 +201,8 @@ type headerMenuItem struct {
 	run func()
 }
 
-func (a *app) headerMenuCommand(id int, label string, enabled bool) headerMenuItem {
-	return headerMenuItem{popupItem{label: label, disabled: !enabled}, func() { a.command(id, 0) }}
+func (a *app) headerMenuCommand(id int, label string, enabled, checked bool) headerMenuItem {
+	return headerMenuItem{popupItem{label: label, disabled: !enabled, checked: checked}, func() { a.command(id, 0) }}
 }
 
 func (a *app) showHeaderMenu(id int) {
@@ -194,15 +215,15 @@ func (a *app) showHeaderMenu(id int) {
 		entries = []headerMenuItem{
 			{popupItem{label: "Po stránkách", checked: !v.continuous, disabled: !ready}, func() { a.setHeaderFlow(false) }},
 			{popupItem{label: "Souvisle", checked: v.continuous, disabled: !ready}, func() { a.setHeaderFlow(true) }},
-			run(idHeaderFitPage, "Přizpůsobit stránce", ready),
-			run(idHeaderFitWidth, "Přizpůsobit šířce", ready),
-			run(idFullscreen, "Celá obrazovka", !a.busy),
-			run(idCompareOpen, getText(a.comparison.button), !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1)),
+			run(idHeaderFitPage, "Přizpůsobit stránce", ready, v.ready() && v.fitMode == 1),
+			run(idHeaderFitWidth, "Přizpůsobit šířce", ready, v.ready() && v.fitMode == 2),
+			run(idFullscreen, "Celá obrazovka", !a.busy, false),
+			run(idCompareOpen, getText(a.comparison.button), !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1), a.comparisonVisible()),
 		}
 	case idHeaderTools:
 		for _, tab := range workspaceTabs {
 			if tab.id != idFileTab && tab.id != idBrowseTab {
-				entries = append(entries, run(tab.id, tab.name, !a.busy && (!tab.needsPDF || ready)))
+				entries = append(entries, run(tab.id, tab.name, !a.busy && (!tab.needsPDF || ready), tab.id == a.tool))
 			}
 		}
 	case idHeaderEdit:

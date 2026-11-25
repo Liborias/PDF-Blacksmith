@@ -418,7 +418,7 @@ func (v *documentView) updatePageDrop() {
 		drag.target, drag.boundary = target, min(row, len(target.order))
 		break
 	}
-	if drag.target == nil && canReorder && !a.detailsCollapsed && !a.full {
+	if drag.target == nil && canReorder && a.settingsWidth > 0 && !a.full {
 		screen := v.thumbnailScreenPoint()
 		hover, _, _ := user32.NewProc("WindowFromPoint").Call(uintptr(uint32(screen.x)) | uintptr(uint32(screen.y))<<32)
 		drag.overDelete = hover == v.deleteButton && len(v.selectedPagePositions()) < len(v.order)

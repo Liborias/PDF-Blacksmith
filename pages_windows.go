@@ -20,16 +20,19 @@ const (
 
 func (v *documentView) buildPagePanel() {
 	a := v.app
-	v.moveLabel = a.label("Cílová pozice", 16, 16, 298, true)
-	v.moveTarget = a.edit(16, 42, 76, false)
-	v.moveButton = a.button("Přesunout", idReaderMoveTo, 100, 40, 214, 0)
-	v.back = a.button("Posunout před", idReaderMoveBack, 16, 80, 145, 0)
-	v.ahead = a.button("Posunout za", idReaderMoveAhead, 169, 80, 145, 0)
-	v.left = a.button("Otočit vlevo", idReaderRotateLeft, 16, 120, 145, 0)
-	v.right = a.button("Otočit vpravo", idReaderRotateRight, 169, 120, 145, 0)
-	v.deleteButton = a.button("Smazat vybrané", idReaderDeletePages, 16, 160, 145, 0)
-	v.undoButton = a.button("Vrátit změnu", idReaderUndo, 169, 160, 145, 0)
-	v.save = a.button("Uložit upravenou kopii…", idReaderSave, 16, 200, 298, 0)
+	a.beginPropertySection("Přesun stránek", 16, "Strany přesuňte na cílovou pozici nebo tažením v panelu Náhledy.")
+	v.moveLabel = a.label("Cílová pozice", 16, 42, 298, false)
+	v.moveTarget = a.edit(16, 68, 76, false)
+	v.moveButton = a.button("Přesunout", idReaderMoveTo, 100, 66, 214, 0)
+	v.back = a.button("Posunout před", idReaderMoveBack, 16, 106, 145, 0)
+	v.ahead = a.button("Posunout za", idReaderMoveAhead, 169, 106, 145, 0)
+	a.beginPropertySection("Otočení a odstranění", 151, "Otočení a odstranění se použijí na vybrané náhledy. Změny lze vrátit.")
+	v.left = a.button("Otočit vlevo", idReaderRotateLeft, 16, 180, 145, 0)
+	v.right = a.button("Otočit vpravo", idReaderRotateRight, 169, 180, 145, 0)
+	v.deleteButton = a.button("Smazat vybrané", idReaderDeletePages, 16, 220, 145, 0)
+	v.undoButton = a.button("Vrátit změnu", idReaderUndo, 169, 220, 145, 0)
+	a.addingSection = 0
+	v.save = a.button("Uložit upravenou kopii…", idReaderSave, 16, 260, 298, 0)
 	a.primaryButtons[v.save] = true
 }
 

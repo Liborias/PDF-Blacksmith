@@ -99,11 +99,6 @@ var workspaceTabs = []struct {
 
 var pageScopeNames = []string{"Všechny strany", "Aktuální strana", "Vlastní výběr", "Vybrané náhledy"}
 
-type panelItem struct {
-	handle              uintptr
-	x, y, width, height int
-}
-
 type point struct{ x, y int32 }
 
 type windowPlacement struct {
@@ -123,6 +118,8 @@ type monitorInfo struct {
 }
 
 func (a *app) setupWorkspace() bool {
+	controls := [2]uint32{8, 4} // ICC_BAR_CLASSES includes native tooltips.
+	comctl32.NewProc("InitCommonControlsEx").Call(uintptr(unsafe.Pointer(&controls)))
 	className := wideString("PDFBlaksmithSidebar")
 	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, 32512)
 	class := windowClass{instance: a.instance, className: uintptr(unsafe.Pointer(className)),
@@ -162,7 +159,7 @@ func (a *app) setupWorkspace() bool {
 
 	a.railFont = a.orientedFont(14, 600, 900)
 	a.toolsToggle = a.button("Nástroje", idToggleTools, 0, 0, sidebarRailWidth, 0)
-	a.detailsToggle = a.button("Nastavení", idToggleDetails, 0, 0, sidebarRailWidth, 0)
+	a.detailsToggle = a.button("Vlastnosti", idToggleDetails, 0, 0, sidebarRailWidth, 0)
 	a.thumbnailsToggle = a.button("Náhledy", idToggleThumbnails, 0, 0, sidebarRailWidth, 0)
 	a.bookmarksToggle = a.button("Záložky", idToggleBookmarks, 0, 0, sidebarRailWidth, 0)
 	a.leftPanelsToggle = a.button("Levá strana", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
@@ -172,10 +169,11 @@ func (a *app) setupWorkspace() bool {
 	a.windowButtons[2] = a.button("Zavřít", idCloseWindow, 0, 0, 36, 0)
 	a.tabList = a.button("Seznam otevřených PDF", idListDocumentTabs, 0, 0, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
-	a.toolsWidth = a.scale(168)
+	a.preferredToolsWidth = a.scale(168)
 	for _, tab := range workspaceTabs {
-		a.toolsWidth = max(a.toolsWidth, a.captionWidth(tab.name, a.labelFont)+a.scale(64))
+		a.preferredToolsWidth = max(a.preferredToolsWidth, a.captionWidth(tab.name, a.labelFont)+a.scale(64))
 		handle := a.button(tab.name, tab.id, 0, 0, 1, 0x04000000) // WS_CLIPSIBLINGS
+		watchNavigationHover(handle)
 		a.toolButtons[tab.id] = handle
 		a.panelButtons[handle] = true
 	}
@@ -193,16 +191,15 @@ func (a *app) setupWorkspace() bool {
 	a.beginPanel(idBrowseTab)
 	a.button("Zobrazit na celou obrazovku · F11", idFullscreen, 16, 16, 298, 0)
 	a.comparison.button = a.button("Zobrazit vedle sebe…", idCompareOpen, 16, 56, 298, 0)
-	a.label("Režim zobrazení", 16, 106, 298, true)
+	a.beginPropertySection("Režim zobrazení", 106, "Ctrl + kolečko přiblíží PDF pod kurzorem. Tiskový rámeček určuje oblast zobrazenou v náhledu.")
 	a.view.flow = a.combo(idReaderFlow, 16, 128, 298, []string{"Souvisle", "Po stránkách"})
 	chooseCombo(a.view.flow, 1)
 	a.label("Rámeček PDF v náhledu", 16, 171, 298, false)
 	a.view.screenBox = a.combo(idReaderScreenBox, 16, 193, 298, []string{"Ořez zobrazení", "Celý arch", "Čistý formát", "Spadávka"})
 	a.view.documentInfo = a.readout(16, 238, 298, 82)
-	a.label("Heslo k otevření PDF", 16, 342, 298, false)
+	a.beginPropertySection("Heslo k otevření PDF", 342, "Zadejte heslo a načtěte otevřený dokument znovu.")
 	a.password = a.edit(16, 365, 298, true)
 	a.button("Načíst znovu s heslem", idReload, 16, 403, 298, 0)
-	a.label("Ctrl + kolečko  ·  zoom pod kurzorem", 16, 454, 298, false)
 
 	a.beginPanel(idPagesTab)
 	a.view.buildPagePanel()
@@ -243,23 +240,27 @@ func (a *app) setupWorkspace() bool {
 
 func (a *app) beginPanel(tab int) {
 	a.addingTab, a.controlParent = tab, a.sidebar
+	a.addingSection = 0
 }
 
 func (a *app) buildExportPanel() {
 	a.runButton = a.button("Uložit exportované PDF…", idRun, 16, 17, 298, 0)
 	a.primaryButtons[a.runButton] = true
-	a.label("Předvolba PDF", 16, 64, 298, true)
+	a.beginPropertySection("Předvolba PDF", 64, "Předvolba určuje účel a výchozí nastavení exportu. Otevřením nápovědy zobrazíte popis vybrané předvolby.").detail = func() string {
+		return a.selectedExportPreset().Description
+	}
 	formats := make([]string, 0, len(a.exportPresets))
 	for _, preset := range a.exportPresets {
 		formats = append(formats, preset.Name)
 	}
 	a.exportFormat = a.combo(idExportPreset, 16, 86, 298, formats)
-	a.exportHint = a.add("STATIC", a.exportPresets[0].Description, 0, 16, 121, 298, 42, 0x80, 0, a.normalFont)
-	a.label("Strany k exportu", 16, 169, 298, true)
+	a.exportWarning = a.readout(16, 121, 298, 44)
+	a.beginPropertySection("Strany k exportu", 169, "Vyberte rozsah stran nebo použijte strany označené v panelu Náhledy.")
 	a.exportScope = a.combo(idExportScope, 16, 191, 145, pageScopeNames)
 	a.exportRange = a.edit(169, 191, 145, false)
 	sendMessage.Call(a.exportRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Např. 1, 3–5, 8")))) // EM_SETCUEBANNER
-	a.exportColorLabel = a.label("Barevný výstup", 16, 229, 298, true)
+	color := a.beginPropertySection("Barevný výstup", 229, "Výstupní režim a profil ICC určují, jak se při exportu převedou barvy PDF.")
+	a.exportColorLabel, a.exportColorHelp = color.header, color.help
 	names := make([]string, 0, len(a.profileChoices))
 	for _, p := range a.profileChoices {
 		names = append(names, p.Name)
@@ -292,7 +293,7 @@ func (a *app) buildExportPanel() {
 	a.decrypt = a.button("Pouze odstranit omezení heslem", idDecrypt, 16, 470, 298, bsAutoCheck)
 	a.raster = a.button(fmt.Sprintf("Povolit rastrovou opravu K (%d dpi)", a.export.RepairDPI), idRaster, 16, 502, 298, bsAutoCheck)
 	a.exportReport = a.readout(16, 542, 298, 105)
-	a.label("Parametry exportu", 16, 661, 298, true)
+	a.beginPropertySection("Parametry exportu", 661, "U ručního exportu lze nastavit převod barev, převzorkování obrázků, kompresi a rozlišení kontroly desek.")
 	labels := []string{"Záměr reprodukce", "Černý bod", "Obrázky", "Komprese", "Kontrola desek", "Oprava K"}
 	choices := [][]string{
 		{"Podle PDF", "Perceptuální", "Relativní", "Saturace", "Absolutní"},
@@ -313,7 +314,7 @@ func (a *app) buildExportPanel() {
 }
 
 func (a *app) buildSignPanel() {
-	a.label("Podepsat dokument", 16, 18, 298, true)
+	a.beginPropertySection("Podepsat dokument", 18, "K vytvoření podpisu vyberte osobní certifikát PKCS#12, zadejte jeho heslo a uložte podepsanou kopii.")
 	a.label("Certifikát PKCS#12 (.p12 nebo .pfx)", 16, 53, 298, false)
 	a.cert = a.edit(16, 76, 194, false)
 	a.button("Vybrat…", idCertBrowse, 219, 74, 95, 0)
@@ -321,7 +322,7 @@ func (a *app) buildSignPanel() {
 	a.certPass = a.edit(16, 144, 298, true)
 	a.visible = a.button("Viditelný podpis v novém poli", idVisible, 16, 183, 298, bsAutoCheck)
 	a.signButton = a.button("Uložit podepsané PDF…", idSign, 16, 224, 298, 0)
-	a.label("Ověřit podpisy", 16, 284, 298, true)
+	a.beginPropertySection("Ověřit podpisy", 284, "Ověření zkontroluje podpisy v otevřeném PDF. Volitelně můžete přidat důvěryhodný kořenový certifikát.")
 	a.label("Doplňkový kořenový certifikát", 16, 318, 298, false)
 	a.trust = a.edit(16, 341, 194, false)
 	a.button("Vybrat…", idTrustBrowse, 219, 339, 95, 0)
@@ -406,6 +407,7 @@ func (a *app) activate(id int) {
 			return
 		}
 		a.tool, a.mode = idFileTab, id
+		a.rightDock.revealPrimary()
 		if id == idFileSign {
 			a.mode = idSignTab
 		}
@@ -427,7 +429,6 @@ func (a *app) activate(id int) {
 		}
 		a.tool, a.mode = id, id
 	}
-	a.detailsCollapsed = false
 	if (old == idProofTab) != (id == idProofTab) {
 		a.view.reframe()
 	}
@@ -525,7 +526,7 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 	switch item.handle {
 	case a.exportRange:
 		return item, comboIndex(a.exportScope) == exportPageRanges
-	case a.exportColorLabel:
+	case a.exportColorLabel, a.exportColorHelp:
 		return item, manual || press
 	case a.profiles:
 		return item, manual
@@ -555,55 +556,47 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 	return item, manual || index < a.exportManualStart
 }
 
-func (a *app) panelContentHeight() int {
-	height := 1
-	tab := a.detailsTab()
-	for index, item := range a.panelItems[tab] {
-		if placed, show := a.panelItemLayout(tab, index, item); show {
-			height = max(height, placed.y+placed.height+18)
-		}
-	}
-	return height
-}
-
 func (a *app) layoutPanel() {
-	if a.full || a.detailsCollapsed {
+	if a.full || a.settingsWidth == 0 {
 		return
 	}
-	height := a.panelContentHeight()
+	active := a.detailsTab()
+	items := a.visiblePropertyItems(active)
+	placed := make(map[uintptr]panelItem, len(items))
+	height := 1
+	for _, item := range items {
+		height = max(height, item.y+item.height+18)
+		placed[item.handle] = a.scaleSettingsItem(item)
+	}
 	area := a.detailsArea
 	total := max(2, int(area.bottom-area.top))
 	left, top, width := int(area.left), int(area.top), int(area.right-area.left)
 	place(a.sidebar, left, top, width, total)
 	available := max(1, total*96/a.dpi)
-	active := a.detailsTab()
 	offset := min(max(0, a.panelScroll[active]), max(0, height-available))
 	a.panelScroll[active] = offset
 	var inner rect
 	getClientRect.Call(a.sidebar, uintptr(unsafe.Pointer(&inner)))
 	place(a.sideScroll.handle, int(inner.right)-a.scale(18), 0, a.scale(14), int(inner.bottom))
 	a.sideScroll.update(height, available, offset, true)
-	for tab, items := range a.panelItems {
-		for index, item := range items {
-			show := tab == active
-			if show {
-				item, show = a.settingsItem(tab, index, item)
-			}
-			if pane := a.scrollPanes[item.handle]; pane != nil {
+	for _, controls := range a.panelItems {
+		for _, control := range controls {
+			item, show := placed[control.handle]
+			if pane := a.scrollPanes[control.handle]; pane != nil {
 				a.layoutScrollPane(pane, item, offset, show)
 				continue
 			}
 			if show {
 				place(item.handle, item.x, a.scale(item.y-offset), item.width, a.scale(item.height))
 			}
-			showControl(item.handle, show)
+			showControl(control.handle, show)
 		}
 	}
 	invalidate(a.sidebar)
 }
 
 func (a *app) revealFocusedControl() {
-	if a.detailsCollapsed || a.full {
+	if a.settingsWidth == 0 || a.full {
 		return
 	}
 	focus, _, _ := user32.NewProc("GetFocus").Call()
@@ -612,12 +605,11 @@ func (a *app) revealFocusedControl() {
 	height := max(1, int(bounds.bottom)*96/a.dpi)
 	tab := a.detailsTab()
 	offset := a.panelScroll[tab]
-	for index, item := range a.panelItems[tab] {
+	for _, item := range a.visiblePropertyItems(tab) {
 		if item.handle != focus {
 			continue
 		}
-		item, show := a.panelItemLayout(tab, index, item)
-		if show && (item.y < offset || item.y+item.height > offset+height) {
+		if item.y < offset || item.y+item.height > offset+height {
 			a.panelScroll[tab] = max(0, min(item.y, item.y+item.height-height))
 			a.layoutPanel()
 		}
@@ -636,7 +628,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		if hwnd == a.fileMenu.handle {
 			outline := bounds
 			outline.top -= int32(a.scale(9))
-			rounded(dc, outline, a.scale(9), panelColor, scrollTrackColor)
+			rounded(dc, outline, a.scale(9), uiColors["popoverBg"], scrollTrackColor)
 			fillColor(dc, rect{right: bounds.right, bottom: 1}, scrollTrackColor)
 		} else {
 			fillColor(dc, bounds, panelColor)
@@ -807,6 +799,9 @@ func (a *app) command(id, notification int) {
 	if a.commandBarCommand(id, notification) {
 		return
 	}
+	if notification == 0 && a.propertySectionCommand(id) {
+		return
+	}
 	if notification == 0 && (id == idHeaderUndo || id == idHeaderRedo) {
 		command := docUndo
 		if id == idHeaderRedo {
@@ -862,7 +857,14 @@ func (a *app) command(id, notification int) {
             if err := saveExportOptions(a.export); err != nil { a.report(err.Error()) }
             a.layoutPanel()
 		case idExportPreset:
-			setText(a.exportHint, a.selectedExportPreset().Description)
+			warning := ""
+			switch a.selectedExportPreset().Key {
+			case "flatten":
+				warning = "Pozor: text ve zploštěném PDF nepůjde označit."
+			case "pdfx-1a", "pdfx-3":
+				warning = "Pozor: průhlednost se při exportu zploští."
+			}
+			setText(a.exportWarning, warning)
 			a.layoutPanel()
 		case idExportScope:
 			delete(a.thumbnailScopes, a.exportScope)
@@ -913,21 +915,21 @@ func (a *app) command(id, notification int) {
 	case idRecentMore:
 		a.toggleRecentFiles()
 	case idToggleTools:
-		a.toolsCollapsed = !a.toolsCollapsed
+		a.leftDock.primaryCollapsed = !a.leftDock.primaryCollapsed
 		a.layout()
 	case idToggleDetails:
-		a.detailsCollapsed = !a.detailsCollapsed
+		a.rightDock.primaryCollapsed = !a.rightDock.primaryCollapsed
 		a.layout()
 		a.view.schedule()
 	case idToggleThumbnails:
-		a.thumbnailsCollapsed = !a.thumbnailsCollapsed
+		a.leftDock.auxiliaryCollapsed = !a.leftDock.auxiliaryCollapsed
 		a.view.endPageDrag()
 		a.layout()
 		a.view.schedule()
 	case idToggleLeftPanels, idToggleRightPanels:
 		a.togglePanelSide(id == idToggleLeftPanels)
 	case idToggleBookmarks:
-		a.bookmarksCollapsed = !a.bookmarksCollapsed
+		a.rightDock.auxiliaryCollapsed = !a.rightDock.auxiliaryCollapsed
 		a.layout()
 		a.view.schedule()
 	case idFullscreen:
@@ -1402,7 +1404,7 @@ func (a *app) handleInput(msg *winMessage) bool {
 			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true
 		}
-		if !a.full && !a.detailsCollapsed && pos.x >= a.detailsArea.left && pos.x < int32(a.width) &&
+		if !a.full && a.settingsWidth > 0 && pos.x >= a.detailsArea.left && pos.x < int32(a.width) &&
 			pos.y >= a.viewport.top && pos.y < a.viewport.bottom {
 			a.wheelSettings(msg.lParam, int(int16(msg.wParam>>16)), msg.wParam&8 != 0)
 			return true

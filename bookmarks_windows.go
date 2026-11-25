@@ -215,7 +215,7 @@ func (v *documentView) refreshBookmarks(selected int) {
 		selected = -1
 	}
 	v.showBookmark(selected)
-	if a := v.app; v.ready() && !a.full && !a.bookmarksCollapsed && a.bookmarkArea.right > a.bookmarkArea.left && oldWidth != v.preferredBookmarkWidth() {
+	if a := v.app; v.ready() && !a.full && a.bookmarkArea.right > a.bookmarkArea.left && oldWidth != v.preferredBookmarkWidth() {
 		a.layout()
 	} else {
 		v.layoutBookmarkPanel()

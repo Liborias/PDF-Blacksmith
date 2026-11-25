@@ -62,7 +62,9 @@ func (a *app) buildFileMenu(className *uint16) bool {
 	}
 	a.controlParent = m.handle
 	for index, option := range fileOptions {
-		m.buttons = append(m.buttons, a.button(option.label, idFileMenuFirst+index, 0, 0, 1, 0))
+		handle := a.button(option.label, idFileMenuFirst+index, 0, 0, 1, 0)
+		watchNavigationHover(handle)
+		m.buttons = append(m.buttons, handle)
 	}
 	a.controlParent = 0
 	return true
@@ -85,11 +87,11 @@ func (a *app) showFileMenuAt(anchor uintptr) {
 		}
 	}
 	a.activate(idFileTab)
-	if a.full || a.toolsCollapsed && anchor == a.toolButtons[idFileTab] {
+	if a.full || a.toolsWidth == 0 && anchor == a.toolButtons[idFileTab] {
 		return
 	}
 	d := a.scale
-	width, height := a.toolsWidth, d(len(m.buttons)*31+8)
+	width, height := max(a.toolsWidth, d(168)), d(len(m.buttons)*31+8)
 	for index, option := range fileOptions {
 		width = max(width, a.captionWidth(option.label, a.normalFont)+d(42))
 		setEnabled(m.buttons[index], a.fileOptionEnabled(option.id))
@@ -191,9 +193,13 @@ func (a *app) drawFileMenuButton(item *buttonDraw) bool {
 		return false
 	}
 	option := fileOptions[index]
+	selected := option.id == a.activeFileOption() || (option.id == idRecentFiles && a.mode == idFileDetails)
 	a.paintPopupEntry(item.dc, item.bounds, popupItem{
-		label: option.label, checked: option.id == a.activeFileOption(), disabled: !a.fileOptionEnabled(option.id),
-	}, item.state&(1|16|64) != 0)
+		label: option.label, checked: selected, disabled: !a.fileOptionEnabled(option.id),
+	}, a.navigationHot(item))
+	if item.state&16 != 0 {
+		a.drawFocus(item.dc, item.bounds)
+	}
 	return true
 }
 
@@ -212,7 +218,7 @@ func (a *app) runFileOption(option int) {
 		a.printDocument()
 	case idRecentFiles:
 		a.mode = idFileDetails
-		a.detailsCollapsed = false
+		a.rightDock.revealPrimary()
 		a.layout()
 		if a.recent.visibleCount() > 0 {
 			setFocus.Call(a.recent.list)

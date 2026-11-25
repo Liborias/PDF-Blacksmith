@@ -301,7 +301,7 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) {
 		bar.setPosition(bar.position - rows)
 		return
 	}
-	if a.detailsCollapsed {
+	if a.settingsWidth == 0 {
 		return
 	}
 	bar := a.scrollbars[hover]

@@ -73,7 +73,7 @@ type searchPanel struct {
 func (v *documentView) buildSearchPanel() {
 	a, p := v.app, &v.search
 	p.events = make(chan searchUpdate, 8)
-	a.label("Text v dokumentu", 16, 15, 298, true)
+	a.beginPropertySection("Text v dokumentu", 15, "Hledání prochází textovou vrstvu PDF včetně textu rozpoznaného nástrojem OCR.")
 	p.input = a.edit(16, 41, 298, false)
 	sendMessage.Call(p.input, 0x00c5, 256, 0) // EM_LIMITTEXT
 	p.start = a.button("Hledat", idSearchRun, 16, 79, 145, 0)
@@ -82,6 +82,7 @@ func (v *documentView) buildSearchPanel() {
 	p.previous = a.button("Předchozí shoda", idSearchPrevious, 16, 119, 145, 0)
 	p.next = a.button("Další shoda", idSearchNext, 169, 119, 145, 0)
 	p.status = a.readout(16, 161, 298, 52)
+	a.addingSection = 0
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100
 	p.list = a.add("LISTBOX", "Výsledky hledání", idSearchList, 16, 221, 298, 116, wsTabstop|listStyle, 0, a.normalFont)
 	sendMessage.Call(p.list, 0x01a0, 0, uintptr(a.scale(26))) // LB_SETITEMHEIGHT
@@ -98,8 +99,10 @@ func (a *app) showSearch() {
 	if a.full {
 		a.toggleFullscreen()
 	}
+	a.rightDock.revealPrimary()
 	a.activate(idSearchTab)
 	input := a.view.search.input
+	a.revealPropertyControl(input)
 	setFocus.Call(input)
 	sendMessage.Call(input, 0x00b1, 0, ^uintptr(0)) // EM_SETSEL
 	a.revealFocusedControl()
@@ -260,7 +263,7 @@ func (v *documentView) receiveSearch(event searchUpdate) {
 			v.clearSearchResults()
 			setText(p.status, multiline(event.Message))
 		}
-		if a := v.app; a.mode == idSearchTab && !a.full && !a.detailsCollapsed && p.widest == 0 && a.settingsWidth > a.scale(panelWidth) {
+		if a := v.app; a.mode == idSearchTab && !a.full && p.widest == 0 && a.settingsWidth > a.scale(panelWidth) {
 			a.layout()
 		}
 	}
@@ -300,7 +303,7 @@ func (v *documentView) addSearchPage(page *searchPage) {
 	invalidate(p.list)
 	v.updateSearchActions()
 	if v.app.mode == idSearchTab {
-		if oldWidth != p.widest && !v.app.detailsCollapsed && !v.app.full {
+		if oldWidth != p.widest && v.app.settingsWidth > 0 && !v.app.full {
 			v.app.layout()
 		}
 		if firstResult {

@@ -60,25 +60,30 @@ func (m *mergePanel) selected() *mergeEntry {
 func (a *app) buildMergePanel() {
 	m := &a.merge
 	m.active = -1
-	m.add = a.button("Přidat PDF soubory…", idMergeAdd, 16, 16, 298, 0)
-	m.addOpen = a.button("Přidat otevřené PDF", idMergeAddOpen, 16, 54, 145, 0)
-	m.addSelected = a.button("Přidat výběr stran", idMergeAddSelected, 169, 54, 145, 0)
+	a.beginPropertySection("Zdroje ke sloučení", 16, "Přidejte soubory nebo vybrané stránky a upravte pořadí jejich vložení.")
+	m.add = a.button("Přidat PDF soubory…", idMergeAdd, 16, 42, 298, 0)
+	m.addOpen = a.button("Přidat otevřené PDF", idMergeAddOpen, 16, 80, 145, 0)
+	m.addSelected = a.button("Přidat výběr stran", idMergeAddSelected, 169, 80, 145, 0)
 	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100
-	m.list = a.add("LISTBOX", "Soubory ke sloučení", idMergeList, 16, 96, 298, 96, wsTabstop|listStyle, 0, a.normalFont)
+	m.list = a.add("LISTBOX", "Soubory ke sloučení", idMergeList, 16, 122, 298, 96, wsTabstop|listStyle, 0, a.normalFont)
 	sendMessage.Call(m.list, 0x01a0, 0, uintptr(a.scale(24))) // LB_SETITEMHEIGHT
 	a.addScrollPane(m.list, a.scale(24), true)
-	m.up = a.button("Nahoru", idMergeUp, 16, 198, 94, 0)
-	m.down = a.button("Dolů", idMergeDown, 118, 198, 94, 0)
-	m.remove = a.button("Odebrat", idMergeRemove, 220, 198, 94, 0)
-	m.sourceStatus = a.add("STATIC", "Strany k přidání", 0, 16, 240, 298, 22, 0x4000, 0, a.normalFont)
-	m.pageRange = a.edit(16, 266, 298, false)
+	m.up = a.button("Nahoru", idMergeUp, 16, 224, 94, 0)
+	m.down = a.button("Dolů", idMergeDown, 118, 224, 94, 0)
+	m.remove = a.button("Odebrat", idMergeRemove, 220, 224, 94, 0)
+	section := a.addingSection
+	a.addingSection = 0
+	m.sourceStatus = a.add("STATIC", "Strany k přidání", 0, 16, 266, 298, 22, 0x4000, 0, a.normalFont)
+	a.addingSection = section
+	m.pageRange = a.edit(16, 292, 298, false)
 	sendMessage.Call(m.pageRange, 0x1501, 1, uintptr(unsafe.Pointer(wideString("Všechny strany · např. 1, 3–5"))))
-	m.run = a.button("Uložit sloučené PDF…", idMergeRun, 16, 307, 298, 0)
+	a.label("Heslo k otevření vybraného souboru", 16, 335, 298, false)
+	m.password = a.edit(16, 359, 145, true)
+	m.inspect = a.button("Načíst počet stran", idMergeInspect, 169, 357, 145, 0)
+	a.beginPropertySection("Výstup", 404, "Sloučený dokument se uloží jako nový soubor.")
+	m.run = a.button("Uložit sloučené PDF…", idMergeRun, 16, 432, 298, 0)
 	a.primaryButtons[m.run] = true
-	a.label("Heslo k otevření vybraného souboru", 16, 350, 298, false)
-	m.password = a.edit(16, 374, 145, true)
-	m.inspect = a.button("Načíst počet stran", idMergeInspect, 169, 372, 145, 0)
-	m.report = a.readout(16, 417, 298, 122)
+	m.report = a.readout(16, 475, 298, 122)
 }
 
 func (a *app) updateMergeActions() {

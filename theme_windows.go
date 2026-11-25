@@ -201,13 +201,16 @@ func (a *app) drawButton(item *buttonDraw) bool {
 	if item.controlType != 4 { // ODT_BUTTON
 		return false
 	}
-	if a.drawCommandBarButton(item) || a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawChoice(item) || a.drawTextIcon(item) {
+	if a.drawCommandBarButton(item) || a.drawDocumentTab(item) || a.drawWindowButton(item) || a.drawPanelToggle(item) || a.drawPropertySectionButton(item) || a.drawChoice(item) || a.drawTextIcon(item) {
 		return true
 	}
 	bounds := item.bounds
 	isOption := a.options[item.handle]
 	id := int(item.controlID)
-	tool := a.toolButtons[id] == item.handle
+	if a.toolButtons[id] == item.handle {
+		a.drawToolNavigation(item)
+		return true
+	}
 	background := canvasColor
 	if a.panelButtons[item.handle] {
 		background = panelColor
@@ -235,12 +238,9 @@ func (a *app) drawButton(item *buttonDraw) bool {
 		if a.tool == idFileTab {
 			selectedDetail = a.activeFileOption()
 		}
-		active := (tool && id == a.tool) || (a.detailButtons[id] == item.handle && id == selectedDetail) ||
+		active := (a.detailButtons[id] == item.handle && id == selectedDetail) ||
 			a.primaryButtons[item.handle] || (id == idReaderDeletePages && a.view.pageDrag.overDelete)
 		body, edge := uiColors["control"], divider
-		if tool {
-			body, edge = background, background
-		}
 		if active && item.state&4 == 0 {
 			foreground = selectionColor
 		}

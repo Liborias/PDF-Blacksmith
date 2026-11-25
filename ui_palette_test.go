@@ -46,11 +46,12 @@ func TestUIPaletteChromeContrast(t *testing.T) {
 		minimum     float64
 	}{
 		{"text", []string{"base", "top", "panel", "control", "input", "hover", "tabActive", "tabHover",
-			"panelTabIdle", "panelTabHover", "panelTabActive"}, 4.5},
-		{"muted", []string{"base", "panel", "editor", "control", "tabIdle", "hover"}, 4.5},
+			"panelTabIdle", "panelTabHover", "panelTabActive", "popoverBg", "selected", "toolbarActive", "toolbarActiveHover"}, 4.5},
+		{"muted", []string{"base", "panel", "editor", "control", "tabIdle", "hover", "popoverBg", "selected", "top"}, 4.5},
 		{"accent", []string{"base", "panel", "control", "input"}, 4.5},
+		{"accent", []string{"hover", "selected", "toolbarActive", "toolbarActiveHover"}, 3},
 		{"focus", []string{"base", "top", "panel", "control", "input", "hover", "tabIdle", "tabActive", "tabHover",
-			"panelTabIdle", "panelTabHover", "panelTabActive"}, 3},
+			"panelTabIdle", "panelTabHover", "panelTabActive", "popoverBg", "selected", "toolbarActive", "toolbarActiveHover"}, 3},
 	}
 	for name := range uiPalettes.Palettes {
 		for _, mode := range []string{"dark", "light"} {
@@ -63,6 +64,32 @@ func TestUIPaletteChromeContrast(t *testing.T) {
 						t.Errorf("%s/%s: %s on %s has %.2f:1, want at least %.1f:1",
 							name, mode, pair.foreground, background, ratio, pair.minimum)
 					}
+				}
+			}
+		}
+	}
+}
+
+func TestNavigationStyle(t *testing.T) {
+	for name := range uiPalettes.Palettes {
+		for _, mode := range []string{"dark", "light"} {
+			colors := uiPalettes.colors(uiTheme{name, mode})
+			base := colors["popoverBg"]
+			for _, state := range []struct {
+				disabled, selected, hovered bool
+				fill, ink                   string
+				accent                      bool
+			}{
+				{false, false, false, "popoverBg", "text", false},
+				{false, true, false, "selected", "text", true},
+				{false, false, true, "hover", "text", true},
+				{false, true, true, "hover", "text", true},
+				{true, true, true, "popoverBg", "muted", false},
+			} {
+				got := colors.navigation(base, state.disabled, state.selected, state.hovered)
+				want := navigationStyle{fill: colors[state.fill], ink: colors[state.ink], accent: state.accent}
+				if got != want {
+					t.Errorf("%s/%s in %s state: got %+v, want %+v", name, mode, state.fill, got, want)
 				}
 			}
 		}

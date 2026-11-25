@@ -30,12 +30,18 @@ Druhá horní lišta, levá navigace a ovladač celé obrazovky používají 23 
 
 **1C. Základní docky:** Nástroje vlevo, Vlastnosti vpravo, miniatury a jeden pomocný panel; korektně se skládat, změna šířky a vracení stavu, práce v malém okně. Neodpojovat stávající OCR/separace.
 
+Krátká horní ouška ovládají celé skupiny a rozbalení obnoví stav jednotlivých panelů. Výpočet šířek počítá s místem na ouška i dokument a podle zbývajícího prostoru rozšiřuje panely podle obsahu. Testy geometrie pokrývají čtyři šířky a tři měřítka. Kontrola ve Windows proběhne při společném sestavení po dalších pracovních blocích.
+
 **Vstup:** schválení 1A nebo 1B nebo 1C. **Done:** 12 motivů, 3 DPI, 4 šířky, nepoškozené PDF a všechna původní menu.
 
 ## Fáze 2 – konzistentní chování aplikace
 **2A. Menu, textové vs ikonové:** horní Soubor/Zobrazení/Nástroje/Úpravy/Formuláře/Pomoc bez rámečků; levá navigace a dropdown bez obdélníkových rámů s levým akcentním pruhem; aktivní ikona druhé lišty s výrazným stavem. Žádné změny funkčnosti příkazů.
 
+Levá navigace a otevřené nabídky sdílejí paletové stavy najetí a výběru s levým akcentem. Horní textové nabídky mají jemný podklad při najetí a otevření. Ikony aktivních režimů mají výraznější podklad a spodní linku. Testy kontrolují kontrast těchto stavů ve všech dvanácti motivech.
+
 **2B. Vlastnosti aktivního nástroje:** související podskupiny s oddělovačem a sbalením/rozbalením, bez dlouhých prázdných hint slotů. Otazník vedle sekce ukazuje metodický popis; **varování/validace se nikdy neschovávají**. Vlastnosti zachovat při sbalení.
+
+Vlastnosti mají sbalitelné sekce a kruhové otazníky s metodikou. Po opětovném otevření zůstávají hodnoty polí i volby zachované. Výsledky a varování zůstávají v rozložení i při sbalení a prázdné výpisy se zobrazí až po naplnění.
 
 **2C. Nápověda + lokalizace:** nativní tooltipy odpovídají CZ/EN, pole popisů podle fokusu, čtení pro klávesnici; volba jazyka v Nastavení/Jazyk, téma v Nastavení/Rozhraní i přes horní půlený přepínač. Lokalizační katalog 809 CZ/EN klíčů, nezasahovat do PDF.
 

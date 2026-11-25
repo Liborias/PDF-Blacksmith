@@ -40,7 +40,7 @@ type textSelection struct {
 }
 
 type textPanel struct {
-	guide, font, size, original, report               uintptr
+	font, size, original, report                      uintptr
 	width, leading, tracking                          uintptr
 	regular, bold, italic, underline, copy, undo, ocr uintptr
 	modes, alignments                                 [4]uintptr
@@ -63,13 +63,11 @@ type textPanel struct {
 
 func (a *app) buildTextPanel() {
 	p := &a.textTool
-	controls := [2]uint32{8, 4} // ICC_BAR_CLASSES includes native tooltips.
-	comctl32.NewProc("InitCommonControlsEx").Call(uintptr(unsafe.Pointer(&controls)))
-	a.label("Výběr textu", 16, 16, 298, true)
+	a.beginPropertySection("Výběr textu", 16, "Zvolte objekt, odstavec, obdélník nebo laso. Laso dokončete Enterem nebo kliknutím na první bod.")
 	for i, name := range []string{"Textový objekt", "Odstavec", "Obdélník", "Mnohoúhelníkové laso"} {
 		p.modes[i] = a.textIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
 	}
-	p.guide = a.add("STATIC", "", 0, 16, 82, 298, 39, 0, 0, a.normalFont)
+	a.beginPropertySection("Formát textu", 91, "Změny se projeví ve výběru přímo v PDF. Proklad je mezera mezi znaky, řádkování určuje vzdálenost mezi řádky.")
 	p.original = a.add("STATIC", "", 0, 16, 137, 158, 21, 0x4000, 0, a.normalFont)
 	a.label("Písmo", 16, 161, 205, false)
 	a.label("Velikost (pt)", 236, 161, 78, false)
@@ -106,17 +104,11 @@ func (a *app) buildTextPanel() {
 	p.undo = a.textIconButton("Vrátit úpravu", idTextUndo, 56, 329, 34)
 	p.ocr = a.textIconButton("OCR výběru", idTextOCR, 96, 329, 34)
 	p.report = a.readout(16, 372, 298, 82)
-	a.textGuide()
+	a.syncTextSelectionModes()
 }
 
-func (a *app) textGuide() {
+func (a *app) syncTextSelectionModes() {
 	p := &a.textTool
-	setText(p.guide, [...]string{
-		"Klikněte na text a pište přímo do rámečku.",
-		"Klikněte do odstavce a upravte ho v dokumentu.",
-		"Vyznačte oblast a klikněte do rámečku.",
-		"Klikáním přidávejte body. Dokončete Enterem nebo kliknutím na první bod.",
-	}[p.mode])
 	for i, h := range p.modes {
 		a.setChecked(h, i == p.mode)
 	}
@@ -128,7 +120,7 @@ func (v *documentView) lastDraftIs(action string) bool {
 
 func (a *app) clearTextSelection() {
 	p := &a.textTool
-	if p.guide == 0 {
+	if p.modes[0] == 0 {
 		return
 	}
 	if p.drag {
@@ -152,7 +144,7 @@ func (a *app) clearTextSelection() {
 
 func (a *app) updateTextActions() {
 	p := &a.textTool
-	if p.guide == 0 {
+	if p.modes[0] == 0 {
 		return
 	}
 	ready := !a.busy && a.view.ready()
@@ -207,7 +199,7 @@ func (a *app) textCommand(id, notification int) bool {
 		p.mode = id - idTextSelectObject
 		p.explicitParagraph = p.mode == textBlock
 		a.clearTextSelection()
-		a.textGuide()
+		a.syncTextSelectionModes()
 	case id >= idTextAlignLeft && id <= idTextAlignJustify:
 		p.alignment = id - idTextAlignLeft
 		a.updateTextActions()

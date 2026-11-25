@@ -217,7 +217,7 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 				p.explicitParagraph = false
 			}
 			p.mode = pick.mode
-			a.textGuide()
+			a.syncTextSelectionModes()
 		}
 		v.nativeText.model, v.nativeText.source, v.nativeText.generation = model, pick.source, pick.generation
 		if oldBox != pick.box {

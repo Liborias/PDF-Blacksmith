@@ -77,12 +77,13 @@ type objectEditor struct {
 
 func (a *app) buildObjectPanel() {
 	e := &a.objects
-	a.label("Výběr objektů", 16, 16, 298, true)
+	a.beginPropertySection("Výběr objektů", 16, "Vybraný objekt nebo skupinu přesunete tažením. Laso uzavřete Enterem nebo kliknutím na první bod.")
 	for i, name := range []string{"Výběr kliknutím (V)", "Obdélníkový výběr (M)", "Mnohoúhelníkové laso (L)"} {
 		e.modes[i] = a.textIconButton(name, idObjectPoint+i, 16+i*40, 42, 34)
 	}
-	a.add("STATIC", "Vybraný objekt nebo skupinu přesunete tažením. Laso uzavřete Enterem nebo kliknutím na první bod.", 0, 16, 80, 298, 47, 0, 0, a.normalFont)
-	e.info = a.label("Vyberte objekt na stránce.", 16, 132, 298, false)
+	a.addingSection = 0
+	e.info = a.label("Vyberte objekt na stránce.", 16, 85, 298, false)
+	a.beginPropertySection("Akce s objekty", 124, "Akce pracují s aktuálním výběrem. Změny lze vrátit klávesami Ctrl + Z.")
 	e.copy = a.button("Kopírovat · Ctrl+C", idObjectCopy, 16, 165, 145, 0)
 	e.paste = a.button("Vložit · Ctrl+V", idObjectPaste, 169, 165, 145, 0)
 	e.duplicate = a.button("Duplikovat · Ctrl+D", idObjectDuplicate, 16, 206, 145, 0)

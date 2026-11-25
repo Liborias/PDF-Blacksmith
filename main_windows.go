@@ -108,7 +108,7 @@ type profileChoice struct {
 type app struct {
 	window, instance, normalFont, titleFont, labelFont uintptr
 	dpi, width, height                                 int
-	toolsWidth, settingsWidth                          int
+	toolsWidth, preferredToolsWidth, settingsWidth      int
 	tool, mode                                         int
 	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent uintptr
 	detailsArea, thumbnailArea, bookmarkArea             rect
@@ -117,14 +117,14 @@ type app struct {
 	sideScroll                                         *panelScrollbar
 	scrollbars                                         map[uintptr]*panelScrollbar
 	scrollPanes                                        map[uintptr]*scrollPane
-	addingTab                                          int
+	addingTab, addingSection                           int
+	propertySections                                  []propertySection
+	propertyLayoutQueued                              bool
 	toolButtons, detailButtons                         map[int]uintptr
 	documentTools                                      bool
 	headerBrand, windowButtonStart                     int
 	tabBounds                                          rect
-	toolsCollapsed, detailsCollapsed                   bool
-	thumbnailsCollapsed, bookmarksCollapsed            bool
-	leftPanelsOpen, rightPanelsOpen                     [2]bool
+	leftDock, rightDock                                 dockVisibility
 	full                                               bool
 	placement                                          windowPlacement
 	savedStyle                                         uintptr
@@ -134,6 +134,7 @@ type app struct {
 	windowButtons                                      [3]uintptr
 	historyButtons                                     [2]uintptr
 	commandBar                                        commandBar
+	hoveredNavigation                                  uintptr
 	tabs                                               []*documentTab
 	activeTab                                          *documentTab
 	tabList                                             uintptr
@@ -154,7 +155,7 @@ type app struct {
 	recent                                             recentPanel
 	exportScope, exportRange                           uintptr
 	splitScope, splitRange, splitButton, splitReport   uintptr
-	exportFormat, exportHint, exportColorLabel         uintptr
+	exportFormat, exportWarning, exportColorLabel, exportColorHelp uintptr
 	profiles, pressProfiles, customICC, customBrowse   uintptr
 	grayProfileCombo, grayCustomICC, grayBrowse, kOutputProfile uintptr
 	proofApply, grayProfileLabel, kOutputLabel uintptr
@@ -201,7 +202,8 @@ func main() {
 		dpi = min(dpi, (screenWidth-24)*96/minimumWorkspaceWidth, (screenHeight-72)*96/550)
 	}
 	window = &app{
-		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idFileTab, mode: idFileDetails, bookmarksCollapsed: true,
+		thumbnailScopes: make(map[uintptr]bool), instance: instance, dpi: int(dpi), tool: idFileTab, mode: idFileDetails,
+		rightDock: dockVisibility{auxiliaryCollapsed: true},
 		panelItems: make(map[int][]panelItem), panelScroll: make(map[int]int),
 		scrollbars: make(map[uintptr]*panelScrollbar), scrollPanes: make(map[uintptr]*scrollPane),
 		toolButtons: make(map[int]uintptr), detailButtons: make(map[int]uintptr), results: make(chan response, 1),
@@ -318,7 +320,7 @@ func (a *app) add(kind, caption string, id, x, y, width, height int, style, exSt
 	)
 	sendMessage.Call(handle, wmSetFont, font, 1)
 	if a.addingTab != 0 {
-		a.panelItems[a.addingTab] = append(a.panelItems[a.addingTab], panelItem{handle, x, y, width, height})
+		a.panelItems[a.addingTab] = append(a.panelItems[a.addingTab], panelItem{handle, x, y, width, height, a.addingSection})
 		a.panelLabels[handle], a.panelButtons[handle] = true, true
 	}
 	return handle
@@ -463,6 +465,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmInlineLayout:
 		a.finishInlineLayout(wParam)
 		return 0
+	case wmPropertyReadoutLayout:
+		a.propertyLayoutQueued = false
+		a.layoutPanel()
+		return 0
 	case wmJobFinished:
 		a.finish(<-a.results)
 		return 0
@@ -537,8 +543,15 @@ func (a *app) drawControl(param uintptr) bool {
 }
 
 func setText(handle uintptr, value string) {
-	if window != nil && window.readOnlyFields[handle] && getText(handle) == value {
-		return
+	if window != nil && window.readOnlyFields[handle] {
+		old := getText(handle)
+		if old == value {
+			return
+		}
+		if (old == "") != (value == "") && !window.propertyLayoutQueued {
+			result, _, _ := postMessage.Call(window.window, wmPropertyReadoutLayout, 0, 0)
+			window.propertyLayoutQueued = result != 0
+		}
 	}
 	setWindowText.Call(handle, uintptr(unsafe.Pointer(wideString(value))))
 }
