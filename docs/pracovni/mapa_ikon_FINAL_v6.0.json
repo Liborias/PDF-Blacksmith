@@ -1,0 +1,1147 @@
+{
+  "schema": "pdf-blacksmith.icons.v6.0",
+  "version": "6.0",
+  "date": "2026-11-25",
+  "authoritative": true,
+  "reference_html": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+  "merged_historical_maps": [
+    "mapa_ikon_v5.1.md",
+    "mapa_ikon_v4.7.md"
+  ],
+  "invariants": [
+    "SVG symbol != verified Win32 command ID",
+    "No implicit F2 or batch authorization",
+    "CurrentColor for UI icons; preserve original magnetic U and author logo",
+    "No missing i-panel_left for interface tab"
+  ],
+  "icons": [
+    {
+      "symbol": "i-align_center",
+      "category": "Text a výběr",
+      "label": "align center",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-align_justify",
+      "category": "Text a výběr",
+      "label": "align justify",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-align_left",
+      "category": "Text a výběr",
+      "label": "align left",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-align_objects_center",
+      "category": "Objekty",
+      "label": "align objects center",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-align_right",
+      "category": "Text a výběr",
+      "label": "align right",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-baseline_down",
+      "category": "Text a výběr",
+      "label": "baseline down",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-baseline_up",
+      "category": "Text a výběr",
+      "label": "baseline up",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-batch_queue",
+      "category": "Ostatní",
+      "label": "batch queue",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-bold",
+      "category": "Ostatní",
+      "label": "bold",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-color_profile",
+      "category": "Separace a barvy",
+      "label": "color profile",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-comment",
+      "category": "Poznámky",
+      "label": "comment",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-compare_overlay",
+      "category": "Ostatní",
+      "label": "compare overlay",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-convert_gray",
+      "category": "Separace a barvy",
+      "label": "Stupně šedi",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-convert_k",
+      "category": "Separace a barvy",
+      "label": "Převod do K",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-copy",
+      "category": "Ostatní",
+      "label": "copy",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-cursor",
+      "category": "Text a výběr",
+      "label": "Univerzální šipka",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-delete",
+      "category": "Ostatní",
+      "label": "delete",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-document_properties",
+      "category": "Ostatní",
+      "label": "document properties",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-duplicate",
+      "category": "Ostatní",
+      "label": "duplicate",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-export",
+      "category": "Ostatní",
+      "label": "export",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-eyedropper",
+      "category": "Ostatní",
+      "label": "eyedropper",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-fill_color",
+      "category": "Separace a barvy",
+      "label": "fill color",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-fit_page",
+      "category": "Stránky a zobrazení",
+      "label": "fit page",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-fit_width",
+      "category": "Stránky a zobrazení",
+      "label": "fit width",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-font_family",
+      "category": "Ostatní",
+      "label": "font family",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-font_size",
+      "category": "Ostatní",
+      "label": "font size",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-font_size_down",
+      "category": "Ostatní",
+      "label": "font size down",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-font_size_up",
+      "category": "Ostatní",
+      "label": "font size up",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-font_width",
+      "category": "Ostatní",
+      "label": "font width",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_checkbox",
+      "category": "Formuláře",
+      "label": "Checkbox",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_dropdown",
+      "category": "Formuláře",
+      "label": "Rozbalovací pole",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_edit",
+      "category": "Formuláře",
+      "label": "Návrh polí F2 — demo",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_fill",
+      "category": "Formuláře",
+      "label": "Vyplnit F1",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_properties",
+      "category": "Formuláře",
+      "label": "Vlastnosti pole",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_radio",
+      "category": "Formuláře",
+      "label": "Radio",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_required",
+      "category": "Formuláře",
+      "label": "form required",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_text_field",
+      "category": "Formuláře",
+      "label": "Textové pole",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-form_validate",
+      "category": "Formuláře",
+      "label": "form validate",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-group_objects",
+      "category": "Objekty",
+      "label": "group objects",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_eye",
+      "category": "Vodítka a snap",
+      "label": "Zobrazit vodítko",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_eye_off",
+      "category": "Vodítka a snap",
+      "label": "Skrýt vodítko",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_group",
+      "category": "Vodítka a snap",
+      "label": "Seskupit vodítka",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_lock",
+      "category": "Vodítka a snap",
+      "label": "Zamknout",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_trash",
+      "category": "Vodítka a snap",
+      "label": "Odstranit vodítko",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_ungroup",
+      "category": "Vodítka a snap",
+      "label": "Rozdělit skupinu",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-guide_unlock",
+      "category": "Vodítka a snap",
+      "label": "Odemknout",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-highlight",
+      "category": "Ostatní",
+      "label": "highlight",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-history",
+      "category": "Ostatní",
+      "label": "history",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-image_crop",
+      "category": "Objekty",
+      "label": "Oříznout obrázek",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-image_edit",
+      "category": "Objekty",
+      "label": "image edit",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-indent_decrease",
+      "category": "Ostatní",
+      "label": "indent decrease",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-indent_increase",
+      "category": "Ostatní",
+      "label": "indent increase",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-italic",
+      "category": "Ostatní",
+      "label": "italic",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-kerning",
+      "category": "Ostatní",
+      "label": "kerning",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-language",
+      "category": "Ostatní",
+      "label": "Nastavení → Jazyk",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-lasso",
+      "category": "Text a výběr",
+      "label": "Univerzální laso",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-letter_spacing",
+      "category": "Ostatní",
+      "label": "letter spacing",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-line_spacing",
+      "category": "Ostatní",
+      "label": "line spacing",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-measure_distance",
+      "category": "Ostatní",
+      "label": "measure distance",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-merge_pages",
+      "category": "Stránky a zobrazení",
+      "label": "merge pages",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-move_down",
+      "category": "Ostatní",
+      "label": "move down",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-move_up",
+      "category": "Ostatní",
+      "label": "move up",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_batch",
+      "category": "Navigace",
+      "label": "nav batch",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_bookmarks",
+      "category": "Navigace",
+      "label": "nav bookmarks",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_compare",
+      "category": "Navigace",
+      "label": "nav compare",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_file",
+      "category": "Navigace",
+      "label": "nav file",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_forms",
+      "category": "Formuláře",
+      "label": "nav forms",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_help",
+      "category": "Navigace",
+      "label": "nav help",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_measure",
+      "category": "Navigace",
+      "label": "nav measure",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_merge_pdf",
+      "category": "Navigace",
+      "label": "nav merge pdf",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_notes",
+      "category": "Navigace",
+      "label": "nav notes",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_objects",
+      "category": "Navigace",
+      "label": "nav objects",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_ocr",
+      "category": "Navigace",
+      "label": "nav ocr",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_page_order",
+      "category": "Navigace",
+      "label": "nav page order",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_preflight",
+      "category": "Navigace",
+      "label": "nav preflight",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_search_pdf",
+      "category": "Navigace",
+      "label": "nav search pdf",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_separations",
+      "category": "Navigace",
+      "label": "nav separations",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_settings",
+      "category": "Navigace",
+      "label": "nav settings",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_signature",
+      "category": "Navigace",
+      "label": "nav signature",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_split_pdf",
+      "category": "Navigace",
+      "label": "nav split pdf",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_text",
+      "category": "Navigace",
+      "label": "nav text",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_thumbnails",
+      "category": "Navigace",
+      "label": "Miniatury / pružný přehled",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-nav_view",
+      "category": "Navigace",
+      "label": "nav view",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-new_document",
+      "category": "Ostatní",
+      "label": "new document",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-note_edit",
+      "category": "Poznámky",
+      "label": "note edit",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-note_filter",
+      "category": "Poznámky",
+      "label": "note filter",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-note_hide",
+      "category": "Poznámky",
+      "label": "note hide",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-note_reply",
+      "category": "Poznámky",
+      "label": "note reply",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-note_show",
+      "category": "Poznámky",
+      "label": "note show",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-ocr_region",
+      "category": "Ostatní",
+      "label": "ocr region",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-open_document",
+      "category": "Ostatní",
+      "label": "open document",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-overprint_preview",
+      "category": "Separace a barvy",
+      "label": "overprint preview",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-page_delete",
+      "category": "Stránky a zobrazení",
+      "label": "page delete",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-page_extract",
+      "category": "Stránky a zobrazení",
+      "label": "page extract",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-page_insert",
+      "category": "Stránky a zobrazení",
+      "label": "page insert",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-page_range",
+      "category": "Stránky a zobrazení",
+      "label": "page range",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-page_replace",
+      "category": "Stránky a zobrazení",
+      "label": "page replace",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-panel_right",
+      "category": "Ostatní",
+      "label": "panel right",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-paragraph",
+      "category": "Text a výběr",
+      "label": "paragraph",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-paragraph_spacing",
+      "category": "Ostatní",
+      "label": "paragraph spacing",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-paste",
+      "category": "Ostatní",
+      "label": "paste",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-preflight_run",
+      "category": "Ostatní",
+      "label": "preflight run",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-print",
+      "category": "Separace a barvy",
+      "label": "print",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-print_preview",
+      "category": "Separace a barvy",
+      "label": "print preview",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-rect_select",
+      "category": "Text a výběr",
+      "label": "Univerzální obdélník",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-redo",
+      "category": "Ostatní",
+      "label": "redo",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-regular",
+      "category": "Ostatní",
+      "label": "regular",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-rotate_left",
+      "category": "Ostatní",
+      "label": "rotate left",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-rotate_right",
+      "category": "Ostatní",
+      "label": "rotate right",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-save",
+      "category": "Ostatní",
+      "label": "save",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-save_copy",
+      "category": "Ostatní",
+      "label": "save copy",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-search",
+      "category": "Ostatní",
+      "label": "search",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-settings_interface",
+      "category": "Ostatní",
+      "label": "Nastavení → Rozhraní",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": "docs/pracovni/rozhrani/ikony/settings_interface.svg"
+    },
+    {
+      "symbol": "i-side_by_side",
+      "category": "Ostatní",
+      "label": "side by side",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-signature_verify",
+      "category": "Ostatní",
+      "label": "signature verify",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-small_caps",
+      "category": "Text a výběr",
+      "label": "small caps",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-snap_magnet",
+      "category": "Vodítka a snap",
+      "label": "Přichytávání (autorský magnet)",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": "magnet(2).svg — původní autorská kresba"
+    },
+    {
+      "symbol": "i-split_pages",
+      "category": "Stránky a zobrazení",
+      "label": "split pages",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-spot_color",
+      "category": "Separace a barvy",
+      "label": "spot color",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-sticky_note",
+      "category": "Poznámky",
+      "label": "sticky note",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-strikethrough",
+      "category": "Ostatní",
+      "label": "strikethrough",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-stroke_width",
+      "category": "Ostatní",
+      "label": "stroke width",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-subscript",
+      "category": "Text a výběr",
+      "label": "subscript",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-superscript",
+      "category": "Text a výběr",
+      "label": "superscript",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-tac_measure",
+      "category": "Separace a barvy",
+      "label": "tac measure",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-text_box",
+      "category": "Text a výběr",
+      "label": "Odstavcový textový rámec",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-text_caret",
+      "category": "Text a výběr",
+      "label": "Textový kurzor",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-text_color",
+      "category": "Text a výběr",
+      "label": "text color",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-text_outline",
+      "category": "Text a výběr",
+      "label": "text outline",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-toggle_grid",
+      "category": "Vodítka a snap",
+      "label": "Mřížka",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-toggle_guides",
+      "category": "Vodítka a snap",
+      "label": "Vodítka",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-toggle_rulers",
+      "category": "Vodítka a snap",
+      "label": "Pravítka",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-underline",
+      "category": "Ostatní",
+      "label": "underline",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-undo",
+      "category": "Ostatní",
+      "label": "undo",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-ungroup_objects",
+      "category": "Objekty",
+      "label": "ungroup objects",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-view_continuous",
+      "category": "Stránky a zobrazení",
+      "label": "Souvislé",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-view_pages",
+      "category": "Stránky a zobrazení",
+      "label": "Po stránkách",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-word_spacing",
+      "category": "Text a výběr",
+      "label": "word spacing",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-zoom_1_1",
+      "category": "Stránky a zobrazení",
+      "label": "zoom 1 1",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-zoom_in",
+      "category": "Stránky a zobrazení",
+      "label": "zoom in",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-zoom_out",
+      "category": "Stránky a zobrazení",
+      "label": "zoom out",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    }
+  ]
+}
