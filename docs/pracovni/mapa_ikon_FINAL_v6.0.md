@@ -204,3 +204,7 @@ Tato mapa konsoliduje **v5.1** (všechny aktualizace magnetu, vodítek, skupin, 
 
 ## Akceptační kontrola
 Pro každý symbol otestovat `<use href="#i-...">`, text alternativy, hover/focus/disabled/active, bez ztráty reálného příkazu. V HTML v3.26 nalezeno 141 unikátních symbolů, 0 duplicit. Pokud se zjistí rozdíl mezi touto mapou a produkčním kódem, zapsat ho jako ověřovací úkol, neimprovizovat nové ID.
+
+## Otevřené ověřovací chyby HTML (nikoli zrušená schválená ikona)
+
+Statické prověření volání `miniIcon`, `block` a seznamů odhalilo nejméně tyto **použité, ale v HTML v3.26 chybějící definice symbolů**: `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single`. Jde například o přepínání panelu Nástroje, šipkové poznámky, transformace objektů a separační desky. **Nezakládat automaticky nová Win32 ID ani nevymýšlet náhradní grafiku**: ověřit, zda je přesný symbol v původním SVG atlasu/manifestu, případně bezpečně doplnit po schválení UI opravy. Strojová mapa eviduje chybějící odkazy ve `known_missing_html_symbols`; tyto symboly **nejsou** mezi 141 skutečně definovanými.
