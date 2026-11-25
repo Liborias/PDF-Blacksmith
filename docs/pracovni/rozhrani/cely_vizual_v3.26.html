@@ -5018,6 +5018,9 @@ function formRenderDesigner(){
  (field?'<section class="p-block"><div class="p-head">Vlastnosti pole</div>'+
   [['name','Název'],['tooltip','Nápověda'],['default','Výchozí hodnota']].map(([key,label])=>'<label class="p-row"><span class="control-label">'+label+'</span><input class="control-input" data-form-property="'+key+'" value="'+escapeHTML(field[key])+'"></label>').join('')+
   '<label class="p-row"><span class="control-label">Velikost písma</span><input class="control-input" data-form-property="fontSize" type="number" min="6" max="72" value="'+field.fontSize+'"></label>'+
+  '<label class="p-row"><span class="control-label">Pořadí Tab</span><input class="control-input" data-form-property="tabOrder" type="number" min="1" value="'+field.tabOrder+'"></label>'+
+  (['radio','combo','list'].includes(field.type)?'<label class="p-row"><span class="control-label">Možnosti (;)</span><input class="control-input" data-form-property="options" value="'+escapeHTML(field.options||'')+'"></label>':'')+
+  (field.type==='checkbox'||field.type==='radio'?'<label class="p-row"><span class="control-label">Exportní hodnota</span><input class="control-input" data-form-property="exportValue" value="'+escapeHTML(field.exportValue||'Yes')+'"></label>':'')+
   '<label class="switchline"><span>Povinné</span><input type="checkbox" data-form-property="required" '+(field.required?'checked':'')+'></label>'+
   '<label class="switchline"><span>Jen ke čtení</span><input type="checkbox" data-form-property="readonly" '+(field.readonly?'checked':'')+'></label>'+
   '<div class="compact-row"><button class="btn" id="formRemoveField">Smazat vybrané pole</button></div></section>':'')+
@@ -5026,7 +5029,7 @@ function formRenderDesigner(){
  root.querySelectorAll('[data-select-field]').forEach(b=>b.addEventListener('click',()=>{pbFormDesigner.selected=+b.dataset.selectField;pbFormDesigner.tool='';formRenderDesigner();formRenderOverlays()}));
  root.querySelectorAll('[data-form-property]').forEach(input=>input.addEventListener('change',()=>{
   const f=formSelected();if(!f)return;const key=input.dataset.formProperty;
-  f[key]=input.type==='checkbox'?input.checked:key==='fontSize'?Number(input.value):input.value;formRenderDesigner();formRenderOverlays();
+  f[key]=input.type==='checkbox'?input.checked:['fontSize','tabOrder'].includes(key)?Number(input.value):input.value;formRenderDesigner();formRenderOverlays();
  }));
  $('formRemoveField')?.addEventListener('click',()=>{pbFormDesigner.fields=pbFormDesigner.fields.filter(f=>f.id!==pbFormDesigner.selected);pbFormDesigner.selected=null;formRenderDesigner();formRenderOverlays()});
 }
@@ -5052,7 +5055,7 @@ $('editor').addEventListener('click',e=>{
  if(e.target.closest('.form-design-field,input,select,button,textarea'))return;
  const page=e.target.closest('.pdf-page');if(!page)return;
  const rect=page.getBoundingClientRect(),k=state.zoom/100,n=pbFormDesigner.nextId++;
- pbFormDesigner.fields.push({id:n,type:pbFormDesigner.tool,page:+page.dataset.page,x:Math.max(0,Math.round((e.clientX-rect.left)/k)),y:Math.max(0,Math.round((e.clientY-rect.top)/k)),w:140,h:30,name:'pole_'+n,tooltip:'',default:'',fontSize:11,required:false,readonly:false});
+ pbFormDesigner.fields.push({id:n,type:pbFormDesigner.tool,page:+page.dataset.page,x:Math.max(0,Math.round((e.clientX-rect.left)/k)),y:Math.max(0,Math.round((e.clientY-rect.top)/k)),w:140,h:30,name:'pole_'+n,tooltip:'',default:'',fontSize:11,tabOrder:n,options:'Ano;Ne',exportValue:'Yes',required:false,readonly:false});
  pbFormDesigner.selected=n;formRenderDesigner();formRenderOverlays();
 });
 const oldFormView=formView;
