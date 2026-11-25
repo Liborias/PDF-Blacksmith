@@ -4,6 +4,15 @@ Repozitář: https://github.com/Liborias/PDF-Blacksmith
 
 Pokračujeme na existující desktopové aplikaci PDF Blacksmith (Go/Win32, PDFium a navazující Python/PDF operace). **První úkol je analýza, nikoliv implementace.** Není dovoleno nahrazovat aplikaci zjednodušenou kopií nebo předpokládat, že HTML návrh je produkční funkční editor.
 
+## Doplnění schváleného HTML z rána 25. 11. 2026
+
+Před analýzou přečti také [UI_ZOBRAZENI_OCR_PANELY_2026-11-25.md](UI_ZOBRAZENI_OCR_PANELY_2026-11-25.md). Do aktuálního HTML `cely_vizual_v3.25.html` byly zapracovány následující návrhové úpravy:
+- Dekorativní vínový obrys stránek v hlavní ploše odstraněn ve všech režimech, včetně přizpůsobení na šířku. Nevypínat rámečky formulářů ani reálné anotace PDF.
+- Režim „po stránkách“ reaguje na kolečko: uvnitř vysoké stránky scroll, na horním/dolním konci přechod mezi stránkami; nepřepisovat souvislý režim ani Ctrl+wheel.
+- Vysvětlivka OCR sdíleného rozpoznávání je skryta pod kruhovým otazníkem v příslušné sekci. Další nepodstatné vysvětlivky mají mít stejnou politiku. V horní druhé liště zůstává Help tlačítko, ale jeho znak ? je bez vlastní kruhové dekorace a opticky vysoký jako ostatní ikony.
+- Panely se zbytečnými prázdnými svislými sloty jsou kompaktnější, logické skupiny mají oddělovač a skládací ouško; dostupné volby se při sbalení neztrácejí.
+- Stejně jako u předchozích iterací jde o **HTML návrh**, nikoliv hotovou produkční Win32 implementaci. Ověř regresně výběrová gesta, dokumentové barvy, formuláře a nápovědu. Aktuální HTML v3.25 není nové číslo verze, ale aktualizace jejího obsahu.
+
 ## Před zahájením
 Ověř aktuální větev, poslední commity, změny ostatních autorů a čistotu pracovního stromu. Přečti v uvedeném pořadí:
 1. Kořenové `PLAN.md`, `NAVOD.md` a odpovídající produkční zdroje (zejména `workspace_windows.go`, `viewer_windows.go`, ukládání a export).
@@ -35,3 +44,15 @@ Při ukládání zachovej `/AcroForm`, `/Fields`, `/Widget`, `/V`, `/AP`, podpis
 5. Předlož seznam nejbližších kroků a vyčkej na schválení.
 
 **Zatím nic neimplementuj, nepřepisuj soubory, nevytvářej commit ani push.**
+
+## ÚPLNĚ POSLEDNÍ BOD – odložený experimentální adaptivní režim stránek
+
+Toto je poslední bod zadání, nikoliv současná implementační priorita. **Pouze analyzuj proveditelnost**, návrh samostatně schválíme později.
+
+- Nový režim pro více stran na pracovní ploše, podobný `flex-wrap`: při oddálení a větším dostupném prostoru se stránky skládají vedle sebe i pod sebou; při vhodném měřítku mohou být zobrazené všechny. Nepřekládat obyčejný scroll na bezpodmínečné oddálení; rozlišit scroll, přiblížení a výběr.
+- Klik zvolí jednu stránku; `Enter` vybranou okamžitě přizpůsobí výšce pracovní plochy.
+- `Ctrl + kolečko` v hlavní pracovní ploše a panelu miniatur přibližuje/oddaluje příslušnou oblast, nikoliv celou HTML stránku. Ověř, zda prohlížeč umožní zastavit nativní Ctrl+wheel pomocí aktivního `wheel` listeneru, `preventDefault` a ohraničení oblasti; na Win32 navrhni alternativu. Otestovat možné konflikty se systémovými zkratkami a přístupností.
+- `Ctrl + levý klik` přidává a odebírá stránky z výběru. Hromadné přesouvání a operace se řídí stejnými pravidly, modelem a ochranou Undo/Redo jako v panelu miniatur; respektovat aktuální nástroj a nepřebíjet Ctrl+klik používaný pro objekty a vodítka.
+- Zásah do vykreslování, přiřazení výběru, změn měřítka a ukládání řešit jako návrh architektury a samostatně testovatelnou etapu **teprve po souhlasu autora**. Nepřepisovat existující „po stránkách“ ani „souvislé“.
+
+**Upozornění: první úkol se nemění. Zatím nic neupravuj, neimplementuj a necommituj; nejprve mi předlož analýzu projektu.**
