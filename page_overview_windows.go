@@ -86,6 +86,7 @@ func (v *documentView) setPageOverview(show bool) {
 		return
 	}
 	if show {
+		v.clearCanvasContent()
 		v.pageSelection = slices.Clone(v.selectedPagePositions())
 		v.overviewAnchor = v.page
 	}
@@ -107,7 +108,7 @@ func (a *app) togglePageOverview() {
 	}
 	a.cancelPageDrag()
 	a.cancelObjectGesture()
-	a.view.cancelMiddleSelection()
+	a.cancelCanvasSelections()
 	a.clearTextSelection()
 	a.clearObjectSelection()
 	v := a.view

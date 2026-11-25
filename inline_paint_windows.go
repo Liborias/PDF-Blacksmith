@@ -21,15 +21,17 @@ func inlineEditProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintp
 				postMessage.Call(a.window, wmInlineCommit, uintptr(e.serial), 0)
 			}
 		}
-		if e.visible && (message == 0x0207 || message == 0x0203 ||
-			message == 0x0201 && canvasSelectionChange() != replaceSelection) {
+		if e.visible {
+			view := a.view
 			x, y := int32(int16(lParam))+e.rect.left, int32(int16(lParam>>16))+e.rect.top
-			if message == 0x0207 {
-				if a.view.middleSelection(message, x, y) {
+			_, selectingArea := view.canvasRegionMode()
+			if message == 0x0207 || selectingArea && (message == 0x0201 || message == 0x0203 ||
+				message == 0x0200 && view.selection.active()) {
+				if view.canvasPointer(message, x, y) {
 					return 0
 				}
-			} else {
-				a.view.selectionClick(x, y, message == 0x0203)
+			} else if message == 0x0203 || message == 0x0201 && canvasSelectionChange() != replaceSelection {
+				view.selectionClick(x, y, message == 0x0203)
 				return 0
 			}
 		}

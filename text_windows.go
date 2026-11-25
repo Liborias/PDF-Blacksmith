@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -36,6 +35,7 @@ type textSelection struct {
 	polygon                        []textPoint
 	box                            string
 	automatic, paragraphRequested  bool
+	combined                       bool
 	change                         selectionChange
 }
 
@@ -49,12 +49,11 @@ type textPanel struct {
 	fonts, fontKeys                                   []string
 	fontNames                                         map[string]string
 	model                                             *textPage
-	pick, gesture                                     textSelection
+	pick                                              textSelection
 	flow                                              textFlow
 	dim                                               textPoint
 	rotation                                          int
-	explicitParagraph, drag, hasHover                 bool
-	hover                                             textPoint
+	explicitParagraph                                 bool
 	inline                                            inlineTextEditor
 	afterEdit                                         func()
 }
@@ -121,13 +120,9 @@ func (a *app) clearTextSelection() {
 	if p.modes[0] == 0 {
 		return
 	}
-	if p.drag {
-		p.drag = false
-		user32.NewProc("ReleaseCapture").Call()
-	}
-	p.model, p.flow, p.hasHover = nil, textFlow{}, false
+	p.model, p.flow = nil, textFlow{}
 	a.clearInlineFrames()
-	p.pick, p.gesture = textSelection{}, textSelection{}
+	p.pick = textSelection{}
 	a.view.nativeText.next = textSelection{}
 	a.view.nativeText.flight = textSelection{}
 	for _, control := range []uintptr{p.original, p.size, p.width, p.leading, p.tracking, p.report} {
@@ -194,9 +189,14 @@ func (a *app) textCommand(id, notification int) bool {
 		if a.saveInlineBefore(func() { a.textCommand(id, notification) }) {
 			return true
 		}
+		a.cancelCanvasSelections()
 		p.mode = id - idTextSelectObject
 		p.explicitParagraph = p.mode == textBlock
-		a.clearTextSelection()
+		a.cancelCanvasRegionProbes()
+		if p.mode < textRectangle || a.view.mixed.pick.source == 0 {
+			a.view.clearMixedSelection()
+			a.clearTextSelection()
+		}
 		a.syncTextSelectionModes()
 	case id >= idTextAlignLeft && id <= idTextAlignJustify:
 		p.alignment = id - idTextAlignLeft
@@ -253,8 +253,8 @@ func (a *app) focusInlineEditor() {
 
 func normalizedTextPoint(area rect, x, y int32) textPoint {
 	return textPoint{
-		max(0, min(1, float64(x-area.left)/float64(area.right-area.left))),
-		max(0, min(1, float64(y-area.top)/float64(area.bottom-area.top))),
+		float64(x-area.left) / float64(area.right-area.left),
+		float64(y-area.top) / float64(area.bottom-area.top),
 	}
 }
 
@@ -279,138 +279,29 @@ func (v *documentView) textAt(x, y int32) textSelection {
 		return textSelection{}
 	}
 	padding := float64(v.app.scale(3))
-	return textSelection{source: source, generation: v.generation, tool: v.app.mode, mode: v.app.textTool.mode,
-		change: canvasSelectionChange(), point: normalizedTextPoint(area, x, y), tolerance: textPoint{padding / float64(area.right-area.left),
-			padding / float64(area.bottom-area.top)}, box: v.box()}
+	pick := v.canvasPick()
+	pick.source, pick.point = source, normalizedTextPoint(area, x, y)
+	pick.tolerance = textPoint{padding / float64(area.right-area.left), padding / float64(area.bottom-area.top)}
+	return pick
 }
 
-func (a *app) textPointer(msg uint32, x, y int32) bool {
-	p, v := &a.textTool, a.view
-	if msg == 0x0215 || msg == 0x001f { // WM_CAPTURECHANGED, WM_CANCELMODE
-		if p.drag {
-			p.drag, p.gesture = false, textSelection{}
-			v.invalidateCanvas()
-		}
-		return false
-	}
-	if msg == 0x02a3 && p.hasHover { // WM_MOUSELEAVE
-		p.hasHover = false
-		v.invalidateCanvas()
-	}
-	if a.mode != idTextTab || a.busy || !v.ready() || a.full {
-		return false
-	}
-	switch msg {
-	case 0x0201: // WM_LBUTTONDOWN
-		pick := v.textAt(x, y)
-		if pick.source == 0 {
-			return false
-		}
-		if pick.change == replaceSelection && (pick.mode == textObject || pick.mode == textBlock) && a.editFrameAt(pick) {
-			return true
-		}
-		setFocus.Call(a.window)
-		switch pick.mode {
-		case textRectangle:
-			pick.polygon = rectangleSelection(pick.point, pick.point)
-			p.drag, p.gesture = true, pick
-			user32.NewProc("SetCapture").Call(a.window)
-			v.invalidateCanvas()
-		case textLasso:
-			gesture := &p.gesture
-			if gesture.source != pick.source || gesture.generation != v.generation || gesture.mode != textLasso {
-				p.gesture = pick
-			}
-			tolerance, pos := pick.tolerance, pick.point
-			if len(gesture.polygon) >= 3 && math.Abs(pos[0]-gesture.polygon[0][0]) <= tolerance[0]*3 &&
-				math.Abs(pos[1]-gesture.polygon[0][1]) <= tolerance[1]*3 {
-				a.completeTextGesture()
-			} else if len(gesture.polygon) < 64 {
-				gesture.polygon = append(gesture.polygon, pos)
-				p.hasHover = false
-				v.invalidateCanvas()
-			}
-		default:
-			v.selectionClick(x, y, p.explicitParagraph)
-		}
-		return true
-	case 0x0200, 0x0202: // WM_MOUSEMOVE, WM_LBUTTONUP
-		if p.drag {
-			pick := &p.gesture
-			area, source := v.textSheetAt(x, y, pick.source)
-			if source != 0 {
-				pick.polygon = rectangleSelection(pick.point, normalizedTextPoint(area, x, y))
-			}
-			if msg == 0x0202 {
-				p.drag = false
-				user32.NewProc("ReleaseCapture").Call()
-				if source != 0 {
-					end := pick.polygon[2]
-					if math.Abs(end[0]-pick.point[0]) < pick.tolerance[0] ||
-						math.Abs(end[1]-pick.point[1]) < pick.tolerance[1] {
-						pick.polygon, pick.automatic = nil, true
-					}
-					a.completeTextGesture()
-				} else {
-					p.gesture = textSelection{}
-				}
-			}
-			v.invalidateCanvas()
-			return true
-		}
-		if msg == 0x0200 && p.mode == textLasso && len(p.gesture.polygon) > 0 {
-			area, source := v.textSheetAt(x, y, p.gesture.source)
-			show := source != 0 && contains(v.viewport, x, y)
-			hover := textPoint{}
-			if show {
-				hover = normalizedTextPoint(area, x, y)
-			}
-			if show && !p.hasHover {
-				track := struct {
-					size, flags uint32
-					window      uintptr
-					hover       uint32
-				}{flags: 2, window: a.window}
-				track.size = uint32(unsafe.Sizeof(track))
-				user32.NewProc("TrackMouseEvent").Call(uintptr(unsafe.Pointer(&track)))
-			}
-			if show != p.hasHover || hover != p.hover {
-				p.hasHover, p.hover = show, hover
-				v.invalidateCanvas()
-			}
-			return true
-		}
-	}
-	return false
+func (v *documentView) canvasPick() textSelection {
+	return textSelection{generation: v.generation, tool: v.app.mode, mode: v.app.textTool.mode,
+		change: canvasSelectionChange(), box: v.box()}
 }
 
 func (a *app) textKey(msg *winMessage) bool {
-	if a.mode != idTextTab || a.full || a.busy {
+	if a.mode != idTextTab || a.full || a.busy || msg.wParam != 0x1b || a.textTool.pick.source == 0 {
 		return false
 	}
-	p := &a.textTool
-	if msg.wParam == 0x1b && (p.gesture.source != 0 || p.pick.source != 0) {
-		if !a.saveInlineBefore(a.clearTextSelection) {
-			a.clearTextSelection()
-		}
-		return true
+	if !a.saveInlineBefore(a.clearTextSelection) {
+		a.clearTextSelection()
 	}
-	if msg.wParam == 0x0d && msg.window == a.window && p.gesture.mode == textLasso && len(p.gesture.polygon) >= 3 {
-		a.completeTextGesture()
-		return true
-	}
-	return false
-}
-
-func (a *app) completeTextGesture() {
-	p := &a.textTool
-	pick := p.gesture
-	p.gesture, p.hasHover = textSelection{}, false
-	a.selectText(pick)
+	return true
 }
 
 func (a *app) selectText(pick textSelection) {
-	a.view.dispatchCanvasSelection(pick, false)
+	a.view.dispatchCanvasSelection(pick)
 }
 
 func formatTextNumber(value float64) string {
@@ -510,37 +401,13 @@ func (a *app) startTextOCR() {
 
 func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	p := &a.textTool
-	if a.mode != idTextTab || a.full || (p.pick.source != source && p.gesture.source != source) {
+	if a.mode != idTextTab || a.full || p.pick.source != source || p.pick.generation != a.view.generation {
 		return
 	}
-	color := uiColors["accentStrong"]
-	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), color.win())
-	old, _, _ := gdiSelect.Call(dc, pen)
-	if p.pick.source == source && p.pick.generation == a.view.generation {
-		if p.flow.text == "" {
-			a.drawSelectionRegion(dc, area, p.pick)
-		}
-		a.paintInlineFrames(dc, area)
+	if p.flow.text == "" {
+		a.drawSelectionRegion(dc, area, p.pick)
 	}
-	if p.gesture.source == source && p.gesture.generation == a.view.generation {
-		polygon := p.gesture.polygon
-		if p.gesture.mode == textLasso {
-			if p.hasHover {
-				drawTextOutline(dc, area, append(slices.Clone(polygon), p.hover), false)
-			} else {
-				drawTextOutline(dc, area, polygon, false)
-			}
-			n := int32(max(2, a.scale(2)))
-			for _, vertex := range polygon {
-				pos := screenTextPoint(area, vertex)
-				fillColor(dc, rect{pos.x - n, pos.y - n, pos.x + n + 1, pos.y + n + 1}, color)
-			}
-		} else {
-			a.drawSelectionRegion(dc, area, p.gesture)
-		}
-	}
-	gdiSelect.Call(dc, old)
-	gdiDelete.Call(pen)
+	a.paintInlineFrames(dc, area)
 }
 
 func screenTextPoint(area rect, pos textPoint) point {
@@ -559,5 +426,11 @@ func drawTextOutline(dc uintptr, area rect, polygon []textPoint, closed bool) {
 	if closed {
 		vertices = append(vertices, vertices[0])
 	}
-	gdi32.NewProc("Polyline").Call(dc, uintptr(unsafe.Pointer(&vertices[0])), uintptr(len(vertices)))
+	drawScreenOutline(dc, vertices)
+}
+
+func drawScreenOutline(dc uintptr, vertices []point) {
+	if len(vertices) >= 2 {
+		gdi32.NewProc("Polyline").Call(dc, uintptr(unsafe.Pointer(&vertices[0])), uintptr(len(vertices)))
+	}
 }

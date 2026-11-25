@@ -133,10 +133,10 @@ func (a *app) textSettingsFocus(handle uintptr) bool {
 }
 
 func (a *app) commitInlineOnBlur(serial uintptr) {
-	p, e := &a.textTool, &a.textTool.inline
+	e := &a.textTool.inline
 	focus, _, _ := user32.NewProc("GetFocus").Call()
-	if e.serial == uint64(serial) && a.mode == idTextTab && !a.busy && !p.drag &&
-		!a.textSettingsFocus(focus) && a.inlineDirty() {
+	if e.serial == uint64(serial) && a.mode == idTextTab && !a.busy && !a.textSettingsFocus(focus) &&
+		!a.focusedDocumentView().selection.active() && a.inlineDirty() {
 		a.startTextEdit()
 	}
 }

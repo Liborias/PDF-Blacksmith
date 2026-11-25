@@ -139,3 +139,32 @@ func rectangleTouchesSegment(box searchRect, a, b textPoint) bool {
 	}
 	return true
 }
+
+func polygonBounds(polygon []textPoint) searchRect {
+	bounds := rectangleBetween(polygon[0], polygon[0])
+	for _, p := range polygon[1:] {
+		bounds[0], bounds[1] = min(bounds[0], p[0]), min(bounds[1], p[1])
+		bounds[2], bounds[3] = max(bounds[2], p[0]), max(bounds[3], p[1])
+	}
+	return bounds
+}
+
+func rectangleOverlapArea(first, second searchRect) float64 {
+	width := min(first[2], second[2]) - max(first[0], second[0])
+	height := min(first[3], second[3]) - max(first[1], second[1])
+	return max(0, width) * max(0, height)
+}
+
+func polygonTouchesRect(polygon []textPoint, box searchRect) bool {
+	if len(polygon) < 3 {
+		return false
+	}
+	prev := polygon[len(polygon)-1]
+	for _, next := range polygon {
+		if rectangleTouchesSegment(box, prev, next) {
+			return true
+		}
+		prev = next
+	}
+	return pointInTextRegion(textPoint{box[0], box[1]}, polygon)
+}

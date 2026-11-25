@@ -110,9 +110,13 @@ func (a *app) documentKey(msg *winMessage) bool {
 		return true
 	}
 	if ctrl&0x8000 == 0 {
-		if !inline && !a.busy && a.view.ready() && !hasShift && !a.focusedDocumentView().overview {
-			mode, ok := map[uintptr]int{'T': idTextSelectObject, 'V': idTextSelectParagraph, 'M': idTextSelectRectangle, 'L': idTextSelectLasso}[msg.wParam]
-			if ok && !a.full {
+		if !inline && !a.busy && !a.full && a.view.ready() && !a.focusedDocumentView().overview {
+			if a.mode == idObjectsTab {
+				if id := map[uintptr]int{'V': idObjectPoint, 'M': idObjectRectangle, 'L': idObjectLasso}[msg.wParam]; id != 0 {
+					return a.objectCommand(id, 0)
+				}
+			}
+			if mode := map[uintptr]int{'T': idTextSelectObject, 'V': idTextSelectParagraph, 'M': idTextSelectRectangle, 'L': idTextSelectLasso}[msg.wParam]; mode != 0 && !hasShift {
 				a.activate(idTextTab)
 				return a.textCommand(mode, 0)
 			}

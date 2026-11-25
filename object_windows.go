@@ -58,9 +58,6 @@ type objectEditor struct {
 	items                                      []pdfObject
 	mode                                       int
 	modes                                      [3]uintptr
-	polygon                                    []textPoint
-	defining                                   bool
-	regionPick                                 textSelection
 	serial                                     uint64
 	snapshot, snapshotComplete                 bool
 	image                                      *printBitmap
@@ -115,7 +112,6 @@ func (a *app) clearObjectSelection() {
 	a.cancelObjectGesture()
 	e.page, e.source, e.pick = nil, 0, textSelection{}
 	e.resetSelection()
-	e.defining, e.polygon = false, nil
 	e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
 	if e.info != 0 {
 		a.setUIMessage(e.info, uiSelectPageObject)
@@ -145,24 +141,19 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 			e.endGesture()
 			v.invalidateCanvas()
 		}
-		if e.defining && e.mode == 1 {
-			e.defining, e.polygon = false, nil
-			v.invalidateCanvas()
-		}
 		return false
 	}
 	if a.mode != idObjectsTab || a.busy || !v.ready() || a.full {
 		return false
 	}
-	if e.mode != 0 && v.objectRegionPointer(msg, x, y) {
-		return true
-	}
 	switch msg {
 	case 0x0201:
 		pick := v.textAt(x, y)
-		if keyDown(0x20) || pick.source == 0 {
+		if pick.source == 0 || keyDown(0x20) || e.mode != 0 &&
+			(pick.change != replaceSelection || !e.selectionContains(pick, v)) {
 			return false
 		}
+		pick.mode = textObject
 		e.pressPick, e.start, e.cursor, e.pressed = pick, point{x, y}, point{x, y}, true
 		setFocus.Call(a.window)
 		user32.NewProc("SetCapture").Call(a.window)
@@ -262,8 +253,8 @@ func (v *documentView) finishObjects(job readerJob) {
 			pick, state.next = state.next, textSelection{}
 		}
 		if job.result.Status != "ok" || job.result.View == nil || job.result.View.ObjectPage == nil {
-			if pick.automatic && pick.region() {
-				v.requestNativeText(pick)
+			if pick.combined {
+				v.failCanvasRegion()
 			} else if a.mode == idObjectsTab {
 				a.setUIMessage(e.info, uiObjectsUnavailable)
 			}
@@ -345,9 +336,6 @@ func (a *app) paintObjectSelection(dc uintptr, source int, area rect) {
 	if a.mode != idObjectsTab || a.full {
 		return
 	}
-	if e.defining && e.regionPick.source == source {
-		a.paintObjectRegion(dc, area)
-	}
 	if e.selected.Token == 0 || e.source != source {
 		return
 	}
@@ -424,8 +412,13 @@ func (a *app) objectCommand(id, notification int) bool {
 	setFocus.Call(a.window)
 	switch id {
 	case idObjectPoint, idObjectRectangle, idObjectLasso:
+		a.cancelCanvasSelections()
 		e.mode = id - idObjectPoint
-		a.clearObjectSelection()
+		a.cancelCanvasRegionProbes()
+		if e.mode == 0 || v.mixed.pick.source == 0 {
+			v.clearMixedSelection()
+			a.clearObjectSelection()
+		}
 		v.invalidateCanvas()
 	case idObjectCopy:
 		if e.selected.Token != 0 {
@@ -495,11 +488,6 @@ func (a *app) objectKey(msg *winMessage) bool {
 		return true
 	case 0x2e:
 		return a.objectCommand(idObjectDelete, 0)
-	case 0x0d:
-		if a.objects.defining && a.objects.mode == 2 {
-			a.finishObjectRegion()
-			return true
-		}
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)
 	if ctrl&0x8000 != 0 {
@@ -512,11 +500,6 @@ func (a *app) objectKey(msg *winMessage) bool {
 			return a.objectCommand(idObjectDuplicate, 0)
 		case 'Z':
 			return false
-		}
-	}
-	if ctrl&0x8000 == 0 {
-		if id := map[uintptr]int{'V': idObjectPoint, 'M': idObjectRectangle, 'L': idObjectLasso}[msg.wParam]; id != 0 {
-			return a.objectCommand(id, 0)
 		}
 	}
 	return false

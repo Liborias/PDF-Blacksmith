@@ -320,7 +320,13 @@ func (a *app) thumbnailView(handle uintptr) *documentView {
 func (a *app) pointer(msg uint32, param uintptr) bool {
 	if a.comparisonVisible() {
 		v := a.comparison.view
-		if msg == 0x0201 {
+		if a.view.selection.active() || a.objects.pressed || a.view.dragging {
+			if a.view.pointer(msg, param) {
+				return true
+			}
+			return v.pointer(msg, param)
+		}
+		if msg == 0x0201 || msg == 0x0207 {
 			x, y := int32(int16(param)), int32(int16(param>>16))
 			a.comparison.canvasFocused = contains(v.viewport, x, y)
 		}

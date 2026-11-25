@@ -273,7 +273,9 @@ type documentView struct {
 	readerError                                                                string
 	nativeText                                                                 textProbeState
 	objectProbe                                                                objectProbeState
-	marquee                                                                    textSelection
+	selection                                                                  canvasSelectionGesture
+	mixed                                                                      mixedCanvasSelection
+	regionText                                                                 *textPage
 	dragStart                                                                  point
 	dragMoved                                                                  bool
 	engine, prefetchEngine                                                     *readerEngine
@@ -474,6 +476,7 @@ func (v *documentView) sourceUnchanged() bool {
 }
 
 func (v *documentView) resetRendering() {
+	v.clearCanvasContent()
 	v.generation++
 	if !v.secondary {
 		v.app.clearObjectSelection()
@@ -483,7 +486,7 @@ func (v *documentView) resetRendering() {
 	v.readerError = ""
 	v.nativeText = textProbeState{}
 	v.objectProbe = objectProbeState{}
-	v.cancelMiddleSelection()
+	v.cancelCanvasSelection()
 	if v.dragging {
 		v.dragging = false
 		user32.NewProc("ReleaseCapture").Call()
@@ -597,6 +600,7 @@ func (v *documentView) clearPlateView() {
 }
 
 func (v *documentView) reframe() {
+	v.clearCanvasContent()
 	v.generation++
 	if !v.secondary {
 		v.app.clearObjectSelection()
@@ -912,14 +916,7 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	if v.overview {
 		return v.overviewPointer(msg, x, y)
 	}
-	if v.middleSelection(msg, x, y) {
-		return true
-	}
-	if msg == 0x0203 && contains(v.viewport, x, y) && v.app.textTool.gesture.source == 0 {
-		v.selectionClick(x, y, true)
-		return true
-	}
-	if !v.secondary && (v.objectPointer(msg, x, y) || v.app.textPointer(msg, x, y)) {
+	if v.canvasPointer(msg, x, y) {
 		return true
 	}
 	switch msg {
@@ -1672,10 +1669,9 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			v.app.paintTextSelection(dc, number, bounds)
 			v.app.paintObjectSelection(dc, number, bounds)
 		}
-		if v.marquee.source == number {
-			v.app.drawSelectionRegion(dc, bounds, v.marquee)
-		}
+		v.paintMixedSelection(dc, number, bounds)
 	}
+	v.paintCanvasSelection(dc)
 	gdi32.NewProc("RestoreDC").Call(dc, saved)
 	if v.app.full {
 		w, h := int(viewport.right), int(viewport.bottom)

@@ -30,110 +30,6 @@ func (e *objectEditor) selectionContains(pick textSelection, v *documentView) bo
 	})
 }
 
-func (v *documentView) objectRegionPointer(message uint32, x, y int32) bool {
-	a, e := v.app, &v.app.objects
-	switch message {
-	case 0x0201:
-		pick := v.textAt(x, y)
-		if pick.source == 0 || keyDown(0x20) {
-			return false
-		}
-		if !e.defining {
-			if pick.change == replaceSelection && e.selectionContains(pick, v) {
-				e.start, e.cursor, e.pressed, e.dragReady = point{x, y}, point{x, y}, true, true
-				e.pressPick, e.pick = pick, pick
-				setFocus.Call(a.window)
-				user32.NewProc("SetCapture").Call(a.window)
-				return true
-			}
-			pick.mode = textRectangle
-			if e.mode == 2 {
-				pick.mode = textLasso
-			}
-			e.regionPick, e.defining = pick, true
-			e.polygon = []textPoint{pick.point}
-			setFocus.Call(a.window)
-			if e.mode == 1 {
-				user32.NewProc("SetCapture").Call(a.window)
-			}
-			a.updateObjectActions()
-		} else if e.mode == 2 && e.regionPick.source == pick.source {
-			area, _ := v.textSheetAt(x, y, pick.source)
-			first := screenTextPoint(area, e.polygon[0])
-			if len(e.polygon) >= 3 && max(absTextDrag(x-first.x), absTextDrag(y-first.y)) <= int32(a.scale(8)) {
-				a.finishObjectRegion()
-			} else if len(e.polygon) < 256 {
-				e.polygon = append(e.polygon, pick.point)
-			}
-		}
-		e.cursor = point{x, y}
-		v.invalidateCanvas()
-		return true
-	case 0x0200, 0x0202:
-		if !e.defining {
-			return false
-		}
-		if area, visible := v.textSheetAt(x, y, e.regionPick.source); visible != 0 {
-			e.cursor = point{x, y}
-			if e.mode == 1 {
-				e.polygon = rectangleSelection(e.regionPick.point, normalizedTextPoint(area, x, y))
-				if message == 0x0202 {
-					e.defining = false
-					user32.NewProc("ReleaseCapture").Call()
-					if absTextDrag(x-screenTextPoint(area, e.regionPick.point).x) < int32(a.scale(3)) ||
-						absTextDrag(y-screenTextPoint(area, e.regionPick.point).y) < int32(a.scale(3)) {
-						e.polygon = nil
-						v.selectionClick(x, y, false)
-					} else {
-						a.finishObjectRegion()
-					}
-				}
-			}
-		}
-		v.invalidateCanvas()
-		return true
-	}
-	return false
-}
-
-func (a *app) finishObjectRegion() {
-	e, v := &a.objects, a.view
-	e.defining = false
-	if len(e.polygon) >= 3 {
-		pick := e.regionPick
-		pick.polygon = e.polygon
-		v.dispatchCanvasSelection(pick, true)
-	}
-	e.regionPick, e.polygon = textSelection{}, nil
-	v.invalidateCanvas()
-}
-
-func (a *app) paintObjectRegion(dc uintptr, area rect) {
-	e := &a.objects
-	polygon := e.polygon
-	if e.mode == 1 {
-		pick := e.regionPick
-		pick.polygon = polygon
-		a.drawSelectionRegion(dc, area, pick)
-		return
-	}
-	if e.mode == 2 {
-		polygon = append(slices.Clone(polygon), normalizedTextPoint(area, e.cursor.x, e.cursor.y))
-	}
-	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), selectionColor.win())
-	old, _, _ := gdiSelect.Call(dc, pen)
-	drawTextOutline(dc, area, polygon, e.mode == 1)
-	if e.mode == 2 {
-		for _, vertex := range e.polygon {
-			p := screenTextPoint(area, vertex)
-			n := int32(max(2, a.scale(2)))
-			fillColor(dc, rect{p.x - n, p.y - n, p.x + n + 1, p.y + n + 1}, selectionColor)
-		}
-	}
-	gdiSelect.Call(dc, old)
-	gdiDelete.Call(pen)
-}
-
 type objectProbeState struct {
 	model              *objectPage
 	source, generation int
@@ -156,12 +52,12 @@ func (v *documentView) matchObjectSelection(page *objectPage, pick textSelection
 	if pick.generation != v.generation || pick.tool != a.mode || a.busy {
 		return
 	}
-	rotation := (page.Rotation + v.rotations[pick.source-1] + 360) % 360
-	hits := objectsAt(page.Objects, page.Boxes[pick.box], rotation, pick)
-	if len(hits) == 0 && pick.automatic && pick.region() {
-		v.requestNativeText(pick)
+	if pick.combined {
+		v.finishCanvasRegion(page, pick)
 		return
 	}
+	rotation := (page.Rotation + v.rotations[pick.source-1] + 360) % 360
+	hits := objectsAt(page.Objects, page.Boxes[pick.box], rotation, pick)
 	if (a.mode != idObjectsTab || v.secondary) && len(hits) == 0 {
 		if !v.secondary && a.mode == idTextTab && !pick.region() && pick.change == replaceSelection {
 			a.clearTextSelection()
@@ -181,7 +77,13 @@ func (v *documentView) matchObjectSelection(page *objectPage, pick textSelection
 	if e.page == page && e.source == pick.source {
 		previous = e.items
 	}
-	hits = combineSelection(previous, hits, pick.change, func(item pdfObject) int { return item.Token })
+	v.applyObjectSelection(page, pick, combineSelection(previous, hits, pick.change, objectKey))
+}
+
+func objectKey(item pdfObject) int { return item.Token }
+
+func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection, hits []pdfObject) {
+	a, e := v.app, &v.app.objects
 	same := e.page == page && e.source == pick.source && slices.EqualFunc(e.items, hits, func(first, second pdfObject) bool { return first.Token == second.Token })
 	e.page, e.source, e.pick = page, pick.source, pick
 	if !same {
@@ -220,10 +122,10 @@ func objectsAt(items []pdfObject, page searchRect, rotation int, pick textSelect
 		}
 		return nil
 	}
-	var area, pdfArea searchRect
+	area := polygonBounds(pick.polygon)
+	var pdfArea searchRect
 	if pick.mode == textRectangle {
 		first, last := pick.polygon[0], pick.polygon[2]
-		area = rectangleBetween(first, last)
 		pdfArea = rectangleBetween(textPointToPDF(first, page, rotation), textPointToPDF(last, page, rotation))
 	}
 	var hits []pdfObject
@@ -237,7 +139,7 @@ func objectsAt(items []pdfObject, page searchRect, rotation int, pick textSelect
 			if rectangleSelects(area, b, crossing) && (!crossing || objectCrosses(item, pdfArea)) {
 				hits = append(hits, item)
 			}
-		} else if pointInTextRegion(textPoint{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}, pick.polygon) {
+		} else if !boundsContain(b, area) && polygonTouchesRect(pick.polygon, b) {
 			hits = append(hits, item)
 		}
 	}

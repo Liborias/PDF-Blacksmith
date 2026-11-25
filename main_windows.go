@@ -419,8 +419,11 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			a.hideFileMenu(false)
 			a.cancelPageDrag()
 			a.cancelObjectGesture()
-			a.view.cancelMiddleSelection()
-			a.comparison.view.cancelMiddleSelection()
+			a.cancelCanvasSelections()
+		}
+	case 0x0020: // WM_SETCURSOR
+		if wParam == hwnd && uint16(lParam) == 1 && a.setCanvasCursor() {
+			return 1
 		}
 	case 0x002c: // WM_MEASUREITEM
 		if a.measurePopup(lParam) {
@@ -531,6 +534,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return 0
 	case wmDestroy:
 		a.cancelPageDrag()
+		a.cancelCanvasSelections()
 		a.cancelObjectGesture()
 		a.clearInlineFrames()
 		if a.view != nil {

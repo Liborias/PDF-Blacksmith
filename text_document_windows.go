@@ -144,6 +144,10 @@ func (v *documentView) finishNativeText(job readerJob) {
 		pick, p.next = p.next, textSelection{}
 	}
 	if job.result.Status != "ok" || job.result.View == nil || job.result.View.TextPage == nil {
+		if pick.combined {
+			v.failCanvasRegion()
+			return
+		}
 		if pick.automatic && !pick.region() {
 			v.requestObjects(pick)
 		}
@@ -160,46 +164,23 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 	if pick.tool != a.mode || pick.generation != v.generation {
 		return
 	}
+	if pick.combined {
+		v.regionText = model
+		v.requestObjects(pick)
+		return
+	}
 	glyphs, dim, rotation := v.nativeTextGeometry(model, pick)
 	var flow textFlow
 	var stored *storedTextBlock
 	if pick.region() && dim[0] > 0 && dim[1] > 0 {
-		var selection searchRect
-		if pick.mode == textRectangle {
-			selection = rectangleBetween(pick.polygon[0], pick.polygon[2])
-		}
-		selected := slices.DeleteFunc(glyphs, func(g layoutGlyph) bool {
-			b := searchRect{g.bounds[0] / dim[0], g.bounds[1] / dim[1], g.bounds[2] / dim[0], g.bounds[3] / dim[1]}
-			if pick.mode == textRectangle {
-				return !rectangleSelects(selection, b, pick.crossing())
-			}
-			return !pointInTextRegion(textPoint{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}, pick.polygon)
-		})
-		flow = layoutText(selected)
+		flow = layoutText(glyphsInRegion(glyphs, dim, pick))
 	} else {
-		bounds := make([]searchRect, len(glyphs))
-		for i, g := range glyphs {
-			bounds[i] = g.bounds
-		}
-		hit := textHit(bounds, textPoint{pick.point[0] * dim[0], pick.point[1] * dim[1]},
-			textPoint{pick.tolerance[0] * dim[0], pick.tolerance[1] * dim[1]})
-		if hit >= 0 {
-			seed := glyphs[hit]
-			run := model.Objects[seed.run]
-			if block := run.Block; block != nil {
-				flow, stored = storedBlockFlow(model, glyphs, block.ID)
-			} else if pick.mode == textBlock {
-				flow = paragraphOrCellAt(glyphs, seed, pick.paragraphRequested)
-			} else {
-				// One PDF show instruction can cover several columns. Pick the
-				// connected text at the pointer, including neighboring word runs.
-				flow = textLineAt(glyphs, seed)
-			}
-		}
+		flow, stored = textAtPoint(model, glyphs, dim, pick)
 	}
 	p := &a.textTool
 	if pick.automatic {
-		if flow.text == "" || a.busy {
+		allowEmptyArea := pick.region() && (pick.tool == idOCRTab || pick.tool == idTextTab)
+		if flow.text == "" && !allowEmptyArea || a.busy {
 			if !a.busy && !pick.region() {
 				v.requestObjects(pick)
 			}
@@ -231,11 +212,36 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 		if p.model == model && p.pick.source == pick.source && p.pick.generation == pick.generation && p.pick.box == pick.box {
 			previous = p.flow.glyphs()
 		}
-		glyphs := combineSelection(previous, flow.glyphs(), pick.change, func(g layoutGlyph) [2]int {
-			return [2]int{g.run, g.index}
-		})
+		glyphs := combineSelection(previous, flow.glyphs(), pick.change, glyphKey)
 		flow, stored = layoutText(glyphs), nil
 	}
+	a.applyTextSelection(v, model, pick, flow, stored, dim, rotation)
+}
+
+func textAtPoint(model *textPage, glyphs []layoutGlyph, dim textPoint, pick textSelection) (textFlow, *storedTextBlock) {
+	bounds := make([]searchRect, len(glyphs))
+	for i, g := range glyphs {
+		bounds[i] = g.bounds
+	}
+	hit := textHit(bounds, textPoint{pick.point[0] * dim[0], pick.point[1] * dim[1]},
+		textPoint{pick.tolerance[0] * dim[0], pick.tolerance[1] * dim[1]})
+	if hit < 0 {
+		return textFlow{}, nil
+	}
+	seed := glyphs[hit]
+	if block := model.Objects[seed.run].Block; block != nil {
+		return storedBlockFlow(model, glyphs, block.ID)
+	}
+	if pick.mode == textBlock {
+		return paragraphOrCellAt(glyphs, seed, pick.paragraphRequested), nil
+	}
+	// One PDF show instruction can cover several columns. Pick the connected
+	// text at the pointer, including neighboring word runs.
+	return textLineAt(glyphs, seed), nil
+}
+
+func (a *app) applyTextSelection(v *documentView, model *textPage, pick textSelection, flow textFlow, stored *storedTextBlock, dim textPoint, rotation int) {
+	p := &a.textTool
 	p.model, p.pick, p.flow, p.dim, p.rotation = model, pick, flow, dim, rotation
 	setText(p.original, "")
 	setText(p.report, "")

@@ -37,3 +37,21 @@ func TestSelectionModifiers(t *testing.T) {
 		}
 	}
 }
+
+func TestLassoIntersectsContentAtItsEdge(t *testing.T) {
+	lasso := []textPoint{{0.1, 0.1}, {0.8, 0.1}, {0.1, 0.8}}
+	for _, test := range []struct {
+		name string
+		box  searchRect
+		hit  bool
+	}{
+		{"content inside", searchRect{0.2, 0.2, 0.24, 0.24}, true},
+		{"content with center outside", searchRect{0.35, 0.45, 0.57, 0.65}, true},
+		{"only the lasso bounding box overlaps", searchRect{0.6, 0.6, 0.7, 0.7}, false},
+		{"lasso entirely inside", searchRect{0, 0, 1, 1}, true},
+	} {
+		if got := polygonTouchesRect(lasso, test.box); got != test.hit {
+			t.Errorf("%s: got %v, want %v", test.name, got, test.hit)
+		}
+	}
+}

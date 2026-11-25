@@ -20,6 +20,8 @@ const (
 	uiSelectedImage                 uiMessage = "win32.properties.SelectedImage"
 	uiPDFGroup                      uiMessage = "win32.properties.PDFGroup"
 	uiSelectedObjects               uiMessage = "win32.properties.SelectedObjects"
+	uiMixedCanvasSelection          uiMessage = "win32.properties.MixedCanvasSelection"
+	uiCanvasRegionUnavailable       uiMessage = "win32.properties.CanvasRegionUnavailable"
 	uiObjectsUnavailable            uiMessage = "win32.properties.ObjectsUnavailable"
 	uiPresetManualName              uiMessage = "win32.export.preset.manual.name"
 	uiPresetManualDescription       uiMessage = "win32.export.preset.manual.description"
@@ -266,6 +268,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiSelectedImage:                 {Czech: "Obrázek", English: "Image"},
 	uiPDFGroup:                      {Czech: "Skupina PDF", English: "PDF group"},
 	uiSelectedObjects:               {Czech: "Vybrané objekty: %d", English: "Selected objects: %d"},
+	uiMixedCanvasSelection:          {Czech: "Výběr · znaky %d, objekty %d", English: "Selection · %d characters, %d objects"},
+	uiCanvasRegionUnavailable:       {Czech: "Obsah vyznačené oblasti se nepodařilo načíst.", English: "Could not load the contents of the selected area."},
 	uiObjectsUnavailable:            {Czech: "Objekty na této straně nelze vybrat.", English: "Objects on this page cannot be selected."},
 	uiPresetManualName:              {Czech: "Vlastní nastavení", English: "Custom settings"},
 	uiPresetManualDescription:       {Czech: "Ruční volba barev, desky K, převodu textu a komprese.", English: "Set colors, K-only output, text conversion, and compression manually."},

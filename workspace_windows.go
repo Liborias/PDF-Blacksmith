@@ -444,6 +444,11 @@ func (a *app) activate(id int) {
 		}
 		a.tool, a.mode = id, id
 	}
+	if old != a.mode {
+		a.cancelCanvasSelections()
+		a.view.clearCanvasContent()
+		a.comparison.view.clearCanvasContent()
+	}
 	a.layoutAids.temporary = false
 	a.syncSearchAuxiliary()
 	if id == idExportTab || id == idFileSign || id == idLayoutAids {
@@ -697,6 +702,8 @@ func (a *app) toggleFullscreen() {
 	if a.saveInlineBefore(a.toggleFullscreen) {
 		return
 	}
+	a.cancelCanvasSelections()
+	a.cancelCanvasRegionProbes()
 	getStyle := user32.NewProc("GetWindowLongW")
 	setStyle := user32.NewProc("SetWindowLongW")
 	position := user32.NewProc("SetWindowPos")
@@ -1465,12 +1472,19 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.message != 0x0100 {
 		return false
 	}
-	if msg.wParam == 0x1b && (a.view.cancelMiddleSelection() ||
-		a.comparison.view.cancelMiddleSelection() || a.cancelPageDrag()) {
+	if msg.wParam == 0x1b && (msg.window == a.window && a.cancelCanvasSelections() || a.cancelPageDrag()) {
+		return true
+	}
+	if msg.wParam == 0x1b && msg.window == a.window && !a.full && a.focusedDocumentView().clearCanvasContent() {
 		return true
 	}
 	if msg.wParam == 0x0d && msg.window == a.window && !keyDown(0x11) && !keyDown(0x12) {
-		if v := a.focusedDocumentView(); v.overview {
+		v := a.focusedDocumentView()
+		if v.selection.active() && v.selection.pick.mode == textLasso {
+			v.finishCanvasSelection()
+			return true
+		}
+		if v.overview {
 			v.fitOverviewSelection()
 			return true
 		}
