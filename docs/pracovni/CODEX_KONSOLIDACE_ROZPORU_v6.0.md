@@ -39,3 +39,4 @@
 - Toto je **dokumentační konsolidace**, nikoli kompletní runtime audit produkční aplikace, ani důkaz, že v3.26 nemá chybné handlery či vizuální nedostatky. Fyzický Windows build/test a Chrome/Edge integrační test zůstává v Etapě 0/1.
 
 **Pokud se Codex setká s historickým dokumentem označeným „aktuální“, není to další závazný plán. Má použít master v6.0, finální mapy a implementační plán v6.0.**
+| 29 | V HTML v3.26 jsou některé UI ikonové reference bez definice SVG symbolu | **Zachovat existující ikonovou sadu, ověřit chybějící `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single` při prvním UI auditu; neprohlašovat prototyp za kompletně ověřený.** |
