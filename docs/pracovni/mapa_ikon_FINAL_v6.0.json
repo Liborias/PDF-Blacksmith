@@ -56,6 +56,14 @@
       "externalSource": null
     },
     {
+      "symbol": "i-background_mask",
+      "category": "Objekty",
+      "label": "Maska pozadí",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
       "symbol": "i-baseline_down",
       "category": "Text a výběr",
       "label": "baseline down",
@@ -131,6 +139,14 @@
       "symbol": "i-copy",
       "category": "Ostatní",
       "label": "copy",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-crop_mask",
+      "category": "Objekty",
+      "label": "Ořezová maska / Maska objektu",
       "status": "HTML_SVG_DEFINED_v3.26",
       "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
       "externalSource": null
@@ -402,7 +418,7 @@
     {
       "symbol": "i-image_crop",
       "category": "Objekty",
-      "label": "Oříznout obrázek",
+      "label": "Ořez",
       "status": "HTML_SVG_DEFINED_v3.26",
       "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
       "externalSource": null
@@ -475,6 +491,30 @@
       "symbol": "i-line_spacing",
       "category": "Ostatní",
       "label": "line spacing",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-mask_aspect_lock",
+      "category": "Objekty",
+      "label": "Poměr stran / Zámek poměru stran",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-mask_invert",
+      "category": "Objekty",
+      "label": "Inverze masky",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
+      "symbol": "i-mask_move_content",
+      "category": "Objekty",
+      "label": "Posun obsahu v masce",
       "status": "HTML_SVG_DEFINED_v3.26",
       "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
       "externalSource": null

@@ -29,9 +29,6 @@ def main():
     ids = ["i-" + name for name in SYMBOLS]
     registry = json.loads((DOCS / "mapa_ikon_FINAL_v6.0.json").read_text(encoding="utf-8"))
     approved = {item["symbol"] for item in registry["icons"]}
-    for name in ids:
-        if name not in original_tags or name not in approved:
-            raise ValueError(f"Missing or unapproved icon: {name}")
     # The reference draws this icon inline in the toolbar instead of the SVG registry.
     quick_mode = re.search(
         r'<button\b[^>]*\bid="themeQuickToggle"[^>]*>\s*<svg\b[^>]*\bviewBox="([^"]+)"[^>]*>(.*?)</svg>',
@@ -41,6 +38,14 @@ def main():
     mode_id = "i-theme_quick_inline"
     original_tags[mode_id] = f'<symbol id="{mode_id}" viewBox="{quick_mode[1]}">{quick_mode[2]}</symbol>'
     ids.append(mode_id)
+    ids.extend("i-" + name for name in (
+        "crop_mask", "background_mask", "mask_move_content", "mask_aspect_lock", "mask_invert",
+    ))
+    for name in ids:
+        if name == mode_id:
+            continue
+        if name not in original_tags or name not in approved:
+            raise ValueError(f"Missing or unapproved icon: {name}")
     width = 24 * len(ids)
     definitions = "".join(original_tags[name] for name in ids)
     tiles = "".join(f'<use x="{24 * index}" width="24" height="24" xlink:href="#{name}"/>'

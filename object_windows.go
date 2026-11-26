@@ -104,8 +104,8 @@ func (a *app) buildObjectPanel() {
 	e.cropTool = a.uiTextIconButton(uiCropImage, idObjectCrop, 16, 288, 34)
 	e.cropHint = a.readout(58, 288, 256, 48)
 	a.buildCropOptions()
-	e.cropApply = a.uiButton(uiApply, idObjectApplyCrop, 16, 454, 145, 0)
-	e.cropCancel = a.uiButton(uiCancel, idObjectCancelCrop, 169, 454, 145, 0)
+	e.cropApply = a.uiButton(uiConfirmImageCrop, idObjectApplyCrop, 16, 454, 145, 0)
+	e.cropCancel = a.uiButton(uiCancelImageCrop, idObjectCancelCrop, 169, 454, 145, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -124,10 +124,18 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.duplicate, selected)
 	setEnabled(e.remove, selected)
 	setEnabled(e.undo, ready && len(a.view.history) > 0)
-	setEnabled(e.cropTool, a.canCropImage())
+	canCrop := a.canCropImage()
+	setEnabled(e.cropTool, canCrop)
 	a.setChecked(e.cropTool, e.crop.active)
 	_, canApplyCrop := a.imageCropBounds()
-	cropOptions := ready && e.crop.active && !e.crop.dragging
+	cropOptions := canCrop && !e.crop.dragging
+	if a.hasImageCropTarget() {
+		hint := uiChooseImageCrop
+		if e.crop.active {
+			hint = uiCropImageHint
+		}
+		a.setUIMessage(e.cropHint, hint)
+	}
 	for i, handle := range e.cropShapes {
 		setEnabled(handle, cropOptions)
 		a.setChecked(handle, e.crop.active && e.crop.shape == imageCropShape(i))
@@ -139,6 +147,7 @@ func (a *app) updateObjectActions() {
 
 func (a *app) clearObjectSelection() {
 	e := &a.objects
+	showedCrop := a.hasImageCropTarget()
 	a.cancelImageCrop()
 	a.cancelObjectGesture()
 	e.page, e.source, e.pick = nil, 0, textSelection{}
@@ -147,6 +156,9 @@ func (a *app) clearObjectSelection() {
 	if e.info != 0 {
 		a.setUIMessage(e.info, uiSelectPageObject)
 		a.updateObjectActions()
+		if showedCrop {
+			a.layoutPanel()
+		}
 	}
 }
 
@@ -441,6 +453,11 @@ func (a *app) copySelectedObject() {
 func (a *app) objectCommand(id, notification int) bool {
 	if a.mode == idObjectsTab && id == idObjectCropRatio && notification == 1 {
 		setFocus.Call(a.window)
+		preset := comboIndex(a.objects.cropRatio)
+		if !a.objects.crop.active {
+			a.beginImageCrop()
+			chooseCombo(a.objects.cropRatio, preset)
+		}
 		a.updateObjectActions()
 		a.view.invalidateCanvas()
 		return true
@@ -471,11 +488,7 @@ func (a *app) objectCommand(id, notification int) bool {
 		if e.mode == 0 {
 			a.canvasTextCursor = false
 		}
-		a.cancelCanvasRegionProbes()
-		if e.mode == 0 || v.mixed.pick.source == 0 {
-			v.clearMixedSelection()
-			a.clearObjectSelection()
-		}
+		a.cancelCanvasSelectionProbes()
 		v.invalidateCanvas()
 		a.updateCommandBar()
 	case idObjectCopy:

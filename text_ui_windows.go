@@ -67,19 +67,23 @@ func (a *app) drawTextIcon(item *buttonDraw) bool {
 		base = titleColor
 	}
 	fillColor(item.dc, item.bounds, base)
-	color, background := textColor, inputColor
+	color, background, edge := textColor, inputColor, divider
+	pressed := item.state&1 != 0
+	hovered := symbol != "" && a.navigationHot(item)
 	switch {
 	case item.state&4 != 0:
 		color, background = disabledColor, panelColor
 	case a.checked(item.handle):
-		color = selectionColor
-	}
-	if item.state&1 != 0 {
+		background, edge = uiColors["toolbarActive"], uiColors["accentStrong"]
+		if pressed || hovered {
+			background = uiColors["toolbarActiveHover"]
+		}
+	case pressed:
 		background = divider
-	} else if symbol != "" && item.state&4 == 0 && a.navigationHot(item) {
+	case hovered:
 		background = uiColors["hover"]
 	}
-	rounded(item.dc, item.bounds, a.scale(5), background, divider)
+	rounded(item.dc, item.bounds, a.scale(5), background, edge)
 	var mixedMask uint32
 	switch id {
 	case idTextRegular:

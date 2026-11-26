@@ -35,6 +35,11 @@
     "i-zoom_out",
     "i-text_box",
     "i-image_crop",
-    "i-theme_quick_inline"
+    "i-theme_quick_inline",
+    "i-crop_mask",
+    "i-background_mask",
+    "i-mask_move_content",
+    "i-mask_aspect_lock",
+    "i-mask_invert"
   ]
 }

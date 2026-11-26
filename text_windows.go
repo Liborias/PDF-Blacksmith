@@ -225,7 +225,7 @@ func (a *app) textCommand(id, notification int) bool {
 		if p.mode < textRectangle {
 			a.canvasTextCursor = true
 		}
-		a.cancelCanvasRegionProbes()
+		a.cancelCanvasSelectionProbes()
 		if p.mode < textRectangle || p.mode == textFrame || a.view.mixed.pick.source == 0 {
 			a.view.clearMixedSelection()
 			a.clearTextSelection()

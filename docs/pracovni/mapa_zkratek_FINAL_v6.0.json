@@ -121,6 +121,12 @@
       "status": "A_statically_documented_needs_Windows_runtime_recheck"
     },
     {
+      "shortcut": "Alt + tažení",
+      "action": "Přesunout vybraný text nebo objekt",
+      "scope": "selected content on canvas",
+      "status": "A_statically_documented_needs_Windows_runtime_recheck"
+    },
+    {
       "shortcut": "Ctrl+Enter",
       "action": "Použít úpravu textu",
       "scope": "inline text",

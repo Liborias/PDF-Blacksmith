@@ -445,6 +445,9 @@ func (a *app) activate(id int) {
 		a.tool, a.mode = id, id
 	}
 	if old != a.mode {
+		if a.mode == idObjectsTab {
+			a.canvasTextCursor = false
+		}
 		a.cancelCanvasSelections()
 		a.view.clearCanvasContent()
 		a.comparison.view.clearCanvasContent()
@@ -522,12 +525,14 @@ func (a *app) layout() {
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
 	if tab == idObjectsTab {
 		switch item.handle {
-		case a.objects.cropHint, a.objects.cropRatioLabel, a.objects.cropRatio, a.objects.cropApply, a.objects.cropCancel:
+		case a.objects.cropApply, a.objects.cropCancel:
 			return item, a.objects.crop.active
+		case a.objects.cropTool, a.objects.cropHint, a.objects.cropRatioLabel, a.objects.cropRatio:
+			return item, a.hasImageCropTarget()
 		}
 		for _, handle := range a.objects.cropShapes {
 			if item.handle == handle {
-				return item, a.objects.crop.active
+				return item, a.hasImageCropTarget()
 			}
 		}
 	}
@@ -715,7 +720,7 @@ func (a *app) toggleFullscreen() {
 		return
 	}
 	a.cancelCanvasSelections()
-	a.cancelCanvasRegionProbes()
+	a.cancelCanvasSelectionProbes()
 	getStyle := user32.NewProc("GetWindowLongW")
 	setStyle := user32.NewProc("SetWindowLongW")
 	position := user32.NewProc("SetWindowPos")

@@ -6,15 +6,15 @@ Tato mapa konsoliduje **v5.1** (všechny aktualizace magnetu, vodítek, skupin, 
 
 ## Závazná pravidla
 - Logo kovadliny je pouze originální autorský vektor `kovadlina křivky.svg`. Ikona `i-snap_magnet` vychází z uživatelem dodaného `magnet(2).svg` a zachovává plnou podkovu/dvě obrysové koncovky; `currentColor`.
-- `i-cursor` ↔ `i-text_caret`: jedno dvoustavové tlačítko **ikona ukazuje příští akci**; `i-rect_select` a `i-lasso` jsou samostatné. `i-text_box` vytváří pouze odstavcový textový rámec.
-- `i-view_pages` ↔ `i-view_continuous`: druhé dvoustavové tlačítko; samostatný třetí Přehled stran používá `i-nav_thumbnails` bez změny tohoto dvoustavu.
+- `i-cursor` ↔ `i-text_caret`: jedno dvoustavové tlačítko **ikona ukazuje aktuální stav, nápověda popisuje příští akci**; `i-rect_select` a `i-lasso` jsou samostatné. `i-text_box` vytváří pouze odstavcový textový rámec.
+- `i-view_pages` ↔ `i-view_continuous`: druhé dvoustavové tlačítko s ikonou aktuálního režimu. Samostatný třetí Přehled stran používá `i-nav_thumbnails` bez změny tohoto dvoustavu.
 - `i-settings_interface`: samostatná ikona v Nastavení → Rozhraní, zdroj `rozhrani/ikony/settings_interface.svg`. Nepoužívat neexistující `i-panel_left` jako ikonu. Jazyk používá `i-language`. Horní Nápověda má prostý znak ? bez kruhového obrysu uvnitř tlačítka.
 - `i-guide_eye`, `i-guide_eye_off`, `i-guide_lock`, `i-guide_unlock`, `i-guide_trash`, `i-guide_group`, `i-guide_ungroup`: oko/lock/trash a skupiny jsou nezaměnitelné; koš = smazat, křížek = zavřít. Volba barvy a potvrzení ✓ nepatří do hit-testu ikon.
 - `i-toggle_rulers`, `i-toggle_guides`, `i-toggle_grid`, `i-snap_magnet` jsou čtyři různé akce. Form F2, Preflight, Batch a Compare ikony nesmějí založit produktový command ID bez schválení.
 - UI SVG mají centrální paletovou barvu `currentColor`, typicky plátno 24×24; pro Go/Win32 převod odpovídající DPI, zachování kontrastu a optických velikostí. CMYK značky, originální swatche a obsah PDF se nepřebarvují.
 - **Stav níže:** definice inline `<symbol>` v HTML v3.26. Neznamená fungující Go/PDFium příkaz; ten nutno auditovat v příslušném zdrojovém souboru.
 
-## Soupis všech 141 symbolů (bez duplicit)
+## Soupis všech 146 symbolů (bez duplicit)
 
 ### Formuláře (10)
 
@@ -56,15 +56,20 @@ Tato mapa konsoliduje **v5.1** (všechny aktualizace magnetu, vodítek, skupin, 
 | `i-nav_thumbnails` | Miniatury / pružný přehled | HTML symbol; Win32 audit |
 | `i-nav_view` | nav view | HTML symbol; Win32 audit |
 
-### Objekty (5)
+### Objekty (10)
 
 | Symbol | Význam | Status |
 |---|---|---|
 | `i-align_objects_center` | align objects center | HTML symbol; Win32 audit |
 | `i-group_objects` | group objects | HTML symbol; Win32 audit |
-| `i-image_crop` | Oříznout obrázek | HTML symbol; Win32 audit |
+| `i-image_crop` | Ořez | Používá nástroj Objekty |
 | `i-image_edit` | image edit | HTML symbol; Win32 audit |
 | `i-ungroup_objects` | ungroup objects | HTML symbol; Win32 audit |
+| `i-crop_mask` | Ořezová maska / Maska objektu | Definováno ve SVG a atlasu Win32 |
+| `i-background_mask` | Maska pozadí | Definováno ve SVG a atlasu Win32 |
+| `i-mask_move_content` | Posun obsahu v masce | Definováno ve SVG a atlasu Win32 |
+| `i-mask_aspect_lock` | Poměr stran / Zámek poměru stran | Definováno ve SVG a atlasu Win32 |
+| `i-mask_invert` | Inverze masky | Definováno ve SVG a atlasu Win32 |
 
 ### Ostatní (47)
 
@@ -207,4 +212,4 @@ Pro každý symbol otestovat `<use href="#i-...">`, text alternativy, hover/focu
 
 ## Otevřené ověřovací chyby HTML (nikoli zrušená schválená ikona)
 
-Statické prověření volání `miniIcon`, `block` a seznamů odhalilo nejméně tyto **použité, ale v HTML v3.26 chybějící definice symbolů**: `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single`. Jde například o přepínání panelu Nástroje, šipkové poznámky, transformace objektů a separační desky. **Nezakládat automaticky nová Win32 ID ani nevymýšlet náhradní grafiku**: ověřit, zda je přesný symbol v původním SVG atlasu/manifestu, případně bezpečně doplnit po schválení UI opravy. Strojová mapa eviduje chybějící odkazy ve `known_missing_html_symbols`; tyto symboly **nejsou** mezi 141 skutečně definovanými.
+Statické prověření volání `miniIcon`, `block` a seznamů odhalilo nejméně tyto **použité, ale v HTML v3.26 chybějící definice symbolů**: `i-panel_left`, `i-arrow_line`, `i-transform_object`, `i-plate_all`, `i-plate_single`. Jde například o přepínání panelu Nástroje, šipkové poznámky, transformace objektů a separační desky. **Nezakládat automaticky nová Win32 ID ani nevymýšlet náhradní grafiku**: ověřit, zda je přesný symbol v původním SVG atlasu/manifestu, případně bezpečně doplnit po schválení UI opravy. Strojová mapa eviduje chybějící odkazy ve `known_missing_html_symbols`; tyto symboly **nejsou** mezi 146 skutečně definovanými.

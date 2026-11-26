@@ -28,14 +28,14 @@ func glyphsInRegion(glyphs []layoutGlyph, dim textPoint, pick textSelection) []l
 	})
 }
 
-func (v *documentView) cancelCanvasRegionProbe() bool {
+func (v *documentView) cancelCanvasSelectionProbe() bool {
 	if v == nil {
 		return false
 	}
 	canceled := v.regionText != nil
 	v.regionText = nil
 	for _, pick := range []*textSelection{&v.nativeText.next, &v.nativeText.flight, &v.objectProbe.next, &v.objectProbe.flight} {
-		if pick.combined || pick.insertPoint || pick.mode == textFrame && pick.region() {
+		if pick.source != 0 {
 			*pick = textSelection{}
 			canceled = true
 		}
@@ -43,13 +43,13 @@ func (v *documentView) cancelCanvasRegionProbe() bool {
 	return canceled
 }
 
-func (a *app) cancelCanvasRegionProbes() {
-	a.view.cancelCanvasRegionProbe()
-	a.comparison.view.cancelCanvasRegionProbe()
+func (a *app) cancelCanvasSelectionProbes() {
+	a.view.cancelCanvasSelectionProbe()
+	a.comparison.view.cancelCanvasSelectionProbe()
 }
 
 func (v *documentView) failCanvasRegion() {
-	v.cancelCanvasRegionProbe()
+	v.cancelCanvasSelectionProbe()
 	v.app.reportStatus(v.app.uiText(uiCanvasRegionUnavailable))
 }
 
@@ -74,7 +74,7 @@ func (v *documentView) clearCanvasContent() bool {
 	if v == nil {
 		return false
 	}
-	canceled := v.cancelCanvasRegionProbe()
+	canceled := v.cancelCanvasSelectionProbe()
 	return v.clearMixedSelection() || canceled
 }
 
@@ -147,9 +147,8 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 	switch {
 	case mixed && pick.tool == idTextTab, hasText && !mixed:
 		tool = idTextTab
-	case pick.region() && !hasText && pick.tool == idTextTab &&
-		(v.mixed.pick.source == 0 || pick.change == replaceSelection || len(items) == 0):
-		// Keep an explicit text region available for OCR when there is no text.
+	case pick.region() && len(items) == 0 && pick.tool == idTextTab:
+		// Keep an empty region available for OCR once neither type was hit.
 		tool = idTextTab
 	case len(items) == 0 && pick.tool != idObjectsTab:
 		v.clearMixedSelection()

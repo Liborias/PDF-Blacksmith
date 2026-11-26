@@ -51,6 +51,7 @@ func (a *app) buildCropOptions() {
 }
 
 func (a *app) chooseImageCropShape(shape imageCropShape) {
+	a.beginImageCrop()
 	e := &a.objects
 	if !e.crop.active || e.crop.dragging {
 		return
@@ -92,10 +93,14 @@ func (a *app) imageCropBounds() (searchRect, bool) {
 		bounds[2] > bounds[0] && bounds[3] > bounds[1]
 }
 
-func (a *app) canCropImage() bool {
+func (a *app) hasImageCropTarget() bool {
 	e, v := &a.objects, a.view
-	return a.mode == idObjectsTab && !a.full && !a.busy && v.ready() && !v.overview &&
+	return a.mode == idObjectsTab && v.ready() && !v.overview &&
 		e.page != nil && e.pick.generation == v.generation && len(e.items) == 1 && e.selected.Kind == "image"
+}
+
+func (a *app) canCropImage() bool {
+	return !a.full && !a.busy && a.hasImageCropTarget()
 }
 
 func (a *app) beginImageCrop() {
@@ -103,12 +108,11 @@ func (a *app) beginImageCrop() {
 		return
 	}
 	a.cancelCanvasSelections()
-	a.cancelCanvasRegionProbes()
+	a.cancelCanvasSelectionProbes()
 	a.cancelObjectGesture()
 	e := &a.objects
 	e.crop.active = true
 	chooseCombo(e.cropRatio, 0)
-	a.setUIMessage(e.cropHint, uiCropImageHint)
 	a.updateObjectActions()
 	a.layoutPanel()
 	a.view.invalidateCanvas()
@@ -124,7 +128,7 @@ func (a *app) cancelImageCrop() bool {
 	if dragging {
 		user32.NewProc("ReleaseCapture").Call()
 	}
-	setText(e.cropHint, "")
+	chooseCombo(e.cropRatio, 0)
 	a.updateObjectActions()
 	a.layoutPanel()
 	a.view.invalidateCanvas()

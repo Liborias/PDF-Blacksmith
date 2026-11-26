@@ -28,6 +28,7 @@
 | Ctrl+V | Vložit | inline text |
 | Ctrl+A | Vybrat vše | inline text/canvas |
 | Ctrl+Enter | Použít úpravu textu | inline text |
+| Alt + tažení | Přesunout vybraný text nebo objekt | vybraný obsah na plátně |
 | Ctrl+B | Tučné | inline text |
 | Ctrl+I | Kurzíva | inline text |
 | Ctrl+U | Podtržené | inline text |

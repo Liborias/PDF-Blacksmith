@@ -55,12 +55,12 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderEdit, label: uiEdit, menu: true},
 	{id: idHeaderForms, label: uiForms, menu: true},
 	{id: idHeaderHelp, label: uiHelpMenu, menu: true},
-	{id: idHeaderPointer, label: uiSwitchToCanvasText, symbol: "i-text_caret"},
+	{id: idHeaderPointer, label: uiSwitchToCanvasText, symbol: "i-cursor"},
 	{id: idHeaderRectangle, label: uiCanvasRectangle, symbol: "i-rect_select"},
 	{id: idHeaderLasso, label: uiCanvasLasso, symbol: "i-lasso"},
 	{id: idHeaderUndo, label: uiUndo, symbol: "i-undo", shortcut: "Ctrl+Z"},
 	{id: idHeaderRedo, label: uiRedo, symbol: "i-redo", shortcut: "Ctrl+Y"},
-	{id: idHeaderFlow, label: uiSwitchToContinuous, symbol: "i-view_continuous"},
+	{id: idHeaderFlow, label: uiSwitchToContinuous, symbol: "i-view_pages"},
 	{id: idHeaderOverview, label: uiPageOverview, symbol: "i-nav_thumbnails"},
 	{id: idReaderZoomOut, label: uiZoomOut, symbol: "i-zoom_out"},
 	{id: idReaderZoomIn, label: uiZoomIn, symbol: "i-zoom_in"},
@@ -136,24 +136,25 @@ func (a *app) buildCommandBar() {
 func (a *app) layoutCommandBar() {
 	d := a.scale
 	x := d(8)
-	total := d(28)
+	menuWidth, iconCount := 0, 0
 	for _, control := range a.commandBar.controls {
 		if control.menu {
-			total += a.captionWidth(a.uiText(control.label), a.normalFont) + d(20) + d(1)
+			menuWidth += a.captionWidth(a.uiText(control.label), a.normalFont) + d(20) + d(1)
 		} else {
-			total += d(30) + d(4)
+			iconCount++
 		}
 	}
 	iconWidth, iconGap := d(30), d(4)
-	if total > a.width {
+	if menuWidth+iconCount*iconWidth+(iconCount-1)*iconGap+d(28) > a.width {
 		iconWidth, iconGap = d(27), d(2)
 	}
+	iconStart := a.width - d(8) - (iconCount*iconWidth + (iconCount-1)*iconGap)
 	for _, control := range a.commandBar.controls {
 		width, gap := iconWidth, iconGap
 		if control.menu {
 			width, gap = a.captionWidth(a.uiText(control.label), a.normalFont)+d(20), d(1)
 		} else if control.id == idHeaderPointer {
-			x += d(12)
+			x = max(x+d(12), iconStart)
 		}
 		show := !a.full && x+width+d(8) <= a.width
 		if show {
@@ -224,7 +225,7 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		switch control.id {
 		case idHeaderPointer:
 			if a.canvasTextCursor {
-				symbol = "i-cursor"
+				symbol = "i-text_caret"
 			}
 			active = a.commandBar.areaMode == 0
 		case idHeaderRectangle:
@@ -233,9 +234,9 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			active = a.commandBar.areaMode == textLasso
 		case idHeaderFlow:
 			if a.view.continuous {
-				symbol = "i-view_pages"
-				active = !a.view.overview
+				symbol = "i-view_continuous"
 			}
+			active = !a.view.overview
 		case idHeaderOverview:
 			active = a.view.overview
 		case idCompareOpen:
@@ -443,7 +444,7 @@ func (a *app) setHeaderSelection(id int) {
 		} else if p := &a.textTool; a.mode == idTextTab && (p.flow.text != "" || a.view.mixed.pick.source != 0) {
 			// The selected text remains available to drag when leaving the text cursor.
 			a.cancelCanvasSelections()
-			a.cancelCanvasRegionProbes()
+			a.cancelCanvasSelectionProbes()
 			a.canvasTextCursor = false
 			p.mode, p.explicitParagraph = textObject, false
 			a.syncTextSelectionModes()
@@ -459,7 +460,7 @@ func (a *app) setHeaderSelection(id int) {
 	}
 	if a.mode == idOCRTab {
 		a.cancelCanvasSelections()
-		a.cancelCanvasRegionProbes()
+		a.cancelCanvasSelectionProbes()
 		a.ocr.areaMode = textRectangle + id - idHeaderRectangle
 		a.updateCommandBar()
 		return

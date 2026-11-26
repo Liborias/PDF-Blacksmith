@@ -76,12 +76,10 @@ func (v *documentView) dispatchCanvasSelection(pick textSelection) {
 			return
 		}
 		pick.source, pick.generation, pick.tool = view.order[position], view.generation, a.mode
-		a.cancelCanvasRegionProbes()
+		a.cancelCanvasSelectionProbes()
 		if !pick.combined {
 			view.clearMixedSelection()
 		}
-		view.nativeText.next, view.nativeText.flight = textSelection{}, textSelection{}
-		view.objectProbe.next, view.objectProbe.flight = textSelection{}, textSelection{}
 		view.requestNativeText(pick)
 	}
 	if !a.saveInlineBefore(apply) {
@@ -181,7 +179,7 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 		return false
 	}
 	pick := v.textAt(x, y)
-	a.cancelCanvasRegionProbes()
+	a.cancelCanvasSelectionProbes()
 	mode, region := v.canvasRegionMode()
 	if message == 0x0203 {
 		if pick.source != 0 && (!region || mode != textLasso) {
@@ -206,6 +204,9 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 		return true
 	}
 	if v.beginCanvasContentMove(pick, pos) {
+		return true
+	}
+	if !v.secondary && region && keyDown(0x12) && a.mode == idObjectsTab && v.objectPointer(message, x, y) {
 		return true
 	}
 	if region {

@@ -29,7 +29,7 @@ func (v *documentView) beginCanvasContentMove(pick textSelection, start point) b
 			}
 			move.tokens = append(move.tokens, item.Token)
 		}
-	} else if p := &a.textTool; a.mode == idTextTab && !a.canvasTextCursor &&
+	} else if p := &a.textTool; a.mode == idTextTab && (!a.canvasTextCursor || keyDown(0x12)) &&
 		pick.sameCanvasPage(p.pick) && p.flow.text != "" && !a.inlineDirty() {
 		model, glyphs, lines, dim = p.model, p.flow.glyphs(), p.flow.highlightBounds(), p.dim
 	}

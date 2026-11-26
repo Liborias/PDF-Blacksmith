@@ -90,6 +90,7 @@ func objectKey(item pdfObject) int { return item.Token }
 
 func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection, hits []pdfObject) {
 	a, e := v.app, &v.app.objects
+	showedCrop := a.hasImageCropTarget()
 	same := e.page == page && e.source == pick.source && slices.EqualFunc(e.items, hits, func(first, second pdfObject) bool { return first.Token == second.Token })
 	e.page, e.source, e.pick = page, pick.source, pick
 	if !same {
@@ -109,6 +110,9 @@ func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection
 		a.setUIMessage(e.info, uiSelectedObjects, len(e.items))
 	}
 	a.updateObjectActions()
+	if showedCrop != a.hasImageCropTarget() {
+		a.layoutPanel()
+	}
 	v.invalidateCanvas()
 	a.moveObjectPreview()
 	v.schedule()

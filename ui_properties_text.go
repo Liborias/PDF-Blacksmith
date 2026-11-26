@@ -193,7 +193,10 @@ const (
 	uiObjectActions                 uiMessage = "win32.properties.ObjectActions"
 	uiObjectActionsHelp             uiMessage = "win32.properties.ObjectActionsHelp"
 	uiCropImage                     uiMessage = "win32.properties.CropImage"
+	uiConfirmImageCrop              uiMessage = "win32.properties.ConfirmImageCrop"
+	uiCancelImageCrop               uiMessage = "win32.properties.CancelImageCrop"
 	uiCropImageHint                 uiMessage = "win32.properties.CropImageHint"
+	uiChooseImageCrop               uiMessage = "win32.properties.ChooseImageCrop"
 	uiCropAspectRatio               uiMessage = "win32.properties.CropAspectRatio"
 	uiCropFreeRatio                 uiMessage = "win32.properties.CropFreeRatio"
 	uiCropSquareRatio               uiMessage = "win32.properties.CropSquareRatio"
@@ -430,14 +433,17 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiPreviousMatch:                 {Czech: "Předchozí shoda", English: "Previous match"},
 	uiNextMatch:                     {Czech: "Další shoda", English: "Next match"},
 	uiSearchResults:                 {Czech: "Výsledky hledání", English: "Search results"},
-	uiObjectSelectionHelp:           {Czech: "Vybraný objekt nebo skupinu přesunete tažením. Laso uzavřete Enterem nebo kliknutím na první bod.", English: "Drag to move a selected object or group. Close the lasso with Enter or by clicking its first point."},
+	uiObjectSelectionHelp:           {Czech: "Vybraný objekt přesunete šipkou nebo tažením s Alt. Laso uzavřete Enterem nebo kliknutím na první bod.", English: "Drag the selected object with the arrow tool or hold Alt while dragging. Close the lasso with Enter or by clicking its first point."},
 	uiSelectByClick:                 {Czech: "Výběr kliknutím (V)", English: "Click selection (V)"},
 	uiRectangleSelection:            {Czech: "Obdélníkový výběr (M)", English: "Rectangle selection (M)"},
 	uiPolygonLassoKey:               {Czech: "Mnohoúhelníkové laso (L)", English: "Polygon lasso (L)"},
 	uiSelectPageObject:              {Czech: "Vyberte objekt na stránce.", English: "Select an object on the page."},
 	uiObjectActions:                 {Czech: "Akce s objekty", English: "Object actions"},
-	uiCropImage:                     {Czech: "Oříznout obrázek", English: "Crop image"},
-	uiCropImageHint:                 {Czech: "Tažením vyznačte výřez. Potvrďte tlačítkem Použít nebo Enterem.", English: "Drag to mark the area to keep. Click Apply or press Enter."},
+	uiCropImage:                     {Czech: "Ořez", English: "Crop image"},
+	uiConfirmImageCrop:              {Czech: "Potvrdit ořez", English: "Confirm crop"},
+	uiCancelImageCrop:               {Czech: "Zrušit ořez", English: "Cancel crop"},
+	uiCropImageHint:                 {Czech: "Výřez vyznačte tažením. Potvrďte Enterem nebo tlačítkem.", English: "Drag to mark the area to keep, then confirm or press Enter."},
+	uiChooseImageCrop:               {Czech: "Zvolte tvar, poměr stran nebo spusťte nástroj ořezu.", English: "Choose a shape or aspect ratio, or click the crop icon to start."},
 	uiCropAspectRatio:               {Czech: "Poměr stran", English: "Aspect ratio"},
 	uiCropFreeRatio:                 {Czech: "Volný", English: "Free"},
 	uiCropSquareRatio:               {Czech: "1 : 1 · Čtverec", English: "1 : 1 · Square"},
@@ -502,8 +508,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiSelectValidFile:               {Czech: "Vyberte soubor s platnou cestou.", English: "Choose a file with a valid path."},
 	uiSelectExistingFolder:          {Czech: "Vyberte existující složku v souborovém systému.", English: "Choose an existing folder."},
 	uiTextSelectionInstructions: {
-		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky. Kliknutím na volné místo stránky vložíte bodový text.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\nRámec · Tažením na stránce vytvoříte nový odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
-		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters. Click a blank area on the page to insert point text.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\nFrame · Drag on the page to create a new paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
+		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky. Kliknutím na volné místo stránky vložíte bodový text.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\nRámec · Tažením na stránce vytvoříte nový odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nAlt + tažení přesune vybraný text po stránce.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
+		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters. Click a blank area on the page to insert point text.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\nFrame · Drag on the page to create a new paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nAlt-drag moves the selected text on the page.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
 	},
 }
 
