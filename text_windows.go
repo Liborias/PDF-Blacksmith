@@ -36,7 +36,7 @@ type textSelection struct {
 	polygon                        []textPoint
 	box                            string
 	automatic, paragraphRequested  bool
-	combined                       bool
+	combined, insertPoint          bool
 	change                         selectionChange
 }
 
@@ -79,7 +79,7 @@ func (a *app) buildTextPanel() {
 		p.modes[mode.value] = a.uiTextIconButton(mode.label, id, 16+index*40, 42, 34)
 		watchNavigationHover(p.modes[mode.value])
 	}
-	section.inlineHelp = a.readout(16, 81, 298, 230)
+	section.inlineHelp = a.readout(16, 81, 298, 260)
 	section.inlineHelpText = uiTextSelectionInstructions
 	a.localizePropertySection(section)
 	a.beginPropertySection(uiTextFormat, 91, uiTextFormatHelp)

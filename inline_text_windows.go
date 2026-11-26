@@ -432,6 +432,9 @@ func (a *app) layoutInlineEditor() {
 	desired := style.width
 	if !e.fixedWidth {
 		desired = max(e.sourceBounds[2]-e.sourceBounds[0], a.measureInlineWidth(style, scale))
+		if p.pick.insertPoint {
+			desired = max(18, desired)
+		}
 	}
 	left, width := inlineHorizontal(e.sourceBounds, e.leftLimit, e.rightLimit, max(1, desired), style.alignment)
 	top := max(0., min(e.sourceBounds[1], e.firstBaseline-.9*e.initialStyle.size))
@@ -543,7 +546,9 @@ func (a *app) paintInlineFrames(dc uintptr, area rect) {
 	for i, frame := range e.frames {
 		if i == e.active && e.visible {
 			if frame.newBounds != nil {
-				a.drawTextFrameOutline(dc, toPixel(e.bounds))
+				if !p.pick.insertPoint {
+					a.drawTextFrameOutline(dc, toPixel(e.bounds))
+				}
 			} else if !e.pristine {
 				a.paintInlineBackdrop(dc, area, frame.flow.highlightBounds(), toPixel)
 			}

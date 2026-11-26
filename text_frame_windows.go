@@ -15,8 +15,8 @@ func (v *documentView) finishTextFrameDrag(pick textSelection, page rect, start,
 	v.dispatchCanvasSelection(pick)
 }
 
-func (a *app) openTextFrame(v *documentView, model *textPage, pick textSelection) {
-	if a.busy || a.textTool.mode != textFrame {
+func (a *app) openNewText(v *documentView, model *textPage, pick textSelection) {
+	if a.busy || a.textTool.mode != pick.mode || pick.insertPoint && !a.canvasTextCursor {
 		return
 	}
 	_, _, rotation := v.nativeTextPageGeometry(model, pick)
@@ -25,19 +25,32 @@ func (a *app) openTextFrame(v *documentView, model *textPage, pick textSelection
 		return
 	}
 	_, dim, rotation := a.view.nativeTextPageGeometry(model, pick)
-	region := polygonBounds(pick.polygon)
-	bounds := searchRect{max(0, region[0]) * dim[0], max(0, region[1]) * dim[1],
-		min(1, region[2]) * dim[0], min(1, region[3]) * dim[1]}
-	bounds[2] = bounds[0] + float64(int((bounds[2]-bounds[0])*100))/100
-	if bounds[2]-bounds[0] < 1 || bounds[3]-bounds[1] < 1 {
-		return
+	var bounds searchRect
+	if pick.insertPoint {
+		x, y := pick.point[0]*dim[0], pick.point[1]*dim[1]
+		if x < 0 || y < 0 || x > dim[0]-1 || y > dim[1]-1 {
+			return
+		}
+		bounds = searchRect{x, y, x, y}
+	} else {
+		region := polygonBounds(pick.polygon)
+		bounds = searchRect{max(0, region[0]) * dim[0], max(0, region[1]) * dim[1],
+			min(1, region[2]) * dim[0], min(1, region[3]) * dim[1]}
+		bounds[2] = bounds[0] + float64(int((bounds[2]-bounds[0])*100))/100
+		if bounds[2]-bounds[0] < 1 || bounds[3]-bounds[1] < 1 {
+			return
+		}
 	}
 	a.clearTextSelection()
 	p := &a.textTool
 	p.model, p.pick, p.dim, p.rotation = model, pick, dim, rotation
 	p.inline.frames = []inlineTextFrame{{newBounds: &bounds, editable: true}}
 	a.focusInlineFrame(0, pick.point, false)
-	a.reportUI(uiNewTextFrameHint)
+	if pick.insertPoint {
+		a.reportUI(uiNewPointTextHint)
+	} else {
+		a.reportUI(uiNewTextFrameHint)
+	}
 }
 
 func (a *app) drawTextFrameOutline(dc uintptr, bounds rect) {
@@ -59,7 +72,7 @@ func (a *app) configureNewTextFrame(frame *inlineTextFrame) {
 	e.sourceBounds = *frame.newBounds
 	e.leftLimit, e.rightLimit = 0, p.dim[0]
 	e.firstBaseline = e.sourceBounds[1] + 10.8
-	e.fixedWidth = true
+	e.fixedWidth = !p.pick.insertPoint
 	e.foreground = 0
 	e.background = 0xffffff
 	sendMessage.Call(e.handle, 0x0443, 0, e.background) // EM_SETBKGNDCOLOR

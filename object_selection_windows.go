@@ -59,11 +59,17 @@ func (v *documentView) matchObjectSelection(page *objectPage, pick textSelection
 	rotation := (page.Rotation + v.rotations[pick.source-1] + 360) % 360
 	hits := objectsAt(page.Objects, page.Boxes[pick.box], rotation, pick)
 	if (a.mode != idObjectsTab || v.secondary) && len(hits) == 0 {
+		text := &v.nativeText
+		if pick.insertPoint && text.source == pick.source && text.generation == pick.generation && text.model != nil {
+			a.openNewText(v, text.model, pick)
+			return
+		}
 		if !v.secondary && a.mode == idTextTab && !pick.region() && pick.change == replaceSelection {
 			a.clearTextSelection()
 		}
 		return
 	}
+	pick.insertPoint = false
 	if a.mode != idObjectsTab || v.secondary {
 		var activated bool
 		pick, activated = a.activateSelection(v, pick, idObjectsTab, page.Boxes, rotation)

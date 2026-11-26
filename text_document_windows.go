@@ -157,6 +157,7 @@ func (v *documentView) finishNativeText(job readerJob) {
 			return
 		}
 		if pick.automatic && !pick.region() {
+			pick.insertPoint = false
 			v.requestObjects(pick)
 		}
 		if !pick.automatic && v.app.mode == idTextTab {
@@ -178,7 +179,7 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 		return
 	}
 	if pick.mode == textFrame && pick.region() {
-		a.openTextFrame(v, model, pick)
+		a.openNewText(v, model, pick)
 		return
 	}
 	glyphs, dim, rotation := v.nativeTextGeometry(model, pick)
@@ -188,6 +189,9 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 		flow = layoutText(glyphsInRegion(glyphs, dim, pick))
 	} else {
 		flow, stored = textAtPoint(model, glyphs, dim, pick)
+	}
+	if flow.text != "" {
+		pick.insertPoint = false
 	}
 	p := &a.textTool
 	if pick.automatic {

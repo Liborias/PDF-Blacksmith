@@ -131,6 +131,7 @@ type canvasSelectionGesture struct {
 	release  uint32
 	hover    point
 	hasHover bool
+	dragged  bool
 }
 
 func (g *canvasSelectionGesture) active() bool { return len(g.vertices) != 0 }
@@ -222,6 +223,10 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 		if !v.secondary && pick.change == replaceSelection && a.editFrameAt(pick) {
 			return true
 		}
+		if a.canvasTextCursor && a.textTool.mode == textObject && pick.change == replaceSelection {
+			v.beginCanvasSelection(pick, pos, textObject, 0x0202)
+			return true
+		}
 		setFocus.Call(a.window)
 		v.selectCanvasPoint(pick, a.textTool.explicitParagraph)
 		return true
@@ -260,6 +265,18 @@ func (v *documentView) continueCanvasSelection(message uint32, x, y int32) bool 
 	if message != 0x0200 && message != g.release {
 		return message == 0x0201 || message == 0x0203 || message == 0x0207
 	}
+	if g.pick.mode == textObject {
+		start := g.vertices[0]
+		g.dragged = g.dragged || max(absTextDrag(x-start.x), absTextDrag(y-start.y)) >= int32(v.app.scale(3))
+		if message == g.release {
+			pick := g.pick
+			release := v.textAt(x, y)
+			pick.insertPoint = !g.dragged && release.source == pick.source && release.change == replaceSelection
+			v.cancelCanvasSelection()
+			v.selectCanvasPoint(pick, false)
+		}
+		return true
+	}
 	last := point{min(max(x, v.viewport.left), v.viewport.right), min(max(y, v.viewport.top), v.viewport.bottom)}
 	g.vertices[1] = last
 	if message == g.release {
@@ -277,6 +294,7 @@ func (v *documentView) continueCanvasSelection(message uint32, x, y int32) bool 
 				pick := v.textAt(x, y)
 				if pick.source == 0 && contains(v.viewport, x, y) && change == replaceSelection {
 					v.clearCanvasContent()
+					v.app.commitInlineOnBlur(uintptr(v.app.textTool.inline.serial))
 				} else {
 					pick.change = change
 					v.selectCanvasPoint(pick, false)
@@ -416,6 +434,9 @@ func (a *app) cancelCanvasSelections() bool {
 func (v *documentView) paintCanvasSelection(dc uintptr) {
 	g := &v.selection
 	if !g.active() || g.pick.generation != v.generation {
+		return
+	}
+	if g.pick.mode == textObject {
 		return
 	}
 	if g.pick.mode == textFrame {

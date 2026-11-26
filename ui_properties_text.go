@@ -211,6 +211,7 @@ const (
 	uiTextLassoSelection            uiMessage = "win32.properties.TextLassoSelection"
 	uiTextParagraphFrame            uiMessage = "win32.properties.TextParagraphFrame"
 	uiNewTextFrameHint              uiMessage = "win32.properties.NewTextFrameHint"
+	uiNewPointTextHint              uiMessage = "win32.properties.NewPointTextHint"
 	uiTextSelectionInstructions     uiMessage = "win32.properties.TextSelectionInstructions"
 	uiHideSelectionHelp             uiMessage = "win32.properties.HideSelectionHelp"
 	uiTextSelectionHelp             uiMessage = "win32.properties.TextSelectionHelp"
@@ -448,6 +449,7 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiTextLassoSelection:            {Czech: "Výběr lasem (L)", English: "Lasso selection (L)"},
 	uiTextParagraphFrame:            {Czech: "Odstavcový textový rámec · vytvořit tažením", English: "Paragraph text frame · drag to create"},
 	uiNewTextFrameHint:              {Czech: "Pište do rámce. Text potvrdíte kliknutím mimo rámec nebo stiskem Ctrl+Enter.", English: "Type in the frame. Click outside the frame or press Ctrl+Enter to apply the text."},
+	uiNewPointTextHint:              {Czech: "Pište od zvoleného místa. Text potvrdíte kliknutím mimo něj nebo stiskem Ctrl+Enter.", English: "Type at the chosen position. Click outside the text or press Ctrl+Enter to apply it."},
 	uiHideSelectionHelp:             {Czech: "Skrýt nápovědu k výběru", English: "Hide selection help"},
 	uiTextFormat:                    {Czech: "Typografie", English: "Typography"},
 	uiTextFormatHelp:                {Czech: "Změny se projeví ve výběru přímo v PDF. Proklad je mezera mezi znaky, řádkování určuje vzdálenost mezi řádky.", English: "Changes appear in the selection in the PDF. Tracking is the space between characters. Line spacing sets the space between lines."},
@@ -482,8 +484,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiSelectValidFile:               {Czech: "Vyberte soubor s platnou cestou.", English: "Choose a file with a valid path."},
 	uiSelectExistingFolder:          {Czech: "Vyberte existující složku v souborovém systému.", English: "Choose an existing folder."},
 	uiTextSelectionInstructions: {
-		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\nRámec · Tažením na stránce vytvoříte nový odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
-		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\nFrame · Drag on the page to create a new paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
+		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky. Kliknutím na volné místo stránky vložíte bodový text.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\nRámec · Tažením na stránce vytvoříte nový odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
+		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters. Click a blank area on the page to insert point text.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\nFrame · Drag on the page to create a new paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
 	},
 }
 
