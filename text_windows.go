@@ -328,8 +328,9 @@ func (a *app) textKey(msg *winMessage) bool {
 		return false
 	}
 	if frame := a.inlineCurrent(); frame != nil && frame.newBounds != nil {
-		a.clearTextSelection()
-	} else if !a.saveInlineBefore(a.clearTextSelection) {
+		return true
+	}
+	if !a.saveInlineBefore(a.clearTextSelection) {
 		a.clearTextSelection()
 	}
 	return true

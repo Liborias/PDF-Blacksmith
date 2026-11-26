@@ -89,7 +89,7 @@ V panelu Text jsou ve společné řadě kurzor (T), obdélník (M), laso (L) a o
 
 Typografie ukazuje smíšené písmo, velikost, proklad a řezy aktivního výběru. Když je v rámci pouze kurzor, panel zobrazuje hodnoty celého aktivního rámce. Nastavení mění jen zvolenou vlastnost a A+/A− posouvá každý úsek vzhledem k jeho velikosti. Šířka, řádkování a zarovnání se nastavují pro aktivní rámec.
 
-Tažení nástrojem odstavcového rámce na jedné stránce určuje jeho umístění a šířku zalamování. Nový rámec roste do výšky podle textu nejvýš po okraj stránky. Psaní se potvrdí kliknutím mimo rámec nebo Ctrl+Enter a zapíše do pracovní karty jako jedna vratná úprava. Esc zahodí nepotvrzený nový rámec. Pouhý klik a prázdný rámec změnu nevytváří. Při opětovné editaci má vložený odstavec vlastní šířku a zachovává ruční odřádkování. Bodový text je další samostatný krok.
+Tažení nástrojem odstavcového rámce na jedné stránce určuje jeho umístění a šířku zalamování. Nový rámec roste do výšky podle textu nejvýš po okraj stránky. Psaní se potvrdí kliknutím mimo rámec nebo Ctrl+Enter a zapíše do pracovní karty jako jedna vratná úprava. Esc ukončí rozpracované tažení. Po otevření editoru rámce Esc ponechá rozepsaný text k další editaci. Pouhý klik a prázdný rámec změnu nevytváří. Při opětovné editaci má vložený odstavec vlastní šířku a zachovává ruční odřádkování. Bodový text je další samostatný krok.
 
 **4C. Pravítka a vodítka:** osa X/Y správně, pouze drag z pravítka, Ctrl+klik vs Ctrl+drag, per-page stav, skupiny a zámky, barvy „Použít“, kontext pravým klikem bez „Vybrat“, dočasná aktivace Pomůcek rozvržení. Nahradit pouze dekorativní paralelní prvky, ne PDF data.
 

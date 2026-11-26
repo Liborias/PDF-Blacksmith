@@ -447,7 +447,7 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiTextRectangleSelection:        {Czech: "Výběr obdélníkem (M)", English: "Rectangle selection (M)"},
 	uiTextLassoSelection:            {Czech: "Výběr lasem (L)", English: "Lasso selection (L)"},
 	uiTextParagraphFrame:            {Czech: "Odstavcový textový rámec · vytvořit tažením", English: "Paragraph text frame · drag to create"},
-	uiNewTextFrameHint:              {Czech: "Pište do rámce. Kliknutím mimo rámec potvrdíte text. Esc rámec zahodí.", English: "Type in the frame. Click outside the frame to apply the text. Esc discards the frame."},
+	uiNewTextFrameHint:              {Czech: "Pište do rámce. Text potvrdíte kliknutím mimo rámec nebo stiskem Ctrl+Enter.", English: "Type in the frame. Click outside the frame or press Ctrl+Enter to apply the text."},
 	uiHideSelectionHelp:             {Czech: "Skrýt nápovědu k výběru", English: "Hide selection help"},
 	uiTextFormat:                    {Czech: "Typografie", English: "Typography"},
 	uiTextFormatHelp:                {Czech: "Změny se projeví ve výběru přímo v PDF. Proklad je mezera mezi znaky, řádkování určuje vzdálenost mezi řádky.", English: "Changes appear in the selection in the PDF. Tracking is the space between characters. Line spacing sets the space between lines."},
