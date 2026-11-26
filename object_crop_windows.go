@@ -100,6 +100,11 @@ func (a *app) buildCropOptions() {
 	}
 	e.cropMoveMode = a.uiCombo(idObjectCropMoveMode, 16, 536, 298, []uiMessage{uiCropMovePair, uiCropMoveMask, uiCropMoveImage})
 	a.bindUIHelp(e.cropMoveMode, uiCropMoveHelp)
+	e.cropScaleLabel = a.label("", 16, 583, 210, false)
+	e.cropZoomOut = a.button("−", idObjectCropZoomOut, 234, 578, 36, 0)
+	e.cropZoomIn = a.button("+", idObjectCropZoomIn, 278, 578, 36, 0)
+	a.bindUIHelp(e.cropZoomOut, uiCropZoomOut)
+	a.bindUIHelp(e.cropZoomIn, uiCropZoomIn)
 	e.cropRatioLabel = a.uiLabel(uiCropAspectRatio, 16, 418, 145, false)
 	e.cropRatio = a.comboWithMessages(idObjectCropRatio, 169, 414, 145, names, messages)
 	a.bindUIHelp(e.cropRatio, uiCropAspectRatio)
@@ -127,8 +132,11 @@ func (a *app) imageCropLimits() (image, box searchRect, angle int, visible bool)
 	e, v := &a.objects, a.view
 	box, angle = e.page.Boxes[v.box()], e.rotation(v)
 	source := e.selected.cropSourceBounds()
-	shift := cropDifference(textPointToPDF(e.crop.motion.shifts.image, box, angle), textPointToPDF(textPoint{}, box, angle))
-	image, visible = searchDisplayRect(moveCropBounds(source, shift), box, angle)
+	first := pdfPointToText(textPoint{source[0], source[1]}, box, angle)
+	last := pdfPointToText(textPoint{source[2], source[3]}, box, angle)
+	image = e.crop.motion.shifts.imageBounds(rectangleBetween(first, last))
+	visible = image[0] < 1 && image[1] < 1 && image[2] > 0 && image[3] > 0
+	image = searchRect{max(0, image[0]), max(0, image[1]), min(1, image[2]), min(1, image[3])}
 	return
 }
 
@@ -265,6 +273,7 @@ func (v *documentView) imageCropPointer(message uint32, x, y int32) bool {
 				if message == 0x0203 {
 					chooseCombo(e.cropMoveMode, int(moveCropImage))
 					a.updateObjectActions()
+					a.layoutPanel()
 					v.invalidateCanvas()
 					return true
 				}

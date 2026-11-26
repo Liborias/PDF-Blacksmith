@@ -41,7 +41,7 @@ Levá navigace a otevřené nabídky sdílejí paletové stavy najetí a výběr
 
 **2B. Vlastnosti aktivního nástroje:** související podskupiny s oddělovačem a sbalením/rozbalením, bez dlouhých prázdných hint slotů. Otazník vedle sekce ukazuje metodický popis; **varování/validace se nikdy neschovávají**. Vlastnosti zachovat při sbalení.
 
-Vlastnosti mají sbalitelné sekce a kruhové otazníky s metodikou. Po opětovném otevření zůstávají hodnoty polí i volby zachované. Výsledky a varování zůstávají v rozložení i při sbalení a prázdné výpisy se zobrazí až po naplnění.
+Vlastnosti mají sbalitelné sekce a kruhové otazníky s metodikou. Šipka je vpravo u konce linky pod názvem. Otazník otevírá rolovací nápovědu se zkratkami příslušné sekce. Další kliknutí na něj, kliknutí mimo nápovědu nebo Esc okno zavře. Po opětovném otevření zůstávají hodnoty polí i volby zachované. Výsledky a varování zůstávají v rozložení i při sbalení a prázdné výpisy se zobrazí až po naplnění.
 
 **2C. Nápověda + lokalizace:** nativní tooltipy odpovídají CZ/EN, pole popisů podle fokusu, čtení pro klávesnici; volba jazyka v Nastavení/Jazyk, téma v Nastavení/Rozhraní i přes horní půlený přepínač. Lokalizační katalog 809 CZ/EN klíčů, nezasahovat do PDF.
 
@@ -85,7 +85,7 @@ Audit Win32 potvrdil T pro bodový výběr textu, V pro odstavec, M pro obdéln�
 
 **4B. Ovládací prvky:** Text Výběr čtyři ikony na jediné řadě + nápověda ?, Typography mixed, Objekty raster editor, OCR s vlastní nápovědou, zachování převodu text ↔ křivky jen jako operace nad výběrem.
 
-V panelu Text jsou ve společné řadě kurzor (T), obdélník (M), laso (L) a odstavcový textový rámec. Klávesou V lze dál zapnout výběr existujícího odstavce. Otazník rozbalí v panelu českou nebo anglickou nápovědu k gestům a modifikátorům. OCR výběru zůstává dostupné pod Typografií i při jejím sbalení.
+V panelu Text jsou ve společné řadě kurzor (T), obdélník (M), laso (L) a odstavcový textový rámec. Klávesou V lze dál zapnout výběr existujícího odstavce. Otazník otevře českou nebo anglickou rolovací nápovědu ke zkratkám a modifikátorům. OCR výběru zůstává dostupné pod Typografií i při jejím sbalení.
 
 Typografie ukazuje smíšené písmo, velikost, proklad a řezy aktivního výběru. Když je v rámci pouze kurzor, panel zobrazuje hodnoty celého aktivního rámce. Nastavení mění jen zvolenou vlastnost a A+/A− posouvá každý úsek vzhledem k jeho velikosti. Šířka, řádkování a zarovnání se nastavují pro aktivní rámec.
 
@@ -116,6 +116,8 @@ Názvosloví rozhraní a nápovědy používá **Ořez** nebo **Nástroj ořezu*
    Osm úchytů upravuje rozměry nové i přístupné uložené ořezové masky při zachování zvoleného poměru. Při aktivním ořezu je skrytá část zdroje vidět přibližně s 30% krytím. Původní rastrová data vstupují do náhledu s vlastní průhledností. Potvrzení používá stávající nedestruktivní zápis masky.
 
    V potvrzeném ořezu tažení uvnitř masky přesune masku i obrázek. Volba **Přesunout jen ořezovou masku** mění polohu výřezu nad pevným obrázkem. **Posun obsahu v masce**, dostupný také dvojklikem, posouvá obrázek uvnitř pevné masky. Posuny se skládají do jednoho náhledu a zapisují až po potvrzení. Při tažení se pohybuje příslušný obrys. Po uvolnění se vykreslí výsledek v kontextu stránky. Pohyb respektuje skutečné hrany rastru včetně zkosení a neodkrývá nové mezery.
+
+   V režimu **Posun obsahu v masce** kolečko mění měřítko kolem místa pod kurzorem. Tlačítka − a + v nastavení mění měřítko kolem středu výřezu. Pevná maska i původní obrazová data zůstávají zachované. Oddálení se zastaví u skutečných hran obrázku. Ctrl+kolečko dál mění přiblížení stránky. Měřítko, posun a změna rozměrů masky se mohou potvrdit a vrátit společně.
 
 3. **Vstupy a společná obsluha.** Vlevo nástroj Ořez a masky. Plovoucí lišta u výběru poskytne ořez, masku objektu, obnovu výřezu, převrácení, poměr stran, potvrzení a zrušení. Pravý panel poskytne číselné rozměry, polohu, úhel, zaoblení, vlastní poměr a nastavení masky. Ovládací prvky používají zdokumentované stálé identifikátory a sémantické akce i stavy `active`, `selected` a `masked`. Plátno a ostatní vstupy sdílejí stejné akce. Symboly se berou z finální mapy ikon a atlasu Win32.
 4. **Druhy masek.** Nejprve čtyři základní tvary a zaoblený obdélník, potom polygon a křivka s editovatelnými uzly. Poté náhled segmentace objektu nebo pozadí s doladěním hran, zjemněním, inverzí a správou vrstev. Odsouhlasit model segmentace, licenci a způsob zpracování dokumentů před jeho integrací.

@@ -8,24 +8,18 @@ const (
 )
 
 type propertySection struct {
-	header, help, inlineHelp           uintptr
-	title, description, inlineHelpText uiMessage
-	detail                             func() string
-	collapsed                          bool
+	header, help       uintptr
+	title, description uiMessage
+	instructions       uiMessage
+	detail             func() string
+	collapsed          bool
 }
 
 func (a *app) beginPropertySection(title uiMessage, y int, description uiMessage) *propertySection {
-	return a.beginPropertySectionWithHelp(title, y, y, 22, description)
-}
-
-func (a *app) beginPropertySectionWithHelp(title uiMessage, y, helpY, helpHeight int, description uiMessage) *propertySection {
 	a.addingSection = 0
 	id := idPropertyFirst + 2*len(a.propertySections)
 	header := a.add("BUTTON", "", id, 16, y, 265, 22, wsTabstop|bsOwnerDraw, 0, a.labelFont)
-	if helpY != y {
-		a.addingSection = len(a.propertySections) + 1
-	}
-	help := a.add("BUTTON", "", id+1, 290, helpY, 24, helpHeight, wsTabstop|bsOwnerDraw, 0, a.normalFont)
+	help := a.add("BUTTON", "", id+1, 290, y, 24, 22, wsTabstop|bsOwnerDraw, 0, a.normalFont)
 	watchNavigationHover(header)
 	watchNavigationHover(help)
 	a.propertySections = append(a.propertySections, propertySection{header: header, help: help, title: title, description: description})
@@ -45,18 +39,8 @@ func (a *app) updatePropertySectionCaption(section *propertySection) {
 
 func (a *app) localizePropertySection(section *propertySection) {
 	a.updatePropertySectionCaption(section)
-	if section.inlineHelp != 0 {
-		key := section.description
-		if getText(section.inlineHelp) != "" {
-			key = uiHideSelectionHelp
-		}
-		caption := a.uiText(key)
-		setText(section.help, caption)
-		a.setTooltip(section.help, caption)
-		return
-	}
 	setText(section.help, a.uiText(uiHelp)+" – "+a.uiText(section.title))
-	a.setTooltip(section.help, a.uiText(section.description))
+	a.setTooltip(section.help, a.uiText(uiHelp)+" – "+a.uiText(section.title))
 }
 
 func (a *app) propertySectionCommand(id int) bool {
@@ -66,55 +50,15 @@ func (a *app) propertySectionCommand(id int) bool {
 	}
 	section := &a.propertySections[index]
 	if (id-idPropertyFirst)%2 == 1 {
-		if section.inlineHelp != 0 {
-			a.setInlinePropertyHelp(section, getText(section.inlineHelp) == "")
-			a.layoutPanel()
-			return true
-		}
-		body := a.uiText(section.description)
-		if section.detail != nil {
-			if detail := section.detail(); detail != "" {
-				body += "\n\n" + detail
-			}
-		}
-		notice(a.window, body, 0x40)
+		a.togglePropertyHelp(section.help, section)
 	} else {
+		a.hidePropertyHelp(false)
 		section.collapsed = !section.collapsed
-		if section.collapsed && section.inlineHelp != 0 && getText(section.inlineHelp) != "" {
-			a.setInlinePropertyHelp(section, false)
-		}
 		a.updatePropertySectionCaption(section)
 		a.layoutPanel()
 		a.revealFocusedControl()
 	}
 	return true
-}
-
-func (a *app) setInlinePropertyHelp(section *propertySection, show bool) {
-	if show {
-		a.setUIMessage(section.inlineHelp, section.inlineHelpText)
-	} else {
-		setText(section.inlineHelp, "")
-	}
-	a.localizePropertySection(section)
-	invalidate(section.help)
-}
-
-func (a *app) closeFocusedPropertyHelp(handle uintptr) bool {
-	if handle == 0 {
-		return false
-	}
-	for i := range a.propertySections {
-		section := &a.propertySections[i]
-		if section.inlineHelp != 0 && (handle == section.inlineHelp || handle == section.help) && getText(section.inlineHelp) != "" {
-			a.setInlinePropertyHelp(section, false)
-			setFocus.Call(section.help)
-			a.layoutPanel()
-			a.revealFocusedControl()
-			return true
-		}
-	}
-	return false
 }
 
 func (a *app) revealPropertyControl(handle uintptr) {
@@ -147,15 +91,23 @@ func (a *app) drawPropertySectionButton(item *buttonDraw) bool {
 		if a.navigationHot(item) {
 			fillColor(item.dc, bounds, uiColors["hover"])
 		}
-		chevron := "⌄"
+		size := int32(d(12))
+		y := (bounds.top+bounds.bottom-size)/2 - int32(d(2))
+		icon := rect{bounds.right - int32(d(16)), y, bounds.right - int32(d(16)) + size, y + size}
+		vertices := []point{{4, 7}, {9, 12}, {14, 7}}
 		if section.collapsed {
-			chevron = "›"
+			vertices = []point{{7, 4}, {12, 9}, {7, 14}}
 		}
-		icon := bounds
-		icon.right = min(icon.right, icon.left+int32(d(17)))
-		drawText(item.dc, chevron, icon, a.normalFont, selectionColor, 1)
+		for i, p := range vertices {
+			vertices[i] = point{icon.left + p.x*size/18, icon.top + p.y*size/18}
+		}
+		pen, _, _ := gdiPen.Call(0, 1, selectionColor.win())
+		old, _, _ := gdiSelect.Call(item.dc, pen)
+		gdi32.NewProc("Polyline").Call(item.dc, uintptr(unsafe.Pointer(&vertices[0])), uintptr(len(vertices)))
+		gdiSelect.Call(item.dc, old)
+		gdiDelete.Call(pen)
 		caption := bounds
-		caption.left = icon.right
+		caption.right = icon.left - int32(d(2))
 		drawText(item.dc, a.uiText(section.title), caption, a.labelFont, textColor, 0x8000)
 		fillColor(item.dc, rect{bounds.left, bounds.bottom - 1, bounds.right, bounds.bottom}, divider)
 	} else {
@@ -164,7 +116,7 @@ func (a *app) drawPropertySectionButton(item *buttonDraw) bool {
 		circle := rect{x, y, x + size, y + size}
 		fill := panelColor
 		edge := divider
-		if section.inlineHelp != 0 && getText(section.inlineHelp) != "" {
+		if a.propertyHelp.anchor == section.help {
 			edge = selectionColor
 		}
 		if a.navigationHot(item) {
@@ -242,30 +194,20 @@ func (a *app) localizeProperties() {
 func (a *app) visiblePropertyItems(tab int) []panelItem {
 	items := a.panelItems[tab]
 	visible := make([]panelItem, 0, len(items))
-	offset := 0
 	for index, item := range items {
 		item, shown := a.panelItemLayout(tab, index, item)
-		var inlineHelp bool
-		var folded bool
-		if item.section > 0 {
-			section := &a.propertySections[item.section-1]
-			inlineHelp, folded = item.handle == section.inlineHelp, section.collapsed
+		if !shown {
+			continue
 		}
-		if shown {
-			if a.readOnlyFields[item.handle] {
-				// Reports remain outside folding. Inline help belongs to its section.
-				shown = getText(item.handle) != "" && (!inlineHelp || !folded)
-			} else {
-				shown = !folded
+		if a.readOnlyFields[item.handle] {
+			// Reports remain outside folding.
+			if getText(item.handle) == "" {
+				continue
 			}
+		} else if item.section > 0 && a.propertySections[item.section-1].collapsed {
+			continue
 		}
-		if shown {
-			item.y += offset
-			visible = append(visible, item)
-			if inlineHelp {
-				offset += item.height
-			}
-		}
+		visible = append(visible, item)
 	}
 	if tab != idFileDetails {
 		compactPropertyRows(visible)

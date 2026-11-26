@@ -128,13 +128,13 @@ func (a *app) setupWorkspace() bool {
 		return false
 	}
 	a.sidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
-		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+		wsChild|0x06000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	a.thumbnailSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x02000000|0x04000000, 0, 0, 1, 1, a.window, 0, a.instance, 0) // Clip the File menu above it.
 	a.bookmarkSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
-		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+		wsChild|0x06000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	a.searchSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
-		wsChild|0x02000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+		wsChild|0x06000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 || a.searchSidebar == 0 {
 		return false
 	}
@@ -527,6 +527,8 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 		switch item.handle {
 		case a.objects.cropApply, a.objects.cropCancel:
 			return item, a.objects.crop.active
+		case a.objects.cropScaleLabel, a.objects.cropZoomOut, a.objects.cropZoomIn:
+			return item, a.canZoomCropImage()
 		case a.objects.cropMoveMode:
 			return item, a.objects.crop.active && a.objects.selected.ImageMask != nil
 		case a.objects.cropReset:
@@ -602,6 +604,7 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 
 func (a *app) layoutPanel() {
 	if a.full || a.settingsWidth == 0 {
+		a.updatePropertyHelp()
 		return
 	}
 	active := a.detailsTab()
@@ -637,6 +640,7 @@ func (a *app) layoutPanel() {
 		}
 	}
 	invalidate(a.sidebar)
+	a.updatePropertyHelp()
 }
 
 func (a *app) revealFocusedControl() {
@@ -669,7 +673,9 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		var bounds rect
 		getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&bounds)))
 		dc, _, _ := user32.NewProc("BeginPaint").Call(hwnd, uintptr(unsafe.Pointer(&paint)))
-		if hwnd == a.fileMenu.handle {
+		if hwnd == a.propertyHelp.handle {
+			rounded(dc, bounds, a.scale(7), panelColor, divider)
+		} else if hwnd == a.fileMenu.handle {
 			outline := bounds
 			outline.top -= int32(a.scale(9))
 			rounded(dc, outline, a.scale(9), uiColors["popoverBg"], divider)
@@ -1462,7 +1468,7 @@ func (a *app) finish(result response) {
 }
 
 func (a *app) handleInput(msg *winMessage) bool {
-	if a.fileMenuInput(msg) || a.recentContextInput(msg) || a.documentMouseContext(msg) {
+	if a.propertyHelpInput(msg) || a.fileMenuInput(msg) || a.recentContextInput(msg) || a.documentMouseContext(msg) {
 		return true
 	}
 	if msg.message == 0x020a { // WM_MOUSEWHEEL
@@ -1477,6 +1483,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 			reader = a.view
 		}
 		if reader != nil {
+			if reader == a.view && !control && a.zoomCropImage(float64(delta)/120, &pos) {
+				return true
+			}
 			if !control && a.wheelTargetsEdit(msg.window) {
 				reader.pageWheel = pageWheelGesture{}
 				return false
@@ -1517,9 +1526,6 @@ func (a *app) handleInput(msg *winMessage) bool {
 			v.fitOverviewSelection()
 			return true
 		}
-	}
-	if msg.wParam == 0x1b && a.closeFocusedPropertyHelp(msg.window) {
-		return true
 	}
 	if a.objectKey(msg) || a.textKey(msg) || a.documentKey(msg) {
 		return true

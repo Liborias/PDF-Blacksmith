@@ -98,3 +98,23 @@ func TestCropMotionRespectsActualRasterEdges(t *testing.T) {
 		}
 	}
 }
+
+func TestCropImageScaleAnchorsAndStopsAtImageEdge(t *testing.T) {
+	quad := []textPoint{{.10, .1}, {.9, .1}, {.9, .9}, {.1, .9}}
+	outline := []textPoint{{.25, .25}, {.6, .25}, {.6, .6}, {.25, .6}}
+	pivot := textPoint{.4, .4}
+	zoom := (cropShifts{}).scaledImage(quad, outline, pivot, 1)
+	if got := zoom.imagePoint(pivot); got != pivot || zoom.imageScale() != 1.125 {
+		t.Fatalf("pivot %v shifted to %v at %.3f", pivot, got, zoom.imageScale())
+	}
+	zoom = (cropShifts{}).scaledImage(quad, outline, pivot, -20)
+	if s := zoom.imageScale(); math.Abs(s-.5) > 1e-10 {
+		t.Fatalf("zoomed past the nearest image edge, scale %g", s)
+	}
+	for i := range quad {
+		quad[i] = zoom.imagePoint(quad[i])
+	}
+	if again := zoom.scaledImage(quad, outline, pivot, -4); again != zoom {
+		t.Fatalf("could still zoom out past the edge: %v", again)
+	}
+}

@@ -121,6 +121,7 @@ type app struct {
 	scrollPanes                                                    map[uintptr]*scrollPane
 	addingTab, addingSection                                       int
 	propertySections                                               []propertySection
+	propertyHelp                                                   propertyHelpPopup
 	propertyLayoutQueued                                           bool
 	toolButtons, detailButtons                                     map[int]uintptr
 	documentTools                                                  bool
@@ -418,6 +419,7 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case 0x0006: // WM_ACTIVATE
 		if wParam&0xffff == 0 {
 			a.hideFileMenu(false)
+			a.hidePropertyHelp(false)
 			a.cancelPageDrag()
 			a.cancelObjectGesture()
 			a.cancelCanvasSelections()

@@ -27,6 +27,11 @@ const (
 	idObjectCropMoveMode
 )
 
+const (
+	idObjectCropZoomOut = 527 + iota
+	idObjectCropZoomIn
+)
+
 type objectEditRequest struct {
 	Operation  string      `json:"operation,omitempty"`
 	Grouping   string      `json:"grouping,omitempty"`
@@ -39,6 +44,7 @@ type objectEditRequest struct {
 	CropShape  string      `json:"crop_shape,omitempty"`
 	MaskDelta  *textPoint  `json:"mask_delta,omitempty"`
 	ImageDelta *textPoint  `json:"image_delta,omitempty"`
+	ImageScale float64     `json:"image_scale,omitempty"`
 }
 
 type pdfObject struct {
@@ -96,6 +102,7 @@ type objectEditor struct {
 	crop                                       imageCrop
 	cropTool, cropApply, cropCancel, cropHint  uintptr
 	cropReset, cropMoveMode                    uintptr
+	cropScaleLabel, cropZoomOut, cropZoomIn    uintptr
 	cropRevision                               uint64
 	cropRatioLabel, cropRatio                  uintptr
 	cropShapes                                 [4]uintptr
@@ -168,6 +175,9 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.cropCancel, ready && e.crop.active)
 	setEnabled(e.cropReset, cropOptions && e.selected.ImageMask != nil)
 	setEnabled(e.cropMoveMode, cropOptions && e.crop.active && e.selected.ImageMask != nil)
+	setEnabled(e.cropZoomOut, cropOptions && a.canZoomCropImage())
+	setEnabled(e.cropZoomIn, cropOptions && a.canZoomCropImage())
+	setText(e.cropScaleLabel, a.uiLocale.formatMessage(localizedMessage{key: uiCropImageScale, args: []any{math.Round(100*e.crop.motion.shifts.imageScale())}}))
 }
 
 func (a *app) clearObjectSelection() {
@@ -512,6 +522,7 @@ func (a *app) objectCommand(id, notification int) bool {
 	if a.mode == idObjectsTab && id == idObjectCropMoveMode && notification == 1 {
 		setFocus.Call(a.window)
 		a.updateObjectActions()
+		a.layoutPanel()
 		a.view.invalidateCanvas()
 		return true
 	}
@@ -525,6 +536,16 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.updateObjectActions()
 		a.invalidateCropMotion()
 		return true
+	}
+	if a.mode == idObjectsTab && notification == 0 {
+		switch id {
+		case idObjectCropZoomOut:
+			a.zoomCropImage(-1, nil)
+			return true
+		case idObjectCropZoomIn:
+			a.zoomCropImage(1, nil)
+			return true
+		}
 	}
 	if id < idObjectCopy || id > idObjectResetCrop || notification != 0 || a.mode != idObjectsTab {
 		return false

@@ -62,7 +62,7 @@ func (a *app) paintCropOverlay(dc uintptr, area rect, box searchRect, angle int,
 		pdfPointToText(textPoint{source[2], source[3]}, box, angle))
 	moved := crop.motion.shifts.changed()
 	if moved {
-		bounds = moveCropBounds(bounds, crop.motion.shifts.image)
+		bounds = crop.motion.shifts.imageBounds(bounds)
 	}
 	first := screenTextPoint(area, textPoint{bounds[0], bounds[1]})
 	last := screenTextPoint(area, textPoint{bounds[2], bounds[3]})

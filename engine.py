@@ -934,6 +934,8 @@ def edit_object_document(src, request):
     if edit.get("operation") in ("crop", "replace_crop"):
         return {**description, "message": "Obrázek byl oříznut v otevřené kartě."}
     if edit.get("operation") == "translate_crop":
+        if edit.get("image_scale", 1) != 1:
+            return {**description, "message": "Měřítko obrázku v masce bylo upraveno."}
         return {**description, "message": "Posun ořezu byl potvrzen."}
     if edit.get("operation") == "reset_crop":
         return {**description, "message": "Plný rozsah obrázku byl obnoven."}

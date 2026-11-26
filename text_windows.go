@@ -64,7 +64,7 @@ type textPanel struct {
 
 func (a *app) buildTextPanel() {
 	p := &a.textTool
-	section := a.beginPropertySectionWithHelp(uiTextSelection, 16, 42, 32, uiTextSelectionHelp)
+	section := a.beginPropertySection(uiTextSelection, 16, uiTextSelectionHelp)
 	for index, mode := range [...]struct {
 		value int
 		label uiMessage
@@ -81,9 +81,7 @@ func (a *app) buildTextPanel() {
 		p.modes[mode.value] = a.uiTextIconButton(mode.label, id, 16+index*40, 42, 34)
 		watchNavigationHover(p.modes[mode.value])
 	}
-	section.inlineHelp = a.readout(16, 81, 298, 260)
-	section.inlineHelpText = uiTextSelectionInstructions
-	a.localizePropertySection(section)
+	section.instructions = uiTextSelectionInstructions
 	a.beginPropertySection(uiTextFormat, 91, uiTextFormatHelp)
 	p.original = a.add("STATIC", "", 0, 16, 137, 158, 21, 0x4000, 0, a.normalFont)
 	a.uiLabel(uiFont, 16, 161, 205, false)

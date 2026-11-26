@@ -1,7 +1,5 @@
 package main
 
-import "strings"
-
 const (
 	commandBarHeight = 38
 	workspaceTop     = headerHeight + commandBarHeight
@@ -344,8 +342,6 @@ func (a *app) showHeaderMenu(id int) {
 				func() { a.doDocumentCommand(v, action, editing) },
 			})
 		}
-	case idHeaderHelp, idHeaderHelpIcon:
-		entries = []headerMenuItem{{popupItem{label: a.uiText(uiShortcuts)}, a.showShortcutHelp}}
 	}
 	items := make([]popupItem, len(entries))
 	for index, entry := range entries {
@@ -360,18 +356,6 @@ func (a *app) showHeaderMenu(id int) {
 	if choice >= 0 {
 		entries[choice].run()
 	}
-}
-
-func (a *app) showShortcutHelp() {
-	lines := []string{
-		"Ctrl+O   " + a.uiText(uiOpenPDF),
-		"Ctrl+F   " + a.uiText(uiFind),
-		"Ctrl+S   " + a.uiText(uiSave),
-		"Ctrl+Z / Ctrl+Y   " + a.uiText(uiUndo) + " / " + a.uiText(uiRedo),
-		"F11   " + a.uiText(uiFullscreen),
-		a.uiText(uiWheelZoom),
-	}
-	notice(a.window, strings.Join(lines, "\n"), 0x40)
 }
 
 func (a *app) headerControl(id int) uintptr {
@@ -410,8 +394,10 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		a.showInterfaceSettings()
 	case idHeaderThemeMode:
 		a.toggleThemeMode()
-	case idHeaderView, idHeaderTools, idHeaderEdit, idHeaderHelp, idHeaderHelpIcon:
+	case idHeaderView, idHeaderTools, idHeaderEdit:
 		a.showHeaderMenu(id)
+	case idHeaderHelp, idHeaderHelpIcon:
+		a.togglePropertyHelp(a.headerControl(id), nil)
 	case idHeaderPointer, idHeaderRectangle, idHeaderLasso:
 		a.setHeaderSelection(id)
 	case idHeaderFlow:

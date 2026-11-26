@@ -280,6 +280,39 @@ def check_crop_motion(work):
          crop=[123, 123, 179, 163], crop_shape="ellipse")
     assert image_state(combined) == ((123, 123, 179, 163), (118, 100, 218, 180))
     assert probe(combined)[0]["image_mask"]["shape"] == "ellipse"
+    scaled = work / "crop-scaled.pdf"
+    # Uniform scale anchored at the center of the fixed mask (145, 140).
+    request = edit(cut, scaled, "translate_crop", image_scale=2, image_delta=[-145, -140])
+    assert image_state(scaled) == (fixed, (55, 60, 255, 220))
+    assert sample(scaled, 146, 135) == (255, 0, 0) and sample(cut, 146, 135) == (255, 0, 0)
+    assert sample(scaled, 153, 135) == (255, 0, 0) and sample(cut, 153, 135) == (0, 0, 255)
+    preview = dispatch({**request, "action": "object_crop_motion_preview"})
+    with Image.open(BytesIO(b64decode(preview["image"]))) as image:
+        factor = image.height / 360
+        assert image.getpixel((int(factor*135), int(factor*153))) == (255, 0, 0)
+
+    smaller = work / "crop-scaled-down.pdf"
+    edit(cut, smaller, "translate_crop", image_scale=.6, image_delta=[58, 56])
+    fixed_after, smaller_image = image_state(smaller)
+    assert fixed_after == fixed and all(abs(a-b) < .001 for a, b in zip(smaller_image, (118, 116, 178, 164)))
+    oval = work / "crop-scale-and-reshape.pdf"
+    edit(cut, oval, "translate_crop", image_scale=.5, image_delta=[75, 70],
+         crop=[133, 125, 167, 155], crop_shape="ellipse")
+    assert image_state(oval) == ((133, 125, 167, 155), (125, 120, 175, 160))
+    assert probe(oval)[0]["image_mask"]["shape"] == "ellipse"
+    restored = work / "crop-scale-restore.pdf"
+    edit(scaled, restored, "reset_crop")
+    assert probe(restored)[0]["bounds"] == (55, 60, 255, 220)
+
+    for scale in (.4, 0, -1, 8.1, True):
+        invalid_scale = work / "crop-scale-invalid.pdf"
+        try:
+            edit(cut, invalid_scale, "translate_crop", image_scale=scale,
+                 image_delta=[145*(1-scale), 140*(1-scale)])
+        except UserError:
+            assert not invalid_scale.exists()
+        else:
+            raise AssertionError(f"Invalid or gap-producing scale {scale} changed the PDF.")
     invalid = work / "crop-motion-blank.pdf"
     try:
         edit(cut, invalid, "translate_crop", image_delta=[60, 0])

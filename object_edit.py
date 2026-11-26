@@ -426,17 +426,11 @@ def selected_image(items):
     return items[0]
 
 
-def crop_image(operators, item, rect, shape, *, replace):
+def crop_path(rect, shape):
     if (shape not in ("rectangle", "ellipse") or not isinstance(rect, list) or len(rect) != 4 or not all(
             type(value) in (float, int) and isfinite(value) and abs(value) < 2e6 for value in rect)
             or rect[2] <= rect[0] or rect[3] <= rect[1]):
         raise ObjectError("Vyznačte platný výřez obrázku.")
-    mask = item.mask
-    source = mask.source_outline() if mask else transformed_points(item.matrix, IMAGE_QUAD)
-    previous_clip = []
-    if mask and not replace:
-        source = mask.outline
-        previous_clip = operators[item.first+2:mask.content_start]
     left, bottom, right, top = rect
     if shape == "ellipse":
         # Build the vector path in page coordinates to keep its proportions
@@ -446,6 +440,17 @@ def crop_image(operators, item, rect, shape, *, replace):
     else:
         contour = ((left, bottom), (right, bottom), (right, top), (left, top))
         path = [instruction("m", *contour[0]), *(instruction("l", *point) for point in contour[1:])]
+    return contour, path
+
+
+def crop_image(operators, item, rect, shape, *, replace):
+    contour, path = crop_path(rect, shape)
+    mask = item.mask
+    source = mask.source_outline() if mask else transformed_points(item.matrix, IMAGE_QUAD)
+    previous_clip = []
+    if mask and not replace:
+        source = mask.outline
+        previous_clip = operators[item.first+2:mask.content_start]
     points = clip_convex(source, contour)
     area = polygon_area(points)
     if area <= 1e-8:
@@ -487,17 +492,23 @@ def translate_image_crop(page, operators, item, edit):
         raise ObjectError("Vyberte obrázek s ořezovou maskou vytvořenou v PDF Blacksmith.")
     mask_delta = clip_point(edit.get("mask_delta", [0, 0]), "posun masky")
     image_delta = clip_point(edit.get("image_delta", [0, 0]), "posun obrázku")
-    if not any((*mask_delta, *image_delta)):
+    scale = edit.get("image_scale", 1)
+    if type(scale) not in (float, int) or not isfinite(scale) or not .125 <= scale <= 8:
+        raise ObjectError("Obrázek má neplatné měřítko.")
+    if scale == 1 and not any((*mask_delta, *image_delta)):
         raise ObjectError("Nejprve posuňte výřez nebo obrázek.")
     quad = mask.source_outline()
     orientation = 1 if signed_area(quad) > 0 else -1
-    relative = (mask_delta[0]-image_delta[0], mask_delta[1]-image_delta[1])
+    final_clip = [(x+mask_delta[0], y+mask_delta[1]) for x, y in mask.clip_outline]
+    if scale != 1 and "crop" in edit:
+        final_clip, _ = crop_path(edit["crop"], edit.get("crop_shape", "rectangle"))
     for (x, y), (u, v) in zip(quad, (*quad[1:], quad[0])):
         nx, ny = (y-v)*orientation, (u-x)*orientation
-        distance = min(nx*(px-x)+ny*(py-y) for px, py in mask.clip_outline)
-        offset = nx*relative[0]+ny*relative[1]
-        if distance + offset < min(0., distance) - .002 * (abs(nx)+abs(ny)):
-            raise ObjectError("Posun by odkryl prázdné místo uvnitř ořezu.")
+        before = min(nx*(px-x)+ny*(py-y) for px, py in mask.clip_outline)
+        left, bottom = x*scale+image_delta[0], y*scale+image_delta[1]
+        after = min(nx*(px-left)+ny*(py-bottom) for px, py in final_clip)
+        if after < min(0., before) - .002 * (abs(nx)+abs(ny)):
+            raise ObjectError("Úprava by odkryla prázdné místo uvnitř ořezu.")
     try:
         inverse = invert(item.matrix)
     except TextError as exc:
@@ -510,9 +521,10 @@ def translate_image_crop(page, operators, item, edit):
                                                for i,value in enumerate(args)))
                  if args else (args, operator) for args, operator in clips]
     content = operators[mask.content_start:item.end-2]
-    if any(image_delta):
+    if scale != 1 or any(image_delta):
         *linear, x, y = mask.content_matrix
-        matrix = compose(inverse, (*linear, x+image_delta[0], y+image_delta[1]))
+        matrix = compose(inverse, (*(scale*value for value in linear),
+                                   scale*x+image_delta[0], scale*y+image_delta[1]))
         if not all(map(isfinite, matrix)):
             raise ObjectError("Obrázek má neplatnou transformaci.")
         content = [instruction("cm", *matrix), content[-1]]
@@ -538,7 +550,7 @@ def crop_motion_preview(page, operators, items, edit, view):
         sample.save(buffer, fix_metadata_version=False)
         preview = render_screen(sample, buffer.getvalue(), {**view, "page": 1, "pixels": 1200}, "")
     if preview is None:
-        raise ObjectError("Náhled posunu ořezu se nepodařilo vykreslit.")
+        raise ObjectError("Náhled úpravy ořezu se nepodařilo vykreslit.")
     payload = BytesIO()
     with Image.frombytes("RGB", (preview["raster_width"], preview["raster_height"]),
                          bytes(preview["raster"]), "raw", "BGRX") as image:

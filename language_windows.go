@@ -53,6 +53,7 @@ func (a *app) setUILanguage(locale uiLocale) {
 	if a.uiLocale == locale {
 		return
 	}
+	a.hidePropertyHelp(false)
 	a.uiLocale = locale
 	for handle, key := range a.uiLabels {
 		caption := a.uiText(key)
@@ -67,6 +68,7 @@ func (a *app) setUILanguage(locale uiLocale) {
 	a.localizeCommandBar()
 	a.localizeReaderHelp()
 	a.localizeProperties()
+	a.updateObjectActions()
 	a.updateComparisonNavigation()
 	a.measureToolNames()
 	a.layout()

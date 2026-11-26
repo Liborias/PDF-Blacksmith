@@ -116,6 +116,28 @@ const (
 	uiSignDocument                  uiMessage = "ui.podepsat.dokument.bb07a5d6ed"
 	uiSignDocumentHelp              uiMessage = "win32.properties.SignDocumentHelp"
 	uiPKCSFile                      uiMessage = "win32.properties.PKCSFile"
+	uiPropertyNoShortcut            uiMessage = "win32.properties.shortcut.NoShortcut"
+	uiPropertyTab                   uiMessage = "win32.properties.shortcut.Tab"
+	uiPropertyCloseTab              uiMessage = "win32.properties.shortcut.CloseTab"
+	uiPropertySwitchTab             uiMessage = "win32.properties.shortcut.SwitchTab"
+	uiPropertySearchResults         uiMessage = "win32.properties.shortcut.SearchResults"
+	uiPropertyZoom                  uiMessage = "win32.properties.shortcut.Zoom"
+	uiPropertyFullscreen            uiMessage = "win32.properties.shortcut.Fullscreen"
+	uiPropertyPageOrder             uiMessage = "win32.properties.shortcut.PageOrder"
+	uiPropertyScroll                uiMessage = "win32.properties.shortcut.Scroll"
+	uiPropertyPageEnds              uiMessage = "win32.properties.shortcut.PageEnds"
+	uiPropertySearchEnter           uiMessage = "win32.properties.shortcut.SearchEnter"
+	uiPropertyApplyText             uiMessage = "win32.properties.shortcut.ApplyText"
+	uiPropertyPointSelect           uiMessage = "win32.properties.shortcut.PointSelect"
+	uiPropertyRectSelect            uiMessage = "win32.properties.shortcut.RectSelect"
+	uiPropertyLasso                 uiMessage = "win32.properties.shortcut.Lasso"
+	uiPropertyFinishLasso           uiMessage = "win32.properties.shortcut.FinishLasso"
+	uiPropertySelectModifiers       uiMessage = "win32.properties.shortcut.SelectModifiers"
+	uiPropertyAltDrag               uiMessage = "win32.properties.shortcut.AltDrag"
+	uiPropertyDuplicate             uiMessage = "win32.properties.shortcut.Duplicate"
+	uiPropertyCropWheel             uiMessage = "win32.properties.shortcut.CropWheel"
+	uiPropertySelectPages           uiMessage = "win32.properties.shortcut.SelectPages"
+	uiPropertyDeletePages           uiMessage = "win32.properties.shortcut.DeletePages"
 	uiChoose                        uiMessage = "win32.properties.Choose"
 	uiCertificatePassword           uiMessage = "win32.properties.CertificatePassword"
 	uiVisibleSignature              uiMessage = "win32.properties.VisibleSignature"
@@ -201,6 +223,9 @@ const (
 	uiCropMoveMask                  uiMessage = "win32.properties.CropMoveMask"
 	uiCropMoveImage                 uiMessage = "win32.properties.CropMoveImage"
 	uiCropMoveHelp                  uiMessage = "win32.properties.CropMoveHelp"
+	uiCropImageScale                uiMessage = "win32.properties.CropImageScale"
+	uiCropZoomOut                   uiMessage = "win32.properties.CropZoomOut"
+	uiCropZoomIn                    uiMessage = "win32.properties.CropZoomIn"
 	uiCropMoveImageHint             uiMessage = "win32.properties.CropMoveImageHint"
 	uiResetImageCrop                uiMessage = "win32.properties.ResetImageCrop"
 	uiChooseImageCrop               uiMessage = "win32.properties.ChooseImageCrop"
@@ -381,6 +406,28 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiResetExport:                   {Czech: "Obnovit výchozí parametry", English: "Restore defaults"},
 	uiSignDocumentHelp:              {Czech: "K vytvoření podpisu vyberte osobní certifikát PKCS#12, zadejte jeho heslo a uložte podepsanou kopii.", English: "Select a personal PKCS#12 certificate, enter its password, and save a signed copy."},
 	uiPKCSFile:                      {Czech: "Certifikát PKCS#12 (.p12 nebo .pfx)", English: "PKCS#12 certificate (.p12 or .pfx)"},
+	uiPropertyNoShortcut:            {Czech: "Tato sekce nemá vlastní zkratky.", English: "This section has no dedicated shortcuts."},
+	uiPropertyTab:                   {Czech: "Další nebo předchozí ovládací prvek", English: "Next or previous control"},
+	uiPropertyCloseTab:              {Czech: "Zavřít PDF", English: "Close PDF"},
+	uiPropertySwitchTab:             {Czech: "Další nebo předchozí dokumentová karta", English: "Next or previous document tab"},
+	uiPropertySearchResults:         {Czech: "Další nebo předchozí výsledek hledání", English: "Next or previous search result"},
+	uiPropertyZoom:                  {Czech: "Přiblížit nebo oddálit stránku", English: "Zoom page in or out"},
+	uiPropertyFullscreen:            {Czech: "Zapnout nebo opustit celou obrazovku", English: "Enter or exit full screen"},
+	uiPropertyPageOrder:             {Czech: "Předchozí nebo následující stránka", English: "Previous or next page"},
+	uiPropertyScroll:                {Czech: "Posun zobrazení", English: "Scroll the view"},
+	uiPropertyPageEnds:              {Czech: "První nebo poslední stránka", English: "First or last page"},
+	uiPropertySearchEnter:           {Czech: "Spustit hledání v poli nebo přejít na označený výsledek", English: "Search from the input or jump to the selected result"},
+	uiPropertyApplyText:             {Czech: "Použít úpravu při psaní na stránce", English: "Apply changes while editing text on the page"},
+	uiPropertyPointSelect:           {Czech: "Bodový výběr objektu", English: "Point selection"},
+	uiPropertyRectSelect:            {Czech: "Obdélníkový výběr", English: "Rectangle selection"},
+	uiPropertyLasso:                 {Czech: "Laso a druhým stiskem křížový výběr", English: "Lasso, then press again for Crossing Selection"},
+	uiPropertyFinishLasso:           {Czech: "Dokončit laso nebo křížový výběr", English: "Finish the lasso or Crossing Selection"},
+	uiPropertySelectModifiers:       {Czech: "Shift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.", English: "Shift adds to the selection, Ctrl toggles items and Shift+Ctrl removes items."},
+	uiPropertyAltDrag:               {Czech: "Alt + tažení  ·  Přesunout výběr", English: "Alt + drag  ·  Move selection"},
+	uiPropertyDuplicate:             {Czech: "Duplikovat výběr objektů", English: "Duplicate selected objects"},
+	uiPropertyCropWheel:             {Czech: "Kolečko nad maskou  ·  Měnit měřítko v režimu Posun obsahu v masce", English: "Wheel over the mask  ·  Scale the image in Move image inside mask mode"},
+	uiPropertySelectPages:           {Czech: "Shift+klik na miniaturu vybere rozsah. Ctrl+klik přidá nebo odebere jednotlivou stránku.", English: "Shift+click a thumbnail for a range. Ctrl+click to add or remove one page."},
+	uiPropertyDeletePages:           {Czech: "Smazat stránky vybrané v panelu miniatur", English: "Delete pages selected in the thumbnail panel"},
 	uiChoose:                        {Czech: "Vybrat…", English: "Choose…"},
 	uiCertificatePassword:           {Czech: "Heslo k certifikátu", English: "Certificate password"},
 	uiVisibleSignature:              {Czech: "Viditelný podpis v novém poli", English: "Visible signature in a new field"},
@@ -455,7 +502,10 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiCropMoveMask:                  {Czech: "Přesunout jen ořezovou masku", English: "Move crop mask only"},
 	uiCropMoveImage:                 {Czech: "Posun obsahu v masce", English: "Move image inside mask"},
 	uiCropMoveHelp:                  {Czech: "Volba určuje, co se pohne při tažení uvnitř ořezové masky.", English: "Controls what moves when you drag inside the crop mask."},
-	uiCropMoveImageHint:             {Czech: "Táhněte obrázek uvnitř pevné masky.", English: "Drag the image inside the fixed mask."},
+	uiCropImageScale:                {Czech: "Měřítko obsahu %.0f %%", English: "Image scale %.0f %%"},
+	uiCropZoomOut:                   {Czech: "Oddálit obsah masky od jejího středu", English: "Zoom out from the center of the crop mask"},
+	uiCropZoomIn:                    {Czech: "Přiblížit obsah masky ke středu výřezu", English: "Zoom in on the center of the crop mask"},
+	uiCropMoveImageHint:             {Czech: "Tažením posunete obrázek. Kolečkem nad maskou změníte jeho měřítko.", English: "Drag to move the image. Scroll over the mask to scale it."},
 	uiResetImageCrop:                {Czech: "Obnovit ořez", English: "Reset crop"},
 	uiChooseImageCrop:               {Czech: "Zvolte tvar, poměr stran nebo spusťte nástroj ořezu.", English: "Choose a shape or aspect ratio, or click the crop icon to start."},
 	uiCropAspectRatio:               {Czech: "Poměr stran", English: "Aspect ratio"},
