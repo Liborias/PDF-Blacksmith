@@ -1,8 +1,9 @@
 package main
 
 import (
+	"slices"
 	"syscall"
-	"unsafe"
+	"unicode/utf16"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 
 var typographicSizes = []float64{6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 60, 72, 96, 120, 144, 200, 300, 450, 600}
 
+const mixedTextNumber = "—"
+
 func (a *app) typographyCommand(id int) bool {
 	if id < idTextSmaller || id > idTextTracking {
 		return false
@@ -25,16 +28,7 @@ func (a *app) typographyCommand(id int) bool {
 		return true
 	}
 	if id == idTextSmaller || id == idTextLarger {
-		current, _ := readTextNumber(p.size, 1, 600)
-		for i, value := range typographicSizes {
-			if id == idTextSmaller {
-				value = typographicSizes[len(typographicSizes)-1-i]
-			}
-			if id == idTextSmaller && value < current || id == idTextLarger && value > current {
-				setText(p.size, formatTextNumber(value))
-				break
-			}
-		}
+		a.stepInlineSizes(id == idTextLarger)
 		a.focusInlineEditor()
 		return true
 	}
@@ -66,30 +60,119 @@ func (a *app) typographyCommand(id int) bool {
 	return true
 }
 
-func (a *app) syncInlineControls() {
+func (a *app) syncInlineControls(edited uintptr) {
 	p, e := &a.textTool, &a.textTool.inline
-	if a.inlineCurrent() == nil || e.loading || e.layoutPosted || a.busy {
+	if a.inlineCurrent() == nil || !e.visible || e.loading || e.layoutPosted || a.busy {
 		return
 	}
-	format := inlineCharFormat{size: uint32(unsafe.Sizeof(inlineCharFormat{}))}
-	sendMessage.Call(e.handle, 0x043a, 1, uintptr(unsafe.Pointer(&format)))
 	e.loading = true
 	defer func() { e.loading = false }()
-	if format.mask&inlineFace != 0 {
-		for i, name := range p.fontKeys {
-			if name == syscall.UTF16ToString(format.face[:]) {
-				chooseCombo(p.font, i)
-				break
+	start, end := inlineSelection(e.handle)
+	// Without a character selection the Typography commands address the active frame.
+	wholeFrame := start == end && a.inlineValue() != ""
+	if wholeFrame {
+		sendMessage.Call(e.handle, 0x000b, 0, 0) // WM_SETREDRAW
+		selectInline(e.handle, 0, -1)
+	}
+	format := readInlineFormat(e.handle)
+	if format.mask&inlineTracking != 0 && (wholeFrame || end-start > 1) {
+		document := inlineTextDocument(e.handle)
+		defer document.release()
+		selection := document.selection()
+		defer selection.release()
+		if selection.mixedSpacing() {
+			format.mask &^= inlineTracking
+		}
+	}
+	if wholeFrame {
+		selectInline(e.handle, start, end)
+		sendMessage.Call(e.handle, 0x000b, 1, 0)
+	}
+	e.mixedFormat = inlineBaseMask &^ format.mask
+	choice := a.choices[p.font]
+	if e.mixedFormat&inlineFace != 0 {
+		if choice.placeholder == "" {
+			choice.placeholder = uiMixedTypography
+			setText(p.font, a.choiceLabel(choice))
+			invalidate(p.font)
+		}
+	} else {
+		index := slices.Index(p.fontKeys, syscall.UTF16ToString(format.face[:]))
+		if index < 0 {
+			index = choice.index
+		}
+		chooseCombo(p.font, index)
+	}
+	for _, field := range [...]struct {
+		control uintptr
+		mask    uint32
+		value   float64
+	}{
+		{p.size, inlineSize, float64(format.height) / 20},
+		{p.tracking, inlineTracking, float64(format.spacing) / 20},
+	} {
+		if field.control != edited {
+			value := formatTextNumber(field.value)
+			if e.mixedFormat&field.mask != 0 {
+				value = mixedTextNumber
+			}
+			if getText(field.control) != value {
+				setText(field.control, value)
 			}
 		}
 	}
-	if format.mask&inlineSize != 0 && format.height > 0 {
-		setText(p.size, formatTextNumber(float64(format.height)/20))
-	}
-	setText(p.tracking, formatTextNumber(float64(format.spacing)/20))
 	for flag, control := range map[uint32]uintptr{inlineBold: p.bold, inlineItalic: p.italic, inlineLine: p.underline} {
 		a.setChecked(control, format.mask&flag != 0 && format.effects&flag != 0)
 	}
 	a.setChecked(p.regular, format.mask&(inlineBold|inlineItalic) == inlineBold|inlineItalic &&
 		format.effects&(inlineBold|inlineItalic) == 0)
+}
+
+func (a *app) stepInlineSizes(larger bool) {
+	e := &a.textTool.inline
+	start, end := inlineSelection(e.handle)
+	left, right := start, end
+	if left == right {
+		left, right = 0, len(utf16.Encode([]rune(a.inlineValue())))
+		if right == 0 {
+			left, right = start, end
+		}
+	}
+	e.loading = true
+	sendMessage.Call(e.handle, 0x000b, 0, 0) // WM_SETREDRAW
+	var changes []inlineTextRun
+	visitInlineFormats(e.handle, left, right, inlineSize, nil, func(from, to int, format inlineCharFormat) {
+		size := float64(format.height) / 20
+		index, exact := slices.BinarySearch(typographicSizes, size)
+		switch {
+		case !larger:
+			index--
+		case exact:
+			index++
+		}
+		if size > 0 && index >= 0 && index < len(typographicSizes) {
+			changes = appendInlineRun(changes, inlineTextRun{Size: typographicSizes[index]}, from, to)
+		}
+	})
+	if len(changes) > 0 {
+		sendMessage.Call(e.handle, 0x0458, 0, 0) // EM_STOPGROUPTYPING
+		var endCollection func()
+		if len(changes) > 1 {
+			endCollection = beginInlineEditCollection(e.handle)
+		}
+		for _, run := range changes {
+			a.setInlineCharacters(run.Start, run.End, run, inlineSize, true)
+		}
+		if endCollection != nil {
+			endCollection()
+		}
+		sendMessage.Call(e.handle, 0x0458, 0, 0)
+	}
+	selectInline(e.handle, start, end)
+	sendMessage.Call(e.handle, 0x000b, 1, 0)
+	e.loading = false
+	a.syncInlineControls(0)
+	a.layoutInlineEditor()
+	a.updateHistoryButtons()
+	a.view.invalidateCanvas()
 }

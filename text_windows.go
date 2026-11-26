@@ -60,10 +60,22 @@ type textPanel struct {
 
 func (a *app) buildTextPanel() {
 	p := &a.textTool
-	a.beginPropertySection(uiTextSelection, 16, uiTextSelectionHelp)
-	for i, name := range []uiMessage{uiTextObject, uiParagraph, uiRectangle, uiPolygonLasso} {
-		p.modes[i] = a.uiTextIconButton(name, idTextSelectObject+i, 16+i*40, 42, 34)
+	section := a.beginPropertySectionWithHelp(uiTextSelection, 16, 42, 32, uiTextSelectionHelp)
+	for index, mode := range [...]struct {
+		value int
+		label uiMessage
+	}{
+		{textObject, uiTextCursorSelection},
+		{textRectangle, uiTextRectangleSelection},
+		{textLasso, uiTextLassoSelection},
+		{textBlock, uiTextParagraphSelection},
+	} {
+		p.modes[mode.value] = a.uiTextIconButton(mode.label, idTextSelectObject+mode.value, 16+index*40, 42, 34)
+		watchNavigationHover(p.modes[mode.value])
 	}
+	section.inlineHelp = a.readout(16, 81, 298, 205)
+	section.inlineHelpText = uiTextSelectionInstructions
+	a.localizePropertySection(section)
 	a.beginPropertySection(uiTextFormat, 91, uiTextFormatHelp)
 	p.original = a.add("STATIC", "", 0, 16, 137, 158, 21, 0x4000, 0, a.normalFont)
 	a.uiLabel(uiFont, 16, 161, 205, false)
@@ -97,6 +109,7 @@ func (a *app) buildTextPanel() {
 		a.bindUIHelp(control, descriptions[i])
 		p.typography[i+3] = a.uiTextIconButton(descriptions[i], idTextWidths+i, 87+i*102, 288, 23)
 	}
+	a.addingSection = 0
 	p.copy = a.uiTextIconButton(uiCopyText, idTextCopy, 16, 329, 34)
 	p.undo = a.uiTextIconButton(uiUndoTextEdit, idTextUndo, 56, 329, 34)
 	p.ocr = a.uiTextIconButton(uiOCRSelection, idTextOCR, 96, 329, 34)
@@ -108,6 +121,9 @@ func (a *app) syncTextSelectionModes() {
 	p := &a.textTool
 	for i, h := range p.modes {
 		a.setChecked(h, i == p.mode)
+	}
+	if len(a.commandBar.controls) != 0 {
+		a.updateCommandBar()
 	}
 }
 
@@ -161,7 +177,8 @@ func (a *app) updateTextActions() {
 		setEnabled(h, edit)
 		a.setChecked(h, i == p.alignment && edit)
 	}
-	a.setChecked(p.regular, edit && !a.checked(p.bold) && !a.checked(p.italic))
+	a.setChecked(p.regular, edit && p.inline.mixedFormat&(inlineBold|inlineItalic) == 0 &&
+		!a.checked(p.bold) && !a.checked(p.italic))
 	setEnabled(p.copy, hasText)
 	setEnabled(p.ocr, valid && p.model != nil && !hasText && len(p.pick.polygon) >= 3)
 	setEnabled(p.undo, ready && a.canDocumentCommand(a.view, docUndo, false))
@@ -192,6 +209,9 @@ func (a *app) textCommand(id, notification int) bool {
 		a.cancelCanvasSelections()
 		p.mode = id - idTextSelectObject
 		p.explicitParagraph = p.mode == textBlock
+		if p.mode < textRectangle {
+			a.canvasTextCursor = true
+		}
 		a.cancelCanvasRegionProbes()
 		if p.mode < textRectangle || a.view.mixed.pick.source == 0 {
 			a.view.clearMixedSelection()
@@ -320,7 +340,7 @@ func (a *app) startTextEdit() {
 		return
 	}
 	style := a.inlineStyle()
-	_, trackingOK := readTextNumber(p.tracking, -72, 72)
+	_, trackingOK := a.inlineMetric(p.tracking, inlineTracking, -72, 72, e.initialStyle.tracking)
 	if style.size <= 0 || e.fixedWidth && style.width <= 0 || style.leading <= 0 || !trackingOK {
 		a.reportUI(uiInvalidTextMetrics)
 		return
@@ -365,10 +385,14 @@ func (a *app) startTextEdit() {
 }
 
 func (a *app) inlineGlyphSelection(frame *inlineTextFrame) []glyphSelection {
+	return glyphSelectionFor(a.textTool.model, frame.flow.glyphs())
+}
+
+func glyphSelectionFor(model *textPage, glyphs []layoutGlyph) []glyphSelection {
 	var selection []glyphSelection
 	indexed := map[int]int{}
-	for _, glyph := range frame.flow.glyphs() {
-		token := a.textTool.model.Objects[glyph.run].BlockToken
+	for _, glyph := range glyphs {
+		token := model.Objects[glyph.run].BlockToken
 		index, found := indexed[token]
 		if !found {
 			index = len(selection)

@@ -206,11 +206,14 @@ const (
 	uiSplitPagesHelp                uiMessage = "win32.properties.SplitPagesHelp"
 	uiSplitToFolder                 uiMessage = "win32.properties.SplitToFolder"
 	uiTextSelection                 uiMessage = "win32.properties.TextSelection"
+	uiTextCursorSelection           uiMessage = "win32.properties.TextCursorSelection"
+	uiTextRectangleSelection        uiMessage = "win32.properties.TextRectangleSelection"
+	uiTextLassoSelection            uiMessage = "win32.properties.TextLassoSelection"
+	uiTextParagraphSelection        uiMessage = "win32.properties.TextParagraphSelection"
+	uiTextSelectionInstructions     uiMessage = "win32.properties.TextSelectionInstructions"
+	uiHideSelectionHelp             uiMessage = "win32.properties.HideSelectionHelp"
 	uiTextSelectionHelp             uiMessage = "win32.properties.TextSelectionHelp"
-	uiTextObject                    uiMessage = "win32.properties.TextObject"
-	uiParagraph                     uiMessage = "ui.odstavec.ea49fdff2b"
-	uiRectangle                     uiMessage = "ui.obdelnik.e80dea7331"
-	uiPolygonLasso                  uiMessage = "win32.properties.PolygonLasso"
+	uiMixedTypography               uiMessage = "win32.properties.MixedTypography"
 	uiTextFormat                    uiMessage = "win32.properties.TextFormat"
 	uiTextFormatHelp                uiMessage = "win32.properties.TextFormatHelp"
 	uiFont                          uiMessage = "win32.properties.Font"
@@ -437,10 +440,14 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiSplitPagesHelp:                {Czech: "Každá vybraná strana se uloží do samostatného PDF ve zvolené složce.", English: "Each selected page is saved as its own PDF in the chosen folder."},
 	uiSplitToFolder:                 {Czech: "Vybrat složku a rozdělit PDF…", English: "Choose folder and split PDF…"},
 	uiTextSelection:                 {Czech: "Výběr textu", English: "Text selection"},
-	uiTextSelectionHelp:             {Czech: "Zvolte objekt, odstavec, obdélník nebo laso. Laso dokončete Enterem nebo kliknutím na první bod.", English: "Choose object, paragraph, rectangle, or lasso selection. Close the lasso with Enter or by clicking its first point."},
-	uiTextObject:                    {Czech: "Textový objekt", English: "Text object"},
-	uiPolygonLasso:                  {Czech: "Mnohoúhelníkové laso", English: "Polygon lasso"},
-	uiTextFormat:                    {Czech: "Formát textu", English: "Text formatting"},
+	uiTextSelectionHelp:             {Czech: "Základní a rozšířený výběr", English: "Basic and extended selection"},
+	uiMixedTypography:               {Czech: "Smíšené", English: "Mixed"},
+	uiTextCursorSelection:           {Czech: "Textový kurzor (T)", English: "Text cursor (T)"},
+	uiTextRectangleSelection:        {Czech: "Výběr obdélníkem (M)", English: "Rectangle selection (M)"},
+	uiTextLassoSelection:            {Czech: "Výběr lasem (L)", English: "Lasso selection (L)"},
+	uiTextParagraphSelection:        {Czech: "Výběr stávajícího odstavce (V)", English: "Select existing paragraph (V)"},
+	uiHideSelectionHelp:             {Czech: "Skrýt nápovědu k výběru", English: "Hide selection help"},
+	uiTextFormat:                    {Czech: "Typografie", English: "Typography"},
 	uiTextFormatHelp:                {Czech: "Změny se projeví ve výběru přímo v PDF. Proklad je mezera mezi znaky, řádkování určuje vzdálenost mezi řádky.", English: "Changes appear in the selection in the PDF. Tracking is the space between characters. Line spacing sets the space between lines."},
 	uiFont:                          {Czech: "Písmo", English: "Font"},
 	uiFontSize:                      {Czech: "Velikost (pt)", English: "Size (pt)"},
@@ -472,6 +479,10 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiInvalidTextMetrics:            {Czech: "Zkontrolujte velikost písma, šířku rámečku a řádkování.", English: "Check the font size, frame width, and line spacing."},
 	uiSelectValidFile:               {Czech: "Vyberte soubor s platnou cestou.", English: "Choose a file with a valid path."},
 	uiSelectExistingFolder:          {Czech: "Vyberte existující složku v souborovém systému.", English: "Choose an existing folder."},
+	uiTextSelectionInstructions: {
+		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
+		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
+	},
 }
 
 var exportPresetMessages = map[string]struct{ name, description uiMessage }{

@@ -107,6 +107,11 @@ const (
 	uiExport               uiMessage = "win32.Export"
 	uiSignedCopy           uiMessage = "win32.SignedCopy"
 	uiPrint                uiMessage = "win32.Print"
+	uiMovingSelection      uiMessage = "win32.MovingSelection"
+	uiSwitchToCanvasText   uiMessage = "win32.SwitchToCanvasText"
+	uiSwitchToCanvasArrow  uiMessage = "win32.SwitchToCanvasArrow"
+	uiCanvasRectangle      uiMessage = "win32.CanvasRectangle"
+	uiCanvasLasso          uiMessage = "win32.CanvasLasso"
 	uiSwitchToPages        uiMessage = "win32.SwitchToPages"
 	uiStopSideBySide       uiMessage = "win32.StopSideBySide"
 	uiStartSideBySide      uiMessage = "win32.StartSideBySide"
@@ -146,6 +151,11 @@ var win32Translations = map[uiMessage]uiTranslation{
 	uiExport:               {Czech: "Export", English: "Export"},
 	uiSignedCopy:           {Czech: "Podepsaná kopie", English: "Signed copy"},
 	uiPrint:                {Czech: "Tisk", English: "Print"},
+	uiMovingSelection:      {Czech: "Přesouvám výběr…", English: "Moving selection…"},
+	uiSwitchToCanvasText:   {Czech: "Přepnout na textový kurzor", English: "Switch to text cursor"},
+	uiSwitchToCanvasArrow:  {Czech: "Přepnout na šipku", English: "Switch to arrow"},
+	uiCanvasRectangle:      {Czech: "Výběr obdélníkem", English: "Select with rectangle"},
+	uiCanvasLasso:          {Czech: "Výběr lasem", English: "Select with lasso"},
 	uiSwitchToPages:        {Czech: "Přepnout na zobrazení po stránkách", English: "Switch to page-by-page view"},
 	uiStopSideBySide:       {Czech: "Ukončit zobrazení vedle sebe", English: "Close side-by-side view"},
 	uiStartSideBySide:      {Czech: "Zobrazit vedle sebe…", English: "Show side by side…"},

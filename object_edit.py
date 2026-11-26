@@ -227,21 +227,24 @@ def modify_page(document, page, operators, candidates, edit):
         append_forms(document, page, original, [(form, (1, 0, 0, 1, *delta))])
         return
     combined, cursor = [], 0
-    dx, dy = delta
     for item in items:
         combined.extend(operators[cursor:item.first])
         cursor = item.end
-        try:
-            a, b, c, d, _, _ = invert(item.matrix)
-        except TextError as exc:
-            raise ObjectError(str(exc)) from exc
-        original = operators[item.first:item.end]
         if action == "duplicate":
-            combined.extend(original)
-        combined.extend((instruction("q"), instruction("cm", 1, 0, 0, 1, a*dx+c*dy, b*dx+d*dy),
-                         *original, instruction("Q")))
+            combined.extend(operators[item.first:item.end])
+        combined.extend(translated_draw(operators, item, delta))
     combined.extend(operators[cursor:])
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))
+
+
+def translated_draw(operators, item, delta):
+    dx, dy = delta
+    try:
+        a, b, c, d, _, _ = invert(item.matrix)
+    except TextError as exc:
+        raise ObjectError(str(exc)) from exc
+    return [instruction("q"), instruction("cm", 1, 0, 0, 1, a*dx+c*dy, b*dx+d*dy),
+            *operators[item.first:item.end], instruction("Q")]
 
 
 def omit_draws(operators, items):

@@ -414,12 +414,16 @@ func (a *app) objectCommand(id, notification int) bool {
 	case idObjectPoint, idObjectRectangle, idObjectLasso:
 		a.cancelCanvasSelections()
 		e.mode = id - idObjectPoint
+		if e.mode == 0 {
+			a.canvasTextCursor = false
+		}
 		a.cancelCanvasRegionProbes()
 		if e.mode == 0 || v.mixed.pick.source == 0 {
 			v.clearMixedSelection()
 			a.clearObjectSelection()
 		}
 		v.invalidateCanvas()
+		a.updateCommandBar()
 	case idObjectCopy:
 		if e.selected.Token != 0 {
 			grouping, accepted := a.chooseObjectGrouping()

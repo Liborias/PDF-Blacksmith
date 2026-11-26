@@ -106,93 +106,94 @@ type profileChoice struct {
 }
 
 type app struct {
-	window, instance, normalFont, titleFont, labelFont uintptr
-	dpi, width, height                                 int
-	displayDPI                                         int
-	toolsWidth, preferredToolsWidth, settingsWidth      int
-	tool, mode                                         int
-	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent uintptr
-	searchSidebar                                       uintptr
-	detailsArea, thumbnailArea, rightAuxArea            rect
-	panelItems                                         map[int][]panelItem
-	panelScroll                                        map[int]int
-	sideScroll                                         *panelScrollbar
-	scrollbars                                         map[uintptr]*panelScrollbar
-	scrollPanes                                        map[uintptr]*scrollPane
-	addingTab, addingSection                           int
-	propertySections                                  []propertySection
-	propertyLayoutQueued                              bool
-	toolButtons, detailButtons                         map[int]uintptr
-	documentTools                                      bool
-	headerBrand, windowButtonStart                     int
-	tabBounds                                          rect
-	leftDock, rightDock                                 dockVisibility
-	rightAux                                            rightAuxiliary
-	layoutAids                                         layoutAidsPanel
-	full                                               bool
-	placement                                          windowPlacement
-	savedStyle                                         uintptr
-	viewport                                           rect
-	canvasBrush, panelBrush, inputBrush, logo          uintptr
-	brand                                              *printBitmap
-	windowButtons                                      [3]uintptr
-	historyButtons                                     [2]uintptr
-	commandBar                                        commandBar
-	hoveredNavigation                                  uintptr
-	uiLocale                                           uiLocale
-	uiTheme                                            uiTheme
-	uiLabels, uiCues, uiHelpKeys                        map[uintptr]uiMessage
-	uiMessages                                         map[uintptr]localizedMessage
-	interfaceDialog                                    *interfaceDialog
-	tooltip, focusHelp, focusedHelpTarget              uintptr
-	tooltipCaptions                                    map[uintptr]tooltipCaption
-	tabs                                               []*documentTab
-	activeTab                                          *documentTab
-	tabList                                             uintptr
-	closing                                             *documentClose
-	workDir                                             string
-	retiredDrafts                                       []string
-	choices                                            map[uintptr]*choiceControl
-	choiceCommands                                     map[int]*choiceControl
-	popup                                              []popupItem
-	popupWidth                                         int
-	fileMenu                                           fileMenu
-	options, checkedOptions, panelLabels, panelButtons map[uintptr]bool
-	readOnlyFields, primaryButtons                     map[uintptr]bool
-	view                                               *documentView
-	toolsToggle, detailsToggle, sidebarTitle, status   uintptr
-	thumbnailsToggle, bookmarksToggle, railFont        uintptr
-	resultsToggle                                      uintptr
-	leftPanelsToggle, rightPanelsToggle                 uintptr
-	recent                                             recentPanel
-	exportScope, exportRange                           uintptr
-	splitScope, splitRange, splitButton, splitReport   uintptr
+	window, instance, normalFont, titleFont, labelFont             uintptr
+	dpi, width, height                                             int
+	displayDPI                                                     int
+	toolsWidth, preferredToolsWidth, settingsWidth                 int
+	tool, mode                                                     int
+	sidebar, thumbnailSidebar, bookmarkSidebar, controlParent      uintptr
+	searchSidebar                                                  uintptr
+	detailsArea, thumbnailArea, rightAuxArea                       rect
+	panelItems                                                     map[int][]panelItem
+	panelScroll                                                    map[int]int
+	sideScroll                                                     *panelScrollbar
+	scrollbars                                                     map[uintptr]*panelScrollbar
+	scrollPanes                                                    map[uintptr]*scrollPane
+	addingTab, addingSection                                       int
+	propertySections                                               []propertySection
+	propertyLayoutQueued                                           bool
+	toolButtons, detailButtons                                     map[int]uintptr
+	documentTools                                                  bool
+	headerBrand, windowButtonStart                                 int
+	tabBounds                                                      rect
+	leftDock, rightDock                                            dockVisibility
+	rightAux                                                       rightAuxiliary
+	layoutAids                                                     layoutAidsPanel
+	full                                                           bool
+	placement                                                      windowPlacement
+	savedStyle                                                     uintptr
+	viewport                                                       rect
+	canvasBrush, panelBrush, inputBrush, logo                      uintptr
+	brand                                                          *printBitmap
+	windowButtons                                                  [3]uintptr
+	historyButtons                                                 [2]uintptr
+	commandBar                                                     commandBar
+	canvasTextCursor                                               bool
+	hoveredNavigation                                              uintptr
+	uiLocale                                                       uiLocale
+	uiTheme                                                        uiTheme
+	uiLabels, uiCues, uiHelpKeys                                   map[uintptr]uiMessage
+	uiMessages                                                     map[uintptr]localizedMessage
+	interfaceDialog                                                *interfaceDialog
+	tooltip, focusHelp, focusedHelpTarget                          uintptr
+	tooltipCaptions                                                map[uintptr]tooltipCaption
+	tabs                                                           []*documentTab
+	activeTab                                                      *documentTab
+	tabList                                                        uintptr
+	closing                                                        *documentClose
+	workDir                                                        string
+	retiredDrafts                                                  []string
+	choices                                                        map[uintptr]*choiceControl
+	choiceCommands                                                 map[int]*choiceControl
+	popup                                                          []popupItem
+	popupWidth                                                     int
+	fileMenu                                                       fileMenu
+	options, checkedOptions, panelLabels, panelButtons             map[uintptr]bool
+	readOnlyFields, primaryButtons                                 map[uintptr]bool
+	view                                                           *documentView
+	toolsToggle, detailsToggle, sidebarTitle, status               uintptr
+	thumbnailsToggle, bookmarksToggle, railFont                    uintptr
+	resultsToggle                                                  uintptr
+	leftPanelsToggle, rightPanelsToggle                            uintptr
+	recent                                                         recentPanel
+	exportScope, exportRange                                       uintptr
+	splitScope, splitRange, splitButton, splitReport               uintptr
 	exportFormat, exportWarning, exportColorLabel, exportColorHelp uintptr
-	profiles, pressProfiles, customICC, customBrowse   uintptr
-	grayProfileCombo, grayCustomICC, grayBrowse, kOutputProfile uintptr
-	proofApply, grayProfileLabel, kOutputLabel uintptr
-	outline, decrypt, raster, visible                  uintptr
-	password, cert, certPass, trust                    uintptr
-	exportReport, signReport                           uintptr
-	runButton, scanButton, verifyButton, signButton    uintptr
-	profileChoices                                     []profileChoice
-	exportPresets                                      []exportPreset
-	exportOptionControls                               [6]uintptr
-	exportManualStart                                  int
-	export                                             exportOptions
-	lastOutput, lastPassword                           string
-	merge                                              mergePanel
-	comparison                                         documentComparison
-	ocr                                                ocrPanel
-	textTool textPanel
-	objects  objectEditor
-	thumbnailScopes map[uintptr]bool
-	busy                                               bool
-	waitingOverwrite                                   bool
-	cancelTextJob                                      context.CancelFunc
-	closeAfterTextJob                                  bool
-	pending                                            request
-	results                                            chan response
+	profiles, pressProfiles, customICC, customBrowse               uintptr
+	grayProfileCombo, grayCustomICC, grayBrowse, kOutputProfile    uintptr
+	proofApply, grayProfileLabel, kOutputLabel                     uintptr
+	outline, decrypt, raster, visible                              uintptr
+	password, cert, certPass, trust                                uintptr
+	exportReport, signReport                                       uintptr
+	runButton, scanButton, verifyButton, signButton                uintptr
+	profileChoices                                                 []profileChoice
+	exportPresets                                                  []exportPreset
+	exportOptionControls                                           [6]uintptr
+	exportManualStart                                              int
+	export                                                         exportOptions
+	lastOutput, lastPassword                                       string
+	merge                                                          mergePanel
+	comparison                                                     documentComparison
+	ocr                                                            ocrPanel
+	textTool                                                       textPanel
+	objects                                                        objectEditor
+	thumbnailScopes                                                map[uintptr]bool
+	busy                                                           bool
+	waitingOverwrite                                               bool
+	cancelTextJob                                                  context.CancelFunc
+	closeAfterTextJob                                              bool
+	pending                                                        request
+	results                                                        chan response
 }
 
 var window *app
@@ -223,7 +224,7 @@ func main() {
 		options: make(map[uintptr]bool), checkedOptions: make(map[uintptr]bool),
 		panelLabels: make(map[uintptr]bool), panelButtons: make(map[uintptr]bool),
 		primaryButtons: make(map[uintptr]bool), readOnlyFields: make(map[uintptr]bool),
-		export:  loadExportOptions(), uiLocale: preferences.Locale, uiTheme: preferences.Theme,
+		export: loadExportOptions(), uiLocale: preferences.Locale, uiTheme: preferences.Theme,
 		choices: make(map[uintptr]*choiceControl), choiceCommands: make(map[int]*choiceControl),
 	}
 	if !window.create() {
@@ -470,10 +471,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		if lParam != 0 && a.textTool.inline.handle != 0 {
 			notice := (*struct {
 				from, id uintptr
-				code uint32
+				code     uint32
 			})(*(*unsafe.Pointer)(unsafe.Pointer(&lParam)))
 			if notice.from == a.textTool.inline.handle && notice.code == 0x0702 {
-				a.syncInlineControls()
+				a.syncInlineControls(0)
 				invalidate(a.textTool.inline.handle)
 				return 0
 			}

@@ -124,6 +124,7 @@ def check_block(folder, fonts):
     start = phrase.index("editable")
     end = start + len("editable words")
     assert run["token"] == 0 and run["editable"] and run["block_token"] > 0
+    assert abs(run["tracking"] - 0.243) < 0.00001
     original_bytes = original.read_bytes()
     selection = [{"token": run["block_token"], "glyphs": list(range(start, end))}]
     output = folder / "laid-out.pdf"
@@ -352,6 +353,61 @@ def check_embedded_subset(folder, fonts):
     assert all(abs(x-y) < .001 for x, y in zip(after, row["glyphs"][before.index("17030")]["origin"]))
 
 
+def check_positioned_move(folder):
+    source, result, invalid = (folder / name for name in ("move-source.pdf", "moved.pdf", "move-invalid.pdf"))
+    with pdf.Pdf.new() as document:
+        font = document.make_indirect(pdf.Dictionary(Type=pdf.Name.Font, Subtype=pdf.Name.Type1,
+                                                    BaseFont=pdf.Name.Helvetica))
+        form = document.make_stream(b"BT /F 14 Tf 12 30 Td (XY) Tj ET", Type=pdf.Name.XObject,
+                                    Subtype=pdf.Name.Form, BBox=pdf.Array([0, 0, 100, 80]),
+                                    Resources=pdf.Dictionary(Font=pdf.Dictionary(F=font)))
+        page = document.add_blank_page(page_size=(400, 400))
+        page.Resources = pdf.Dictionary(Font=pdf.Dictionary(F=font), XObject=pdf.Dictionary(Fm=form))
+        page.Contents = document.make_stream(
+            b"0.1 0.2 0.3 rg BT /F 20 Tf 85 Tz 3 Ts 1 0 0 1 50 300 Tm [(AB) -200 (CD)] TJ (EF) Tj ET "
+            b"0 1 0 rg 70 160 45 20 re f "
+            b"q 1 0 0 1 100 70 cm /Fm Do Q q 1 0 0 1 210 70 cm /Fm Do Q")
+        document.save(source)
+    original = source.read_bytes()
+
+    def text(path):
+        return dispatch(dict(action="text_probe", input=str(path)))["text_page"]["objects"]
+
+    def graphics(path):
+        return dispatch(dict(action="object_probe", input=str(path)))["object_page"]["objects"]
+
+    before, objects = text(source), graphics(source)
+    nested = next(item for item in before if item["text"] == "XY")
+    chosen = [dict(token=before[0]["block_token"], glyphs=[1, 2]),
+              dict(token=nested["block_token"], glyphs=[0, 1])]
+    delta = [17, -26]
+    req = dict(action="object_edit", input=str(source), output=str(result), text_selection=chosen,
+               object_edit=dict(operation="move_selection", delta=delta, tokens=[objects[0]["token"], objects[1]["token"]]))
+    dispatch(req)
+    after = text(result)
+    assert all(run["fill"] == before[0]["fill"] for run in after if any(g["text"] in "ABCDEF" for g in run["glyphs"]))
+    old = {g["text"]: g["origin"] for run in before for g in run["glyphs"] if g["text"] in "ABCDEF"}
+    new = {g["text"]: g["origin"] for run in after for g in run["glyphs"] if g["text"] in "ABCDEF"}
+    for char, origin in old.items():
+        offset = delta if char in "BC" else (0, 0)
+        assert all(abs(new[char][i]-origin[i]-offset[i]) < .002 for i in range(2)), (char, old, new)
+    # Text inside a selected Form follows the Form once, with its other instance untouched.
+    for char in "XY":
+        starts = sorted(g["origin"] for run in before for g in run["glyphs"] if g["text"] == char)
+        ends = sorted(g["origin"] for run in after for g in run["glyphs"] if g["text"] == char)
+        assert all(abs(ends[0][i]-starts[0][i]-delta[i]) < .002 for i in range(2))
+        assert ends[1] == starts[1]
+    for index, item in enumerate(graphics(result)):
+        offset = delta if index < 2 else (0, 0)
+        assert all(abs(item["bounds"][i]-objects[index]["bounds"][i]-offset[i % 2]) < .002 for i in range(4))
+    try:
+        dispatch({**req, "output": str(invalid), "text_selection": [dict(token=0, glyphs=[0])]})
+    except UserError:
+        assert not invalid.exists() or not invalid.stat().st_size
+    else:
+        raise AssertionError("A partially invalid mixed move may not publish a draft")
+    assert source.read_bytes() == original
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
         fonts = Path(sys.argv[1]).resolve()
@@ -361,4 +417,5 @@ if __name__ == "__main__":
         check_catalog(Path(tmp), fonts)
         check_rich_text_in_shared_form(Path(tmp), fonts)
         check_embedded_subset(Path(tmp), fonts)
+        check_positioned_move(Path(tmp))
     print("Text blocks preserve nearby glyphs and graphics, and reflow with spacing, alignment and rotation.")

@@ -470,6 +470,7 @@ func (a *app) activate(id int) {
 		a.view.invalidateCanvas()
 	}
 	a.layout()
+	a.updateCommandBar()
 	if scope, _ := a.scopeControls(); old != a.mode && (a.thumbnailScopes[scope] || comboIndex(scope) == exportAllPages) {
 		a.applyThumbnailScope()
 	}
@@ -935,6 +936,9 @@ func (a *app) command(id, notification int) {
 	case idSearchTab:
 		a.showSearch()
 	case idBrowseTab, idPagesTab, idLayoutAids, idPageOrderTool, idProofTab, idSignTab, idSplitTab, idMergeTab, idOCRTab, idTextTab, idObjectsTab:
+		if id == idTextTab || id == idObjectsTab {
+			a.canvasTextCursor = id == idTextTab
+		}
 		a.activate(id)
 	case idToggleLayoutGrid:
 		a.toggleLayoutGrid()
@@ -1488,6 +1492,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 			v.fitOverviewSelection()
 			return true
 		}
+	}
+	if msg.wParam == 0x1b && a.closeFocusedPropertyHelp(msg.window) {
+		return true
 	}
 	if a.objectKey(msg) || a.textKey(msg) || a.documentKey(msg) {
 		return true

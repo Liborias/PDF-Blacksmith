@@ -46,6 +46,7 @@ func (a *app) doInlineHistory(command documentCommand) {
 	}
 	e.previewStyle = a.inlineStyle()
 	e.loading = false
+	a.syncInlineControls(0)
 	a.layoutInlineEditor()
 	a.updateTextActions()
 	a.updateHistoryButtons()

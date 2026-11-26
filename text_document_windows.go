@@ -29,7 +29,7 @@ type textRun struct {
 	Text                    string
 	Block                   *storedTextBlock
 	Fill                    [3]uint8
-	Size                    float64
+	Size, Tracking          float64
 	Matrix                  [6]float64
 	Bold, Italic, Underline bool
 	Glyphs                  []textGlyph

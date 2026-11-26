@@ -18,6 +18,7 @@ const (
 
 type ocrPanel struct {
 	scope, pageRange, language, start, undo, report uintptr
+	areaMode                                        int
 }
 
 func (a *app) buildOCRPanel() {

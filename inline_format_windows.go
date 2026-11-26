@@ -54,9 +54,10 @@ func (a *app) initialInlineContent(frame *inlineTextFrame) (string, []inlineText
 	appendText := func(value string, glyph layoutGlyph) {
 		source := p.model.Objects[glyph.run]
 		style := inlineTextRun{Font: a.inlineFontForRun(source),
-			Size:  max(1, math.Round(source.Size*math.Hypot(source.Matrix[2], source.Matrix[3])*20)/20),
-			Color: uint32(paletteColor{source.Fill[0], source.Fill[1], source.Fill[2]}.win()),
-			Bold:  source.Bold, Italic: source.Italic, Underline: source.Underline}
+			Size:     max(1, math.Round(source.Size*math.Hypot(source.Matrix[2], source.Matrix[3])*20)/20),
+			Tracking: source.Tracking,
+			Color:    uint32(paletteColor{source.Fill[0], source.Fill[1], source.Fill[2]}.win()),
+			Bold:     source.Bold, Italic: source.Italic, Underline: source.Underline}
 		if source.Block != nil {
 			style.Tracking = source.Block.Tracking
 		}
@@ -89,7 +90,7 @@ func appendInlineRun(runs []inlineTextRun, style inlineTextRun, start, end int) 
 	if len(runs) > 0 {
 		last := &runs[len(runs)-1]
 		style.Start, style.End = last.Start, last.End
-		if style == *last {
+		if last.End == start && style == *last {
 			last.End = end
 			return runs
 		}
@@ -106,6 +107,94 @@ func inlineSelection(handle uintptr) (int, int) {
 
 func selectInline(handle uintptr, start, end int) {
 	sendMessage.Call(handle, 0x00b1, uintptr(start), uintptr(end))
+}
+
+func readInlineFormat(handle uintptr) inlineCharFormat {
+	format := inlineCharFormat{size: uint32(unsafe.Sizeof(inlineCharFormat{}))}
+	sendMessage.Call(handle, 0x043a, 1, uintptr(unsafe.Pointer(&format))) // EM_GETCHARFORMAT
+	return format
+}
+
+// Callers that traverse formats restore the actual selection before showing the editor again.
+func visitInlineFormats(handle uintptr, left, right int, mask uint32, selection *richTextInterface, visit func(int, int, inlineCharFormat)) {
+	selectInline(handle, left, right)
+	format := readInlineFormat(handle)
+	if right-left > 1 && format.mask&mask == mask && selection.mixedSpacing() {
+		format.mask &^= inlineTracking
+	}
+	if format.mask&mask != mask && right-left > 1 {
+		mid := (left + right) / 2
+		visitInlineFormats(handle, left, mid, mask, selection, visit)
+		visitInlineFormats(handle, mid, right, mask, selection, visit)
+		return
+	}
+	visit(left, right, format)
+}
+
+type richTextInterface struct{ methods *[51]uintptr }
+
+func (ref *richTextInterface) release() {
+	if ref != nil {
+		syscall.SyscallN(ref.methods[2], uintptr(unsafe.Pointer(ref))) // IUnknown::Release
+	}
+}
+
+func inlineTextDocument(handle uintptr) *richTextInterface {
+	var ole, document *richTextInterface
+	if ok, _, _ := sendMessage.Call(handle, 0x043c, 0, uintptr(unsafe.Pointer(&ole))); ok == 0 || ole == nil {
+		return nil // EM_GETOLEINTERFACE
+	}
+	defer ole.release()
+	iid := syscall.GUID{Data1: 0x8cc497c0, Data2: 0xa1df, Data3: 0x11ce, Data4: [8]byte{0x80, 0x98, 0, 0xaa, 0, 0x47, 0xbe, 0x5d}}
+	syscall.SyscallN(ole.methods[0], uintptr(unsafe.Pointer(ole)),
+		uintptr(unsafe.Pointer(&iid)), uintptr(unsafe.Pointer(&document))) // QueryInterface
+	return document
+}
+
+func (document *richTextInterface) selection() *richTextInterface {
+	var selection *richTextInterface
+	if document != nil {
+		syscall.SyscallN(document.methods[8], uintptr(unsafe.Pointer(document)),
+			uintptr(unsafe.Pointer(&selection))) // ITextDocument::GetSelection
+	}
+	return selection
+}
+
+// EM_GETCHARFORMAT misses mixed character spacing in some RichEdit implementations.
+func (selection *richTextInterface) mixedSpacing() bool {
+	if selection == nil {
+		return false
+	}
+	var font *richTextInterface
+	syscall.SyscallN(selection.methods[18], uintptr(unsafe.Pointer(selection)),
+		uintptr(unsafe.Pointer(&font))) // ITextRange::GetFont
+	if font == nil {
+		return false
+	}
+	defer font.release()
+	var spacing float32
+	result, _, _ := syscall.SyscallN(font.methods[50], uintptr(unsafe.Pointer(font)),
+		uintptr(unsafe.Pointer(&spacing))) // ITextFont::GetSpacing
+	const tomUndefined = -9999999
+	return int32(result) >= 0 && spacing == tomUndefined
+}
+
+// Group the individual format changes as one Undo operation in Windows RichEdit.
+func beginInlineEditCollection(handle uintptr) func() {
+	document := inlineTextDocument(handle)
+	if document == nil {
+		return nil
+	}
+	ptr := uintptr(unsafe.Pointer(document))
+	result, _, _ := syscall.SyscallN(document.methods[20], ptr) // ITextDocument::BeginEditCollection
+	if int32(result) < 0 {
+		document.release()
+		return nil
+	}
+	return func() {
+		syscall.SyscallN(document.methods[21], ptr) // ITextDocument::EndEditCollection
+		document.release()
+	}
 }
 
 func (a *app) setInlineCharacters(start, end int, style inlineTextRun, mask uint32, selectRange bool) {
@@ -126,8 +215,18 @@ func (a *app) changeInlineCharacters(mask uint32) {
 		return
 	}
 	style := a.inlineStyle()
-	if mask == inlineSize && style.size <= 0 {
-		return
+	var edited uintptr
+	switch mask {
+	case inlineSize:
+		edited = a.textTool.size
+		if _, ok := readTextNumber(edited, 1, 600); !ok {
+			return
+		}
+	case inlineTracking:
+		edited = a.textTool.tracking
+		if _, ok := readTextNumber(edited, -72, 72); !ok {
+			return
+		}
 	}
 	start, end := inlineSelection(e.handle)
 	change := inlineTextRun{Font: style.font, Size: style.size, Tracking: style.tracking,
@@ -142,6 +241,7 @@ func (a *app) changeInlineCharacters(mask uint32) {
 	}
 	sendMessage.Call(e.handle, 0x0458, 0, 0)
 	e.loading = false
+	a.syncInlineControls(edited)
 	a.updateHistoryButtons()
 }
 
@@ -160,18 +260,12 @@ func (a *app) inlineRuns(content string) []inlineTextRun {
 		e.loading = false
 		invalidate(e.handle)
 	}()
+	document := inlineTextDocument(e.handle)
+	defer document.release()
+	selection := document.selection()
+	defer selection.release()
 	var runs []inlineTextRun
-	var read func(int, int)
-	read = func(left, right int) {
-		selectInline(e.handle, left, right)
-		format := inlineCharFormat{size: uint32(unsafe.Sizeof(inlineCharFormat{}))}
-		sendMessage.Call(e.handle, 0x043a, 1, uintptr(unsafe.Pointer(&format))) // EM_GETCHARFORMAT
-		if format.mask&inlineBaseMask != inlineBaseMask && right-left > 1 {
-			mid := (left + right) / 2
-			read(left, mid)
-			read(mid, right)
-			return
-		}
+	visitInlineFormats(e.handle, 0, length, inlineBaseMask, selection, func(left, right int, format inlineCharFormat) {
 		style := inlineTextRun{Font: syscall.UTF16ToString(format.face[:]), Size: float64(format.height) / 20,
 			Color: format.color & 0xffffff, Tracking: float64(format.spacing) / 20,
 			Bold: format.effects&inlineBold != 0, Italic: format.effects&inlineItalic != 0,
@@ -183,8 +277,7 @@ func (a *app) inlineRuns(content string) []inlineTextRun {
 			style.Size = e.initialStyle.size
 		}
 		runs = appendInlineRun(runs, style, left, right)
-	}
-	read(0, length)
+	})
 	return runs
 }
 
@@ -230,9 +323,9 @@ func (a *app) finishInlineLayout(control uintptr) {
 	case p.size:
 		a.changeInlineCharacters(inlineSize)
 	case p.tracking:
-		if _, ok := readTextNumber(p.tracking, -72, 72); ok {
-			a.changeInlineCharacters(inlineTracking)
-		}
+		a.changeInlineCharacters(inlineTracking)
+	case e.handle:
+		a.syncInlineControls(0)
 	case p.leading:
 		if style := a.inlineStyle(); style.leading > 0 {
 			e.loading = true

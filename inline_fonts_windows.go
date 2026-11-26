@@ -71,7 +71,7 @@ func (a *app) updateInlineFontChoices() {
 		labels[index] = p.fontNames[keys[index]] + " (z PDF)"
 	}
 	choice := a.choices[p.font]
-	choice.names, choice.index = labels, 0
+	choice.names, choice.index, choice.placeholder = labels, 0, ""
 	setText(p.font, labels[0])
 	invalidate(p.font)
 }

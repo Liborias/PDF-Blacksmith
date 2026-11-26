@@ -7,7 +7,15 @@ type choiceControl struct {
 	notification int
 	names        []string
 	messages     []uiMessage
+	placeholder  uiMessage
 	index        int
+}
+
+func (a *app) choiceLabel(choice *choiceControl) string {
+	if choice.placeholder != "" {
+		return a.uiText(choice.placeholder)
+	}
+	return choice.names[choice.index]
 }
 
 type menuMeasure struct {
@@ -56,9 +64,10 @@ func comboIndex(handle uintptr) int {
 
 func chooseCombo(handle uintptr, index int) {
 	choice := window.choices[handle]
-	if choice == nil || index < 0 || index >= len(choice.names) || index == choice.index {
+	if choice == nil || index < 0 || index >= len(choice.names) || index == choice.index && choice.placeholder == "" {
 		return
 	}
+	choice.placeholder = ""
 	choice.index = index
 	setText(handle, choice.names[index])
 	invalidate(handle)
@@ -84,7 +93,7 @@ func (a *app) drawChoice(item *buttonDraw) bool {
 	a.arrow(item.dc, x, y, text)
 	bounds.left += int32(a.scale(8))
 	bounds.right -= int32(a.scale(24))
-	drawText(item.dc, choice.names[choice.index], bounds, a.normalFont, text, 0x8000)
+	drawText(item.dc, a.choiceLabel(choice), bounds, a.normalFont, text, 0x8000)
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, item.bounds)
 	}
@@ -112,9 +121,9 @@ func (a *app) arrow(dc uintptr, x, y int, color paletteColor) {
 func (a *app) openChoice(choice *choiceControl) {
 	items := make([]popupItem, len(choice.names))
 	for index, name := range choice.names {
-		items[index] = popupItem{label: name, checked: index == choice.index}
+		items[index] = popupItem{label: name, checked: index == choice.index && choice.placeholder == ""}
 	}
-	if index := a.trackPopup(choice.handle, 302, items); index >= 0 && index != choice.index {
+	if index := a.trackPopup(choice.handle, 302, items); index >= 0 && (index != choice.index || choice.placeholder != "") {
 		width := a.preferredSettingsWidth()
 		chooseCombo(choice.handle, index)
 		a.command(choice.notification, 1)

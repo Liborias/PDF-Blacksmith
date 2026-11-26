@@ -140,6 +140,9 @@ func (v *documentView) canvasRegionMode() (int, bool) {
 	case idTextTab:
 		mode := v.app.textTool.mode
 		return mode, mode == textRectangle || mode == textLasso
+	case idOCRTab:
+		mode := v.app.ocr.areaMode
+		return mode, mode == textRectangle || mode == textLasso
 	case idObjectsTab:
 		switch v.app.objects.mode {
 		case 1:
@@ -153,6 +156,9 @@ func (v *documentView) canvasRegionMode() (int, bool) {
 
 func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 	a := v.app
+	if !v.secondary && v.canvasContentMovePointer(message, x, y) {
+		return true
+	}
 	if v.selection.active() && v.continueCanvasSelection(message, x, y) {
 		return true
 	}
@@ -186,6 +192,9 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 	}
 	if keyDown(0x20) {
 		return false
+	}
+	if v.beginCanvasContentMove(pick, pos) {
+		return true
 	}
 	if region {
 		v.beginCanvasSelection(pick, pos, mode, 0x0202)
@@ -382,7 +391,8 @@ func (v *documentView) cancelCanvasSelection() bool {
 
 func (a *app) cancelCanvasSelections() bool {
 	primary := a.view.cancelCanvasSelection()
-	return a.comparison.view.cancelCanvasSelection() || primary
+	move := a.view.cancelCanvasContentMove()
+	return a.comparison.view.cancelCanvasSelection() || primary || move
 }
 
 func (v *documentView) paintCanvasSelection(dc uintptr) {
@@ -413,7 +423,7 @@ func (v *documentView) paintCanvasSelection(dc uintptr) {
 }
 
 func (a *app) setCanvasCursor() bool {
-	if a.mode != idTextTab || a.full || a.busy || a.textTool.mode >= textRectangle || keyDown(0x20) {
+	if a.mode != idTextTab || !a.canvasTextCursor || a.full || a.busy || a.textTool.mode >= textRectangle || keyDown(0x20) {
 		return false
 	}
 	var p point

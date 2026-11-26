@@ -909,7 +909,10 @@ def edit_object_document(src, request):
                 _, rotation, page = select(document)
                 prepare_edit(document, request)
                 operators = pikepdf_operators(page)
-                if edit.get("operation") == "paste":
+                if edit.get("operation") == "move_selection":
+                    from text_move import move_selection
+                    move_selection(document, page, operators, list(draws(page, operators)), edit, request.get("text_selection"))
+                elif edit.get("operation") == "paste":
                     paste_object(document, page, operators, edit, rotation, box_options(view)[0])
                 else:
                     modify_page(document, page, operators, list(draws(page, operators)), edit)
@@ -921,6 +924,8 @@ def edit_object_document(src, request):
                 raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
     except ObjectError as exc:
         raise UserError(str(exc)) from exc
+    if edit.get("operation") == "move_selection":
+        return {**description, "message": "Výběr byl přesunut."}
     if edit.get("grouping") == "group":
         return {**description, "message": {
             "move": "Výběr byl přesunut jako skupina.",

@@ -46,8 +46,9 @@ def invert(matrix):
     return d/det, -b/det, -c/det, a/det, (c*f-d*e)/det, (b*e-a*f)/det
 
 
-def positions(operators, resources, *, include_dependent=False):
+def positions(operators, resources, *, include_dependent=False, paint_parameters=None, inherited=(100., 0.)):
     ctm, line, leading, mode, saved = IDENTITY, IDENTITY, 0, 0, []
+    scale, rise = inherited
     independent, in_text = True, False
     usable = set()
     for index in range(len(operators)-1, -1, -1):
@@ -65,11 +66,15 @@ def positions(operators, resources, *, include_dependent=False):
         name = str(entry.operator)
         operands = entry.operands
         if name == "q":
-            saved.append((ctm, leading, mode))
+            saved.append((ctm, leading, mode, scale, rise))
         elif name == "Q" and saved:
-            ctm, leading, mode = saved.pop()
+            ctm, leading, mode, scale, rise = saved.pop()
         elif name == "Tr":
             mode = int(operands[0])
+        elif name == "Tz":
+            scale = float(operands[0])
+        elif name == "Ts":
+            rise = float(operands[0])
         elif name in ("BMC", "BDC"):
             value = operands[1] if name == "BDC" else None
             if isinstance(value, pdf.Name):
@@ -98,6 +103,8 @@ def positions(operators, resources, *, include_dependent=False):
             line = compose(line, (1, 0, 0, 1, x, y))
         elif name in ("T*", "'", '"'):
             line = compose(line, (1, 0, 0, 1, 0, -leading))
+        if paint_parameters is not None and name in PAINT | {"Do"}:
+            paint_parameters[index+1] = scale, rise
         if in_text and name in PAINT:
             clipping |= mode >= 4
             if (mode in (0, 2) and (index in usable or include_dependent and name in ('Tj', 'TJ'))
@@ -118,10 +125,19 @@ def union(first, second):
     return min(first[0], second[0]), min(first[1], second[1]), max(first[2], second[2]), max(first[3], second[3])
 
 
+def underline_marks(operators, token):
+    after = token
+    while after < len(operators) and str(operators[after].operator) == "Ts":
+        after += 1
+    following = operators[after:after+5]
+    if ([str(entry.operator) for entry in following] == ["ET", "BMC", "re", "f", "EMC"]
+            and tuple(following[1].operands) == (UNDERLINE,)):
+        return range(after+2, after+6)
+    return range(0)
+
+
 def has_underline(operators, token):
-    following = operators[token:token+5]
-    return ([str(entry.operator) for entry in following] == ["ET", "BMC", "re", "f", "EMC"]
-            and tuple(following[1].operands) == (UNDERLINE,))
+    return bool(underline_marks(operators, token))
 
 
 def source_styles(operators, resources, marked, initial_color=()):
@@ -267,15 +283,18 @@ def stored_block(text):
                 row=block["PBRow"], paragraph=block["PBParagraph"], word_wrap=bool(block["PBWordWrap"]),
                 bold=block.get("PBBold"), italic=block.get("PBItalic"))
 
-def text_tree(page, document=None, *, probe=False, replacements=None, discard=()):
+def text_tree(page, document=None, *, probe=False, replacements=None, discard=(),
+              move_context=None, translations=None, graphics=None, blocks=None, underlines=None):
     """Assign each show an ID in page paint order, including instances of shared Forms."""
     root_operators = pikepdf_operators(page)
     sources, serial, forms = {}, len(root_operators), 0
 
-    def visit(operators, resources, parents, outer, initial_color):
+    def visit(operators, resources, parents, outer, initial_color, root_form=0, inherited=(100., 0.)):
         nonlocal serial, forms
         states = positions(operators, resources)
-        block_states = positions(operators, resources, include_dependent=True)
+        parameters = {} if move_context is not None else None
+        block_states = positions(operators, resources, include_dependent=True,
+                                 paint_parameters=parameters, inherited=inherited)
         form_calls = {i for i, op in enumerate(operators, 1) if str(op.operator) == "Do"}
         styles = source_styles(operators, resources, block_states.keys() | form_calls, initial_color)
         mapping = {}
@@ -287,8 +306,13 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
                 token = index
             mapping[index] = token
             sources[token] = (operators, index, styles[index], index in states, outer, not parents)
+            if parameters is not None:
+                ctm, line = block_states[index]
+                move_context[token] = compose(outer, compose(ctm, line)), parameters[index], root_form, compose(outer, ctm)
+        underline_offsets = {underline_marks(operators, index).start+1: underlines[token] for index, token in mapping.items()
+                             if underlines and token in underlines}
         skip = {offset for index, token in mapping.items() if token in discard
-                for offset in range(index+2, index+6)}
+                for offset in underline_marks(operators, index)}
         output, new_resources, changed = [], None, False
         xobjects = resources.get("/XObject", {})
         ctm, matrices = outer, []
@@ -317,7 +341,8 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
                         if not isinstance(child_resources, pdf.Dictionary):
                             child_resources = resources
                         child, child_resources, update = visit(child_ops, child_resources, (*parents, form.objgen),
-                                                               child_matrix, styles[index][4])
+                                                               child_matrix, styles[index][4], root_form or index,
+                                                               parameters[index] if parameters is not None else inherited)
                         if update:
                             clone = document.make_stream(pdf.unparse_content_stream(child))
                             for key, value in form.stream_dict.items():
@@ -336,7 +361,29 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
                             op = instruction("Do", key)
                             changed = True
             token = mapping.get(index)
-            if probe and token is not None:
+            if graphics is not None and not parents and index in graphics:
+                output.extend(graphics[index])
+                changed = True
+            elif index in underline_offsets:
+                dx, dy = underline_offsets[index]
+                x, y, width, height = operands
+                output.append(instruction("re", float(x)+dx, float(y)+dy, width, height))
+                changed = True
+            elif translations is not None and token in translations:
+                output.extend(translations[token])
+                changed = True
+            elif blocks and name == "BDC" and isinstance(operands[1], pdf.Dictionary) and "/PBTextBlock" in operands[1] and (
+                    group := (root_form, int(operands[1].PBTextBlock))) in blocks:
+                properties = pdf.Dictionary(operands[1])
+                delta = blocks[group]
+                if delta is None:
+                    del properties["/PBTextBlock"]
+                else:
+                    properties.PBFirstX = int(properties.PBFirstX) + round(delta[0]*1000)
+                    properties.PBFirstY = int(properties.PBFirstY) + round(delta[1]*1000)
+                output.append(instruction("BDC", operands[0], properties))
+                changed = True
+            elif probe and token is not None:
                 output.extend((instruction("BDC", pdf.Name.Span, pdf.Dictionary(PBTextToken=token)),
                                op, instruction("EMC")))
                 changed = True
@@ -417,19 +464,25 @@ def source_objects(page, sources, *, font_catalog=None):
             font = text.get_font()
             name = font.get_family_name() or font.get_base_name()
             generic = name.casefold()
+            base_name = font.get_base_name().casefold()
             family = 2 if any(word in generic for word in ("courier", "mono", "consolas")) else 1 if any(
                 word in generic for word in ("times", "serif", "georgia")) and "sans" not in generic else 0
             size = text.get_font_size()
             matrix = text.get_matrix().get()
             advance, glyph_indices, whole, root = [], [], False, False
             face = ""
+            tracking = 0.0
             operator_list, index = (), 0
             if token:
                 operator_list, index, style, whole, outer, root = sources[token]
                 if not root:
                     matrix = compose(outer, matrix)
+                spacing = style[2] * hypot(*matrix[:2])
+                if -72 <= spacing <= 72:
+                    tracking = spacing
                 source = style[0]
                 if source is not None:
+                    base_name = str(source.get("/BaseFont", base_name)).casefold()
                     if re.fullmatch(r"PB[0-9a-f]{16}", name):
                         name = str(source.get("/BaseFont", name)).lstrip("/")
                     key = source.objgen
@@ -447,8 +500,8 @@ def source_objects(page, sources, *, font_catalog=None):
                             face, display, data = embedded[font_key]
                             font_catalog.setdefault(face, {"name": display, "data": b64encode(data).decode("ascii")})
             block = stored_block(text)
-            bold = font.get_weight() >= 600 or "bold" in generic
-            italic = any(word in font.get_base_name().casefold() for word in ("italic", "oblique"))
+            bold = font.get_weight() >= 600 or "bold" in generic or "bold" in base_name
+            italic = any(word in base_name for word in ("italic", "oblique"))
             if block:
                 bold = bold if block["bold"] is None else bool(block["bold"])
                 italic = italic if block["italic"] is None else bool(block["italic"])
@@ -458,7 +511,7 @@ def source_objects(page, sources, *, font_catalog=None):
                                 face=face, whole=whole,
                                 glyphs=characters, block=block, text=value, bounds=bounds, matrix=matrix, font=name, family=family,
                                 fill=[red.value, green.value, blue.value],
-                                size=size, bold=bold, italic=italic,
+                                size=size, tracking=tracking, bold=bold, italic=italic,
                                 underline=bool(token and has_underline(operator_list, index))))
     counts = Counter(item["block_token"] for item in objects)
     for item in objects:
@@ -596,8 +649,7 @@ def replace_runs(document, page, edits, font_dir):
         if token not in replacements:
             updated.append(entry)
             continue
-        if has_underline(operators, token):
-            discard.update(range(token+2, token+6))
+        discard.update(underline_marks(operators, token))
         if token in drawing:
             ctm, line = states[token]
             local = compose(invert(ctm), indexed[token]["matrix"])

@@ -21,10 +21,18 @@ func inlineEditProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintp
 				postMessage.Call(a.window, wmInlineCommit, uintptr(e.serial), 0)
 			}
 		}
+		if e.visible && message == 0x0020 && uint16(lParam) == 1 && !a.canvasTextCursor { // WM_SETCURSOR, HTCLIENT
+			cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, 32512) // IDC_ARROW
+			user32.NewProc("SetCursor").Call(cursor)
+			return 1
+		}
 		if e.visible {
 			view := a.view
 			x, y := int32(int16(lParam))+e.rect.left, int32(int16(lParam>>16))+e.rect.top
 			_, selectingArea := view.canvasRegionMode()
+			if message == 0x0201 && !a.canvasTextCursor && view.beginCanvasContentMove(view.textAt(x, y), point{x, y}) {
+				return 0
+			}
 			if message == 0x0207 || selectingArea && (message == 0x0201 || message == 0x0203 ||
 				message == 0x0200 && view.selection.active()) {
 				if view.canvasPointer(message, x, y) {

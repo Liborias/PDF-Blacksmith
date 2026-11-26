@@ -124,6 +124,11 @@ func (a *app) textSettingsFocus(handle uintptr) bool {
 	if handle == a.textTool.inline.handle {
 		return true
 	}
+	for _, id := range []int{idHeaderPointer, idHeaderRectangle, idHeaderLasso} {
+		if button := a.headerControl(id); button != 0 && handle == button {
+			return true
+		}
+	}
 	for _, control := range a.panelItems[idTextTab] {
 		if control.handle == handle {
 			return true

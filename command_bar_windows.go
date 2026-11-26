@@ -23,6 +23,9 @@ const (
 	idHeaderThemeMode
 	idHeaderActualSize
 	idHeaderOverview
+	idHeaderPointer
+	idHeaderRectangle
+	idHeaderLasso
 )
 
 type commandBarButton struct {
@@ -42,6 +45,7 @@ type commandBar struct {
 	openMenu int
 	fitMode  readingZoomMode
 	overview bool
+	areaMode int
 }
 
 var headerButtons = []commandBarButton{
@@ -51,6 +55,9 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderEdit, label: uiEdit, menu: true},
 	{id: idHeaderForms, label: uiForms, menu: true},
 	{id: idHeaderHelp, label: uiHelpMenu, menu: true},
+	{id: idHeaderPointer, label: uiSwitchToCanvasText, symbol: "i-text_caret"},
+	{id: idHeaderRectangle, label: uiCanvasRectangle, symbol: "i-rect_select"},
+	{id: idHeaderLasso, label: uiCanvasLasso, symbol: "i-lasso"},
 	{id: idHeaderUndo, label: uiUndo, symbol: "i-undo", shortcut: "Ctrl+Z"},
 	{id: idHeaderRedo, label: uiRedo, symbol: "i-redo", shortcut: "Ctrl+Y"},
 	{id: idHeaderFlow, label: uiSwitchToContinuous, symbol: "i-view_continuous"},
@@ -69,6 +76,9 @@ var headerButtons = []commandBarButton{
 
 func (a *app) commandBarCaption(button commandBarButton) string {
 	key := button.label
+	if button.id == idHeaderPointer && a.canvasTextCursor {
+		key = uiSwitchToCanvasArrow
+	}
 	if button.id == idHeaderFlow && a.view.continuous {
 		key = uiSwitchToPages
 	}
@@ -126,11 +136,23 @@ func (a *app) buildCommandBar() {
 func (a *app) layoutCommandBar() {
 	d := a.scale
 	x := d(8)
+	total := d(28)
 	for _, control := range a.commandBar.controls {
-		width, gap := d(30), d(4)
+		if control.menu {
+			total += a.captionWidth(a.uiText(control.label), a.normalFont) + d(20) + d(1)
+		} else {
+			total += d(30) + d(4)
+		}
+	}
+	iconWidth, iconGap := d(30), d(4)
+	if total > a.width {
+		iconWidth, iconGap = d(27), d(2)
+	}
+	for _, control := range a.commandBar.controls {
+		width, gap := iconWidth, iconGap
 		if control.menu {
 			width, gap = a.captionWidth(a.uiText(control.label), a.normalFont)+d(20), d(1)
-		} else if control.id == idHeaderUndo {
+		} else if control.id == idHeaderPointer {
 			x += d(12)
 		}
 		show := !a.full && x+width+d(8) <= a.width
@@ -149,6 +171,13 @@ func (a *app) updateCommandBar() {
 	fitChanged := a.commandBar.fitMode != v.fitMode || a.commandBar.overview != v.overview
 	a.commandBar.fitMode = v.fitMode
 	a.commandBar.overview = v.overview
+	areaMode, selectingArea := v.canvasRegionMode()
+	if !selectingArea {
+		areaMode = 0
+	}
+	selectionChanged := a.commandBar.areaMode != areaMode
+	a.commandBar.areaMode = areaMode
+	canSelect := a.canUseHeaderSelection()
 	for _, control := range a.commandBar.controls {
 		switch control.id {
 		case idHeaderSave:
@@ -159,11 +188,16 @@ func (a *app) updateCommandBar() {
 			setEnabled(control.handle, ready)
 		case idHeaderEdit:
 			setEnabled(control.handle, ready)
+		case idHeaderPointer, idHeaderRectangle, idHeaderLasso:
+			setEnabled(control.handle, canSelect)
+			if selectionChanged {
+				invalidate(control.handle)
+			}
 		}
 		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth || control.id == idHeaderOverview || control.id == idHeaderFlow) {
 			invalidate(control.handle)
 		}
-		if control.id == idHeaderFlow {
+		if control.id == idHeaderFlow || control.id == idHeaderPointer {
 			label := a.commandBarCaption(control.commandBarButton)
 			if getText(control.handle) != label {
 				setText(control.handle, label)
@@ -188,6 +222,15 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			control.id == idHeaderFile && a.fileMenu.open && a.fileMenu.anchor == control.handle
 		symbol := control.symbol
 		switch control.id {
+		case idHeaderPointer:
+			if a.canvasTextCursor {
+				symbol = "i-cursor"
+			}
+			active = a.commandBar.areaMode == 0
+		case idHeaderRectangle:
+			active = a.commandBar.areaMode == textRectangle
+		case idHeaderLasso:
+			active = a.commandBar.areaMode == textLasso
 		case idHeaderFlow:
 			if a.view.continuous {
 				symbol = "i-view_pages"
@@ -360,6 +403,8 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		a.toggleThemeMode()
 	case idHeaderView, idHeaderTools, idHeaderEdit, idHeaderHelp, idHeaderHelpIcon:
 		a.showHeaderMenu(id)
+	case idHeaderPointer, idHeaderRectangle, idHeaderLasso:
+		a.setHeaderSelection(id)
 	case idHeaderFlow:
 		a.setHeaderFlow(!a.view.continuous)
 	case idHeaderOverview:
@@ -376,4 +421,49 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		return false
 	}
 	return true
+}
+
+func (a *app) canUseHeaderSelection() bool {
+	if a.full || a.busy || !a.documentTools || !a.view.ready() {
+		return false
+	}
+	v := a.focusedDocumentView()
+	return v.ready() && !v.overview
+}
+
+func (a *app) setHeaderSelection(id int) {
+	if !a.canUseHeaderSelection() || a.saveInlineBefore(func() { a.setHeaderSelection(id) }) {
+		return
+	}
+	setFocus.Call(a.window)
+	if id == idHeaderPointer {
+		if !a.canvasTextCursor {
+			a.activate(idTextTab)
+			a.textCommand(idTextSelectObject, 0)
+		} else if p := &a.textTool; a.mode == idTextTab && (p.flow.text != "" || a.view.mixed.pick.source != 0) {
+			// The selected text remains available to drag when leaving the text cursor.
+			a.cancelCanvasSelections()
+			a.cancelCanvasRegionProbes()
+			a.canvasTextCursor = false
+			p.mode, p.explicitParagraph = textObject, false
+			a.syncTextSelectionModes()
+		} else {
+			a.activate(idObjectsTab)
+			a.objectCommand(idObjectPoint, 0)
+		}
+		return
+	}
+	if a.mode == idTextTab {
+		a.textCommand(idTextSelectRectangle+id-idHeaderRectangle, 0)
+		return
+	}
+	if a.mode == idOCRTab {
+		a.cancelCanvasSelections()
+		a.cancelCanvasRegionProbes()
+		a.ocr.areaMode = textRectangle + id - idHeaderRectangle
+		a.updateCommandBar()
+		return
+	}
+	a.activate(idObjectsTab)
+	a.objectCommand(idObjectRectangle+id-idHeaderRectangle, 0)
 }

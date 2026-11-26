@@ -38,6 +38,7 @@ type inlineTextEditor struct {
 	rect, pageArea, clip  rect
 	dpi, pixels           int
 	previewStyle          inlineTextStyle
+	mixedFormat           uint32
 	layoutPosted          bool
 	textPixels            float64
 	fontHandles           map[string]uintptr
@@ -60,7 +61,8 @@ type inlineCharFormat struct {
 	color                                   uint32
 	charset, pitch                          byte
 	face                                    [32]uint16
-	padding, weight                         uint16
+	_                                       uint16 // CHARFORMATW tail padding before the extension
+	weight                                  uint16
 	spacing                                 int16
 	background, locale, reserved            uint32
 	style                                   int16
@@ -101,12 +103,19 @@ func (a *app) createInlineTextEditor() {
 
 func (a *app) inlineStyle() inlineTextStyle {
 	p := &a.textTool
-	size, _ := readTextNumber(p.size, 1, 600)
+	size, _ := a.inlineMetric(p.size, inlineSize, 1, 600, p.inline.initialStyle.size)
 	leading, _ := readTextNumber(p.leading, .7, 5)
-	tracking, _ := readTextNumber(p.tracking, -72, 72)
+	tracking, _ := a.inlineMetric(p.tracking, inlineTracking, -72, 72, p.inline.initialStyle.tracking)
 	width, _ := readTextNumber(p.width, 1, 20000)
 	return inlineTextStyle{p.fontKeys[max(0, comboIndex(p.font))], size, leading, tracking, width, p.alignment,
 		a.checked(p.bold), a.checked(p.italic), a.checked(p.underline)}
+}
+
+func (a *app) inlineMetric(control uintptr, flag uint32, low, high, fallback float64) (float64, bool) {
+	if a.textTool.inline.mixedFormat&flag != 0 && getText(control) == mixedTextNumber {
+		return fallback, true
+	}
+	return readTextNumber(control, low, high)
 }
 
 func (a *app) inlineCurrent() *inlineTextFrame {
@@ -152,6 +161,7 @@ func (a *app) clearInlineFrames() {
 	e.serial++
 	e.capture.close()
 	e.visible, e.pristine, e.mouseSelecting = false, false, false
+	e.mixedFormat = 0
 	e.glyphPositions = nil
 	if e.handle != 0 {
 		showWindow.Call(e.handle, 0)
@@ -250,6 +260,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	}
 	frame := &e.frames[index]
 	e.active, e.loading, e.fixedWidth, e.pixels = index, true, false, 0
+	e.mixedFormat = 0
 	e.backdrop, e.backdropRequested = nil, false
 	e.serial++
 	e.sourceBounds = frame.flow.bounds
@@ -273,7 +284,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 		}
 	}
 	setText(p.leading, formatTextNumber(leading))
-	setText(p.tracking, "0")
+	setText(p.tracking, formatTextNumber(first.Tracking))
 	setText(p.width, formatTextNumber(max(1, e.sourceBounds[2]-e.sourceBounds[0])))
 	p.alignment = 0
 	a.setChecked(p.bold, first.Bold)
@@ -324,6 +335,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 			selectInline(e.handle, index, index)
 		}
 	}
+	a.syncInlineControls(0)
 	a.view.invalidateCanvas()
 	a.view.schedule()
 }

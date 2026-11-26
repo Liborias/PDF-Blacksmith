@@ -275,6 +275,7 @@ type documentView struct {
 	objectProbe                                                                objectProbeState
 	selection                                                                  canvasSelectionGesture
 	mixed                                                                      mixedCanvasSelection
+	contentMove                                                                canvasContentMove
 	regionText                                                                 *textPage
 	dragStart                                                                  point
 	dragMoved                                                                  bool
@@ -476,6 +477,7 @@ func (v *documentView) sourceUnchanged() bool {
 }
 
 func (v *documentView) resetRendering() {
+	v.cancelCanvasContentMove()
 	v.clearCanvasContent()
 	v.generation++
 	if !v.secondary {
@@ -600,6 +602,7 @@ func (v *documentView) clearPlateView() {
 }
 
 func (v *documentView) reframe() {
+	v.cancelCanvasContentMove()
 	v.clearCanvasContent()
 	v.generation++
 	if !v.secondary {
@@ -1670,6 +1673,7 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			v.app.paintObjectSelection(dc, number, bounds)
 		}
 		v.paintMixedSelection(dc, number, bounds)
+		v.paintCanvasContentMove(dc, number, bounds)
 	}
 	v.paintCanvasSelection(dc)
 	gdi32.NewProc("RestoreDC").Call(dc, saved)
