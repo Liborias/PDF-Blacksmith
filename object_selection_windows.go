@@ -90,6 +90,8 @@ func objectKey(item pdfObject) int { return item.Token }
 
 func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection, hits []pdfObject) {
 	a, e := v.app, &v.app.objects
+	previous := pick.history
+	pick.history = nil
 	showedCrop := a.hasImageCropTarget()
 	showedReset := showedCrop && e.selected.ImageMask != nil
 	same := e.page == page && e.source == pick.source && slices.EqualFunc(e.items, hits, func(first, second pdfObject) bool { return first.Token == second.Token })
@@ -115,6 +117,7 @@ func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection
 	if showedCrop != showCrop || showedReset != (showCrop && e.selected.ImageMask != nil) {
 		a.layoutPanel()
 	}
+	v.rememberCanvasSelection(previous)
 	v.invalidateCanvas()
 	a.moveObjectPreview()
 	v.schedule()
@@ -152,11 +155,64 @@ func objectsAt(items []pdfObject, page searchRect, rotation int, pick textSelect
 			if rectangleSelects(area, b, crossing) && (!crossing || objectCrosses(item, pdfArea)) {
 				hits = append(hits, item)
 			}
-		} else if !boundsContain(b, area) && polygonTouchesRect(pick.polygon, b) {
+		} else if objectInPolygonSelection(item, b, page, rotation, pick) {
 			hits = append(hits, item)
 		}
 	}
 	return hits
+}
+
+func objectInPolygonSelection(item pdfObject, bounds, page searchRect, rotation int, pick textSelection) bool {
+	contours := [][]textPoint(nil)
+	switch {
+	case item.ImageMask != nil && len(item.ImageMask.Outline) >= 3:
+		outline := item.ImageMask.Outline
+		closed := append(slices.Clone(outline), outline[0])
+		contours = [][]textPoint{closed}
+	case item.Outline != nil && item.Outline.Margin == (textPoint{}):
+		contours = item.Outline.Contours
+	}
+	if pick.mode == textLasso {
+		if polygonContainsRect(pick.polygon, bounds) {
+			return true
+		}
+		if len(contours) == 0 {
+			return false
+		}
+		edge := append(slices.Clone(pick.polygon), pick.polygon[0])
+		for _, contour := range contours {
+			display := displayContour(contour, page, rotation)
+			if len(display) == 0 || !pointInTextRegion(display[0], pick.polygon) || polylinesIntersect(edge, display) {
+				return false
+			}
+		}
+		return true
+	}
+	if pick.mode != textCrossing || !polylineTouchesRect(pick.polygon, bounds) {
+		return false
+	}
+	if len(contours) == 0 {
+		return true
+	}
+	inside := false
+	for _, contour := range contours {
+		display := displayContour(contour, page, rotation)
+		if polylinesIntersect(pick.polygon, display) {
+			return true
+		}
+		if len(display) > 2 && display[0] == display[len(display)-1] && pointInTextRegion(pick.polygon[0], display) {
+			inside = !inside
+		}
+	}
+	return inside
+}
+
+func displayContour(contour []textPoint, page searchRect, rotation int) []textPoint {
+	result := make([]textPoint, len(contour))
+	for i, p := range contour {
+		result[i] = pdfPointToText(p, page, rotation)
+	}
+	return result
 }
 
 func objectCrosses(object pdfObject, area searchRect) bool {

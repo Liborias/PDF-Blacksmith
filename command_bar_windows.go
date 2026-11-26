@@ -81,6 +81,9 @@ func (a *app) commandBarCaption(button commandBarButton) string {
 			key = uiSwitchToCanvasArrow
 		}
 	}
+	if button.id == idHeaderLasso && a.commandBar.areaMode == textCrossing {
+		key = uiCrossingSelection
+	}
 	if button.id == idHeaderFlow && a.view.continuous {
 		key = uiSwitchToPages
 	}
@@ -200,7 +203,7 @@ func (a *app) updateCommandBar() {
 		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth || control.id == idHeaderOverview || control.id == idHeaderFlow) {
 			invalidate(control.handle)
 		}
-		if control.id == idHeaderFlow || control.id == idHeaderPointer {
+		if control.id == idHeaderFlow || control.id == idHeaderPointer || control.id == idHeaderLasso {
 			label := a.commandBarCaption(control.commandBarButton)
 			if getText(control.handle) != label {
 				setText(control.handle, label)
@@ -233,7 +236,10 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		case idHeaderRectangle:
 			active = a.commandBar.areaMode == textRectangle
 		case idHeaderLasso:
-			active = a.commandBar.areaMode == textLasso
+			active = polygonSelectionMode(a.commandBar.areaMode)
+			if a.commandBar.areaMode == textCrossing {
+				symbol = "i-crossing_selection"
+			}
 		case idHeaderFlow:
 			if a.view.continuous {
 				symbol = "i-view_continuous"
@@ -464,7 +470,11 @@ func (a *app) setHeaderSelection(id int) {
 	if a.mode == idOCRTab {
 		a.cancelCanvasSelections()
 		a.cancelCanvasSelectionProbes()
-		a.ocr.areaMode = textRectangle + id - idHeaderRectangle
+		mode := textRectangle + id - idHeaderRectangle
+		if mode == textLasso && a.ocr.areaMode == textLasso {
+			mode = textCrossing
+		}
+		a.ocr.areaMode = mode
 		a.updateCommandBar()
 		return
 	}

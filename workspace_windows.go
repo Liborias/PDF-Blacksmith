@@ -1497,12 +1497,17 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.wParam == 0x1b && (msg.window == a.window && a.cancelCanvasSelections() || a.cancelPageDrag()) {
 		return true
 	}
-	if msg.wParam == 0x1b && msg.window == a.window && !a.full && a.focusedDocumentView().clearCanvasContent() {
-		return true
+	if msg.wParam == 0x1b && msg.window == a.window && !a.full {
+		v := a.focusedDocumentView()
+		previous := v.captureCanvasSelection()
+		if v.clearCanvasContent() {
+			v.rememberCanvasSelection(&previous)
+			return true
+		}
 	}
 	if msg.wParam == 0x0d && msg.window == a.window && !keyDown(0x11) && !keyDown(0x12) {
 		v := a.focusedDocumentView()
-		if v.selection.active() && v.selection.pick.mode == textLasso {
+		if v.selection.active() && polygonSelectionMode(v.selection.pick.mode) {
 			v.finishCanvasSelection()
 			return true
 		}

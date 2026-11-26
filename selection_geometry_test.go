@@ -55,3 +55,18 @@ func TestLassoIntersectsContentAtItsEdge(t *testing.T) {
 		}
 	}
 }
+
+func TestLassoContainsAndCrossingStaysOpen(t *testing.T) {
+	lasso := []textPoint{{0, 0}, {8, 0}, {8, 8}, {5, 8}, {5, 3}, {3, 3}, {3, 8}, {0, 8}}
+	if polygonContainsRect(lasso, searchRect{1, 2, 7, 4}) {
+		t.Fatal("a rectangle intersecting the notch must not be contained")
+	}
+	if !polygonContainsRect(lasso, searchRect{1, 4, 2, 6}) {
+		t.Fatal("lasso failed to contain a rectangle on one side of the notch")
+	}
+	line := []textPoint{{0, 0}, {8, 0}, {8, 8}}
+	if !polylineTouchesRect(line, searchRect{7, 3, 9, 4}) ||
+		polylineTouchesRect(line, searchRect{3, 3, 5, 5}) {
+		t.Fatal("crossing must test only the drawn segments")
+	}
+}

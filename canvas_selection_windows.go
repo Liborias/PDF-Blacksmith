@@ -24,7 +24,25 @@ func canvasSelectionChange() selectionChange {
 	}
 }
 
-func (pick textSelection) region() bool { return len(pick.polygon) >= 3 }
+func polygonSelectionMode(mode int) bool { return mode == textLasso || mode == textCrossing }
+
+func (pick textSelection) region() bool {
+	return len(pick.polygon) >= 3 || pick.mode == textCrossing && len(pick.polygon) >= 2
+}
+
+func (a *app) updatePolygonButton(handle uintptr, crossing bool, lasso uiMessage) {
+	if handle == 0 {
+		return
+	}
+	label := lasso
+	if crossing {
+		label = uiCrossingSelection
+	}
+	if caption := a.uiText(label); caption != getText(handle) {
+		a.setUIMessage(handle, label)
+		a.bindUIHelp(handle, label)
+	}
+}
 func (pick textSelection) crossing() bool {
 	return pick.mode == textRectangle && pick.region() && pick.polygon[2][0] < pick.polygon[0][0]
 }
@@ -76,6 +94,8 @@ func (v *documentView) dispatchCanvasSelection(pick textSelection) {
 			return
 		}
 		pick.source, pick.generation, pick.tool = view.order[position], view.generation, a.mode
+		previous := view.captureCanvasSelection()
+		pick.history = &previous
 		a.cancelCanvasSelectionProbes()
 		if !pick.combined {
 			view.clearMixedSelection()
@@ -124,12 +144,13 @@ func (a *app) activateSelection(v *documentView, pick textSelection, tool int, b
 }
 
 type canvasSelectionGesture struct {
-	pick     textSelection
-	vertices []point
-	release  uint32
-	hover    point
-	hasHover bool
-	dragged  bool
+	pick            textSelection
+	vertices        []point
+	release, button uint32
+	alternate       int
+	hover           point
+	hasHover        bool
+	dragged         bool
 }
 
 func (g *canvasSelectionGesture) active() bool { return len(g.vertices) != 0 }
@@ -138,16 +159,18 @@ func (v *documentView) canvasRegionMode() (int, bool) {
 	switch v.app.mode {
 	case idTextTab:
 		mode := v.app.textTool.mode
-		return mode, mode == textRectangle || mode == textLasso
+		return mode, mode == textRectangle || polygonSelectionMode(mode)
 	case idOCRTab:
 		mode := v.app.ocr.areaMode
-		return mode, mode == textRectangle || mode == textLasso
+		return mode, mode == textRectangle || polygonSelectionMode(mode)
 	case idObjectsTab:
 		switch v.app.objects.mode {
 		case 1:
 			return textRectangle, true
 		case 2:
 			return textLasso, true
+		case 3:
+			return textCrossing, true
 		}
 	}
 	return 0, false
@@ -171,7 +194,7 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 		return false
 	}
 	switch message {
-	case 0x0201, 0x0203, 0x0207: // Left press/double click or middle press.
+	case 0x0201, 0x0203, 0x0207, 0x0209: // Left and middle press/double click.
 	default:
 		return false
 	}
@@ -182,12 +205,21 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 	a.cancelCanvasSelectionProbes()
 	mode, region := v.canvasRegionMode()
 	if message == 0x0203 {
-		if pick.source != 0 && (!region || mode != textLasso) {
+		if pick.source != 0 && !polygonSelectionMode(mode) {
 			v.selectCanvasPoint(pick, true)
 		}
 		return true
 	}
 	pos := point{x, y}
+	if message == 0x0207 && polygonSelectionMode(mode) {
+		alternate := textLasso
+		if mode == textLasso {
+			alternate = textCrossing
+		}
+		v.beginCanvasSelection(pick, pos, textRectangle, 0x0208)
+		v.selection.alternate = alternate
+		return true
+	}
 	if message == 0x0207 {
 		v.beginCanvasSelection(pick, pos, textRectangle, 0x0208)
 		return true
@@ -244,10 +276,14 @@ func (v *documentView) beginCanvasSelection(pick textSelection, pos point, mode 
 	}
 	pick.mode = mode
 	vertices := []point{pos, pos}
-	if mode == textLasso {
+	button := uint32(0x0201)
+	if polygonSelectionMode(mode) {
+		if release == 0x0208 {
+			button = 0x0207
+		}
 		vertices, release = vertices[:1], 0
 	}
-	v.selection = canvasSelectionGesture{pick: pick, vertices: vertices, release: release}
+	v.selection = canvasSelectionGesture{pick: pick, vertices: vertices, release: release, button: button}
 	v.app.comparison.canvasFocused = v.secondary
 	setFocus.Call(v.app.window)
 	if release != 0 {
@@ -263,7 +299,7 @@ func (v *documentView) continueCanvasSelection(message uint32, x, y int32) bool 
 		v.cancelCanvasSelection()
 		return false
 	}
-	if g.pick.mode == textLasso {
+	if polygonSelectionMode(g.pick.mode) {
 		return v.continueCanvasLasso(message, x, y)
 	}
 	if message != 0x0200 && message != g.release {
@@ -285,6 +321,12 @@ func (v *documentView) continueCanvasSelection(message uint32, x, y int32) bool 
 	g.vertices[1] = last
 	if message == g.release {
 		first, threshold := g.vertices[0], int32(v.app.scale(3))
+		if g.alternate != 0 && max(absTextDrag(last.x-first.x), absTextDrag(last.y-first.y)) < threshold {
+			pick, alternate := g.pick, g.alternate
+			v.cancelCanvasSelection()
+			v.beginCanvasSelection(pick, first, alternate, 0x0208)
+			return true
+		}
 		if absTextDrag(last.x-first.x) < threshold || absTextDrag(last.y-first.y) < threshold {
 			mode, change := g.pick.mode, g.pick.change
 			click := g.release == 0x0202 && mode != textFrame
@@ -317,21 +359,22 @@ func (v *documentView) continueCanvasLasso(message uint32, x, y int32) bool {
 	g := &v.selection
 	pos := point{x, y}
 	switch message {
-	case 0x0201, 0x0203:
+	case g.button, g.button + 2:
 		if !contains(v.viewport, x, y) {
-			if message == 0x0201 {
+			if message == g.button {
 				v.cancelCanvasSelection()
 			}
 			return false
 		}
 		first := g.vertices[0]
-		close := len(g.vertices) >= 3 && max(absTextDrag(pos.x-first.x), absTextDrag(pos.y-first.y)) <= int32(v.app.scale(9))
-		if message == 0x0203 || close {
-			v.finishCanvasSelection()
-		} else if len(g.vertices) < 256 && pos != g.vertices[len(g.vertices)-1] {
+		close := g.pick.mode == textLasso && len(g.vertices) >= 3 && max(absTextDrag(pos.x-first.x), absTextDrag(pos.y-first.y)) <= int32(v.app.scale(9))
+		if !close && len(g.vertices) < 256 && pos != g.vertices[len(g.vertices)-1] {
 			g.vertices = append(g.vertices, pos)
 			g.hasHover = false
 			v.invalidateCanvas()
+		}
+		if message == g.button+2 || close {
+			v.finishCanvasSelection()
 		}
 		return true
 	case 0x0200, 0x02a3: // Move or leave.
@@ -344,7 +387,7 @@ func (v *documentView) continueCanvasLasso(message uint32, x, y int32) bool {
 			v.invalidateCanvas()
 		}
 		return show
-	case 0x0207:
+	case 0x0201, 0x0207:
 		v.cancelCanvasSelection()
 	}
 	return false
@@ -352,7 +395,7 @@ func (v *documentView) continueCanvasLasso(message uint32, x, y int32) bool {
 
 func selectionScreenPolygon(g canvasSelectionGesture) []textPoint {
 	toPoint := func(p point) textPoint { return textPoint{float64(p.x), float64(p.y)} }
-	if g.pick.mode != textLasso {
+	if !polygonSelectionMode(g.pick.mode) {
 		return rectangleSelection(toPoint(g.vertices[0]), toPoint(g.vertices[1]))
 	}
 	polygon := make([]textPoint, len(g.vertices))
@@ -377,6 +420,11 @@ func (v *documentView) canvasRegionPage(startSource int, polygon []textPoint, mo
 		visible := searchRect{float64(max(area.left, v.viewport.left)), float64(max(area.top, v.viewport.top)),
 			float64(min(area.right, v.viewport.right)), float64(min(area.bottom, v.viewport.bottom))}
 		overlap := rectangleOverlapArea(bounds, visible)
+		if mode == textCrossing && polylineTouchesRect(polygon, visible) {
+			overlap++
+		} else if mode == textCrossing {
+			continue
+		}
 		if overlap > bestOverlap && (mode != textLasso || polygonTouchesRect(polygon, visible)) {
 			best, source, bestOverlap = area, number, overlap
 		}
@@ -386,7 +434,7 @@ func (v *documentView) canvasRegionPage(startSource int, polygon []textPoint, mo
 
 func (v *documentView) finishCanvasSelection() bool {
 	g := v.selection
-	if len(g.vertices) < 3 && g.pick.mode == textLasso {
+	if len(g.vertices) < 3 && g.pick.mode == textLasso || len(g.vertices) < 2 && g.pick.mode == textCrossing {
 		return false
 	}
 	polygon := selectionScreenPolygon(g)
@@ -405,7 +453,7 @@ func (v *documentView) finishCanvasSelection() bool {
 		polygon[i] = normalizedTextPoint(area, int32(vertex[0]), int32(vertex[1]))
 	}
 	pick.polygon, pick.point = polygon, polygon[0]
-	pick.combined = pick.tool != idOCRTab
+	pick.combined = pick.tool != idOCRTab || pick.mode == textCrossing
 	pick.automatic = !pick.combined
 	v.dispatchCanvasSelection(pick)
 	return true
@@ -456,7 +504,13 @@ func (v *documentView) paintCanvasSelection(dc uintptr) {
 		v.app.drawSelectionRegion(dc, v.viewport, preview)
 		return
 	}
-	pen, _, _ := gdiPen.Call(0, uintptr(max(1, v.app.scale(2))), selectionColor.win())
+	style, width := uintptr(0), uintptr(max(1, v.app.scale(2)))
+	if g.pick.mode == textCrossing {
+		style, width = 1, 1
+	}
+	mode, _, _ := gdi32.NewProc("SetBkMode").Call(dc, 1)
+	defer gdi32.NewProc("SetBkMode").Call(dc, mode)
+	pen, _, _ := gdiPen.Call(style, width, selectionColor.win())
 	old, _, _ := gdiSelect.Call(dc, pen)
 	vertices := g.vertices
 	if g.hasHover {

@@ -40,6 +40,7 @@
     "i-background_mask",
     "i-mask_move_content",
     "i-mask_aspect_lock",
-    "i-mask_invert"
+    "i-mask_invert",
+    "i-crossing_selection"
   ]
 }

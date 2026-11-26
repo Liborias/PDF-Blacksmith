@@ -877,7 +877,7 @@ def save_document(src, request):
 
 
 def edit_object_document(src, request):
-    from object_edit import (ObjectError, describe_objects, draws, modify_page, paste_object,
+    from object_edit import (ObjectError, crop_preview, describe_objects, draws, modify_page, paste_object,
                              pikepdf_operators, selected_draws, snapshot_object)
 
     view = request.get("view", {})
@@ -895,7 +895,7 @@ def edit_object_document(src, request):
         return number, rotation, document.pages[number-1]
 
     try:
-        if action in ("object_probe", "object_snapshot"):
+        if action in ("object_probe", "object_snapshot", "object_crop_preview"):
             with open_pdf(src, password) as document:
                 number, rotation, page = select(document)
                 operators = pikepdf_operators(page)
@@ -903,6 +903,8 @@ def edit_object_document(src, request):
                 if action == "object_probe":
                     return {"object_page": describe_objects(page, operators, candidates)}
                 items = selected_draws(candidates, edit)
+                if action == "object_crop_preview":
+                    return crop_preview(page, operators, items, rotation)
                 return snapshot_object(document, number, page, operators, candidates, items, rotation)
 
         with output_file(src, request) as pending:
@@ -1299,7 +1301,8 @@ def dispatch(request, *, raster=False):
                  "insert_probe": inspect_insertion_colors,
                  "text_probe": edit_text_document, "text_edit": edit_text_document,
                  "text_background": edit_text_document, "object_probe": edit_object_document,
-                 "object_snapshot": edit_object_document, "object_edit": edit_object_document}.get(request.get("action"))
+                 "object_snapshot": edit_object_document, "object_crop_preview": edit_object_document,
+                 "object_edit": edit_object_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:

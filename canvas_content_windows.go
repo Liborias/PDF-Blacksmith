@@ -24,7 +24,10 @@ func glyphsInRegion(glyphs []layoutGlyph, dim textPoint, pick textSelection) []l
 		if pick.mode == textRectangle {
 			return !rectangleSelects(area, b, pick.crossing())
 		}
-		return !polygonTouchesRect(pick.polygon, b)
+		if pick.mode == textCrossing {
+			return !polylineTouchesRect(pick.polygon, b)
+		}
+		return !polygonContainsRect(pick.polygon, b)
 	})
 }
 
@@ -147,7 +150,7 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 	switch {
 	case mixed && pick.tool == idTextTab, hasText && !mixed:
 		tool = idTextTab
-	case pick.region() && len(items) == 0 && pick.tool == idTextTab:
+	case pick.region() && pick.mode != textCrossing && len(items) == 0 && pick.tool == idTextTab:
 		// Keep an empty region available for OCR once neither type was hit.
 		tool = idTextTab
 	case len(items) == 0 && pick.tool != idObjectsTab:
@@ -156,6 +159,7 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 	}
 
 	oldBox, oldTool := pick.box, pick.tool
+	activeMode, areaMode := v.canvasRegionMode()
 	boxes, angle := page.Boxes, objectRotation
 	if tool == idTextTab {
 		boxes, angle = text.Boxes, rotation
@@ -181,9 +185,21 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 		})
 		flow = layoutText(glyphs)
 	}
-	if tool == idTextTab && oldTool != idTextTab {
-		a.textTool.mode, a.textTool.explicitParagraph = pick.mode, false
-		a.syncTextSelectionModes()
+	if oldTool != tool {
+		mode := pick.mode
+		if areaMode && pick.region() {
+			mode = activeMode
+		}
+		switch tool {
+		case idTextTab:
+			a.textTool.mode, a.textTool.explicitParagraph = mode, false
+			a.syncTextSelectionModes()
+		case idObjectsTab:
+			if selected, ok := map[int]int{textRectangle: 1, textLasso: 2, textCrossing: 3}[mode]; ok {
+				a.objects.mode = selected
+				a.updateCommandBar()
+			}
+		}
 	}
 	if !mixed {
 		if tool == idTextTab {
@@ -195,13 +211,21 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 	}
 	a.clearTextSelection()
 	a.clearObjectSelection()
+	previous := pick.history
+	pick.history = nil
 	v.mixed = mixedCanvasSelection{pick: pick, text: text, objects: page, glyphs: glyphs, items: items, textBounds: flow.highlightBounds(), dim: dim}
+	v.reportMixedSelection()
+	v.rememberCanvasSelection(previous)
+	v.invalidateCanvas()
+}
+
+func (v *documentView) reportMixedSelection() {
+	a, selection := v.app, v.mixed
 	report := a.objects.info
-	if tool == idTextTab {
+	if selection.pick.tool == idTextTab {
 		report = a.textTool.report
 	}
-	a.setUIMessage(report, uiMixedCanvasSelection, len(glyphs), len(items))
-	v.invalidateCanvas()
+	a.setUIMessage(report, uiMixedCanvasSelection, len(selection.glyphs), len(selection.items))
 }
 
 func (v *documentView) paintMixedSelection(dc uintptr, source int, area rect) {

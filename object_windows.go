@@ -47,6 +47,7 @@ type pdfObject struct {
 }
 
 type pdfImageMask struct {
+	Shape        string
 	SourceBounds searchRect `json:"source_bounds"`
 	Outline      []textPoint
 }
@@ -126,13 +127,14 @@ func (a *app) updateObjectActions() {
 	selected := ready && e.selected.Token != 0
 	for i, handle := range e.modes {
 		setEnabled(handle, ready)
-		a.setChecked(handle, e.mode == i)
+		a.setChecked(handle, e.mode == i || i == 2 && e.mode == 3)
 	}
+	a.updatePolygonButton(e.modes[2], e.mode == 3, uiPolygonLassoKey)
 	setEnabled(e.copy, selected)
 	setEnabled(e.paste, ready && e.owner == a.activeTab && len(e.clipboard) != 0)
 	setEnabled(e.duplicate, selected)
 	setEnabled(e.remove, selected)
-	setEnabled(e.undo, ready && len(a.view.history) > 0)
+	setEnabled(e.undo, ready && a.canDocumentCommand(a.view, docUndo, false))
 	canCrop := a.canCropImage()
 	setEnabled(e.cropTool, canCrop)
 	a.setChecked(e.cropTool, e.crop.active)
@@ -281,6 +283,14 @@ func (v *documentView) scheduleObjects() bool {
 	if v.secondary || a.mode != idObjectsTab || a.busy || e.pick.source == 0 || e.pick.generation != v.generation {
 		return false
 	}
+	if e.crop.active && !e.crop.previewRequested {
+		e.crop.previewRequested = true
+		req := v.request("object_crop_preview")
+		req.View.Page, req.View.Rotation = e.source, v.rotations[e.source-1]
+		req.ObjectEdit = &objectEditRequest{Token: e.selected.Token}
+		v.launch(req, e.source, 0, false, nil)
+		return true
+	}
 	if e.selected.Token != 0 && !e.snapshot {
 		e.snapshot = true
 		req := v.request("object_snapshot")
@@ -323,6 +333,13 @@ func (v *documentView) finishObjects(job readerJob) {
 		return
 	}
 	if v.secondary || a.mode != idObjectsTab || job.objectPage != e.pick.source || job.objectSerial != e.serial {
+		return
+	}
+	if job.action == "object_crop_preview" {
+		if e.crop.active && job.result.Status == "ok" {
+			e.crop.preview = job.frame.image
+			v.invalidateCanvas()
+		}
 		return
 	}
 	e.snapshot, e.snapshotComplete = true, true
@@ -501,12 +518,17 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.chooseImageCropShape(imageCropShape(id - idObjectCropRectangle))
 	case idObjectPoint, idObjectRectangle, idObjectLasso:
 		a.cancelCanvasSelections()
+		previous := e.mode
 		e.mode = id - idObjectPoint
+		if e.mode == 2 && previous == 2 {
+			e.mode = 3
+		}
 		if e.mode == 0 {
 			a.canvasTextCursor = false
 		}
 		a.cancelCanvasSelectionProbes()
 		v.invalidateCanvas()
+		a.updateObjectActions()
 		a.updateCommandBar()
 	case idObjectCopy:
 		if e.selected.Token != 0 {
@@ -539,7 +561,7 @@ func (a *app) objectCommand(id, notification int) bool {
 			})
 		}
 	case idObjectUndo:
-		v.undo()
+		a.doDocumentCommand(v, docUndo, false)
 	case idObjectDuplicate, idObjectDelete:
 		if e.selected.Token != 0 {
 			edit := objectEditRequest{Operation: "delete", Token: e.selected.Token, Tokens: e.tokens()}
@@ -573,8 +595,10 @@ func (a *app) objectKey(msg *winMessage) bool {
 		if a.cancelImageCrop() {
 			return true
 		}
+		previous := a.view.captureCanvasSelection()
 		a.cancelObjectGesture()
 		a.clearObjectSelection()
+		a.view.rememberCanvasSelection(&previous)
 		a.view.invalidateCanvas()
 		return true
 	case 0x2e:

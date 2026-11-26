@@ -168,3 +168,38 @@ func polygonTouchesRect(polygon []textPoint, box searchRect) bool {
 	}
 	return pointInTextRegion(textPoint{box[0], box[1]}, polygon)
 }
+
+func polylineTouchesRect(line []textPoint, box searchRect) bool {
+	for i := 1; i < len(line); i++ {
+		if rectangleTouchesSegment(box, line[i-1], line[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+func polygonContainsRect(polygon []textPoint, box searchRect) bool {
+	// A single point inside plus no boundary crossing also handles concave lassos.
+	return len(polygon) >= 3 && pointInTextRegion(textPoint{box[0], box[1]}, polygon) &&
+		!polylineTouchesRect(polygon, box) &&
+		!rectangleTouchesSegment(box, polygon[len(polygon)-1], polygon[0])
+}
+
+func polylinesIntersect(first, second []textPoint) bool {
+	side := func(a, b, p textPoint) float64 {
+		return (b[0]-a[0])*(p[1]-a[1]) - (b[1]-a[1])*(p[0]-a[0])
+	}
+	sameSide := func(a, b float64) bool { return a > 0 && b > 0 || a < 0 && b < 0 }
+	for i := 1; i < len(first); i++ {
+		a, b := first[i-1], first[i]
+		bounds := rectangleBetween(a, b)
+		for j := 1; j < len(second); j++ {
+			c, d := second[j-1], second[j]
+			if rectangleSelects(bounds, rectangleBetween(c, d), true) &&
+				!sameSide(side(a, b, c), side(a, b, d)) && !sameSide(side(c, d, a), side(c, d, b)) {
+				return true
+			}
+		}
+	}
+	return false
+}

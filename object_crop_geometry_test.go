@@ -50,3 +50,28 @@ func TestImageCropFreeAndSingleAxisDrag(t *testing.T) {
 		t.Fatalf("vertical square drag at right edge ended at %v, want a crop down and to the left", end)
 	}
 }
+
+func TestResizeImageCropHandles(t *testing.T) {
+	limit := searchRect{0, 0, 1, 1}
+	box := searchRect{.25, .25, .75, .75}
+	minimum := textPoint{.01, .01}
+	for _, test := range []struct {
+		handle cropHandle
+		delta  textPoint
+		aspect float64
+		want   searchRect
+	}{
+		{cropHandle{-1, -1}, textPoint{-.1, -.2}, 0, searchRect{.15, .05, .75, .75}},
+		{cropHandle{0, -1}, textPoint{0, -.15}, 1, searchRect{.175, .1, .825, .75}},
+		{cropHandle{1, 0}, textPoint{1, 0}, 1, searchRect{.25, .125, 1, .875}},
+		{cropHandle{1, 1}, textPoint{-1, -1}, 0, searchRect{.25, .25, .26, .26}},
+	} {
+		got := resizeImageCrop(box, limit, test.handle, test.delta, minimum, test.aspect)
+		for index := range got {
+			if math.Abs(got[index]-test.want[index]) > 1e-7 {
+				t.Errorf("resize %v: got %v, want %v", test.handle, got, test.want)
+				break
+			}
+		}
+	}
+}

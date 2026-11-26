@@ -39,7 +39,7 @@ def main():
     original_tags[mode_id] = f'<symbol id="{mode_id}" viewBox="{quick_mode[1]}">{quick_mode[2]}</symbol>'
     ids.append(mode_id)
     ids.extend("i-" + name for name in (
-        "crop_mask", "background_mask", "mask_move_content", "mask_aspect_lock", "mask_invert",
+        "crop_mask", "background_mask", "mask_move_content", "mask_aspect_lock", "mask_invert", "crossing_selection",
     ))
     for name in ids:
         if name == mode_id:

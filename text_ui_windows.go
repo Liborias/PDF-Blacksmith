@@ -59,6 +59,9 @@ var selectionIcons = map[int]string{
 func (a *app) drawTextIcon(item *buttonDraw) bool {
 	id := int(item.controlID)
 	paths, symbol := textIcons[id], selectionIcons[id]
+	if id == idTextSelectLasso && a.textTool.mode == textCrossing || id == idObjectLasso && a.objects.mode == 3 {
+		symbol = "i-crossing_selection"
+	}
 	if len(paths) == 0 && symbol == "" {
 		return false
 	}

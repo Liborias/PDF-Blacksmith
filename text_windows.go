@@ -26,11 +26,13 @@ const (
 	textRectangle
 	textLasso
 	textFrame
+	textCrossing
 )
 
 var textAlignments = []string{"left", "center", "right", "justify"}
 
 type textSelection struct {
+	history                        *canvasSelectionState
 	source, generation, mode, tool int
 	point, tolerance               textPoint
 	polygon                        []textPoint
@@ -127,13 +129,14 @@ func (a *app) syncTextSelectionModes() {
 	p := &a.textTool
 	for i, h := range p.modes {
 		if h != 0 {
-			checked := i == p.mode
+			checked := i == p.mode || i == textLasso && p.mode == textCrossing
 			if i == textObject {
 				checked = a.canvasTextCursor && (p.mode == textObject || p.mode == textBlock)
 			}
 			a.setChecked(h, checked)
 		}
 	}
+	a.updatePolygonButton(p.modes[textLasso], p.mode == textCrossing, uiTextLassoSelection)
 	if len(a.commandBar.controls) != 0 {
 		a.updateCommandBar()
 	}
@@ -221,7 +224,11 @@ func (a *app) textCommand(id, notification int) bool {
 			return true
 		}
 		a.cancelCanvasSelections()
+		previous := p.mode
 		p.mode = id - idTextSelectObject
+		if p.mode == textLasso && previous == textLasso {
+			p.mode = textCrossing
+		}
 		if id == idTextNewFrame {
 			p.mode = textFrame
 		}
@@ -230,7 +237,7 @@ func (a *app) textCommand(id, notification int) bool {
 			a.canvasTextCursor = true
 		}
 		a.cancelCanvasSelectionProbes()
-		if p.mode < textRectangle || p.mode == textFrame || a.view.mixed.pick.source == 0 {
+		if p.mode < textRectangle || p.mode == textFrame {
 			a.view.clearMixedSelection()
 			a.clearTextSelection()
 		}
@@ -334,8 +341,10 @@ func (a *app) textKey(msg *winMessage) bool {
 	if frame := a.inlineCurrent(); frame != nil && frame.newBounds != nil {
 		return true
 	}
+	previous := a.view.captureCanvasSelection()
 	if !a.saveInlineBefore(a.clearTextSelection) {
 		a.clearTextSelection()
+		a.view.rememberCanvasSelection(&previous)
 	}
 	return true
 }

@@ -258,6 +258,8 @@ func textAtPoint(model *textPage, glyphs []layoutGlyph, dim textPoint, pick text
 
 func (a *app) applyTextSelection(v *documentView, model *textPage, pick textSelection, flow textFlow, stored *storedTextBlock, dim textPoint, rotation int) {
 	p := &a.textTool
+	previous := pick.history
+	pick.history = nil
 	p.model, p.pick, p.flow, p.dim, p.rotation = model, pick, flow, dim, rotation
 	setText(p.original, "")
 	setText(p.report, "")
@@ -275,6 +277,7 @@ func (a *app) applyTextSelection(v *documentView, model *textPage, pick textSele
 	}
 
 	a.updateTextActions()
+	v.rememberCanvasSelection(previous)
 	v.invalidateCanvas()
 }
 

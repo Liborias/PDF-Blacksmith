@@ -77,16 +77,16 @@ func decodePrintBitmap(data []byte) (*printBitmap, error) {
 			src := rgba.Pix[y*rgba.Stride : y*rgba.Stride+rowSize]
 			dst := result.pixels[y*rowSize : (y+1)*rowSize]
 			for i := 0; i < rowSize; i += 4 {
-				dst[i], dst[i+1], dst[i+2] = src[i+2], src[i+1], src[i]
+				dst[i], dst[i+1], dst[i+2], dst[i+3] = src[i+2], src[i+1], src[i], src[i+3]
 			}
 		}
 		return result, nil
 	}
 	for y := range result.height {
 		for x := range result.width {
-			r, g, b, _ := decoded.At(x+bounds.Min.X, y+bounds.Min.Y).RGBA()
+			r, g, b, alpha := decoded.At(x+bounds.Min.X, y+bounds.Min.Y).RGBA()
 			offset := (y*result.width + x) * 4
-			result.pixels[offset], result.pixels[offset+1], result.pixels[offset+2] = byte(b>>8), byte(g>>8), byte(r>>8)
+			result.pixels[offset], result.pixels[offset+1], result.pixels[offset+2], result.pixels[offset+3] = byte(b>>8), byte(g>>8), byte(r>>8), byte(alpha>>8)
 		}
 	}
 	return result, nil
@@ -276,6 +276,7 @@ type documentView struct {
 	selection                                                                  canvasSelectionGesture
 	mixed                                                                      mixedCanvasSelection
 	contentMove                                                                canvasContentMove
+	selectionHistory canvasSelectionHistory
 	regionText                                                                 *textPage
 	dragStart                                                                  point
 	dragMoved                                                                  bool
@@ -477,6 +478,7 @@ func (v *documentView) sourceUnchanged() bool {
 }
 
 func (v *documentView) resetRendering() {
+	v.selectionHistory = canvasSelectionHistory{}
 	v.cancelCanvasContentMove()
 	v.clearCanvasContent()
 	v.generation++
@@ -602,6 +604,7 @@ func (v *documentView) clearPlateView() {
 }
 
 func (v *documentView) reframe() {
+	v.selectionHistory = canvasSelectionHistory{}
 	v.cancelCanvasContentMove()
 	v.clearCanvasContent()
 	v.generation++
@@ -1091,7 +1094,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 	}
 	var objectPage int
 	var objectSerial uint64
-	if req.Action == "object_probe" || req.Action == "object_snapshot" {
+	if req.Action == "object_probe" || req.Action == "object_snapshot" || req.Action == "object_crop_preview" {
 		objectPage = req.View.Page
 		if req.ObjectEdit != nil {
 			objectSerial = v.app.objects.serial
@@ -1158,7 +1161,7 @@ func (v *documentView) finished(job readerJob) {
 		return
 	}
 	v.running = false
-	if job.action == "object_probe" || job.action == "object_snapshot" {
+	if job.action == "object_probe" || job.action == "object_snapshot" || job.action == "object_crop_preview" {
 		v.finishObjects(job)
 		v.schedule()
 		return

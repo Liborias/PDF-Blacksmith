@@ -231,9 +231,9 @@ func (a *app) canDocumentCommand(v *documentView, command documentCommand, editi
 	}
 	switch command {
 	case docUndo:
-		return v == a.view && (a.canInlineHistory(command) || !a.inlineDirty() && len(v.history) > 0)
+		return v == a.view && (a.canInlineHistory(command) || !a.inlineDirty() && (v.canCanvasHistory(command) || len(v.history) > 0))
 	case docRedo:
-		return v == a.view && (a.canInlineHistory(command) || !a.inlineDirty() && a.activeTab != nil && len(a.activeTab.redo) > 0)
+		return v == a.view && (a.canInlineHistory(command) || !a.inlineDirty() && (v.canCanvasHistory(command) || a.activeTab != nil && len(a.activeTab.redo) > 0))
 	case docCut, docDelete:
 		return writable && hasSelection
 	case docCopy:
@@ -299,9 +299,13 @@ func (a *app) doDocumentCommand(v *documentView, command documentCommand, editin
 	}
 	switch command {
 	case docUndo:
-		v.undo()
+		if !v.stepCanvasHistory(command) {
+			v.undo()
+		}
 	case docRedo:
-		a.redoDocument()
+		if !v.stepCanvasHistory(command) {
+			a.redoDocument()
+		}
 	case docCopy:
 		a.copyTextSelection()
 	case docApplyText:

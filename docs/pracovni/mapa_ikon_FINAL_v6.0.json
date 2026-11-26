@@ -152,6 +152,14 @@
       "externalSource": null
     },
     {
+      "symbol": "i-crossing_selection",
+      "category": "Text a výběr",
+      "label": "Křížový výběr",
+      "status": "HTML_SVG_DEFINED_v3.26",
+      "source": "docs/pracovni/rozhrani/cely_vizual_v3.26.html",
+      "externalSource": null
+    },
+    {
       "symbol": "i-cursor",
       "category": "Text a výběr",
       "label": "Univerzální šipka",

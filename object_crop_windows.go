@@ -29,9 +29,51 @@ type imageCropDrag struct {
 
 type imageCrop struct {
 	active, dragging bool
+	previewRequested bool
+	preview          *printBitmap
+	ghost, tint      viewportSurface
 	shape            imageCropShape
 	drag             imageCropDrag
 	selection        *imageCropDrag
+	resize           *cropResize
+}
+
+type cropResize struct {
+	handle  cropHandle
+	box     searchRect
+	start   textPoint
+	minimum textPoint
+}
+
+func (a *app) cropPreviewBox(image, box searchRect, angle int) (searchRect, bool) {
+	crop := &a.objects.crop
+	var drag *imageCropDrag
+	switch {
+	case crop.dragging && crop.resize != nil:
+		resize := crop.resize
+		delta := textPoint{crop.drag.end[0] - resize.start[0], crop.drag.end[1] - resize.start[1]}
+		width, height := box[2]-box[0], box[3]-box[1]
+		if angle%180 != 0 {
+			width, height = height, width
+		}
+		bounds := resizeImageCrop(resize.box, image, resize.handle, delta, resize.minimum, a.cropRatioValue()*height/width)
+		return bounds, true
+	case crop.dragging:
+		drag = &crop.drag
+	case crop.selection != nil:
+		drag = crop.selection
+	default:
+		if a.objects.selected.ImageMask != nil {
+			return searchDisplayRect(a.objects.selected.Bounds, box, angle)
+		}
+		return searchRect{}, false
+	}
+	return rectangleBetween(drag.start, a.cropEnd(*drag, image, box, angle)), true
+}
+
+func (a *app) cropRatioValue() float64 {
+	preset := imageCropRatios[max(0, comboIndex(a.objects.cropRatio))]
+	return float64(preset.width) / float64(preset.height)
 }
 
 func (a *app) buildCropOptions() {
@@ -65,9 +107,7 @@ func (a *app) chooseImageCropShape(shape imageCropShape) {
 }
 
 func (a *app) cropEnd(drag imageCropDrag, image, box searchRect, angle int) textPoint {
-	preset := imageCropRatios[max(0, comboIndex(a.objects.cropRatio))]
-	ratio := float64(preset.width) / float64(preset.height)
-	return constrainImageCrop(drag.start, drag.end, image, box, angle, ratio)
+	return constrainImageCrop(drag.start, drag.end, image, box, angle, a.cropRatioValue())
 }
 
 func (a *app) imageCropLimits() (image, box searchRect, angle int, visible bool) {
@@ -119,10 +159,14 @@ func (a *app) beginImageCrop() {
 	a.cancelObjectGesture()
 	e := &a.objects
 	e.crop.active = true
+	if mask := e.selected.ImageMask; mask != nil && mask.Shape == "ellipse" {
+		e.crop.shape = cropOval
+	}
 	chooseCombo(e.cropRatio, 0)
 	a.updateObjectActions()
 	a.layoutPanel()
 	a.view.invalidateCanvas()
+	a.view.schedule()
 }
 
 func (a *app) cancelImageCrop() bool {
@@ -131,6 +175,8 @@ func (a *app) cancelImageCrop() bool {
 		return false
 	}
 	dragging := e.crop.dragging
+	e.crop.ghost.close()
+	e.crop.tint.close()
 	e.crop = imageCrop{}
 	if dragging {
 		user32.NewProc("ReleaseCapture").Call()
@@ -163,6 +209,7 @@ func (v *documentView) imageCropPointer(message uint32, x, y int32) bool {
 	case 0x0215, 0x001f: // Capture changed or cancelled.
 		if crop.dragging {
 			crop.dragging = false
+			crop.resize = nil
 			a.updateObjectActions()
 			v.invalidateCanvas()
 		}
@@ -192,7 +239,19 @@ func (v *documentView) imageCropPointer(message uint32, x, y int32) bool {
 	at := normalizedTextPoint(area, x, y)
 	switch message {
 	case 0x0201, 0x0203:
-		if at[0] >= image[0] && at[0] <= image[2] && at[1] >= image[1] && at[1] <= image[3] {
+		crop.resize = nil
+		if current, ok := a.cropPreviewBox(image, box, angle); ok {
+			radius, minimum := int32(a.scale(7)), float64(a.scale(4))
+			for _, handle := range cropHandles {
+				p := screenTextPoint(area, handle.point(current))
+				if absTextDrag(p.x-x) <= radius && absTextDrag(p.y-y) <= radius {
+					crop.resize = &cropResize{handle, current, at,
+						textPoint{minimum / float64(area.right-area.left), minimum / float64(area.bottom-area.top)}}
+					break
+				}
+			}
+		}
+		if crop.resize != nil || boundsContain(image, rectangleBetween(at, at)) {
 			crop.drag = imageCropDrag{at, at}
 			crop.dragging = true
 			a.comparison.canvasFocused = false
@@ -205,12 +264,19 @@ func (v *documentView) imageCropPointer(message uint32, x, y int32) bool {
 		crop.drag.end = at
 		if message == 0x0202 {
 			drag := crop.drag
-			start, end := screenTextPoint(area, drag.start), screenTextPoint(area, a.cropEnd(drag, image, box, angle))
-			minimum := int32(a.scale(4))
-			if absTextDrag(end.x-start.x) >= minimum && absTextDrag(end.y-start.y) >= minimum {
-				crop.selection = &drag
+			if crop.resize != nil {
+				if drag.start != drag.end {
+					bounds, _ := a.cropPreviewBox(image, box, angle)
+					crop.selection = &imageCropDrag{textPoint{bounds[0], bounds[1]}, textPoint{bounds[2], bounds[3]}}
+				}
+			} else {
+				start, end := screenTextPoint(area, drag.start), screenTextPoint(area, a.cropEnd(drag, image, box, angle))
+				minimum := int32(a.scale(4))
+				if absTextDrag(end.x-start.x) >= minimum && absTextDrag(end.y-start.y) >= minimum {
+					crop.selection = &drag
+				}
 			}
-			crop.dragging = false
+			crop.dragging, crop.resize = false, nil
 			user32.NewProc("ReleaseCapture").Call()
 			a.updateObjectActions()
 		}
@@ -228,35 +294,36 @@ func (a *app) paintImageCrop(dc uintptr, area rect) {
 	start := screenTextPoint(area, textPoint{image[0], image[1]})
 	end := screenTextPoint(area, textPoint{image[2], image[3]})
 	a.drawTextFrameOutline(dc, rect{start.x, start.y, end.x, end.y})
-	drag := crop.selection
-	if crop.dragging {
-		drag = &crop.drag
-	}
-	mask := a.objects.selected.ImageMask
-	if drag == nil && mask == nil {
+	current, drawn := a.cropPreviewBox(image, box, angle)
+	a.paintCropOverlay(dc, area, box, angle, current, drawn)
+	if !drawn {
 		return
 	}
 	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), selectionColor.win())
 	old, _, _ := gdiSelect.Call(dc, pen)
 	defer gdiDelete.Call(pen)
 	defer gdiSelect.Call(dc, old)
-	if drag == nil {
+	first := textPoint{current[0], current[1]}
+	last := textPoint{current[2], current[3]}
+	mask := a.objects.selected.ImageMask
+	if !crop.dragging && crop.selection == nil && mask != nil {
 		outline := make([]textPoint, len(mask.Outline))
 		for i, point := range mask.Outline {
 			outline[i] = pdfPointToText(point, box, angle)
 		}
 		drawTextOutline(dc, area, outline, true)
-		return
-	}
-	finish := a.cropEnd(*drag, image, box, angle)
-	if crop.shape.round() {
-		first, last := screenTextPoint(area, drag.start), screenTextPoint(area, finish)
+	} else if crop.shape.round() {
+		s, t := screenTextPoint(area, first), screenTextPoint(area, last)
 		brush, _, _ := gdi32.NewProc("GetStockObject").Call(5) // NULL_BRUSH
 		oldBrush, _, _ := gdiSelect.Call(dc, brush)
-		gdi32.NewProc("Ellipse").Call(dc, uintptr(min(first.x, last.x)), uintptr(min(first.y, last.y)),
-			uintptr(max(first.x, last.x)), uintptr(max(first.y, last.y)))
+		gdi32.NewProc("Ellipse").Call(dc, uintptr(s.x), uintptr(s.y), uintptr(t.x), uintptr(t.y))
 		gdiSelect.Call(dc, oldBrush)
 	} else {
-		drawTextOutline(dc, area, rectangleSelection(drag.start, finish), true)
+		drawTextOutline(dc, area, rectangleSelection(first, last), true)
+	}
+	radius := int32(max(2, a.scale(3)))
+	for _, handle := range cropHandles {
+		p := screenTextPoint(area, handle.point(current))
+		fillColor(dc, rect{p.x - radius, p.y - radius, p.x + radius + 1, p.y + radius + 1}, selectionColor)
 	}
 }

@@ -33,7 +33,7 @@ func inlineEditProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintp
 			if message == 0x0201 && view.beginCanvasContentMove(view.textAt(x, y), point{x, y}) {
 				return 0
 			}
-			if message == 0x0207 || selectingArea && (message == 0x0201 || message == 0x0203 ||
+			if message == 0x0207 || message == 0x0209 || selectingArea && (message == 0x0201 || message == 0x0203 ||
 				message == 0x0200 && view.selection.active()) {
 				if view.canvasPointer(message, x, y) {
 					return 0

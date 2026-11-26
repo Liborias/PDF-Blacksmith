@@ -146,6 +146,15 @@ def check_image_crop(work):
     edit(partial, replaced, "replace_crop", legacy_mask["token"], crop=[114, 147, 151, 180], crop_shape="ellipse")
     assert all_bounds(replaced) == [(114, 147, 151, 180), second["bounds"]]
     assert clip_operators(replaced).count("W") == 1
+
+    preview = dispatch({"action": "object_crop_preview", "input": str(partial), "view": {"page": 1, "rotation": 90},
+                        "object_edit": {"token": legacy_mask["token"]}})
+    with Image.open(BytesIO(b64decode(preview["image"]))) as ghost:
+        assert max(ghost.size) <= 651 and ghost.mode == "RGBA"
+        alpha = ghost.getchannel("A")
+        lower, upper = alpha.getextrema()
+        assert lower == 0 and 170 < upper < 210
+        assert ghost.getpixel((ghost.width // 2, ghost.height // 2))[3] > 170
     recovered = (139, 173)
     assert result.getpixel(recovered) == (255, 255, 255)
     assert render(replaced).getpixel(recovered) == original.getpixel(recovered)

@@ -111,6 +111,7 @@ const (
 	uiSwitchToCanvasText   uiMessage = "win32.SwitchToCanvasText"
 	uiSwitchToCanvasArrow  uiMessage = "win32.SwitchToCanvasArrow"
 	uiCanvasRectangle      uiMessage = "win32.CanvasRectangle"
+	uiCrossingSelection    uiMessage = "win32.CrossingSelection"
 	uiCanvasLasso          uiMessage = "win32.CanvasLasso"
 	uiSwitchToPages        uiMessage = "win32.SwitchToPages"
 	uiStopSideBySide       uiMessage = "win32.StopSideBySide"
@@ -155,6 +156,7 @@ var win32Translations = map[uiMessage]uiTranslation{
 	uiSwitchToCanvasText:   {Czech: "Přepnout na textový kurzor", English: "Switch to text cursor"},
 	uiSwitchToCanvasArrow:  {Czech: "Přepnout na šipku", English: "Switch to arrow"},
 	uiCanvasRectangle:      {Czech: "Výběr obdélníkem", English: "Select with rectangle"},
+	uiCrossingSelection:    {Czech: "Křížový výběr", English: "Crossing Selection"},
 	uiCanvasLasso:          {Czech: "Výběr lasem", English: "Select with lasso"},
 	uiSwitchToPages:        {Czech: "Přepnout na zobrazení po stránkách", English: "Switch to page-by-page view"},
 	uiStopSideBySide:       {Czech: "Ukončit zobrazení vedle sebe", English: "Close side-by-side view"},

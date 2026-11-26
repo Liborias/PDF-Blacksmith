@@ -34,6 +34,7 @@ CLIP_END = ("h", "W", "n")
 @dataclass(frozen=True)
 class ImageMask:
     content_start: int
+    shape: str
     content_matrix: tuple  # Image placement in page coordinates, independent of the clip.
     outline: tuple         # Visible intersection of the mask and the image in page coordinates.
 
@@ -106,6 +107,7 @@ def cropped_image_draw(operators, first, matrix, xobjects):
     if [str(op.operator) for op in operators[first+1:first+3]] != ["q", "m"]:
         return None
     clips = []
+    curved = False
     start = first+2
     while start < len(operators) and str(operators[start].operator) == "m":
         close = start+1
@@ -119,6 +121,7 @@ def cropped_image_draw(operators, first, matrix, xobjects):
             return None
         if not contour:
             return None
+        curved = str(operators[start+1].operator) == 'c'
         clips.append(contour)
         start = close+3
     paint = start
@@ -144,7 +147,9 @@ def cropped_image_draw(operators, first, matrix, xobjects):
         return None
     for contour in clips:
         points = clip_convex(points, contour)
-    return ObjectDraw(first, paint+len(tail), "image", matrix, ImageMask(start, placement, tuple(points)))
+    shape = "ellipse" if len(clips) == 1 and curved else "rectangle"
+    return ObjectDraw(first, paint+len(tail), "image", matrix,
+                      ImageMask(start, shape, placement, tuple(points)))
 
 
 def image_clip_contour(path, matrix):
@@ -272,7 +277,7 @@ def describe_objects(page, operators, candidates, *, outlines=True):
                 obj = {"token": token, "kind": draw.kind, "bounds": bounds}
                 if mask and outlines:
                     obj["image_mask"] = {"source_bounds": polygon_bounds(mask.source_outline()),
-                                         "outline": mask.outline}
+                                         "outline": mask.outline, "shape": mask.shape}
                 if draw.kind == "path" and outline_budget > 0:
                     try:
                         outline = path_outline(operators, draw, bounds)
@@ -573,6 +578,37 @@ def snapshot_object(document, number, page, operators, candidates, items, rotati
             preview.save(png, format="PNG")
             result["image"] = b64encode(png.getvalue()).decode("ascii")
     return result
+
+
+def crop_preview(page, operators, items, rotation):
+    """Render the source image without its app-owned crop, on transparent paper."""
+    item = selected_image(items)
+    mask = item.mask
+    points = mask.source_outline() if mask else transformed_points(item.matrix, IMAGE_QUAD)
+    bounds = polygon_bounds(points)
+    if not all(map(isfinite, bounds)) or min(bounds[2]-bounds[0], bounds[3]-bounds[1]) <= 0:
+        raise ObjectError("Obrázek nemá platný rozsah.")
+    parts = []
+    projection = isolated_paint(operators, [item], parts=parts)
+    if mask:
+        first, last = parts[0]
+        projection[first:last] = [operators[item.first+1], *operators[mask.content_start:item.end-1]]
+    data = BytesIO()
+    with pdf.Pdf.new() as sample:
+        sample.pages.append(page)
+        isolated = sample.pages[0]
+        isolated.obj.Contents = sample.make_stream(pdf.unparse_content_stream(projection))
+        isolated.obj.MediaBox = pdf.Array(bounds)
+        isolated.obj.CropBox = pdf.Array(bounds)
+        isolated.obj.Rotate = (int(page.obj.get("/Rotate", 0)) + rotation) % 360
+        sample.remove_unreferenced_resources()
+        sample.save(data, fix_metadata_version=False)
+    with pdfium.PdfDocument(data.getvalue()) as document, closing(document[0]) as preview:
+        with closing(preview.render(scale=650 / max(preview.get_size()),
+                                    fill_color=(0, 0, 0, 0), draw_annots=False)) as bitmap:
+            png = BytesIO()
+            bitmap.to_pil().save(png, format="PNG")
+            return {"image": b64encode(png.getvalue()).decode("ascii")}
 
 
 def object_form(document, resources, bounds, operators):
