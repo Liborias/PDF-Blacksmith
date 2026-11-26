@@ -93,6 +93,8 @@ Tažení nástrojem odstavcového rámce na jedné stránce určuje jeho umíst�
 
 V nástroji Objekty umožňuje ikona Oříznout obrázek vyznačit obdélník na jednom vybraném rastrovém obrázku. Použít nebo Enter zapíše ořez do pracovní karty. Zrušit nebo Esc zavře náhled. Ořez je jedna vratná úprava a ukládá se jako maska při vykreslení. Původní obrazový stream, rozlišení, barevný prostor a případná průhlednost se používají dál. Maska se přesouvá a duplikuje spolu s obrázkem.
 
+Nabídka Poměr stran začíná u každého ořezu volným poměrem a nabízí čtverec 1 : 1 i ostatní pevné poměry podle specifikace. Poměr odpovídá zobrazené orientaci stránky. Při tažení k hraně obrázku se výřez přizpůsobí dostupné ploše při zachování poměru. Změna poměru přepočítá náhled podle posledního tažení.
+
 **4C. Pravítka a vodítka:** osa X/Y správně, pouze drag z pravítka, Ctrl+klik vs Ctrl+drag, per-page stav, skupiny a zámky, barvy „Použít“, kontext pravým klikem bez „Vybrat“, dočasná aktivace Pomůcek rozvržení. Nahradit pouze dekorativní paralelní prvky, ne PDF data.
 
 **4D. SnapEngine:** zvlášť po prokázané přesné geometrii a výkonu. Nikdy nepřepisovat aktuální výběr, neukládat vodítka do tiskového PDF.

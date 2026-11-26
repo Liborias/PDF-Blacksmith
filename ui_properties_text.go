@@ -194,6 +194,9 @@ const (
 	uiObjectActionsHelp             uiMessage = "win32.properties.ObjectActionsHelp"
 	uiCropImage                     uiMessage = "win32.properties.CropImage"
 	uiCropImageHint                 uiMessage = "win32.properties.CropImageHint"
+	uiCropAspectRatio               uiMessage = "win32.properties.CropAspectRatio"
+	uiCropFreeRatio                 uiMessage = "win32.properties.CropFreeRatio"
+	uiCropSquareRatio               uiMessage = "win32.properties.CropSquareRatio"
 	uiObjectCopyKey                 uiMessage = "win32.properties.ObjectCopyKey"
 	uiObjectPasteKey                uiMessage = "win32.properties.ObjectPasteKey"
 	uiObjectDuplicateKey            uiMessage = "win32.properties.ObjectDuplicateKey"
@@ -431,6 +434,9 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiObjectActions:                 {Czech: "Akce s objekty", English: "Object actions"},
 	uiCropImage:                     {Czech: "Oříznout obrázek", English: "Crop image"},
 	uiCropImageHint:                 {Czech: "Tažením vyznačte výřez. Potvrďte tlačítkem Použít nebo Enterem.", English: "Drag to mark the area to keep. Click Apply or press Enter."},
+	uiCropAspectRatio:               {Czech: "Poměr stran", English: "Aspect ratio"},
+	uiCropFreeRatio:                 {Czech: "Volný", English: "Free"},
+	uiCropSquareRatio:               {Czech: "1 : 1 · Čtverec", English: "1 : 1 · Square"},
 	uiObjectActionsHelp:             {Czech: "Akce pracují s aktuálním výběrem. Změny lze vrátit klávesami Ctrl + Z.", English: "Actions apply to the current selection. Press Ctrl + Z to undo changes."},
 	uiObjectCopyKey:                 {Czech: "Kopírovat · Ctrl+C", English: "Copy · Ctrl+C"},
 	uiObjectPasteKey:                {Czech: "Vložit · Ctrl+V", English: "Paste · Ctrl+V"},

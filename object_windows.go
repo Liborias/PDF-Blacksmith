@@ -18,6 +18,7 @@ const (
 	idObjectCrop
 	idObjectApplyCrop
 	idObjectCancelCrop
+	idObjectCropRatio
 )
 
 type objectEditRequest struct {
@@ -76,6 +77,7 @@ type objectEditor struct {
 	preview                                    dragPreview
 	crop                                       imageCrop
 	cropTool, cropApply, cropCancel, cropHint  uintptr
+	cropRatioLabel, cropRatio                  uintptr
 }
 
 func (a *app) buildObjectPanel() {
@@ -95,8 +97,9 @@ func (a *app) buildObjectPanel() {
 	e.undo = a.uiButton(uiObjectUndoKey, idObjectUndo, 16, 247, 298, 0)
 	e.cropTool = a.uiTextIconButton(uiCropImage, idObjectCrop, 16, 288, 34)
 	e.cropHint = a.readout(58, 288, 256, 48)
-	e.cropApply = a.uiButton(uiApply, idObjectApplyCrop, 16, 343, 145, 0)
-	e.cropCancel = a.uiButton(uiCancel, idObjectCancelCrop, 169, 343, 145, 0)
+	a.buildCropRatio()
+	e.cropApply = a.uiButton(uiApply, idObjectApplyCrop, 16, 379, 145, 0)
+	e.cropCancel = a.uiButton(uiCancel, idObjectCancelCrop, 169, 379, 145, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -117,7 +120,9 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.undo, ready && len(a.view.history) > 0)
 	setEnabled(e.cropTool, a.canCropImage())
 	a.setChecked(e.cropTool, e.crop.active)
-	setEnabled(e.cropApply, ready && e.crop.active && e.crop.hasRect && !e.crop.dragging)
+	_, canApplyCrop := a.imageCropBounds()
+	setEnabled(e.cropRatio, ready && e.crop.active && !e.crop.dragging)
+	setEnabled(e.cropApply, canApplyCrop)
 	setEnabled(e.cropCancel, ready && e.crop.active)
 }
 
@@ -423,6 +428,12 @@ func (a *app) copySelectedObject() {
 }
 
 func (a *app) objectCommand(id, notification int) bool {
+	if a.mode == idObjectsTab && id == idObjectCropRatio && notification == 1 {
+		setFocus.Call(a.window)
+		a.updateObjectActions()
+		a.view.invalidateCanvas()
+		return true
+	}
 	if id < idObjectCopy || id > idObjectCancelCrop || notification != 0 || a.mode != idObjectsTab {
 		return false
 	}
