@@ -851,8 +851,9 @@ def edit_text_document(src, request):
             try:
                 edits = request.get("text_edit", {})
                 if "block" in edits:
-                    from text_block import replace_block
-                    replace_block(pdf, selected(pdf), edits, models)
+                    from text_block import insert_block, replace_block
+                    edit_block = insert_block if edits.get("insert") is True else replace_block
+                    edit_block(pdf, selected(pdf), edits, models)
                 else:
                     replace_runs(pdf, selected(pdf), edits, models)
             except TextError as exc:

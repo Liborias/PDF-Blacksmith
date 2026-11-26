@@ -272,7 +272,8 @@ def stored_block(text):
     if group <= 0:
         return None
     block = integer_marks(text, ("PBWidth", "PBFirstX", "PBFirstY", "PBAngle", "PBAlign",
-                                 "PBLeading", "PBTracking", "PBRow", "PBParagraph", "PBWordWrap", "PBBold", "PBItalic"))
+                                 "PBLeading", "PBTracking", "PBRow", "PBParagraph", "PBWordWrap", "PBBold", "PBItalic",
+                                 "PBFixedWidth", "PBSpaceAfter"))
     required = ("PBWidth", "PBFirstX", "PBFirstY", "PBAngle", "PBAlign", "PBLeading", "PBTracking",
                 "PBRow", "PBParagraph", "PBWordWrap")
     if not all(name in block for name in required):
@@ -281,6 +282,7 @@ def stored_block(text):
                 origin=(block["PBFirstX"]/1000, block["PBFirstY"]/1000), rotation=block["PBAngle"],
                 alignment=block["PBAlign"], leading=block["PBLeading"]/1000, tracking=block["PBTracking"]/1000,
                 row=block["PBRow"], paragraph=block["PBParagraph"], word_wrap=bool(block["PBWordWrap"]),
+                fixed_width=bool(block.get("PBFixedWidth")), space_after=bool(block.get("PBSpaceAfter")),
                 bold=block.get("PBBold"), italic=block.get("PBItalic"))
 
 def text_tree(page, document=None, *, probe=False, replacements=None, discard=(),

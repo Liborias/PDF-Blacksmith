@@ -141,7 +141,11 @@ func (a *app) commitInlineOnBlur(serial uintptr) {
 	e := &a.textTool.inline
 	focus, _, _ := user32.NewProc("GetFocus").Call()
 	if e.serial == uint64(serial) && a.mode == idTextTab && !a.busy && !a.textSettingsFocus(focus) &&
-		!a.focusedDocumentView().selection.active() && a.inlineDirty() {
-		a.startTextEdit()
+		!a.focusedDocumentView().selection.active() {
+		if a.inlineDirty() {
+			a.startTextEdit()
+		} else if frame := a.inlineCurrent(); frame != nil && frame.newBounds != nil {
+			a.clearTextSelection()
+		}
 	}
 }

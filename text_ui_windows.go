@@ -17,6 +17,7 @@ const (
 	idTextAlignCenter
 	idTextAlignRight
 	idTextAlignJustify
+	idTextNewFrame
 )
 
 var textIcons = map[int][][]point{
@@ -48,7 +49,7 @@ var selectionIcons = map[int]string{
 	idTextSelectObject:    "i-text_caret",
 	idTextSelectRectangle: "i-rect_select",
 	idTextSelectLasso:     "i-lasso",
-	idTextSelectParagraph: "i-paragraph",
+	idTextNewFrame:        "i-text_box",
 	idObjectPoint:         "i-cursor",
 	idObjectRectangle:     "i-rect_select",
 	idObjectLasso:         "i-lasso",

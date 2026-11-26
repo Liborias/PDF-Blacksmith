@@ -25,6 +25,7 @@ const (
 	textBlock
 	textRectangle
 	textLasso
+	textFrame
 )
 
 var textAlignments = []string{"left", "center", "right", "justify"}
@@ -43,7 +44,8 @@ type textPanel struct {
 	font, size, original, report                      uintptr
 	width, leading, tracking                          uintptr
 	regular, bold, italic, underline, copy, undo, ocr uintptr
-	modes, alignments                                 [4]uintptr
+	modes                                             [5]uintptr
+	alignments                                        [4]uintptr
 	typography                                        [6]uintptr
 	mode, alignment                                   int
 	fonts, fontKeys                                   []string
@@ -68,12 +70,16 @@ func (a *app) buildTextPanel() {
 		{textObject, uiTextCursorSelection},
 		{textRectangle, uiTextRectangleSelection},
 		{textLasso, uiTextLassoSelection},
-		{textBlock, uiTextParagraphSelection},
+		{textFrame, uiTextParagraphFrame},
 	} {
-		p.modes[mode.value] = a.uiTextIconButton(mode.label, idTextSelectObject+mode.value, 16+index*40, 42, 34)
+		id := idTextSelectObject + mode.value
+		if mode.value == textFrame {
+			id = idTextNewFrame
+		}
+		p.modes[mode.value] = a.uiTextIconButton(mode.label, id, 16+index*40, 42, 34)
 		watchNavigationHover(p.modes[mode.value])
 	}
-	section.inlineHelp = a.readout(16, 81, 298, 205)
+	section.inlineHelp = a.readout(16, 81, 298, 230)
 	section.inlineHelpText = uiTextSelectionInstructions
 	a.localizePropertySection(section)
 	a.beginPropertySection(uiTextFormat, 91, uiTextFormatHelp)
@@ -120,7 +126,9 @@ func (a *app) buildTextPanel() {
 func (a *app) syncTextSelectionModes() {
 	p := &a.textTool
 	for i, h := range p.modes {
-		a.setChecked(h, i == p.mode)
+		if h != 0 {
+			a.setChecked(h, i == p.mode || i == textObject && p.mode == textBlock)
+		}
 	}
 	if len(a.commandBar.controls) != 0 {
 		a.updateCommandBar()
@@ -158,9 +166,9 @@ func (a *app) updateTextActions() {
 	}
 	ready := !a.busy && a.view.ready()
 	valid := ready && p.pick.generation == a.view.generation && p.pick.source != 0
-	hasText := valid && p.flow.text != ""
 	frame := a.inlineCurrent()
-	edit := hasText && frame != nil && frame.editable
+	hasText := valid && (p.flow.text != "" || frame != nil && frame.newBounds != nil && a.inlineValue() != "")
+	edit := valid && frame != nil && frame.editable
 	if p.inline.handle != 0 {
 		sendMessage.Call(p.inline.handle, 0x00cf, uintptr(boolFlag(!edit)), 0)
 	}
@@ -171,7 +179,9 @@ func (a *app) updateTextActions() {
 		setEnabled(h, edit)
 	}
 	for _, h := range p.modes {
-		setEnabled(h, ready)
+		if h != 0 {
+			setEnabled(h, ready)
+		}
 	}
 	for i, h := range p.alignments {
 		setEnabled(h, edit)
@@ -180,7 +190,7 @@ func (a *app) updateTextActions() {
 	a.setChecked(p.regular, edit && p.inline.mixedFormat&(inlineBold|inlineItalic) == 0 &&
 		!a.checked(p.bold) && !a.checked(p.italic))
 	setEnabled(p.copy, hasText)
-	setEnabled(p.ocr, valid && p.model != nil && !hasText && len(p.pick.polygon) >= 3)
+	setEnabled(p.ocr, valid && p.model != nil && p.pick.mode != textFrame && !hasText && p.pick.region())
 	setEnabled(p.undo, ready && a.canDocumentCommand(a.view, docUndo, false))
 }
 
@@ -202,18 +212,21 @@ func (a *app) textCommand(id, notification int) bool {
 	}
 	p := &a.textTool
 	switch {
-	case id >= idTextSelectObject && id <= idTextSelectLasso:
+	case id >= idTextSelectObject && id <= idTextSelectLasso || id == idTextNewFrame:
 		if a.saveInlineBefore(func() { a.textCommand(id, notification) }) {
 			return true
 		}
 		a.cancelCanvasSelections()
 		p.mode = id - idTextSelectObject
+		if id == idTextNewFrame {
+			p.mode = textFrame
+		}
 		p.explicitParagraph = p.mode == textBlock
 		if p.mode < textRectangle {
 			a.canvasTextCursor = true
 		}
 		a.cancelCanvasRegionProbes()
-		if p.mode < textRectangle || a.view.mixed.pick.source == 0 {
+		if p.mode < textRectangle || p.mode == textFrame || a.view.mixed.pick.source == 0 {
 			a.view.clearMixedSelection()
 			a.clearTextSelection()
 		}
@@ -314,7 +327,9 @@ func (a *app) textKey(msg *winMessage) bool {
 	if a.mode != idTextTab || a.full || a.busy || msg.wParam != 0x1b || a.textTool.pick.source == 0 {
 		return false
 	}
-	if !a.saveInlineBefore(a.clearTextSelection) {
+	if frame := a.inlineCurrent(); frame != nil && frame.newBounds != nil {
+		a.clearTextSelection()
+	} else if !a.saveInlineBefore(a.clearTextSelection) {
 		a.clearTextSelection()
 	}
 	return true
@@ -349,6 +364,9 @@ func (a *app) startTextEdit() {
 	b := e.bounds
 	top := textPoint{b[0] / p.dim[0], b[1] / p.dim[1]}
 	baseline := e.firstBaseline - b[1]
+	if frame.newBounds != nil {
+		baseline = .9 * style.size
+	}
 	content := a.inlineValue()
 	if !a.inlineDirty() {
 		return
@@ -379,7 +397,7 @@ func (a *app) startTextEdit() {
 	block.Selection = a.inlineGlyphSelection(frame)
 	req := v.request("text_edit")
 	req.View.Page = p.pick.source
-	req.TextEdit = &textEditRequest{Font: style.font, Size: style.size,
+	req.TextEdit = &textEditRequest{Font: style.font, Size: style.size, Insert: frame.newBounds != nil,
 		Bold: style.bold, Italic: style.italic, Underline: style.underline, Block: block}
 	a.runDocumentDraft(req, "Upravuji text v otevřené kartě…", p.report)
 }
@@ -406,7 +424,8 @@ func glyphSelectionFor(model *textPage, glyphs []layoutGlyph) []glyphSelection {
 
 func (a *app) startTextOCR() {
 	p, v := &a.textTool, a.view
-	if a.busy || p.model == nil || p.pick.generation != v.generation || p.flow.text != "" || len(p.pick.polygon) < 3 {
+	if a.busy || p.model == nil || p.pick.generation != v.generation || p.flow.text != "" ||
+		p.pick.mode == textFrame || !p.pick.region() {
 		return
 	}
 	position := slices.Index(v.order, p.pick.source)
@@ -428,7 +447,7 @@ func (a *app) paintTextSelection(dc uintptr, source int, area rect) {
 	if a.mode != idTextTab || a.full || p.pick.source != source || p.pick.generation != a.view.generation {
 		return
 	}
-	if p.flow.text == "" {
+	if p.flow.text == "" && p.pick.mode != textFrame {
 		a.drawSelectionRegion(dc, area, p.pick)
 	}
 	a.paintInlineFrames(dc, area)

@@ -193,6 +193,14 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 	if keyDown(0x20) {
 		return false
 	}
+	if a.mode == idTextTab && a.textTool.mode == textFrame && pick.change == replaceSelection {
+		if pick.source != 0 {
+			v.beginCanvasSelection(pick, pos, textFrame, 0x0202)
+		} else {
+			setFocus.Call(a.window)
+		}
+		return true
+	}
 	if v.beginCanvasContentMove(pick, pos) {
 		return true
 	}
@@ -257,9 +265,15 @@ func (v *documentView) continueCanvasSelection(message uint32, x, y int32) bool 
 	if message == g.release {
 		first, threshold := g.vertices[0], int32(v.app.scale(3))
 		if absTextDrag(last.x-first.x) < threshold || absTextDrag(last.y-first.y) < threshold {
-			middle, change := g.release == 0x0208, g.pick.change
+			mode, change := g.pick.mode, g.pick.change
+			click := g.release == 0x0202 && mode != textFrame
 			v.cancelCanvasSelection()
-			if !middle {
+			if mode == textFrame {
+				if frame := v.app.inlineCurrent(); frame != nil && frame.newBounds != nil && !v.app.inlineDirty() {
+					v.app.clearTextSelection()
+				}
+			}
+			if click {
 				pick := v.textAt(x, y)
 				if pick.source == 0 && contains(v.viewport, x, y) && change == replaceSelection {
 					v.clearCanvasContent()
@@ -316,7 +330,7 @@ func (v *documentView) continueCanvasLasso(message uint32, x, y int32) bool {
 
 func selectionScreenPolygon(g canvasSelectionGesture) []textPoint {
 	toPoint := func(p point) textPoint { return textPoint{float64(p.x), float64(p.y)} }
-	if g.pick.mode == textRectangle {
+	if g.pick.mode != textLasso {
 		return rectangleSelection(toPoint(g.vertices[0]), toPoint(g.vertices[1]))
 	}
 	polygon := make([]textPoint, len(g.vertices))
@@ -360,6 +374,10 @@ func (v *documentView) finishCanvasSelection() bool {
 	if source == 0 {
 		return true
 	}
+	if pick.mode == textFrame {
+		v.finishTextFrameDrag(pick, area, g.vertices[0], g.vertices[1])
+		return true
+	}
 	pick.source = source
 	for i, vertex := range polygon {
 		polygon[i] = normalizedTextPoint(area, int32(vertex[0]), int32(vertex[1]))
@@ -400,6 +418,12 @@ func (v *documentView) paintCanvasSelection(dc uintptr) {
 	if !g.active() || g.pick.generation != v.generation {
 		return
 	}
+	if g.pick.mode == textFrame {
+		if area, source := v.textSheetAt(0, 0, g.pick.source); source != 0 {
+			v.app.drawTextFrameOutline(dc, intersectInlineRect(area, textFrameDragRect(g.vertices[0], g.vertices[1])))
+		}
+		return
+	}
 	if g.pick.mode == textRectangle {
 		first, last := g.vertices[0], g.vertices[1]
 		preview := textSelection{mode: textRectangle, polygon: rectangleSelection(
@@ -423,7 +447,13 @@ func (v *documentView) paintCanvasSelection(dc uintptr) {
 }
 
 func (a *app) setCanvasCursor() bool {
-	if a.mode != idTextTab || !a.canvasTextCursor || a.full || a.busy || a.textTool.mode >= textRectangle || keyDown(0x20) {
+	if a.mode != idTextTab || a.full || a.busy || keyDown(0x20) {
+		return false
+	}
+	cursorID := uintptr(32513) // IDC_IBEAM
+	if a.textTool.mode == textFrame {
+		cursorID = 32515 // IDC_CROSS
+	} else if !a.canvasTextCursor || a.textTool.mode >= textRectangle {
 		return false
 	}
 	var p point
@@ -439,7 +469,7 @@ func (a *app) setCanvasCursor() bool {
 	if _, source := v.textSheetAt(p.x, p.y, 0); source == 0 {
 		return false
 	}
-	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, 32513) // IDC_IBEAM
+	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, cursorID)
 	user32.NewProc("SetCursor").Call(cursor)
 	return true
 }

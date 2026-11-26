@@ -363,11 +363,12 @@ func (a *app) doDocumentCommand(v *documentView, command documentCommand, editin
 }
 
 func (a *app) copyTextSelection() {
-	if a.textTool.flow.text == "" {
+	frame := a.inlineCurrent()
+	if a.textTool.flow.text == "" && (frame == nil || frame.newBounds == nil) {
 		return
 	}
 	value := a.textTool.flow.text
-	if e := &a.textTool.inline; a.inlineCurrent() != nil && (len(e.frames) == 1 || a.inlineDirty()) {
+	if e := &a.textTool.inline; frame != nil && (len(e.frames) == 1 || a.inlineDirty()) {
 		var start, end int32
 		sendMessage.Call(e.handle, 0x00b0, uintptr(unsafe.Pointer(&start)), uintptr(unsafe.Pointer(&end)))
 		if start != end {

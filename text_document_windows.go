@@ -18,6 +18,8 @@ type storedTextBlock struct {
 	Alignment, Rotation      int
 	Origin                   textPoint
 	WordWrap                 bool `json:"word_wrap"`
+	FixedWidth               bool `json:"fixed_width"`
+	SpaceAfter               bool `json:"space_after"`
 }
 
 type textRun struct {
@@ -69,6 +71,7 @@ type textEditRequest struct {
 	Bold      bool          `json:"bold"`
 	Italic    bool          `json:"italic"`
 	Underline bool          `json:"underline"`
+	Insert    bool          `json:"insert,omitempty"`
 	Block     textBlockEdit `json:"block"`
 }
 
@@ -79,14 +82,9 @@ type textProbeState struct {
 }
 
 func (v *documentView) nativeTextGeometry(model *textPage, pick textSelection) ([]layoutGlyph, textPoint, int) {
-	box := model.Boxes[pick.box]
-	rotation := (model.Rotation + v.rotations[pick.source-1] + 360) % 360
-	dim := textPoint{box[2] - box[0], box[3] - box[1]}
+	box, dim, rotation := v.nativeTextPageGeometry(model, pick)
 	if dim[0] <= 0 || dim[1] <= 0 {
 		return nil, dim, rotation
-	}
-	if rotation%180 != 0 {
-		dim[0], dim[1] = dim[1], dim[0]
 	}
 	var glyphs []layoutGlyph
 	for i, run := range model.Objects {
@@ -100,6 +98,16 @@ func (v *documentView) nativeTextGeometry(model *textPage, pick textSelection) (
 		}
 	}
 	return glyphs, dim, rotation
+}
+
+func (v *documentView) nativeTextPageGeometry(model *textPage, pick textSelection) (searchRect, textPoint, int) {
+	box := model.Boxes[pick.box]
+	rotation := (model.Rotation + v.rotations[pick.source-1] + 360) % 360
+	dim := textPoint{box[2] - box[0], box[3] - box[1]}
+	if rotation%180 != 0 {
+		dim[0], dim[1] = dim[1], dim[0]
+	}
+	return box, dim, rotation
 }
 
 func (v *documentView) requestNativeText(pick textSelection) {
@@ -167,6 +175,10 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 	if pick.combined {
 		v.regionText = model
 		v.requestObjects(pick)
+		return
+	}
+	if pick.mode == textFrame && pick.region() {
+		a.openTextFrame(v, model, pick)
 		return
 	}
 	glyphs, dim, rotation := v.nativeTextGeometry(model, pick)
@@ -298,7 +310,9 @@ func storedBlockFlow(model *textPage, glyphs []layoutGlyph, group int) (textFlow
 	for i, run := range runs {
 		if i > 0 {
 			previous := runs[i-1].Block
-			if newlines := min(64, run.Block.Paragraph-previous.Paragraph); newlines > 0 {
+			if previous.FixedWidth {
+				text.WriteString(savedFrameLineBreak(previous, run.Block))
+			} else if newlines := min(64, run.Block.Paragraph-previous.Paragraph); newlines > 0 {
 				text.WriteString(strings.Repeat("\n", newlines))
 			} else if run.Block.Row != previous.Row && (previous.WordWrap || run.Block.Row != previous.Row+1) {
 				text.WriteByte(' ')
@@ -318,4 +332,17 @@ func storedBlockFlow(model *textPage, glyphs []layoutGlyph, group int) (textFlow
 	}
 	flow.text = text.String()
 	return flow, runs[0].Block
+}
+
+func savedFrameLineBreak(previous, next *storedTextBlock) string {
+	if previous == nil || next == nil || next.ID != previous.ID {
+		return "\n"
+	}
+	if count := min(64, next.Paragraph-previous.Paragraph); count > 0 {
+		return strings.Repeat("\n", count)
+	}
+	if next.Row != previous.Row && previous.SpaceAfter {
+		return " "
+	}
+	return ""
 }

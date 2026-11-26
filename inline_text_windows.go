@@ -11,9 +11,10 @@ import (
 const idInlineText = 490
 
 type inlineTextFrame struct {
-	flow     textFlow
-	stored   *storedTextBlock
-	editable bool
+	flow      textFlow
+	stored    *storedTextBlock
+	newBounds *searchRect
+	editable  bool
 }
 
 type inlineTextEditor struct {
@@ -26,6 +27,7 @@ type inlineTextEditor struct {
 	firstBaseline         float64
 	leftLimit, rightLimit float64
 	fixedWidth, loading   bool
+	initialFixedWidth     bool
 	nativeWrap            bool
 	visible               bool
 	foreground            uintptr
@@ -132,9 +134,13 @@ func (a *app) inlineDirty() bool {
 	if frame == nil || !frame.editable || e.loading {
 		return false
 	}
+	if frame.newBounds != nil {
+		return strings.TrimSpace(a.inlineValue()) != ""
+	}
 	modified, _, _ := sendMessage.Call(e.handle, 0x00c6, 0, 0) // EM_CANUNDO
 	style := a.inlineStyle()
-	return a.inlineValue() != e.original || modified != 0 || e.fixedWidth ||
+	return a.inlineValue() != e.original || modified != 0 || e.fixedWidth != e.initialFixedWidth ||
+		e.fixedWidth && style.width != e.initialStyle.width ||
 		style.leading != e.initialStyle.leading || style.alignment != e.initialStyle.alignment
 }
 
@@ -205,7 +211,7 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 				break
 			}
 		}
-		e.frames = append(e.frames, inlineTextFrame{group, stored, editable})
+		e.frames = append(e.frames, inlineTextFrame{flow: group, stored: stored, editable: editable})
 	}
 	for i, frame := range e.frames {
 		if frame.editable {
@@ -263,6 +269,51 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	e.mixedFormat = 0
 	e.backdrop, e.backdropRequested = nil, false
 	e.serial++
+	if frame.newBounds != nil {
+		a.configureNewTextFrame(frame)
+	} else {
+		a.configureSourceTextFrame(frame)
+	}
+	e.initialFixedWidth = e.fixedWidth
+	e.initialStyle = a.inlineStyle()
+	e.previewStyle = inlineTextStyle{}
+	content, runs := a.initialInlineContent(frame)
+	e.original = content
+	sendMessage.Call(e.handle, 0x00cf, 0, 0)
+	setText(e.handle, multiline(e.original))
+	for _, run := range runs {
+		a.setInlineCharacters(run.Start, run.End, run, inlineBaseMask, true)
+	}
+	a.formatInlineParagraph(e.initialStyle)
+	sendMessage.Call(e.handle, 0x00b1, 0, 0)
+	sendMessage.Call(e.handle, 0x00cf, uintptr(boolFlag(!frame.editable)), 0) // EM_SETREADONLY
+	if frame.newBounds != nil {
+		style := inlineTextRun{Font: e.initialStyle.font, Size: e.initialStyle.size, Color: uint32(e.foreground)}
+		a.formatEmptyTextFrame(style, inlineBaseMask)
+	}
+	sendMessage.Call(e.handle, 0x00cd, 0, 0) // EM_EMPTYUNDOBUFFER
+	sendMessage.Call(e.handle, 0x00b9, 0, 0) // EM_SETMODIFY
+	e.loading = false
+	a.updateTextActions()
+	a.layoutInlineEditor()
+	if e.visible {
+		setFocus.Call(e.handle)
+		if frame.newBounds == nil && !useCaret && (p.pick.region() || p.pick.mode == textBlock || p.pick.change != replaceSelection) {
+			selectInline(e.handle, 0, -1)
+		}
+		if useCaret {
+			at := screenTextPoint(e.pageArea, caret)
+			index := a.originalInlinePosition(at.x, at.y)
+			selectInline(e.handle, index, index)
+		}
+	}
+	a.syncInlineControls(0)
+	a.view.invalidateCanvas()
+	a.view.schedule()
+}
+
+func (a *app) configureSourceTextFrame(frame *inlineTextFrame) {
+	p, e := &a.textTool, &a.textTool.inline
 	e.sourceBounds = frame.flow.bounds
 	e.firstBaseline = frame.flow.paragraphs[0][0].baseline
 	first := p.model.Objects[frame.flow.glyphs()[0].run]
@@ -295,6 +346,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 		x, y := anchor[0]*p.dim[0], anchor[1]*p.dim[1]
 		if x >= 0 && y >= 0 && saved.Width >= 1 && x+saved.Width <= p.dim[0]+.003 {
 			e.sourceBounds[0], e.sourceBounds[1], e.sourceBounds[2] = x, y, x+saved.Width
+			e.fixedWidth = saved.FixedWidth
 			p.alignment = min(max(saved.Alignment, 0), len(textAlignments)-1)
 			setText(p.leading, formatTextNumber(saved.Leading))
 			setText(p.tracking, formatTextNumber(saved.Tracking))
@@ -307,37 +359,6 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	}
 	glyphs, _, _ := a.view.nativeTextGeometry(p.model, p.pick)
 	e.leftLimit, e.rightLimit = inlineNeighbourEdges(e.sourceBounds, glyphs, included, p.dim[0])
-	e.initialStyle = a.inlineStyle()
-	e.previewStyle = inlineTextStyle{}
-	content, runs := a.initialInlineContent(frame)
-	e.original = content
-	sendMessage.Call(e.handle, 0x00cf, 0, 0)
-	setText(e.handle, multiline(e.original))
-	for _, run := range runs {
-		a.setInlineCharacters(run.Start, run.End, run, inlineBaseMask, true)
-	}
-	a.formatInlineParagraph(e.initialStyle)
-	sendMessage.Call(e.handle, 0x00b1, 0, 0)
-	sendMessage.Call(e.handle, 0x00cf, uintptr(boolFlag(!frame.editable)), 0) // EM_SETREADONLY
-	sendMessage.Call(e.handle, 0x00cd, 0, 0)                                  // EM_EMPTYUNDOBUFFER
-	sendMessage.Call(e.handle, 0x00b9, 0, 0)                                  // EM_SETMODIFY
-	e.loading = false
-	a.updateTextActions()
-	a.layoutInlineEditor()
-	if e.visible {
-		setFocus.Call(e.handle)
-		if !useCaret && (p.pick.region() || p.pick.mode == textBlock || p.pick.change != replaceSelection) {
-			selectInline(e.handle, 0, -1)
-		}
-		if useCaret {
-			at := screenTextPoint(e.pageArea, caret)
-			index := a.originalInlinePosition(at.x, at.y)
-			selectInline(e.handle, index, index)
-		}
-	}
-	a.syncInlineControls(0)
-	a.view.invalidateCanvas()
-	a.view.schedule()
 }
 
 func boolFlag(value bool) uint32 {
@@ -395,7 +416,7 @@ func (a *app) layoutInlineEditor() {
 		return
 	}
 	e.pageArea = area
-	e.pristine = !a.inlineDirty()
+	e.pristine = frame.newBounds == nil && !a.inlineDirty()
 	scale := float64(area.right-area.left) / p.dim[0]
 	style := a.inlineStyle()
 	if style.size <= 0 || style.leading <= 0 || e.fixedWidth && style.width <= 0 {
@@ -521,7 +542,9 @@ func (a *app) paintInlineFrames(dc uintptr, area rect) {
 	}
 	for i, frame := range e.frames {
 		if i == e.active && e.visible {
-			if !e.pristine {
+			if frame.newBounds != nil {
+				a.drawTextFrameOutline(dc, toPixel(e.bounds))
+			} else if !e.pristine {
 				a.paintInlineBackdrop(dc, area, frame.flow.highlightBounds(), toPixel)
 			}
 			invalidate(e.handle)

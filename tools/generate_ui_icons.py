@@ -16,7 +16,7 @@ SYMBOLS = (
     "nav_settings", "nav_signature", "nav_split_pdf", "nav_text", "nav_thumbnails", "nav_view", "panel_right", "paragraph",
     "rect_select", "redo", "save", "search", "settings_interface", "side_by_side", "text_caret",
     "undo", "view_continuous", "view_pages",
-    "zoom_in", "zoom_out",
+    "zoom_in", "zoom_out", "text_box",
 )
 
 

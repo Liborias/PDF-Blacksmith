@@ -161,7 +161,11 @@ func (a *app) stepInlineSizes(larger bool) {
 			endCollection = beginInlineEditCollection(e.handle)
 		}
 		for _, run := range changes {
-			a.setInlineCharacters(run.Start, run.End, run, inlineSize, true)
+			if left == right && a.inlineCurrent().newBounds != nil {
+				a.formatEmptyTextFrame(run, inlineSize)
+			} else {
+				a.setInlineCharacters(run.Start, run.End, run, inlineSize, true)
+			}
 		}
 		if endCollection != nil {
 			endCollection()

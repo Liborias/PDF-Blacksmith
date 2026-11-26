@@ -209,7 +209,8 @@ const (
 	uiTextCursorSelection           uiMessage = "win32.properties.TextCursorSelection"
 	uiTextRectangleSelection        uiMessage = "win32.properties.TextRectangleSelection"
 	uiTextLassoSelection            uiMessage = "win32.properties.TextLassoSelection"
-	uiTextParagraphSelection        uiMessage = "win32.properties.TextParagraphSelection"
+	uiTextParagraphFrame            uiMessage = "win32.properties.TextParagraphFrame"
+	uiNewTextFrameHint              uiMessage = "win32.properties.NewTextFrameHint"
 	uiTextSelectionInstructions     uiMessage = "win32.properties.TextSelectionInstructions"
 	uiHideSelectionHelp             uiMessage = "win32.properties.HideSelectionHelp"
 	uiTextSelectionHelp             uiMessage = "win32.properties.TextSelectionHelp"
@@ -445,7 +446,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiTextCursorSelection:           {Czech: "Textový kurzor (T)", English: "Text cursor (T)"},
 	uiTextRectangleSelection:        {Czech: "Výběr obdélníkem (M)", English: "Rectangle selection (M)"},
 	uiTextLassoSelection:            {Czech: "Výběr lasem (L)", English: "Lasso selection (L)"},
-	uiTextParagraphSelection:        {Czech: "Výběr stávajícího odstavce (V)", English: "Select existing paragraph (V)"},
+	uiTextParagraphFrame:            {Czech: "Odstavcový textový rámec · vytvořit tažením", English: "Paragraph text frame · drag to create"},
+	uiNewTextFrameHint:              {Czech: "Pište do rámce. Kliknutím mimo rámec potvrdíte text. Esc rámec zahodí.", English: "Type in the frame. Click outside the frame to apply the text. Esc discards the frame."},
 	uiHideSelectionHelp:             {Czech: "Skrýt nápovědu k výběru", English: "Hide selection help"},
 	uiTextFormat:                    {Czech: "Typografie", English: "Typography"},
 	uiTextFormatHelp:                {Czech: "Změny se projeví ve výběru přímo v PDF. Proklad je mezera mezi znaky, řádkování určuje vzdálenost mezi řádky.", English: "Changes appear in the selection in the PDF. Tracking is the space between characters. Line spacing sets the space between lines."},
@@ -480,8 +482,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiSelectValidFile:               {Czech: "Vyberte soubor s platnou cestou.", English: "Choose a file with a valid path."},
 	uiSelectExistingFolder:          {Czech: "Vyberte existující složku v souborovém systému.", English: "Choose an existing folder."},
 	uiTextSelectionInstructions: {
-		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
-		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
+		Czech:   "Základní výběr\nT · Kliknutím do textu otevřete editaci. Tažením v textu označíte znaky.\nM · Tažením vymezíte obdélník.\nL · Klikáním určíte vrcholy lasa. Uzavřete jej Enterem nebo dvojklikem.\nV · Kliknutím vyberete stávající odstavec.\nRámec · Tažením na stránce vytvoříte nový odstavec.\n\nRozšířený výběr\nShift přidává, Ctrl přepíná označení a Shift+Ctrl odebírá.\nObdélník tažený doleva vybírá i protnuté prvky. Tažený doprava vybírá jen prvky celé uvnitř.",
+		English: "Basic selection\nT · Click existing text to edit it. Drag across text to select characters.\nM · Drag to draw a rectangle.\nL · Click to add vertices. Press Enter or double-click to close the lasso.\nV · Click to select an existing paragraph.\nFrame · Drag on the page to create a new paragraph.\n\nExtended selection\nShift adds to the selection, Ctrl toggles items, and Shift+Ctrl removes items.\nDrag a rectangle left to select intersecting items. Drag right to select fully enclosed items.",
 	},
 }
 

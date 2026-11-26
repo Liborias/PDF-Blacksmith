@@ -41,6 +41,55 @@ def find_text(description, value):
     return next(run for run in description["objects"] if run["text"] == value)
 
 
+def check_inserted_frame(folder, fonts):
+    source, output = folder / "insert-source.pdf", folder / "insert-output.pdf"
+    fixture(source)
+    with pdf.Pdf.open(source, allow_overwriting_input=True) as document:
+        page = document.pages[1]
+        page.obj.Rotate = 90
+        original_stream = page.obj.Contents.read_bytes()
+        document.save(source)
+    original = source.read_bytes()
+    content = "Vložený český odstavec zalamuje slova.\nRuční odřádkování."
+    block = dict(text=content, align="left", width=113, height=190, leading=1.2,
+                 tracking=0, baseline_offset=10.8, origin=[164, 90], rotation=90, wrap=True,
+                 runs=[dict(start=0, end=len(content), font="Liberation Sans", size=12, color=0, tracking=0)])
+    request = dict(action="text_edit", input=str(source), output=str(output),
+                   text_fonts=str(fonts), view={"page": 2}, text_edit=dict(insert=True, size=12, block=block))
+
+    dispatch(request)
+    assert source.read_bytes() == original
+    with pdf.Pdf.open(output) as changed:
+        assert not changed.check_pdf_syntax()
+        assert changed.pages[1].obj.Rotate == 90
+        assert changed.pages[1].obj.Contents[1].read_bytes() == original_stream
+        with changed.open_outline() as outline:
+            assert outline.root[0].title == "Beginning"
+    details = dispatch(dict(action="text_probe", input=str(output), view={"page": 2}))["text_page"]
+    added = [run for run in details["objects"] if run["block"]]
+    assert len(added) >= 3 and all(run["editable"] for run in added)
+    assert {run["block"]["id"] for run in added} == {1}
+    assert {run["block"]["width"] for run in added} == {113}
+    assert {run["block"]["paragraph"] for run in added} == {0, 1}
+    assert all(run["block"]["fixed_width"] for run in added)
+    assert any(run["block"]["space_after"] for run in added)
+    assert find_text(details, "Header 2")["token"] > 0
+    assert "Vložený český" in " ".join(run["text"] for run in added)
+    with pdfium.PdfDocument(source) as before, pdfium.PdfDocument(output) as after:
+        for index in (0, 2, 3):
+            assert ImageChops.difference(read_page(before, index)[1], read_page(after, index)[1]).getbbox() is None
+
+    for invalid in (dict(text="   "), dict(height=10), dict(selection=[dict(token=1, glyphs=[0])])):
+        rejected = folder / "insert-rejected.pdf"
+        try:
+            dispatch({**request, "output": str(rejected),
+                      "text_edit": {**request["text_edit"], "block": {**block, **invalid}}})
+        except UserError:
+            assert not rejected.exists()
+        else:
+            raise AssertionError(f"Invalid new frame was written: {invalid}")
+
+
 def check_text(folder, fonts):
     original = folder / "input.pdf"
     fixture(original)
@@ -412,6 +461,7 @@ if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-check-text-") as tmp:
         fonts = Path(sys.argv[1]).resolve()
         check_text(Path(tmp), fonts)
+        check_inserted_frame(Path(tmp), fonts)
         check_block(Path(tmp), fonts)
         check_font_fallback(Path(tmp), fonts)
         check_catalog(Path(tmp), fonts)

@@ -1,4 +1,4 @@
-"""Reflow a selected range and write searchable text into its page."""
+"""Lay out searchable text in a new or existing PDF text frame."""
 
 from itertools import groupby
 from math import isfinite
@@ -140,7 +140,7 @@ def rich_block_commands(document, page, block, content, folder, size, width, hei
     marked = pdf.Dictionary(PBTextBlock=group, PBWidth=round(width*1000), PBFirstX=round(origin[0]*1000),
                             PBFirstY=round(origin[1]*1000), PBAngle=angle,
                             PBAlign=("left", "center", "right", "justify").index(alignment),
-                            PBLeading=round(leading*1000))
+                            PBLeading=round(leading*1000), PBFixedWidth=int(bool(block.get("wrap"))))
     result = [instruction("q"), instruction("cm", *matrix, *origin), instruction("BDC", pdf.Name.Div, marked)]
     stroke = {"g": "G", "rg": "RG", "k": "K", "cs": "CS", "sc": "SC", "scn": "SCN"}
     first_ink = ranges[0]["color"]
@@ -177,6 +177,7 @@ def rich_block_commands(document, page, block, content, folder, size, width, hei
                 face = faces[index]
                 name, cids = references[index]
                 row_mark = pdf.Dictionary(PBRow=row, PBParagraph=paragraph, PBWordWrap=int(wrapped),
+                                          PBSpaceAfter=int(wrapped and line[-1][0] == " "),
                                           PBBold=int(bold), PBItalic=int(italic), PBTracking=round(tracking*1000))
                 length = sum(advances[char]*span_size+tracking for char in piece) + extra*piece.count(" ")
                 result.extend((instruction("BDC", pdf.Name.Span, row_mark), instruction("q"), *paint))
@@ -385,3 +386,22 @@ def replace_block(document, page, edits, font_dir):
     commands = block_commands(document, page, block, edits, font_dir, color, group, palette, embedded)
     combined = [instruction("q"), *original, instruction("Q"), *commands] if commands else original
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))
+
+
+def insert_block(document, page, edits, font_dir):
+    from text_edit import text_page
+
+    block = edits["block"]
+    if block.get("selection") not in (None, []):
+        raise TextError("Nový rámec nemůže nahradit vybrané znaky.")
+    _, _, objects = text_page(page)
+    group = max((run["block"]["id"] for run in objects if run["block"]), default=0) + 1
+    if group > 2**31 - 1:
+        raise TextError("Na stránce nelze vytvořit další editovatelný blok.")
+    black = (pdf.ContentStreamInstruction(*instruction("g", 0)),)
+    commands = block_commands(document, page, block, edits, font_dir, black, group)
+    if not commands:
+        raise TextError("Do nového rámce napište text.")
+    # Isolate the original graphics state and retain the original content streams.
+    page.contents_add(b"q\n", prepend=True)
+    page.contents_add(b"Q\n" + pdf.unparse_content_stream(commands) + b"\n")

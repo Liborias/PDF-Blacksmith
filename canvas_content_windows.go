@@ -35,7 +35,7 @@ func (v *documentView) cancelCanvasRegionProbe() bool {
 	canceled := v.regionText != nil
 	v.regionText = nil
 	for _, pick := range []*textSelection{&v.nativeText.next, &v.nativeText.flight, &v.objectProbe.next, &v.objectProbe.flight} {
-		if pick.combined {
+		if pick.combined || pick.mode == textFrame && pick.region() {
 			*pick = textSelection{}
 			canceled = true
 		}

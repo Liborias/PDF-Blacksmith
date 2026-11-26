@@ -89,7 +89,7 @@ func inlineEditProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintp
 func (a *app) scheduleInlineBackground() bool {
 	p, e, v := &a.textTool, &a.textTool.inline, a.view
 	frame := a.inlineCurrent()
-	if frame == nil || !e.visible || e.backdropRequested || p.pick.generation != v.generation || a.busy {
+	if frame == nil || frame.newBounds != nil || !e.visible || e.backdropRequested || p.pick.generation != v.generation || a.busy {
 		return false
 	}
 	bounds := frame.flow.bounds

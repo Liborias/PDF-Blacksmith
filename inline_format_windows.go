@@ -64,7 +64,7 @@ func (a *app) initialInlineContent(frame *inlineTextFrame) (string, []inlineText
 		content.WriteString(value)
 		length := len(utf16.Encode([]rune(value)))
 		runs = appendInlineRun(runs, style, offset, offset+length)
-		if value != "\n" {
+		if !strings.HasPrefix(value, "\n") {
 			p.inline.glyphPositions = append(p.inline.glyphPositions,
 				inlineGlyphPosition{start: offset, end: offset + length, line: row, bounds: glyph.bounds})
 		}
@@ -74,7 +74,15 @@ func (a *app) initialInlineContent(frame *inlineTextFrame) (string, []inlineText
 	for _, group := range frame.flow.paragraphs {
 		for _, line := range group {
 			if previous.run >= 0 {
-				appendText("\n", previous)
+				separator := "\n"
+				if frame.stored != nil && frame.stored.FixedWidth {
+					before := p.model.Objects[previous.run].Block
+					next := p.model.Objects[line.glyphs[0].run].Block
+					separator = savedFrameLineBreak(before, next)
+				}
+				if separator != "" {
+					appendText(separator, previous)
+				}
 				row++
 			}
 			writeGlyphLine(line, func(value string, glyph layoutGlyph) {
@@ -202,16 +210,31 @@ func (a *app) setInlineCharacters(start, end int, style inlineTextRun, mask uint
 	if selectRange {
 		selectInline(h, start, end)
 	}
+	format := inlineCharacterFormat(style, mask)
+	sendMessage.Call(h, 0x0444, 1, uintptr(unsafe.Pointer(&format))) // EM_SETCHARFORMAT, SCF_SELECTION
+}
+
+func inlineCharacterFormat(style inlineTextRun, mask uint32) inlineCharFormat {
 	format := inlineCharFormat{mask: mask, color: style.Color, height: int32(math.Round(style.Size * 20)), charset: 1,
 		spacing: int16(math.Round(style.Tracking * 20)), effects: boolFlag(style.Bold) | boolFlag(style.Italic)<<1 | boolFlag(style.Underline)<<2}
 	format.size = uint32(unsafe.Sizeof(format))
 	copy(format.face[:len(format.face)-1], syscall.StringToUTF16(style.Font))
-	sendMessage.Call(h, 0x0444, 1, uintptr(unsafe.Pointer(&format))) // EM_SETCHARFORMAT, SCF_SELECTION
+	return format
+}
+
+func (a *app) formatEmptyTextFrame(style inlineTextRun, mask uint32) {
+	format := inlineCharacterFormat(style, mask)
+	handle := a.textTool.inline.handle
+	// Set the default, the terminal paragraph mark, and the insertion format.
+	for _, scope := range [...]uintptr{0, 4, 1} { // SCF_DEFAULT, SCF_ALL, SCF_SELECTION
+		sendMessage.Call(handle, 0x0444, scope, uintptr(unsafe.Pointer(&format)))
+	}
 }
 
 func (a *app) changeInlineCharacters(mask uint32) {
 	e := &a.textTool.inline
-	if frame := a.inlineCurrent(); frame == nil || !frame.editable || a.busy {
+	frame := a.inlineCurrent()
+	if frame == nil || !frame.editable || a.busy {
 		return
 	}
 	style := a.inlineStyle()
@@ -233,10 +256,15 @@ func (a *app) changeInlineCharacters(mask uint32) {
 		Bold: style.bold, Italic: style.italic, Underline: style.underline}
 	e.loading = true
 	sendMessage.Call(e.handle, 0x0458, 0, 0) // EM_STOPGROUPTYPING
-	if start == end && a.inlineValue() != "" {
+	switch {
+	case start != end:
+		a.setInlineCharacters(0, 0, change, mask, false)
+	case a.inlineValue() != "":
 		a.setInlineCharacters(0, -1, change, mask, true)
 		selectInline(e.handle, start, end)
-	} else {
+	case frame.newBounds != nil:
+		a.formatEmptyTextFrame(change, mask)
+	default:
 		a.setInlineCharacters(0, 0, change, mask, false)
 	}
 	sendMessage.Call(e.handle, 0x0458, 0, 0)
@@ -326,6 +354,9 @@ func (a *app) finishInlineLayout(control uintptr) {
 		a.changeInlineCharacters(inlineTracking)
 	case e.handle:
 		a.syncInlineControls(0)
+		if a.inlineCurrent().newBounds != nil {
+			a.updateTextActions()
+		}
 	case p.leading:
 		if style := a.inlineStyle(); style.leading > 0 {
 			e.loading = true

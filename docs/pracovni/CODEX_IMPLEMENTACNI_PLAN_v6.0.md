@@ -85,9 +85,11 @@ Audit Win32 potvrdil T pro bodový výběr textu, V pro odstavec, M pro obdéln�
 
 **4B. Ovládací prvky:** Text Výběr čtyři ikony na jediné řadě + nápověda ?, Typography mixed, Objekty raster editor, OCR s vlastní nápovědou, zachování převodu text ↔ křivky jen jako operace nad výběrem.
 
-V panelu Text jsou ve společné řadě kurzor (T), obdélník (M), laso (L) a výběr existujícího odstavce (V). Otazník rozbalí přímo v panelu českou nebo anglickou nápovědu k základním gestům a modifikátorům. OCR výběru zůstává dostupné pod Typografií i při jejím sbalení.
+V panelu Text jsou ve společné řadě kurzor (T), obdélník (M), laso (L) a odstavcový textový rámec. Klávesou V lze dál zapnout výběr existujícího odstavce. Otazník rozbalí v panelu českou nebo anglickou nápovědu k gestům a modifikátorům. OCR výběru zůstává dostupné pod Typografií i při jejím sbalení.
 
-Typografie ukazuje smíšené písmo, velikost, proklad a řezy aktivního výběru. Když je v rámci pouze kurzor, panel zobrazuje hodnoty celého aktivního rámce. Nastavení mění jen zvolenou vlastnost a A+/A− posouvá každý úsek vzhledem k jeho velikosti. Šířka, řádkování a zarovnání se nadále nastavují pro aktivní rámec. Samostatná tvorba odstavcového rámce navazuje v dalším kroku.
+Typografie ukazuje smíšené písmo, velikost, proklad a řezy aktivního výběru. Když je v rámci pouze kurzor, panel zobrazuje hodnoty celého aktivního rámce. Nastavení mění jen zvolenou vlastnost a A+/A− posouvá každý úsek vzhledem k jeho velikosti. Šířka, řádkování a zarovnání se nastavují pro aktivní rámec.
+
+Tažení nástrojem odstavcového rámce na jedné stránce určuje jeho umístění a šířku zalamování. Nový rámec roste do výšky podle textu nejvýš po okraj stránky. Psaní se potvrdí kliknutím mimo rámec nebo Ctrl+Enter a zapíše do pracovní karty jako jedna vratná úprava. Esc zahodí nepotvrzený nový rámec. Pouhý klik a prázdný rámec změnu nevytváří. Při opětovné editaci má vložený odstavec vlastní šířku a zachovává ruční odřádkování. Bodový text je další samostatný krok.
 
 **4C. Pravítka a vodítka:** osa X/Y správně, pouze drag z pravítka, Ctrl+klik vs Ctrl+drag, per-page stav, skupiny a zámky, barvy „Použít“, kontext pravým klikem bez „Vybrat“, dočasná aktivace Pomůcek rozvržení. Nahradit pouze dekorativní paralelní prvky, ne PDF data.
 
