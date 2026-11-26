@@ -5,7 +5,8 @@ from math import isfinite
 
 import pikepdf as pdf
 
-from object_edit import ObjectError, clip_point, selected_draws, translated_draw
+from object_edit import ObjectError, clip_point, isolated_move_span, move_widgets, selected_page_items, translated_draw
+from text_block import remove_glyphs
 from text_edit import TextError, code_size, instruction, invert, show_items, source_objects, text_tree, underline_marks
 
 
@@ -39,33 +40,70 @@ def moved_show(entry, selected_codes, step, x_adjustment, rise, vertical):
     return commands
 
 
-def move_selection(document, page, operators, candidates, edit, selected):
-    delta = clip_point(edit.get("delta"), "posun")
-    items = selected_draws(candidates, edit) if edit.get("tokens") else []
-    graphics = {}
-    for item in items:
-        for index in range(item.first+1, item.end+1):
-            graphics[index] = []
-        graphics[item.first+1] = translated_draw(operators, item, delta)
-
+def selected_text_runs(page, selected):
+    if not isinstance(selected, list) or not 1 <= len(selected) <= 4000:
+        raise ObjectError("Vyberte platný text k přesunu.")
     context = {}
     _, sources = text_tree(page, move_context=context)
     runs = source_objects(page, sources)
     indexed = {run["block_token"]: run for run in runs if run["block_token"]}
-    if not isinstance(selected, list) or not 1 <= len(selected) <= 4000:
-        raise ObjectError("Vyberte platný text k přesunu.")
-    translations, moved_glyphs, blocks, underlines = {}, {}, {}, {}
+    chosen_runs = {}
     for item in selected:
         if not isinstance(item, dict):
             raise ObjectError("Neplatný výběr textu.")
         token, glyphs = item.get("token"), item.get("glyphs")
-        if type(token) is not int or token not in indexed or token in moved_glyphs or not isinstance(glyphs, list):
+        if type(token) is not int or token not in indexed or token in chosen_runs or not isinstance(glyphs, list):
             raise ObjectError("Tento text nelze bezpečně přesunout. Výběr zůstal na původním místě.")
         run = indexed[token]
         count = len(run["glyphs"])
         if not glyphs or any(type(index) is not int or not 0 <= index < count for index in glyphs):
             raise ObjectError("Výběr textu se mezitím změnil. Vyberte jej znovu.")
-        chosen = set(glyphs)
+        chosen_runs[token] = run, set(glyphs)
+    return runs, chosen_runs, sources, context
+
+
+def selected_text_paint(page, items, selected):
+    """Generate opposite text selections while preserving each show operation's advance."""
+    _, choices, sources, context = selected_text_runs(page, selected)
+    shapes = {index for item in items for index in range(item.first+1, item.end+1)}
+    show, remove, keep, underline = set(), {}, {}, set()
+    for token, (run, chosen) in choices.items():
+        if context[token][2] in shapes:
+            continue  # The selected Form already includes this text and its appearance.
+        operators, index, style, independent, _, _ = sources[token]
+        advances = run["advances"]
+        complete = len(chosen) == len(run["glyphs"])
+        if advances:
+            codes = {run["glyph_indices"][glyph] for glyph in chosen}
+            step, entry = code_size(style[0]), operators[index-1]
+            remove[token] = remove_glyphs(entry, step, advances, codes)
+            if not complete:
+                keep[token] = remove_glyphs(entry, step, advances, set(range(len(advances)))-codes)
+        elif complete and independent:
+            remove[token] = instruction("TJ", pdf.Array())
+        else:
+            raise ObjectError("Náhled části tohoto písma nelze sestavit.")
+        if complete:
+            underline.add(token)
+        show.add(token)
+    return (shapes, show), remove, keep, underline
+
+
+def move_selection(document, page, operators, candidates, edit, selected):
+    delta = clip_point(edit.get("delta"), "posun")
+    items, widgets, indexed = selected_page_items(document, page, candidates, edit) if edit.get("tokens") else ([], [], {})
+    move_widgets((indexed[token] for token in widgets), delta)
+    graphics = {}
+    for item in items:
+        item = isolated_move_span(operators, item)
+        for index in range(item.first+1, item.end+1):
+            graphics[index] = []
+        graphics[item.first+1] = translated_draw(operators, item, delta)
+
+    runs, chosen_runs, sources, context = selected_text_runs(page, selected)
+    translations, moved_glyphs, blocks, underlines = {}, {}, {}, {}
+    for token, (run, chosen) in chosen_runs.items():
+        count = len(run["glyphs"])
         matrix, (scale, rise), root, graphic_matrix = context[token]
         moved_glyphs[token] = len(chosen)
         if root in graphics:

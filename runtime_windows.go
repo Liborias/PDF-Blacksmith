@@ -65,6 +65,7 @@ type request struct {
 	TextEdit              *textEditRequest `json:"text_edit,omitempty"`
 	TextSelection         []glyphSelection `json:"text_selection,omitempty"`
 	ObjectEdit            *objectEditRequest `json:"object_edit,omitempty"`
+	PageLocal             bool `json:"page_local,omitempty"`
 }
 
 type viewRequest struct {
@@ -73,6 +74,8 @@ type viewRequest struct {
 	Rotation     int              `json:"rotation,omitempty"`
 	Box          string           `json:"box,omitempty"`
 	Region       *screenRegion    `json:"region,omitempty"`
+	DragBounds   *searchRect      `json:"drag_bounds,omitempty"`
+	DragZoom     float64          `json:"drag_zoom,omitempty"`
 	Pages        []int            `json:"pages,omitempty"`
 	ProofProfile string           `json:"proof_profile,omitempty"`
 	HidePlates   []string         `json:"hide_plates,omitempty"`
@@ -95,12 +98,17 @@ type viewResponse struct {
 	ObjectClipboard []byte              `json:"object_clipboard,omitempty"`
 	Sizes        []map[string][2]float64 `json:"sizes"`
 	Pages        int                     `json:"pages"`
+	ChangedPages []int                  `json:"changed_pages,omitempty"`
 	DPI          int                     `json:"dpi"`
 	OutputIntent string                  `json:"output_intent"`
 	Simulation   string                  `json:"simulation"`
 	Image        []byte                  `json:"image"`
 	RasterWidth  int                     `json:"raster_width"`
 	RasterHeight int                     `json:"raster_height"`
+	RasterScale  float64                 `json:"raster_scale"`
+	DragLayer    bool                    `json:"drag_layer,omitempty"`
+	DragBounds   searchRect              `json:"drag_bounds,omitempty"`
+	dragPixels   []byte
 	Plates       []plateInfo             `json:"plates"`
 	UsedPlates   []plateInfo             `json:"used_plates"`
 	MergeInfo    []mergeSourceInfo       `json:"merge_info"`
@@ -153,7 +161,7 @@ func runtimeReady(path string) bool {
 		filepath.Join("text-fonts", "LiberationSans-Regular.ttf"),
 		filepath.Join("packages", "fontTools", "ttLib", "__init__.py"),
 		filepath.Join("tessdata", "ces.traineddata"), filepath.Join("tessdata", "eng.traineddata"),
-		"proof.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
+		"proof.py", "reader_render.py", "reader_drag.py", "print_profiles.py", "profiles.json", filepath.Join("ghostscript", "bin", "gswin64c.exe"),
 		filepath.Join("ghostscript", "bin", "gsdll64.dll")} {
 		info, err := os.Stat(filepath.Join(path, name))
 		if err != nil || !info.Mode().IsRegular() {

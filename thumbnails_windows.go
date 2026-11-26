@@ -27,7 +27,7 @@ func (v *documentView) buildThumbnails() {
 	a.panelLabels[v.thumbnailHeading] = true
 	v.thumbnailHint = a.label("Ctrl + kolečko", 196, 4, 123, false)
 	a.panelLabels[v.thumbnailHint] = true
-	const listStyle = 0x0001 | 0x0010 | 0x0040 | 0x0100 | 0x0800 // LBS_EXTENDEDSEL
+	const listStyle = 0x0001 | 0x0010 | 0x0100 | 0x0800 | 0x2000 // LBS_NODATA, LBS_OWNERDRAWFIXED, LBS_EXTENDEDSEL
 	v.pageList = a.add("LISTBOX", "Náhledy stránek", idReaderPageList, 16, 31, 298, 1, wsTabstop|listStyle, 0, a.normalFont)
 	rowHeight := a.scale(112)
 	sendMessage.Call(v.pageList, 0x01a0, 0, uintptr(rowHeight))

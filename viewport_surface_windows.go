@@ -63,8 +63,28 @@ func (s *viewportSurface) ensure(reference uintptr, width, height int32) bool {
 }
 
 func (v *documentView) invalidateCanvas() {
-	v.canvasDirty = true
+	v.canvasDirty, v.canvasDirtyArea = true, rect{}
 	bounds := v.viewport
+	winInvalidate.Call(v.app.window, uintptr(unsafe.Pointer(&bounds)), 0)
+}
+
+// Keep the cached canvas and repaint just the destination of the new raster.
+func (v *documentView) invalidateRasterArea(bounds rect) {
+	bounds = intersectInlineRect(bounds, v.viewport)
+	if bounds.right <= bounds.left || bounds.bottom <= bounds.top {
+		return
+	}
+	if !v.canvasDirty {
+		v.canvasDirtyArea = bounds
+	} else if previous := v.canvasDirtyArea; previous != (rect{}) {
+		v.canvasDirtyArea = rect{min(previous.left, bounds.left), min(previous.top, bounds.top),
+			max(previous.right, bounds.right), max(previous.bottom, bounds.bottom)}
+	}
+	v.canvasDirty = true
+	v.invalidateOverlay(bounds)
+}
+
+func (v *documentView) invalidateOverlay(bounds rect) {
 	winInvalidate.Call(v.app.window, uintptr(unsafe.Pointer(&bounds)), 0)
 }
 
@@ -77,20 +97,15 @@ func (v *documentView) canvasReady() bool {
 	}
 	cache := v.activeCache()
 	_, height := v.viewportSize()
-	for _, page := range v.spread.visible(v.scrollY, height) {
-		if target := v.fullPreviewTarget(page); target > 0 {
-			number := v.order[page.index]
-			if cache.frames[number].pixels < target && !cache.failed[number] {
-				return false
-			}
+	visible := v.spread.visible(v.scrollY, height)
+	for _, page := range visible {
+		number := v.order[page.index]
+		if cache.frames[number].image != nil || cache.failed[number] ||
+			(!v.proofMode() && (v.hasDetailFrame(number, v.pageBounds(page)) || v.detailFailed(number))) {
+			return true
 		}
 	}
-	for _, tile := range v.visibleDetails {
-		if v.detailFrames[tile].image == nil && !v.failedDetails[tile] {
-			return false
-		}
-	}
-	return true
+	return len(visible) == 0
 }
 
 func (v *documentView) paint(dc uintptr) {
@@ -111,20 +126,26 @@ func (v *documentView) paint(dc uintptr) {
 		} else {
 			v.paintLoading(dc)
 		}
+		v.paintCanvasContentMove(dc)
 		return
 	}
 	if (ready && v.canvasDirty) || !surface.complete {
 		saved, _, _ := gdi32.NewProc("SaveDC").Call(surface.dc)
 		surfaceOrigin.Call(surface.dc, uintptr(-bounds.left), uintptr(-bounds.top), 0)
 		if ready {
+			if dirty := v.canvasDirtyArea; surface.complete && dirty != (rect{}) {
+				gdi32.NewProc("IntersectClipRect").Call(surface.dc, uintptr(dirty.left), uintptr(dirty.top),
+					uintptr(dirty.right), uintptr(dirty.bottom))
+			}
 			v.paintCanvas(surface.dc)
-			surface.complete, v.canvasDirty = true, false
+			surface.complete, v.canvasDirty, v.canvasDirtyArea = true, false, rect{}
 		} else {
 			v.paintLoading(surface.dc)
 		}
 		gdi32.NewProc("RestoreDC").Call(surface.dc, saved)
 	}
 	surface.blit(dc, bounds)
+	v.paintCanvasContentMove(dc)
 }
 
 func (s *viewportSurface) blit(dc uintptr, bounds rect) {

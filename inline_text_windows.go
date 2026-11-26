@@ -408,7 +408,7 @@ func (a *app) layoutInlineEditor() {
 		return
 	}
 	area, source := v.textSheetAt(0, 0, p.pick.source)
-	if source == 0 || v.generation != p.pick.generation || a.full || p.dim[0] <= 0 || a.mode != idTextTab {
+	if source == 0 || v.generation != p.pick.generation || a.full || p.dim[0] <= 0 || a.mode != idTextTab || v.contentMove.activePixels(a.scale(4)) {
 		if e.visible {
 			showWindow.Call(e.handle, 0)
 			e.visible = false

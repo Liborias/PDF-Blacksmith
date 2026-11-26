@@ -1287,13 +1287,20 @@ func (a *app) beginJob(req request, status string) bool {
 }
 
 func (a *app) startOverwrite() {
-	// Ghostscript and PDFium may still have the original open. Wait for all readers to
-	// finish before replacing the file on Windows.
-	if a.waitingOverwrite && !a.view.hasRenderJobs() && !a.comparison.view.hasRenderJobs() && a.view.search.task == nil {
-		a.waitingOverwrite = false
-		req := a.pending
-		a.launchJob(func() response { return runOperation(req) })
+	if !a.waitingOverwrite || a.view.hasRenderJobs() || a.comparison.view.hasRenderJobs() || a.view.search.task != nil {
+		return
 	}
+	a.waitingOverwrite = false
+	req := a.pending
+	pending := append(a.view.releaseReadersForOverwrite(), a.comparison.view.releaseReadersForOverwrite()...)
+	a.launchJob(func() response {
+		// An idle PDFium process may still hold a reader file. Wait here,
+		// away from the UI thread, for its handles to close before replacing it.
+		for _, done := range pending {
+			<-done
+		}
+		return runOperation(req)
+	})
 }
 
 func (a *app) launchJob(operation func() response) {
@@ -1378,6 +1385,10 @@ func (a *app) finish(result response) {
 		if result.Status == "ok" && !a.applyDocumentDraft(req, result) {
 			result = operationError("Upravené PDF se nepodařilo načíst do pracovní karty.")
 		}
+		if result.Status != "ok" || !a.view.contentMove.settling {
+			a.view.cancelCanvasContentMove()
+		}
+		a.draftDamage = nil
 		if result.Status != "ok" {
 			a.retiredDrafts = append(a.retiredDrafts, req.Output)
 		}

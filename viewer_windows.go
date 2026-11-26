@@ -213,6 +213,8 @@ type pageEdit struct {
 	bookmarkSelection int
 	draftBase *documentContent
 	draftAction string
+	changedPages []int
+	damage       *pageDamage
 }
 
 type pageRotation struct{ number, angle int }
@@ -221,6 +223,7 @@ type readerFrame struct {
 	image  *printBitmap
 	proof  *viewResponse
 	pixels int
+	scale float64
 }
 
 type readerTask struct {
@@ -228,12 +231,14 @@ type readerTask struct {
 	page, pixels int
 	background   bool
 	tile         *screenTile
+	patch        *screenTile
 }
 
 type readerJob struct {
 	cropRevision uint64
 	cropCoverage searchRect
 	textFrame uint64
+	dragSerial uint64
 	objectPage              int
 	objectSerial            uint64
 	readerTask
@@ -278,11 +283,13 @@ type documentView struct {
 	selection                                                                  canvasSelectionGesture
 	mixed                                                                      mixedCanvasSelection
 	contentMove                                                                canvasContentMove
+	moveSerial                                                                 uint64
 	selectionHistory canvasSelectionHistory
 	regionText                                                                 *textPage
 	dragStart                                                                  point
 	dragMoved                                                                  bool
 	engine, prefetchEngine                                                     *readerEngine
+	readerShutdown                                                             []<-chan struct{}
 	bookmarkPanel                                                              bookmarkPanel
 	search                                                                     searchPanel
 	pageDrag                                                                   thumbnailDrag
@@ -301,11 +308,13 @@ type documentView struct {
 	running                                                                    bool
 	reading, printPreview, thumbnails                                          pageCache
 	visibleDetails                                                             []screenTile
+	rasterDamage                                                               map[screenTile]searchRect
 	detailFrames                                                               map[screenTile]detailFrame
 	failedDetails                                                              map[screenTile]bool
 	detailClock                                                                uint64
 	detailBytes                                                                int64
 	canvas                                                                     viewportSurface
+	canvasDirtyArea rect
 	canvasDirty                                                                bool
 	zoomDeadline                                                               time.Time
 	cacheLimit                                                                 int64
@@ -535,7 +544,7 @@ func (v *documentView) resetDocument() {
 
 func (v *documentView) closeReaders() {
 	if v.engine != nil {
-		v.engine.close()
+		v.trackReaderShutdown(v.engine.close())
 		v.engine = nil
 	}
 	v.stopPrefetchEngine()
@@ -543,9 +552,33 @@ func (v *documentView) closeReaders() {
 
 func (v *documentView) stopPrefetchEngine() {
 	if v.prefetchEngine != nil {
-		v.prefetchEngine.close()
+		v.trackReaderShutdown(v.prefetchEngine.close())
 		v.prefetchEngine = nil
 	}
+}
+
+func (v *documentView) trackReaderShutdown(done <-chan struct{}) {
+	v.readerShutdown = slices.DeleteFunc(v.readerShutdown, func(previous <-chan struct{}) bool {
+		select {
+		case <-previous:
+			return true
+		default:
+			return false
+		}
+	})
+	if done != nil {
+		v.readerShutdown = append(v.readerShutdown, done)
+	}
+}
+
+func (v *documentView) releaseReadersForOverwrite() []<-chan struct{} {
+	v.closeReaders()
+	pending := v.readerShutdown
+	v.readerShutdown = nil
+	if v.path != "" {
+		v.engine = &readerEngine{}
+	}
+	return pending
 }
 
 func (v *documentView) open(path, password string, original os.FileInfo) {
@@ -659,16 +692,20 @@ func (v *documentView) rebuild(keep bool) {
 }
 
 func (v *documentView) buildLayout() {
-	sizes := v.sizesInOrder()
 	width, height := v.viewportSize()
-	if len(sizes) == 0 || width <= 0 || height <= 0 {
+	if len(v.order) == 0 || width <= 0 || height <= 0 {
 		v.spread = readingLayout{}
 		return
 	}
 	gap := float64(v.app.scale(18))
-	ref := sizes[min(max(v.reference, 0), len(sizes)-1)]
+	box := v.box()
+	ref := v.pageDimensions(v.order[min(max(v.reference, 0), len(v.order)-1)], box)
 	v.zoom = readingZoomScale(v.fitMode, v.zoom, width, height, gap, ref, v.app.displayDPI)
-	v.spread = layoutPages(sizes, v.page, v.continuous, v.zoom, gap)
+	if v.continuous {
+		v.spread = layoutPages(v.sizesInOrder(), v.page, true, v.zoom, gap)
+	} else {
+		v.spread = layoutPage(v.pageDimensions(v.order[v.page], box), v.page, v.zoom, gap)
+	}
 }
 
 func (v *documentView) zoomPercent() float64 {
@@ -829,6 +866,7 @@ func (v *documentView) zoomAt(delta, x, y float64) {
 	}
 	v.zoom, v.fitMode = next, readingZoomManual
 	v.syncZoomChoice()
+	previousPage := v.page
 	v.buildLayout()
 	v.restore(anchor, x, y)
 	v.updatePageFromCenter()
@@ -836,7 +874,15 @@ func (v *documentView) zoomAt(delta, x, y float64) {
 		uintptr(zoomSettleDelay/time.Millisecond), 0); timer != 0 {
 		v.zoomDeadline = time.Now().Add(zoomSettleDelay)
 	}
-	v.changedViewport()
+	if v.page == previousPage {
+		v.updateZoomLabel()
+		if !v.secondary {
+			v.app.layoutInlineEditor()
+		}
+		v.refreshViewportRaster()
+	} else {
+		v.changedViewport()
+	}
 }
 
 func (v *documentView) zoomTimer() uintptr {
@@ -927,6 +973,9 @@ func (v *documentView) pointer(msg uint32, param uintptr) bool {
 	if v.canvasPointer(msg, x, y) {
 		return true
 	}
+	if v.app.busy || v.contentMove.dropped {
+		return false
+	}
 	switch msg {
 	case 0x0201:
 		if contains(v.viewport, x, y) {
@@ -977,6 +1026,10 @@ func (v *documentView) changedViewport() {
 		v.app.layoutInlineEditor()
 	}
 	v.app.updateComparisonNavigation()
+	v.refreshViewportRaster()
+}
+
+func (v *documentView) refreshViewportRaster() {
 	v.syncDetails()
 	v.invalidateCanvas()
 	v.schedule()
@@ -1014,13 +1067,16 @@ func (v *documentView) schedule() {
 		}
 		return
 	}
-	if v.scheduleNativeText() || v.scheduleObjects() || (!v.secondary && v.app.scheduleInlineBackground()) {
+	if v.scheduleContentDragPreview() || v.scheduleNativeText() || v.scheduleObjects() || (!v.secondary && v.app.scheduleInlineBackground()) {
 		return
 	}
 	_, height := v.viewportSize()
 	candidates := slices.Clone(v.spread.visible(v.scrollY, height))
 	if current, ok := v.spread.position(v.page); ok {
 		candidates = append([]sheet{current}, candidates...)
+	}
+	if v.scheduleRasterPatch(candidates) {
+		return
 	}
 	cache, proof := v.activeCache(), v.proofMode()
 	for _, item := range candidates {
@@ -1042,7 +1098,7 @@ func (v *documentView) schedule() {
 			return
 		}
 	}
-	if !v.app.busy && v.prefetch.page == 0 {
+	if !v.app.busy && v.contentMove.pick.source == 0 && v.prefetch.page == 0 {
 		if !v.scheduleThumbnails() && !proof && !v.secondary {
 			v.schedulePrefetch()
 		}
@@ -1088,8 +1144,13 @@ func (v *documentView) renderPage(number, pixels int, background bool) {
 }
 
 func (v *documentView) launch(req request, number, pixels int, background bool, tile *screenTile) {
+	v.launchReader(req, number, pixels, background, tile, nil)
+}
+
+func (v *documentView) launchReader(req request, number, pixels int, background bool, tile, patch *screenTile) {
 	_, original := v.readSource()
 	generation := v.generation
+	dragSerial := v.contentMove.serial
 	var textFrame uint64
 	if req.Action == "text_background" {
 		textFrame = v.app.textTool.inline.serial
@@ -1108,7 +1169,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 		cropRevision = v.app.objects.cropRevision
 		cropCoverage = v.app.cropMotionCoverage()
 	}
-	task := readerTask{generation, number, pixels, background, tile}
+	task := readerTask{generation, number, pixels, background, tile, patch}
 	engine := v.engine
 	if background {
 		v.prefetch = task
@@ -1120,7 +1181,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 		v.running = true
 	}
 	go func() {
-		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame, objectPage: objectPage, objectSerial: objectSerial,
+		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame, dragSerial: dragSerial, objectPage: objectPage, objectSerial: objectSerial,
 			cropRevision: cropRevision, cropCoverage: cropCoverage,
 			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
 		if unchanged(req.Input, original) {
@@ -1144,7 +1205,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 				job.frame.image = nil
 				job.result = operationError("Rozměry vykresleného výřezu neodpovídají náhledu.")
 			} else {
-				job.frame.proof, job.frame.pixels = view, pixels
+				job.frame.proof, job.frame.pixels, job.frame.scale = view, pixels, view.RasterScale
 			}
 			view.Image = nil
 		}
@@ -1170,6 +1231,11 @@ func (v *documentView) finished(job readerJob) {
 		return
 	}
 	v.running = false
+	if job.action == "object_drag_preview" {
+		v.finishContentDragPreview(job)
+		v.schedule()
+		return
+	}
 	if job.action == "object_probe" || job.action == "object_snapshot" || job.action == "object_crop_preview" || job.action == "object_crop_motion_preview" {
 		v.finishObjects(job)
 		v.schedule()
@@ -1187,6 +1253,10 @@ func (v *documentView) finished(job readerJob) {
 	}
 	if job.generation != v.generation {
 		v.schedule()
+		return
+	}
+	if job.patch != nil {
+		v.finishRasterPatch(job)
 		return
 	}
 	if job.tile != nil {
@@ -1244,6 +1314,7 @@ func (v *documentView) finished(job readerJob) {
 		v.updateDocumentInfo()
 		v.app.updateActions()
 	}
+	v.settleContentPreview(job.page)
 	v.changedViewport()
 }
 
@@ -1383,10 +1454,8 @@ func (v *documentView) platesChanged() {
 
 func (v *documentView) updatePageList() {
 	sendMessage.Call(v.pageList, 0x000b, 0, 0)
-	sendMessage.Call(v.pageList, 0x0184, 0, 0)
-	for i := range v.order {
-		sendMessage.Call(v.pageList, 0x0180, 0, uintptr(unsafe.Pointer(wideString(strconv.Itoa(i+1)))))
-	}
+	sendMessage.Call(v.pageList, 0x0184, 0, 0) // LB_RESETCONTENT
+	sendMessage.Call(v.pageList, 0x01a7, uintptr(len(v.order)), 0) // LB_SETCOUNT for LBS_NODATA
 	v.resetPageListSelection()
 	sendMessage.Call(v.pageList, 0x000b, 1, 0)
 	v.app.scrollPanes[v.pageList].reflow()
@@ -1430,17 +1499,21 @@ func (v *documentView) updateActions() {
 			}
 		}
 		v.app.setUIMessage(v.location, uiPageTotal, len(v.order))
-		percent := v.zoomPercent()
-		if v.overview {
-			percent = 100 * v.overviewScale
-		}
-		setText(v.zoomLabel, fmt.Sprintf("%.0f %%", percent))
+		v.updateZoomLabel()
 		v.syncPageListSelection()
 	} else {
 		setText(v.pageInput, "")
 		setText(v.location, "")
 		setText(v.zoomLabel, "")
 	}
+}
+
+func (v *documentView) updateZoomLabel() {
+	percent := v.zoomPercent()
+	if v.overview {
+		percent = 100 * v.overviewScale
+	}
+	setText(v.zoomLabel, fmt.Sprintf("%.0f %%", percent))
 }
 
 func (v *documentView) rotate(angle int) {
@@ -1489,7 +1562,7 @@ func (v *documentView) undo() {
 	v.history = v.history[:index:index]
 	defer v.app.updateHistoryButtons()
 	if edit.draftBase != nil {
-		v.app.undoDocumentDraft(*edit.draftBase, edit.draftAction)
+		v.app.undoDocumentDraft(edit)
 		return
 	}
 	if edit.bookmarks != nil {
@@ -1659,24 +1732,21 @@ func (v *documentView) paintCanvas(dc uintptr) {
 		number := v.order[page.index]
 		bounds := v.pageBounds(page)
 		bitmap := cache.frames[number].image
-		details := v.fullPreviewTarget(page) == 0
-		if details {
+		hasDetail := v.hasDetailFrame(number, bounds)
+		if bitmap != nil {
+			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
+		} else {
 			fillColor(dc, bounds, paletteColor{255, 255, 255})
-			for _, tile := range v.visibleDetails {
-				if tile.page == number && v.failedDetails[tile] {
-					details = false
-					break
+			if !hasDetail {
+				hint := "Načítám stránku…"
+				if cache.failed[number] || v.detailFailed(number) {
+					hint = "Stránku nelze vykreslit."
 				}
+				drawText(dc, hint, bounds, v.app.normalFont, paperInkColor, 1)
 			}
 		}
-		if !details && bitmap == nil {
-			fillColor(dc, bounds, paletteColor{235, 234, 232})
-			drawText(dc, "Stránku nelze vykreslit.", bounds, v.app.normalFont, paperInkColor, 1)
-		} else if !details {
-			drawBitmap(dc, bitmap, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
-		}
 		v.paintDetails(dc, number, bounds)
-		if grid && (details || bitmap != nil) {
+		if grid && (hasDetail || bitmap != nil) {
 			v.paintLayoutGrid(dc, bounds, v.pageDimensions(number, v.box()))
 		}
 		if !v.secondary {
@@ -1685,7 +1755,6 @@ func (v *documentView) paintCanvas(dc uintptr) {
 			v.app.paintObjectSelection(dc, number, bounds)
 		}
 		v.paintMixedSelection(dc, number, bounds)
-		v.paintCanvasContentMove(dc, number, bounds)
 	}
 	v.paintCanvasSelection(dc)
 	gdi32.NewProc("RestoreDC").Call(dc, saved)

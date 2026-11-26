@@ -38,6 +38,12 @@ func (v *documentView) pageBounds(page sheet) rect {
 }
 
 func (v *documentView) clearDetails() {
+	for tile := range v.rasterDamage {
+		if tile.Zoom == 0 {
+			v.reading.remove(tile.page)
+		}
+	}
+	v.rasterDamage = make(map[screenTile]searchRect)
 	v.visibleDetails = nil
 	v.detailFrames = make(map[screenTile]detailFrame)
 	v.failedDetails = make(map[screenTile]bool)
@@ -157,6 +163,7 @@ func (v *documentView) trimDetails(budget int64) {
 		}
 		v.detailBytes -= int64(len(v.detailFrames[oldest].image.pixels))
 		delete(v.detailFrames, oldest)
+		delete(v.rasterDamage, oldest)
 	}
 }
 
@@ -190,13 +197,81 @@ func (v *documentView) finishDetail(job readerJob) {
 		}
 		v.invalidateCanvas()
 	}
+	v.settleContentPreview(tile.page)
 	v.schedule()
 }
 
-func (v *documentView) paintDetails(dc uintptr, number int, bounds rect) {
+func (v *documentView) hasDetailFrame(number int, bounds rect) bool {
+	if v.proofMode() {
+		return false
+	}
+	for tile := range v.detailFrames {
+		if tile.page == number && v.detailInViewport(tile, bounds) {
+			return true
+		}
+	}
+	return false
+}
+
+func (v *documentView) detailInViewport(tile screenTile, bounds rect) bool {
+	area := v.projectDetail(tile, bounds)
+	return area.right > v.viewport.left && area.left < v.viewport.right &&
+		area.bottom > v.viewport.top && area.top < v.viewport.bottom
+}
+
+func (v *documentView) detailFailed(number int) bool {
 	for _, tile := range v.visibleDetails {
-		if bitmap := v.detailFrames[tile].image; tile.page == number && bitmap != nil {
+		if tile.page == number && v.failedDetails[tile] {
+			return true
+		}
+	}
+	return false
+}
+
+func (v *documentView) paintDetails(dc uintptr, number int, bounds rect) {
+	if v.proofMode() || len(v.detailFrames) == 0 {
+		return
+	}
+	best := screenTile{}
+	newest := uint64(0)
+	distance := math.Inf(1)
+	required, missing := false, false
+	for _, tile := range v.visibleDetails {
+		if tile.page == number {
+			required = true
+			missing = missing || v.detailFrames[tile].image == nil
+		}
+	}
+	complete := !missing && (required || v.reading.frames[number].image != nil)
+	if !complete {
+		for tile, frame := range v.detailFrames {
+			if tile.page != number {
+				continue
+			}
+			quality := math.Abs(math.Log(v.zoom / tile.Zoom))
+			if !v.detailInViewport(tile, bounds) {
+				continue
+			}
+			if quality < distance || quality == distance && frame.used > newest {
+				best, distance, newest = tile, quality, frame.used
+			}
+		}
+	}
+	if best.page != 0 {
+		area := v.projectDetail(best, bounds)
+		drawBitmap(dc, v.detailFrames[best].image, int(area.left), int(area.top),
+			int(area.right-area.left), int(area.bottom-area.top))
+	}
+	for _, tile := range v.visibleDetails {
+		if bitmap := v.detailFrames[tile].image; tile.page == number && bitmap != nil && tile != best {
 			drawBitmap(dc, bitmap, int(bounds.left)+tile.X, int(bounds.top)+tile.Y, bitmap.width, bitmap.height)
 		}
 	}
+}
+
+func (v *documentView) projectDetail(tile screenTile, bounds rect) rect {
+	ratio := v.zoom / tile.Zoom
+	x := func(px int) int32 { return bounds.left + int32(math.Round(float64(px)*ratio)) }
+	y := func(px int) int32 { return bounds.top + int32(math.Round(float64(px)*ratio)) }
+	return rect{x(tile.X), y(tile.Y), x(tile.X + tile.Width), y(tile.Y + tile.Height)}
 }

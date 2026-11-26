@@ -286,12 +286,12 @@ def stored_block(text):
                 bold=block.get("PBBold"), italic=block.get("PBItalic"))
 
 def text_tree(page, document=None, *, probe=False, replacements=None, discard=(),
-              move_context=None, translations=None, graphics=None, blocks=None, underlines=None):
+              move_context=None, translations=None, graphics=None, blocks=None, underlines=None, paint_only=None):
     """Assign each show an ID in page paint order, including instances of shared Forms."""
     root_operators = pikepdf_operators(page)
     sources, serial, forms = {}, len(root_operators), 0
 
-    def visit(operators, resources, parents, outer, initial_color, root_form=0, inherited=(100., 0.)):
+    def visit(operators, resources, parents, outer, initial_color, root_form=0, inherited=(100., 0.), initial_mode=0):
         nonlocal serial, forms
         states = positions(operators, resources)
         parameters = {} if move_context is not None else None
@@ -316,17 +316,28 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
         skip = {offset for index, token in mapping.items() if token in discard
                 for offset in underline_marks(operators, index)}
         output, new_resources, changed = [], None, False
+        retained = False
+        render_mode, saved_modes = initial_mode, []
+        shapes, shows = paint_only if paint_only is not None else ((), ())
+        underlined = {i for index, token in mapping.items() if token in shows and token not in (replacements or {})
+                      for i in underline_marks(operators, index)}
         xobjects = resources.get("/XObject", {})
         ctm, matrices = outer, []
         for index, op in enumerate(operators, 1):
             name, operands = str(op.operator), op.operands
             if name == "q":
                 matrices.append(ctm)
+                saved_modes.append(render_mode)
             elif name == "Q" and matrices:
                 ctm = matrices.pop()
+                render_mode = saved_modes.pop()
             elif name == "cm":
                 ctm = compose(ctm, tuple(map(float, operands)))
-            if (name == "Do" and len(parents) < 8 and forms < 256 and hasattr(xobjects, "get")):
+            elif name == "Tr":
+                render_mode = int(operands[0])
+            selected_shape = not parents and index in shapes or index in underlined
+            child_paints = False
+            if (name == "Do" and not selected_shape and len(parents) < 8 and forms < 256 and hasattr(xobjects, "get")):
                 form = xobjects.get(operands[0])
                 if (isinstance(form, pdf.Stream) and form.get("/Subtype") == pdf.Name.Form
                         and form.objgen not in parents and "/Ref" not in form
@@ -342,10 +353,11 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
                         child_resources = form.get("/Resources")
                         if not isinstance(child_resources, pdf.Dictionary):
                             child_resources = resources
-                        child, child_resources, update = visit(child_ops, child_resources, (*parents, form.objgen),
-                                                               child_matrix, styles[index][4], root_form or index,
-                                                               parameters[index] if parameters is not None else inherited)
-                        if update:
+                        child, child_resources, update, child_paints = visit(
+                            child_ops, child_resources, (*parents, form.objgen),
+                            child_matrix, styles[index][4], root_form or index,
+                            parameters[index] if parameters is not None else inherited, render_mode)
+                        if update and (paint_only is None or child_paints):
                             clone = document.make_stream(pdf.unparse_content_stream(child))
                             for key, value in form.stream_dict.items():
                                 if key not in ("/Length", "/Filter", "/DecodeParms", "/Resources"):
@@ -363,6 +375,23 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
                             op = instruction("Do", key)
                             changed = True
             token = mapping.get(index)
+            if paint_only is not None:
+                if selected_shape or child_paints or token in shows:
+                    output.append(replacements.get(token, op) if replacements else op)
+                    retained = True
+                elif name in PAINT:
+                    # Preserve text advance and, where present, text clipping.
+                    hidden = 7 if render_mode >= 4 else 3
+                    output.extend((instruction("Tr", hidden), op, instruction("Tr", render_mode)))
+                    changed = True
+                elif name in {"S", "s", "f", "F", "f*", "B", "B*", "b", "b*"}:
+                    output.append(instruction("n"))
+                    changed = True
+                elif name in {"Do", "sh", "INLINE IMAGE"}:
+                    changed = True
+                else:
+                    output.append(op)
+                continue
             if graphics is not None and not parents and index in graphics:
                 output.extend(graphics[index])
                 changed = True
@@ -396,9 +425,9 @@ def text_tree(page, document=None, *, probe=False, replacements=None, discard=()
                 changed = True
             else:
                 output.append(op)
-        return output, new_resources if new_resources is not None else resources, changed
+        return output, new_resources if new_resources is not None else resources, changed, retained
 
-    output, resources, changed = visit(root_operators, page.resources, (), IDENTITY, ())
+    output, resources, changed, _ = visit(root_operators, page.resources, (), IDENTITY, ())
     if changed:
         page.obj.Resources = resources
     return output, sources
@@ -420,6 +449,8 @@ def source_objects(page, sources, *, font_catalog=None):
         sample.obj.Contents = probe.make_stream(pdf.unparse_content_stream(marked))
         # Probe every text object on the sheet, even outside the displayed crop.
         sample.obj.CropBox = sample.mediabox
+        if "/Annots" in probe.pages[0].obj:
+            del probe.pages[0].obj["/Annots"]
         probe.save(buffer)
     objects, code_maps, embedded = [], {}, {}
     with pdfium.PdfDocument(buffer.getvalue()) as probe, closing(probe[0]) as native, closing(native.get_textpage()) as layer:

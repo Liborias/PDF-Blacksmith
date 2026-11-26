@@ -70,23 +70,27 @@ func layoutPages(sizes []pageSize, current int, continuous bool, zoom, gap float
 	if len(sizes) == 0 || current < 0 || current >= len(sizes) {
 		return readingLayout{}
 	}
-	first, last := current, current+1
-	if continuous {
-		first, last = 0, len(sizes)
+	if !continuous {
+		return layoutPage(sizes[current], current, zoom, gap)
 	}
 	width := 0.0
-	for _, page := range sizes[first:last] {
+	for _, page := range sizes {
 		width = max(width, page.width*zoom)
 	}
-	layout := readingLayout{width: width + 2*gap, sheets: make([]sheet, 0, last-first)}
+	layout := readingLayout{width: width + 2*gap, sheets: make([]sheet, 0, len(sizes))}
 	top := gap
-	for index := first; index < last; index++ {
-		w, h := sizes[index].width*zoom, sizes[index].height*zoom
+	for index, size := range sizes {
+		w, h := size.width*zoom, size.height*zoom
 		layout.sheets = append(layout.sheets, sheet{index, (layout.width - w) / 2, top, w, h})
 		top += h + gap
 	}
 	layout.height = top
 	return layout
+}
+
+func layoutPage(size pageSize, index int, zoom, gap float64) readingLayout {
+	w, h := size.width*zoom, size.height*zoom
+	return readingLayout{[]sheet{{index, gap, gap, w, h}}, w + 2*gap, h + 2*gap}
 }
 
 func (layout readingLayout) position(index int) (sheet, bool) {

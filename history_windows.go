@@ -69,7 +69,17 @@ func (a *app) redoDocument() {
 	version := tab.redo[index]
 	tab.redo[index] = documentContent{}
 	tab.redo = tab.redo[:index]
-	a.restoreDocumentVersion(version)
+	var applied bool
+	if len(version.history) > 0 {
+		edit := version.history[len(version.history)-1]
+		if len(edit.changedPages) > 0 && edit.draftBase != nil && a.view.isVersion(*edit.draftBase) {
+			a.swapLocalVersion(version, edit.changedPages, edit.damage, edit.draftAction == "ocr")
+			applied = true
+		}
+	}
+	if !applied {
+		a.restoreDocumentVersion(version)
+	}
 	a.reportStatus("Změna byla znovu použita.")
 }
 

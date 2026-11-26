@@ -18,6 +18,7 @@ const (
 	uiNoEditableObject              uiMessage = "win32.properties.NoEditableObject"
 	uiVectorShape                   uiMessage = "win32.properties.VectorShape"
 	uiSelectedImage                 uiMessage = "win32.properties.SelectedImage"
+	uiSelectedWidget                uiMessage = "win32.properties.SelectedWidget"
 	uiPDFGroup                      uiMessage = "win32.properties.PDFGroup"
 	uiSelectedObjects               uiMessage = "win32.properties.SelectedObjects"
 	uiMixedCanvasSelection          uiMessage = "win32.properties.MixedCanvasSelection"
@@ -315,6 +316,7 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiNoEditableObject:              {Czech: "Na tomto místě není upravitelný objekt.", English: "There is no editable object here."},
 	uiVectorShape:                   {Czech: "Vektorový tvar", English: "Vector shape"},
 	uiSelectedImage:                 {Czech: "Obrázek", English: "Image"},
+	uiSelectedWidget:                {Czech: "Formulářové pole", English: "Form field"},
 	uiPDFGroup:                      {Czech: "Skupina PDF", English: "PDF group"},
 	uiSelectedObjects:               {Czech: "Vybrané objekty: %d", English: "Selected objects: %d"},
 	uiMixedCanvasSelection:          {Czech: "Výběr · znaky %d, objekty %d", English: "Selection · %d characters, %d objects"},

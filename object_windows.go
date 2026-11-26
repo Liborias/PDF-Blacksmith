@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"slices"
 	"unsafe"
 )
 
@@ -45,6 +46,7 @@ type objectEditRequest struct {
 	MaskDelta  *textPoint  `json:"mask_delta,omitempty"`
 	ImageDelta *textPoint  `json:"image_delta,omitempty"`
 	ImageScale float64     `json:"image_scale,omitempty"`
+	CapsuleOnly bool        `json:"capsule_only,omitempty"`
 }
 
 type pdfObject struct {
@@ -89,16 +91,13 @@ type objectEditor struct {
 	modes                                      [3]uintptr
 	serial                                     uint64
 	snapshot, snapshotComplete                 bool
-	image                                      *printBitmap
 	capsule                                    []byte
 	copyWaiting                                bool
 	copyGrouping, clipboardGrouping            string
 	clipboard                                  []byte
 	owner                                      *documentTab
 	start, cursor                              point
-	pressed, moving                            bool
-	delta                                      textPoint
-	preview                                    dragPreview
+	pressed, released                          bool
 	crop                                       imageCrop
 	cropTool, cropApply, cropCancel, cropHint  uintptr
 	cropReset, cropMoveMode                    uintptr
@@ -143,10 +142,11 @@ func (a *app) updateObjectActions() {
 		a.setChecked(handle, e.mode == i || i == 2 && e.mode == 3)
 	}
 	a.updatePolygonButton(e.modes[2], e.mode == 3, uiPolygonLassoKey)
-	setEnabled(e.copy, selected)
+	artwork := selected && !e.hasWidgets()
+	setEnabled(e.copy, artwork)
 	setEnabled(e.paste, ready && e.owner == a.activeTab && len(e.clipboard) != 0)
-	setEnabled(e.duplicate, selected)
-	setEnabled(e.remove, selected)
+	setEnabled(e.duplicate, artwork)
+	setEnabled(e.remove, artwork)
 	setEnabled(e.undo, ready && a.canDocumentCommand(a.view, docUndo, false))
 	canCrop := a.canCropImage()
 	setEnabled(e.cropTool, canCrop)
@@ -198,8 +198,7 @@ func (a *app) clearObjectSelection() {
 }
 
 func (e *objectEditor) endGesture() {
-	e.preview.close()
-	e.pressed, e.moving, e.dragReady, e.delta = false, false, false, textPoint{}
+	e.pressed, e.released, e.dragReady = false, false, false
 	e.pressPick = textSelection{}
 }
 
@@ -217,9 +216,8 @@ func (a *app) cancelObjectGesture() {
 func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 	a, e := v.app, &v.app.objects
 	if msg == 0x0215 || msg == 0x001f { // Capture changed or cancelled.
-		if e.pressed {
+		if e.pressed && !e.released {
 			e.endGesture()
-			v.invalidateCanvas()
 		}
 		return false
 	}
@@ -238,49 +236,57 @@ func (v *documentView) objectPointer(msg uint32, x, y int32) bool {
 		setFocus.Call(a.window)
 		user32.NewProc("SetCapture").Call(a.window)
 		return true
-	case 0x0200:
-		if e.pressed {
-			e.cursor = point{x, y}
-			v.prepareObjectDrag()
-			a.moveObjectPreview()
-			return true
+	case 0x0200, 0x0202:
+		if !e.pressed || e.released {
+			return false
 		}
-	case 0x0202:
-		if e.pressed {
-			e.cursor = point{x, y}
-			a.moveObjectPreview()
-			delta, moved := e.delta, e.moving
-			click := max(absTextDrag(x-e.start.x), absTextDrag(y-e.start.y)) <= int32(a.scale(4))
-			target := v.textAt(x, y)
+		e.cursor = point{x, y}
+		release := msg == 0x0202
+		click := max(absTextDrag(x-e.start.x), absTextDrag(y-e.start.y)) <= int32(a.scale(4))
+		if click && release {
 			a.cancelObjectGesture()
-			if moved && target.source == e.pick.source && math.Hypot(delta[0], delta[1]) > .01 {
-				if grouping, accepted := a.chooseObjectGrouping(); accepted {
-					a.runObjectEdit(e.pick.source, objectEditRequest{
-						Operation: "move", Grouping: grouping, Token: e.selected.Token, Tokens: e.tokens(), Delta: delta,
-					})
-				}
-			} else if click {
-				v.selectionClick(x, y, false)
-			}
+			v.selectionClick(x, y, false)
 			return true
 		}
+		if !click {
+			e.released = release
+			v.prepareObjectDrag()
+		}
+		if e.pressed && release {
+			user32.NewProc("ReleaseCapture").Call()
+		}
+		return true
 	}
 	return false
 }
 
 func (v *documentView) prepareObjectDrag() {
 	e := &v.app.objects
-	if e.dragReady || e.pressPick.source == 0 || e.pressPick.change != replaceSelection ||
-		max(absTextDrag(e.start.x-e.cursor.x), absTextDrag(e.start.y-e.cursor.y)) <= int32(v.app.scale(4)) {
+	if e.dragReady || e.pressPick.source == 0 || e.pressPick.change != replaceSelection {
 		return
 	}
 	e.dragReady = true
-	pick := e.pressPick
-	if e.selectionContains(pick, v) {
-		e.pick = pick
-	} else {
-		v.requestObjects(pick)
+	v.requestObjects(e.pressPick)
+}
+
+func (v *documentView) continueProbedDrag() {
+	e := &v.app.objects
+	if !e.pressed || !e.dragReady {
+		return
 	}
+	pick, origin, cursor, released := e.pressPick, e.start, e.cursor, e.released
+	e.endGesture()
+	if !v.beginCanvasContentMove(pick, origin) {
+		if !released {
+			user32.NewProc("ReleaseCapture").Call()
+		}
+		return
+	}
+	message := uint32(0x0200)
+	if released {
+		message = 0x0202
+	}
+	v.canvasContentMovePointer(message, cursor.x, cursor.y)
 }
 
 func (e *objectEditor) rotation(v *documentView) int {
@@ -321,11 +327,11 @@ func (v *documentView) scheduleObjects() bool {
 		v.launch(req, e.source, 0, false, nil)
 		return true
 	}
-	if e.selected.Token != 0 && !e.snapshot {
+	if e.selected.Token != 0 && e.copyWaiting && !e.snapshot {
 		e.snapshot = true
 		req := v.request("object_snapshot")
 		req.View.Page, req.View.Rotation = e.source, v.rotations[e.source-1]
-		req.ObjectEdit = &objectEditRequest{Token: e.selected.Token, Tokens: e.tokens()}
+		req.ObjectEdit = &objectEditRequest{Token: e.selected.Token, Tokens: e.tokens(), CapsuleOnly: true}
 		v.launch(req, e.source, 0, false, nil)
 		return true
 	}
@@ -351,6 +357,9 @@ func (v *documentView) finishObjects(job readerJob) {
 			pick, state.next = state.next, textSelection{}
 		}
 		if job.result.Status != "ok" || job.result.View == nil || job.result.View.ObjectPage == nil {
+			if e.pressed && e.dragReady {
+				a.cancelObjectGesture()
+			}
 			if pick.combined {
 				v.failCanvasRegion()
 			} else if a.mode == idObjectsTab {
@@ -382,66 +391,11 @@ func (v *documentView) finishObjects(job readerJob) {
 	}
 	e.snapshot, e.snapshotComplete = true, true
 	if job.result.Status == "ok" && job.result.View != nil {
-		e.image, e.capsule = job.frame.image, job.result.View.ObjectClipboard
-		if e.moving && e.image != nil {
-			a.showObjectPreview()
-		}
+		e.capsule = job.result.View.ObjectClipboard
 	}
 	if e.copyWaiting {
 		a.copySelectedObject()
 	}
-}
-
-func (a *app) moveObjectPreview() {
-	e, v := &a.objects, a.view
-	if !e.pressed || !e.dragReady || e.selected.Token == 0 || e.pick.source != e.pressPick.source || max(absTextDrag(e.start.x-e.cursor.x), absTextDrag(e.start.y-e.cursor.y)) <= int32(a.scale(4)) && !e.moving {
-		return
-	}
-	area, source := v.textSheetAt(0, 0, e.pick.source)
-	if source == 0 {
-		return
-	}
-	box, angle := e.page.Boxes[e.pick.box], e.rotation(v)
-	size := textPoint{float64(area.right - area.left), float64(area.bottom - area.top)}
-	at := textPoint{e.pick.point[0] + float64(e.cursor.x-e.start.x)/size[0],
-		e.pick.point[1] + float64(e.cursor.y-e.start.y)/size[1]}
-	p, start := textPointToPDF(at, box, angle), textPointToPDF(e.pick.point, box, angle)
-	e.delta = textPoint{p[0] - start[0], p[1] - start[1]}
-	if !e.moving {
-		e.moving = true
-		a.showObjectPreview()
-	}
-	e.preview.move(a.objectScreenCursor())
-	v.invalidateCanvas()
-}
-
-func (a *app) objectScreenCursor() point {
-	cursor := a.objects.cursor
-	user32.NewProc("ClientToScreen").Call(a.window, uintptr(unsafe.Pointer(&cursor)))
-	return cursor
-}
-
-func (a *app) showObjectPreview() {
-	e := &a.objects
-	d, image := a.scale, e.image
-	w, h := d(96), d(78)
-	if image != nil {
-		scale := min(float64(d(112))/float64(image.width), float64(d(100))/float64(image.height))
-		w, h = max(d(28), int(float64(image.width)*scale)), max(d(28), int(float64(image.height)*scale))
-	}
-	e.preview.show(a.window, a.objectScreenCursor(), point{int32(w), int32(h)}, int32(d(13)), int32(d(6)), func(dc uintptr) {
-		r := rect{right: int32(w), bottom: int32(h)}
-		fillColor(dc, r, panelColor)
-		if image != nil {
-			gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
-			pad := d(4)
-			fit := min(float64(w-2*pad)/float64(image.width), float64(h-2*pad)/float64(image.height))
-			iw, ih := max(1, int(float64(image.width)*fit)), max(1, int(float64(image.height)*fit))
-			drawBitmap(dc, image, (w-iw)/2, (h-ih)/2, iw, ih)
-		} else {
-			drawText(dc, getText(e.info), r, a.normalFont, textColor, 1)
-		}
-	})
 }
 
 func (a *app) paintObjectSelection(dc uintptr, source int, area rect) {
@@ -461,11 +415,7 @@ func (a *app) paintObjectSelection(dc uintptr, source int, area rect) {
 	defer gdiDelete.Call(pen)
 	defer gdiSelect.Call(dc, old)
 	for _, item := range e.items {
-		b := item.Bounds
-		if e.moving {
-			b = searchRect{b[0] + e.delta[0], b[1] + e.delta[1], b[2] + e.delta[0], b[3] + e.delta[1]}
-		}
-		bounds, show := searchDisplayRect(b, e.page.Boxes[v.box()], e.rotation(v))
+		bounds, show := searchDisplayRect(item.Bounds, e.page.Boxes[v.box()], e.rotation(v))
 		if show {
 			drawTextOutline(dc, area, rectangleSelection(textPoint{bounds[0], bounds[1]}, textPoint{bounds[2], bounds[3]}), true)
 		}
@@ -477,12 +427,52 @@ func (a *app) runObjectEdit(source int, edit objectEditRequest) {
 	req := v.request("object_edit")
 	req.View.Page, req.View.Rotation = source, v.rotations[source-1]
 	req.ObjectEdit = &edit
-	a.runDocumentDraft(req, "Upravuji objekt…", 0)
+	a.runDamagedDraft(req, "Upravuji objekt…", 0, a.objectEditDamage(source, edit))
+}
+
+func (a *app) objectEditDamage(source int, edit objectEditRequest) *pageDamage {
+	e, v := &a.objects, a.view
+	if e.page == nil || e.source != source || len(e.items) == 0 {
+		return nil
+	}
+	var affected searchRect
+	for _, item := range e.items {
+		switch edit.Operation {
+		case "delete":
+			affected = unionPageRects(affected, item.Bounds)
+		case "duplicate":
+			affected = unionPageRects(affected, moveCropBounds(item.Bounds, edit.Delta))
+		case "replace_crop", "reset_crop":
+			affected = unionPageRects(affected, item.cropSourceBounds())
+		case "translate_crop":
+			affected = unionPageRects(affected, item.Bounds)
+			if edit.Crop != nil {
+				affected = unionPageRects(affected, *edit.Crop)
+			} else if edit.MaskDelta != nil {
+				affected = unionPageRects(affected, moveCropBounds(item.Bounds, *edit.MaskDelta))
+			}
+		default:
+			return nil
+		}
+	}
+	// Leave room for the antialiasing footprint and minor rounding differences.
+	const pad = 3.
+	affected = searchRect{affected[0] - pad, affected[1] - pad, affected[2] + pad, affected[3] + pad}
+	box := v.box()
+	bounds, visible := searchDisplayRect(affected, e.page.Boxes[box], e.rotation(v))
+	if !visible {
+		return nil
+	}
+	return &pageDamage{source, box, bounds}
+}
+
+func (e *objectEditor) hasWidgets() bool {
+	return slices.ContainsFunc(e.items, func(item pdfObject) bool { return item.Kind == "widget" })
 }
 
 func (a *app) chooseObjectGrouping() (string, bool) {
 	e := &a.objects
-	if len(e.items) < 2 {
+	if len(e.items) < 2 || e.hasWidgets() {
 		return "", true
 	}
 	tab, generation, selection := a.activeTab, a.view.generation, e.serial
@@ -586,7 +576,7 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.updateObjectActions()
 		a.updateCommandBar()
 	case idObjectCopy:
-		if e.selected.Token != 0 {
+		if e.selected.Token != 0 && !e.hasWidgets() {
 			grouping, accepted := a.chooseObjectGrouping()
 			if !accepted {
 				return true
@@ -618,7 +608,7 @@ func (a *app) objectCommand(id, notification int) bool {
 	case idObjectUndo:
 		a.doDocumentCommand(v, docUndo, false)
 	case idObjectDuplicate, idObjectDelete:
-		if e.selected.Token != 0 {
+		if e.selected.Token != 0 && !e.hasWidgets() {
 			edit := objectEditRequest{Operation: "delete", Token: e.selected.Token, Tokens: e.tokens()}
 			if id == idObjectDuplicate {
 				grouping, accepted := a.chooseObjectGrouping()

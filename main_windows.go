@@ -154,6 +154,7 @@ type app struct {
 	closing                                                        *documentClose
 	workDir                                                        string
 	retiredDrafts                                                  []string
+	draftDamage                                                    *pageDamage
 	choices                                                        map[uintptr]*choiceControl
 	choiceCommands                                                 map[int]*choiceControl
 	popup                                                          []popupItem

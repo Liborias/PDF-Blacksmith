@@ -95,6 +95,9 @@ func (v *documentView) trimCache(cache *pageCache, budget int64, keepVisible boo
 		}
 		if number := v.order[index]; !visible[number] && cache.frames[number].image != nil {
 			cache.remove(number)
+			if cache == &v.reading {
+				delete(v.rasterDamage, screenTile{page: number})
+			}
 		}
 	}
 }

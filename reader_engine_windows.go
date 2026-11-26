@@ -67,7 +67,7 @@ func (e *readerEngine) start() (*readerProcess, error) {
 	return e.process, nil
 }
 
-func (p *readerProcess) readResponse() (response, error) {
+func (p *readerProcess) readResponse(action string) (response, error) {
 	var result response
 	header, err := p.receive.ReadBytes('\n')
 	if err != nil {
@@ -87,6 +87,22 @@ func (p *readerProcess) readResponse() (response, error) {
 		if _, err := io.ReadFull(p.receive, view.Image); err != nil {
 			return result, err
 		}
+		if view.DragLayer {
+			if action != "object_drag_preview" || w*h > 2_000_000 {
+				return result, fmt.Errorf("neplatná vrstva náhledu přesunu")
+			}
+			view.dragPixels = make([]byte, len(view.Image))
+			if _, err := io.ReadFull(p.receive, view.dragPixels); err != nil {
+				return result, err
+			}
+			// Win32 AlphaBlend expects premultiplied BGRA.
+			for i := 0; i < len(view.dragPixels); i += 4 {
+				alpha := uint16(view.dragPixels[i+3])
+				for j := range 3 {
+					view.dragPixels[i+j] = byte((uint16(view.dragPixels[i+j])*alpha + 127) / 255)
+				}
+			}
+		}
 	}
 	return result, nil
 }
@@ -97,7 +113,7 @@ func (e *readerEngine) run(req request) response {
 		return operationError(err.Error())
 	}
 	if process.send.Encode(req) == nil {
-		result, err := process.readResponse()
+		result, err := process.readResponse(req.Action)
 		if err == nil && result.Status != "" {
 			return result
 		}
@@ -120,19 +136,22 @@ func (e *readerEngine) run(req request) response {
 	return runOperation(req)
 }
 
-func (e *readerEngine) close() {
+func (e *readerEngine) close() <-chan struct{} {
 	e.mu.Lock()
 	process := e.process
 	e.process, e.closed = nil, true
 	e.mu.Unlock()
-	if process != nil {
-		// A worker can still be reading a render on a synchronous Windows pipe.
-		// Terminate it off the UI thread before releasing the pipe handles.
-		go func() {
-			process.command.Process.Kill()
-			process.input.Close()
-			process.output.Close()
-			process.command.Wait()
-		}()
+	if process == nil {
+		return nil
 	}
+	done := make(chan struct{})
+	// Terminate off the UI thread before releasing synchronous Windows pipes.
+	go func() {
+		defer close(done)
+		process.command.Process.Kill()
+		process.input.Close()
+		process.output.Close()
+		process.command.Wait()
+	}()
+	return done
 }

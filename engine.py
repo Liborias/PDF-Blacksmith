@@ -1,6 +1,6 @@
 """Local PDF operations for PDF Blacksmith. The Windows front end uses JSON on stdin/stdout."""
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from hashlib import sha256
 from io import BytesIO
 import json
@@ -22,7 +22,7 @@ from color_conversion import (ColorConversionError, resolve_gray_icc, convert_ri
 from pdfx import PDFXError, check_profile, finish_pdfx, pdfx_prefix
 from page_transfer import convert_inserted_artwork, transfer_color_plan
 from proof import ProofError, box_options, describe, page_box, page_proof, scan_plates, screen_page
-from reader_render import render_screen
+from reader_render import ScreenReader, render_screen
 
 
 class UserError(Exception):
@@ -761,17 +761,19 @@ def apply_page_order(pdf, pages, order):
     return True
 
 
-def inspect_document(src, request, *, raster=False):
+def inspect_document(src, request, *, raster=False, reader=None):
     view = request.get("view", {})
     password = request.get("pdf_password", "")
     action = request["action"]
-    with open_pdf(src, password) as pdf:
+    reusable = reader if action in ("describe", "screen", "thumbnail") else None
+    source = nullcontext(reusable.document(src, password, open_pdf)) if reusable else open_pdf(src, password)
+    with source as pdf:
         if not len(pdf.pages):
             raise UserError("Vstupní PDF nemá žádné strany.")
         if action == "describe":
             return {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
         if action in ("screen", "thumbnail") and raster:
-            rendered = render_screen(pdf, src, view, password, thumbnail=action == "thumbnail")
+            rendered = render_screen(pdf, src, view, password, thumbnail=action == "thumbnail", reader=reusable)
             if rendered is not None:
                 return rendered
         exe = ghostscript_path(request)
@@ -793,6 +795,20 @@ def save_page_edits(src, request):
         prepare_edit(pdf, request)
         write_page_edits(pdf, src, password, pending, view)
     return "Uložena upravená kopie PDF."
+
+
+def is_page_local(request, cleared_signatures):
+    return (request.get("page_local") is True and not cleared_signatures
+            and not request.get("view", {}).keys() & {"order", "rotations", "bookmarks"})
+
+
+def describe_edit(pdf, request, changed, cleared_signatures, *, pending=None):
+    if is_page_local(request, cleared_signatures):
+        return {"pages": len(pdf.pages), "changed_pages": changed}
+    if pending is not None:
+        with open_pdf(pending, request.get("pdf_password", "")) as written:
+            return {**describe(written), "bookmarks": describe_bookmarks(written)}
+    return {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
 
 
 def write_page_edits(pdf, src, password, pending, view):
@@ -847,7 +863,7 @@ def edit_text_document(src, request):
     models = request.get("text_fonts") or Path(__file__).resolve().parent / "text-fonts"
     with output_file(src, request) as pending:
         with open_pdf(src, password) as pdf:
-            prepare_edit(pdf, request)
+            cleared = prepare_edit(pdf, request)
             try:
                 edits = request.get("text_edit", {})
                 if "block" in edits:
@@ -860,8 +876,7 @@ def edit_text_document(src, request):
                 raise UserError(str(exc)) from exc
             clear_pdfx_claim(pdf)
             write_page_edits(pdf, src, password, pending, view)
-        with open_pdf(pending, password) as pdf:
-            description = {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
+            description = describe_edit(pdf, request, [view.get("page", 1)], cleared, pending=pending)
         if not same_file_state(source_state, src.stat()):
             raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
     return {**description, "message": "Text byl upraven v otevřené kartě."}
@@ -877,7 +892,7 @@ def save_document(src, request):
 
 
 def edit_object_document(src, request):
-    from object_edit import (ObjectError, crop_motion_preview, crop_preview, describe_objects, draws, modify_page, paste_object,
+    from object_edit import (ObjectError, crop_motion_preview, crop_preview, describe_objects, draws, has_xfa, modify_page, paste_object,
                              pikepdf_operators, selected_draws, snapshot_object)
 
     view = request.get("view", {})
@@ -895,24 +910,28 @@ def edit_object_document(src, request):
         return number, rotation, document.pages[number-1]
 
     try:
-        if action in ("object_probe", "object_snapshot", "object_crop_preview", "object_crop_motion_preview"):
+        if action in ("object_probe", "object_snapshot", "object_crop_preview", "object_crop_motion_preview", "object_drag_preview"):
             with open_pdf(src, password) as document:
                 number, rotation, page = select(document)
                 operators = pikepdf_operators(page)
                 candidates = list(draws(page, operators))
                 if action == "object_probe":
-                    return {"object_page": describe_objects(page, operators, candidates)}
+                    return {"object_page": describe_objects(page, operators, candidates, widgets=not has_xfa(document))}
+                if action == "object_drag_preview":
+                    from reader_drag import drag_preview
+                    return drag_preview(document, page, number, operators, candidates, edit, request.get("text_selection"), view)
                 items = selected_draws(candidates, edit)
                 if action == "object_crop_motion_preview":
                     return crop_motion_preview(page, operators, items, edit, view)
                 if action == "object_crop_preview":
                     return crop_preview(page, operators, items, rotation)
-                return snapshot_object(document, number, page, operators, candidates, items, rotation)
+                return snapshot_object(document, number, page, operators, candidates, items, rotation,
+                                       capsule_only=edit.get("capsule_only") is True)
 
         with output_file(src, request) as pending:
             with open_pdf(src, password) as document:
-                _, rotation, page = select(document)
-                prepare_edit(document, request)
+                number, rotation, page = select(document)
+                cleared = prepare_edit(document, request)
                 operators = pikepdf_operators(page)
                 if edit.get("operation") == "move_selection":
                     from text_move import move_selection
@@ -923,8 +942,7 @@ def edit_object_document(src, request):
                     modify_page(document, page, operators, list(draws(page, operators)), edit)
                 clear_pdfx_claim(document)
                 write_page_edits(document, src, password, pending, view)
-            with open_pdf(pending, password) as document:
-                description = {**describe(document), "bookmarks": describe_bookmarks(document)}
+                description = describe_edit(document, request, [number], cleared, pending=pending)
             if not same_file_state(state, src.stat()):
                 raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
     except ObjectError as exc:
@@ -969,7 +987,7 @@ def ocr_document(src, request):
         with open_pdf(source, password) as pdf:
             if not len(pdf.pages):
                 raise UserError("Vstupní PDF nemá žádné strany.")
-            prepare_edit(pdf, request)
+            cleared = prepare_edit(pdf, request)
             pages = selected_pages(view, len(pdf.pages)) or list(range(1, len(pdf.pages)+1))
             models = request.get("ocr_models") or Path(__file__).resolve().parent / "tessdata"
             try:
@@ -983,7 +1001,7 @@ def ocr_document(src, request):
                 raise UserError("OCR ve vybraných stranách nepřidalo žádný nový text. PDF se neuložilo.")
             clear_pdfx_claim(pdf)
             pdf.save(pending, encryption=pdf.is_encrypted, fix_metadata_version=False)
-            description = {**describe(pdf), "bookmarks": describe_bookmarks(pdf)}
+            description = describe_edit(pdf, request, pages, cleared)
         if not same_file_state(source_state, src.stat()):
             raise UserError("Původní PDF se mezitím změnilo. Otevřete je znovu.")
     return {**description, "message": f"OCR přidalo text na {updated} z {len(pages)} vybraných stran.\nSlov přidáno {words}."}
@@ -1291,11 +1309,13 @@ def insert_document_pages(src, request):
     return {**description, "message": message}
 
 
-def dispatch(request, *, raster=False):
+def dispatch(request, *, raster=False, reader=None):
     if request.get("action") == "merge_probe":
         return inspect_merge(request)
     if request.get("action") == "merge":
         return merge_documents(request)
+    if request.get("action") == "object_drag_preview" and not raster:
+        raise UserError("Průhledný náhled je dostupný v místním vykreslovači.")
     src = Path(request["input"])
     if not src.is_file():
         raise UserError("Vyberte existující soubor PDF.")
@@ -1308,11 +1328,12 @@ def dispatch(request, *, raster=False):
                  "text_probe": edit_text_document, "text_edit": edit_text_document,
                  "text_background": edit_text_document, "object_probe": edit_object_document,
                  "object_snapshot": edit_object_document, "object_crop_preview": edit_object_document,
-                 "object_crop_motion_preview": edit_object_document, "object_edit": edit_object_document}.get(request.get("action"))
+                 "object_crop_motion_preview": edit_object_document, "object_drag_preview": edit_object_document,
+                 "object_edit": edit_object_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:
-        return inspect_document(src, request, raster=raster)
+        return inspect_document(src, request, raster=raster, reader=reader)
     view = request.get("view", {})
     if request["action"] in ("transform", "sign") and view.keys() & {"rotations", "bookmarks"}:
         # Keep draft edits in the same transaction as export or signing.
@@ -1323,12 +1344,16 @@ def dispatch(request, *, raster=False):
     return operation(src, request)
 
 
-def respond(payload, *, raster=False):
-    pixels = None
+def respond(payload, *, raster=False, reader=None):
+    pixels = ()
     try:
-        result = dispatch(json.loads(payload), raster=raster)
+        result = dispatch(json.loads(payload), raster=raster, reader=reader)
         if raster and isinstance(result, dict):
-            pixels = result.pop("raster", None)
+            if (base := result.pop("raster", None)) is not None:
+                layer = result.pop("drag_raster", None)
+                if layer is not None:
+                    result["drag_layer"] = True
+                pixels = (base,) if layer is None else (base, layer)
         if isinstance(result, str):
             response = {"status": "ok", "message": result}
         else:
@@ -1380,13 +1405,18 @@ def main():
             output.write(json.dumps(result, ensure_ascii=True).encode("ascii") + b"\n")
             output.flush()
         return
-    for line in source if raster or args == ["--stream"] else (source.read(),):
-        header, pixels = respond(line, raster=raster)
-        output.write(header.encode("ascii") + b"\n")
-        if pixels is not None:
-            output.write(pixels)
-        output.flush()
-        del header, pixels
+    reader = ScreenReader() if raster else None
+    try:
+        for line in source if raster or args == ["--stream"] else (source.read(),):
+            header, pixels = respond(line, raster=raster, reader=reader)
+            output.write(header.encode("ascii") + b"\n")
+            for layer in pixels:
+                output.write(layer)
+            output.flush()
+            del header, pixels
+    finally:
+        if reader is not None:
+            reader.close()
 
 
 if __name__ == "__main__":

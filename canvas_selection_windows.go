@@ -178,6 +178,10 @@ func (v *documentView) canvasRegionMode() (int, bool) {
 
 func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 	a := v.app
+	if !v.secondary && v.contentMove.settling && !a.busy &&
+		(message == 0x0201 || message == 0x0203 || message == 0x0207) {
+		v.cancelCanvasContentMove()
+	}
 	if !v.secondary && v.imageCropPointer(message, x, y) {
 		return true
 	}
@@ -188,7 +192,12 @@ func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 		return true
 	}
 	if !v.secondary && a.objects.pressed {
-		return v.objectPointer(message, x, y)
+		if !a.objects.released {
+			return v.objectPointer(message, x, y)
+		}
+		if message == 0x0201 || message == 0x0203 || message == 0x0207 {
+			a.cancelObjectGesture()
+		}
 	}
 	if v.dragging || a.busy || a.full || !v.ready() {
 		return false

@@ -50,6 +50,10 @@ func (a *app) startOCR() {
 }
 
 func (a *app) runDocumentDraft(req request, status string, report uintptr) {
+	a.runDamagedDraft(req, status, report, nil)
+}
+
+func (a *app) runDamagedDraft(req request, status string, report uintptr, damage *pageDamage) {
 	var err error
 	req.Output, err = a.documentDraftPath()
 	if err != nil {
@@ -58,11 +62,14 @@ func (a *app) runDocumentDraft(req request, status string, report uintptr) {
 	}
 	if a.view.hasPageEdits() {
 		a.view.includeEdits(&req)
+	} else {
+		req.PageLocal = req.Action == "text_edit" || req.Action == "object_edit" || req.Action == "ocr"
 	}
 	if report != 0 {
 		setText(report, status)
 	}
 	if a.run(req) {
+		a.draftDamage = damage
 		a.reportStatus(status)
 	} else {
 		a.retiredDrafts = append(a.retiredDrafts, req.Output)
@@ -95,12 +102,29 @@ func (a *app) applyDocumentDraft(req request, result response) bool {
 	if req.InsertPages != nil {
 		count += len(req.InsertPages.Source.View.Pages)
 	}
-	if err != nil || result.View == nil || len(result.View.Sizes) != count {
+	if err != nil || result.View == nil {
 		return false
 	}
 	v := a.view
-	a.dropRedo(a.activeTab)
 	base := v.documentContent
+	data := result.View
+	if req.PageLocal && data.Pages == count && len(data.ChangedPages) != 0 {
+		for _, page := range data.ChangedPages {
+			if page < 1 || page > len(v.sizes) {
+				return false
+			}
+		}
+		a.dropRedo(a.activeTab)
+		next := base
+		next.draft, next.draftInfo = req.Output, info
+		next.history = []pageEdit{{draftBase: &base, draftAction: req.Action, changedPages: data.ChangedPages, damage: a.draftDamage}}
+		a.swapLocalVersion(next, data.ChangedPages, a.draftDamage, req.Action == "ocr")
+		return true
+	}
+	if len(data.Sizes) != count {
+		return false
+	}
+	a.dropRedo(a.activeTab)
 	scope, _ := a.scopeControls()
 	automaticScope := a.thumbnailScopes[scope]
 	w, h := v.viewportSize()
@@ -135,8 +159,13 @@ func (a *app) applyDocumentDraft(req request, result response) bool {
 	return true
 }
 
-func (a *app) undoDocumentDraft(base documentContent, action string) {
-	a.restoreDocumentVersion(base)
+func (a *app) undoDocumentDraft(edit pageEdit) {
+	action := edit.draftAction
+	if len(edit.changedPages) > 0 {
+		a.swapLocalVersion(*edit.draftBase, edit.changedPages, edit.damage, action == "ocr")
+	} else {
+		a.restoreDocumentVersion(*edit.draftBase)
+	}
 	messages := map[string]string{"ocr": "Poslední rozpoznávání OCR bylo vráceno.",
 		"insert_pages": "Vložení stránek bylo vráceno.", "object_edit": "Úprava objektu byla vrácena.",
 		"text_edit": "Poslední úprava textu byla vrácena."}

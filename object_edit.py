@@ -2,7 +2,7 @@
 
 from base64 import b64decode, b64encode
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from io import BytesIO
 from math import isclose, isfinite
 
@@ -194,6 +194,8 @@ def marked_draws(page, operators, candidates):
         sample = probe.pages[0]
         sample.obj.Contents = probe.make_stream(pdf.unparse_content_stream(marked))
         sample.obj.CropBox = sample.mediabox
+        if "/Annots" in sample.obj:
+            del sample.obj["/Annots"]
         probe.save(buffer)
     return buffer.getvalue()
 
@@ -259,7 +261,63 @@ def path_outline(operators, draw, bounds):
     return {"contours": contours, "margin": margin, "rectangle": axis_aligned_rectangle}
 
 
-def describe_objects(page, operators, candidates, *, outlines=True):
+def movable_widgets(page):
+    """Existing editable AcroForm appearances on this page."""
+    for number, annot in enumerate(page.obj.get("/Annots", []), 1):
+        if not isinstance(annot, pdf.Dictionary) or annot.get("/Subtype") != pdf.Name.Widget:
+            continue
+        flags = annot.get("/F", 0)
+        if not isinstance(flags, int) or flags & (1 | 2 | 32 | 64 | 128 | 512):
+            continue
+        parent, field_type, seen = annot, None, set()
+        while isinstance(parent, pdf.Dictionary) and len(seen) < 32 and parent.objgen not in seen:
+            field_type = parent.get("/FT")
+            if field_type is not None:
+                break
+            seen.add(parent.objgen)
+            parent = parent.get("/Parent")
+        rect = annot.get("/Rect")
+        field_flags = parent.get("/Ff", 0) if isinstance(parent, pdf.Dictionary) else None
+        if (not isinstance(field_flags, int) or field_flags & 1
+                or field_type not in (pdf.Name.Tx, pdf.Name.Btn, pdf.Name.Ch)
+                or not isinstance(rect, pdf.Array) or len(rect) != 4):
+            continue
+        try:
+            x, y, r, t = map(float, rect)
+        except (TypeError, ValueError):
+            continue
+        if all(map(isfinite, (x, y, r, t))) and x < r and y < t:
+            yield -number, annot, (x, y, r, t)
+
+
+def has_xfa(document):
+    acroform = document.Root.get("/AcroForm")
+    return isinstance(acroform, pdf.Dictionary) and "/XFA" in acroform
+
+
+def selected_page_items(document, page, candidates, edit):
+    tokens = edit.get("tokens", [edit.get("token")])
+    if not isinstance(tokens, list) or any(type(token) is not int or token == 0 for token in tokens):
+        raise ObjectError("Vyberte platné objekty.")
+    ordinary = [token for token in tokens if token > 0]
+    widgets = [token for token in tokens if token < 0]
+    if widgets and has_xfa(document):
+        raise ObjectError("Poloha formulářových polí XFA se nemění.")
+    indexed = {token: annot for token, annot, _ in movable_widgets(page)} if widgets else {}
+    if any(token not in indexed for token in widgets) or len(set(widgets)) != len(widgets):
+        raise ObjectError("Výběr formulářových polí se mezitím změnil.")
+    items = selected_draws(candidates, {"tokens": ordinary}) if ordinary else []
+    return items, widgets, indexed
+
+
+def move_widgets(widgets, delta):
+    dx, dy = delta
+    for widget in widgets:
+        x, y, r, t = map(float, widget.Rect)
+        widget.Rect = pdf.Array((x+dx, y+dy, r+dx, t+dy))
+
+
+def describe_objects(page, operators, candidates, *, outlines=True, widgets=True):
     objects = []
     identified = {candidate.token: candidate for candidate in candidates}
     outline_budget = 32000 if outlines else 0
@@ -291,6 +349,9 @@ def describe_objects(page, operators, candidates, *, outlines=True):
                         obj["outline"] = outline
                         outline_budget -= sum(map(len, outline["contours"]))
                 objects.append(obj)
+    if widgets:
+        objects.extend({"token": token, "kind": "widget", "bounds": bounds}
+                       for token, _, bounds in movable_widgets(page))
     return {"objects": objects, "rotation": int(page.obj.get("/Rotate", 0)) % 360,
             "boxes": {key: page_box(page, box) for key, (box, _) in BOXES.items()},
             "unit": float(page.obj.get("/UserUnit", 1))}
@@ -315,8 +376,19 @@ def selected_draws(candidates, edit):
 
 
 def modify_page(document, page, operators, candidates, edit):
-    items = selected_draws(candidates, edit)
     action = edit.get("operation")
+    if action == "move":
+        items, widgets, indexed = selected_page_items(document, page, candidates, edit)
+        if widgets:
+            if edit.get("grouping") == "group":
+                raise ObjectError("Formulářová pole zůstávají samostatná.")
+            move_widgets((indexed[token] for token in widgets), clip_point(edit.get("delta"), "posun"))
+        if not items:
+            if widgets:
+                return
+            raise ObjectError("Vyberte platné objekty.")
+    else:
+        items = selected_draws(candidates, edit)
     if action in {"crop", "replace_crop", "reset_crop", "translate_crop"}:
         item = selected_image(items)
         if action == "reset_crop":
@@ -346,6 +418,7 @@ def modify_page(document, page, operators, candidates, edit):
         return
     combined, cursor = [], 0
     for item in items:
+        item = isolated_move_span(operators, item)
         combined.extend(operators[cursor:item.first])
         cursor = item.end
         if action == "duplicate":
@@ -558,6 +631,35 @@ def crop_motion_preview(page, operators, items, edit, view):
     return {"image": b64encode(payload.getvalue()).decode("ascii")}
 
 
+def isolated_move_span(operators, item):
+    # Producers often isolate a single image or path with q / clipping / paint / Q.
+    # Move that clip with its only paint. A clip shared with other paints stays put.
+    if item.end >= len(operators) or str(operators[item.end].operator) != "Q":
+        return item
+    clipped = False
+    prefix = []
+    for index in range(item.first-1, -1, -1):
+        op = operators[index]
+        name = str(op.operator)
+        if name == "q":
+            if not clipped:
+                return item
+            local = IDENTITY
+            for matrix in reversed(prefix):
+                local = compose(local, matrix)
+            try:
+                outer = compose(item.matrix, invert(local))
+            except TextError:
+                return item
+            return replace(item, first=index, end=item.end+1, matrix=outer)
+        if name not in STATE | PATH | {"W", "W*", "n"} or name == "Q":
+            break
+        clipped |= name in {"W", "W*"}
+        if name == "cm":
+            prefix.append(tuple(map(float, op.operands)))
+    return item
+
+
 def translated_draw(operators, item, delta):
     dx, dy = delta
     try:
@@ -630,7 +732,7 @@ def selected_bounds(page, operators, candidates, items):
     return bounds, boxes
 
 
-def snapshot_object(document, number, page, operators, candidates, items, rotation):
+def snapshot_object(document, number, page, operators, candidates, items, rotation, *, capsule_only=False):
     bounds, boxes = selected_bounds(page, operators, candidates, items)
     parts = []
     projection = isolated_paint(operators, items, parts=parts)
@@ -652,11 +754,12 @@ def snapshot_object(document, number, page, operators, candidates, items, rotati
         sample.remove_unreferenced_resources()
         sample.save(buffer, fix_metadata_version=False)
         data = buffer.getvalue()
-        rendered = render_screen(sample, data, {"page": 1, "box": "crop", "pixels": 400}, "")
+        rendered = None if capsule_only else render_screen(
+            sample, data, {"page": 1, "box": "crop", "pixels": 400}, "", transparent=True)
     result = {"object_clipboard": b64encode(data).decode("ascii") if len(data) <= CLIPBOARD_LIMIT else ""}
     if rendered:
         size = rendered["raster_width"], rendered["raster_height"]
-        with Image.frombytes("RGB", size, bytes(rendered["raster"]), "raw", "BGRX") as preview:
+        with Image.frombytes("RGBA", size, bytes(rendered["raster"]), "raw", "BGRA") as preview:
             png = BytesIO()
             preview.save(png, format="PNG")
             result["image"] = b64encode(png.getvalue()).decode("ascii")

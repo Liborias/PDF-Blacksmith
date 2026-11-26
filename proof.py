@@ -120,28 +120,38 @@ def box_options(req):
     return attribute, [flag] if flag else []
 
 
-def page_box(page, box):
+def page_box(page, box, *, media=None):
     left, bottom, right, top = map(float, getattr(page, box))
     left, right = sorted((left, right))
     bottom, top = sorted((bottom, top))
     if box != "mediabox":
-        ml, mb, mr, mt = map(float, page.mediabox)
-        left, right = max(left, min(ml, mr)), min(right, max(ml, mr))
-        bottom, top = max(bottom, min(mb, mt)), min(top, max(mb, mt))
+        ml, mb, mr, mt = media if media is not None else page_box(page, "mediabox")
+        left, right = max(left, ml), min(right, mr)
+        bottom, top = max(bottom, mb), min(top, mt)
     return left, bottom, right, top
 
 
 def page_size(page, box):
-    left, bottom, right, top = page_box(page, box)
-    unit = float(page.obj.get("/UserUnit", 1))
+    return box_size(page_box(page, box), *page_units(page))
+
+
+def page_units(page):
+    return float(page.obj.get("/UserUnit", 1)), int(page.obj.get("/Rotate", 0)) % 180 == 90
+
+
+def box_size(bounds, unit, turned):
+    left, bottom, right, top = bounds
     width, height = max(1, (right-left)*unit), max(1, (top-bottom)*unit)
-    if int(page.obj.get("/Rotate", 0)) % 180 == 90:
-        return height, width
-    return width, height
+    return (height, width) if turned else (width, height)
 
 
 def describe(pdf):
-    sizes = [{name: page_size(page, attr) for name, (attr, _) in BOXES.items()} for page in pdf.pages]
+    sizes = []
+    for page in pdf.pages:
+        media = page_box(page, "mediabox")
+        units = page_units(page)
+        sizes.append({name: box_size(media if attr == "mediabox" else page_box(page, attr, media=media), *units)
+                      for name, (attr, _) in BOXES.items()})
     return dict(pages=len(sizes), sizes=sizes, output_intent=output_intent(pdf))
 
 

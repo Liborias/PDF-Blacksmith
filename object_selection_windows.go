@@ -4,7 +4,7 @@ import "slices"
 
 func (e *objectEditor) resetSelection() {
 	e.serial++
-	e.selected, e.items, e.image, e.capsule = pdfObject{}, nil, nil, nil
+	e.selected, e.items, e.capsule = pdfObject{}, nil, nil
 	e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
 }
 
@@ -108,7 +108,7 @@ func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection
 	case 0:
 		a.setUIMessage(e.info, uiNoEditableObject)
 	case 1:
-		a.setUIMessage(e.info, map[string]uiMessage{"path": uiVectorShape, "image": uiSelectedImage, "form": uiPDFGroup}[e.selected.Kind])
+		a.setUIMessage(e.info, map[string]uiMessage{"path": uiVectorShape, "image": uiSelectedImage, "form": uiPDFGroup, "widget": uiSelectedWidget}[e.selected.Kind])
 	default:
 		a.setUIMessage(e.info, uiSelectedObjects, len(e.items))
 	}
@@ -119,7 +119,7 @@ func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection
 	}
 	v.rememberCanvasSelection(previous)
 	v.invalidateCanvas()
-	a.moveObjectPreview()
+	v.continueProbedDrag()
 	v.schedule()
 }
 
