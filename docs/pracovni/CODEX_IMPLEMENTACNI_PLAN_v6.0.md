@@ -101,6 +101,8 @@ V náhledu ořezu jsou čtyři tvary. Čtverec a kruh uzamknou poměr 1 : 1. Obd
 
 Při změně režimu nebo zahájení nového gesta se zruší čekající výběr a odpověď staršího požadavku už do dokumentu nezasáhne. Obdélník i laso zpracují text a grafiku v nástrojích Text a Objekty. Podržením Alt při tažení výběr přesunete. Zkoušky pokryjí rychlé přepnutí, výběr z okraje pracovní plochy, prázdný záběr pro OCR a přesun smíšeného výběru. Vybraný obrázek ihned zpřístupní nastavení ořezu. Horní ikony šipky a zobrazení vyjadřují aktuální režim, nápověda popisuje akci po kliknutí. Celý blok ikon je vpravo.
 
+Z obdélníku a lasa se horním přepínačem přejde na šipku se zachováním výběru. Šipka přesune vybraný obsah běžným tažením. V režimu obdélníku nebo lasa běžné gesto vybere nový obsah i uvnitř dosavadního výběru. Alt při tažení vyhrazuje pohyb existujícího výběru.
+
 **4B.2. Editovatelný ořez obrázků a oddělené transformace**
 
 Názvosloví rozhraní a nápovědy používá **Ořez** nebo **Nástroj ořezu**. **Ořezová maska** určuje viditelnou oblast. **Maska objektu** vymezuje rozpoznaný objekt a **Maska pozadí** jeho pozadí. **Obsah masky** nebo **Obrázek v masce** označuje vrstvu uvnitř výřezu. **Poměr stran** je volný, přednastavený nebo vlastní a **Zámek poměru stran** jej drží při změně velikosti. **Zjemnění okraje** určuje přechod na hraně. **Inverze masky** převrací viditelnou a skrytou část. Akce **Obnovit ořez** vrátí plný rozsah obrázku. **Potvrdit ořez** a **Zrušit ořez** dokončí nebo ukončí rozpracovanou úpravu.

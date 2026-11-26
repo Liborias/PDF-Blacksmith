@@ -76,8 +76,10 @@ var headerButtons = []commandBarButton{
 
 func (a *app) commandBarCaption(button commandBarButton) string {
 	key := button.label
-	if button.id == idHeaderPointer && a.canvasTextCursor {
-		key = uiSwitchToCanvasArrow
+	if button.id == idHeaderPointer {
+		if _, area := a.view.canvasRegionMode(); area || a.canvasTextCursor {
+			key = uiSwitchToCanvasArrow
+		}
 	}
 	if button.id == idHeaderFlow && a.view.continuous {
 		key = uiSwitchToPages
@@ -224,7 +226,7 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		symbol := control.symbol
 		switch control.id {
 		case idHeaderPointer:
-			if a.canvasTextCursor {
+			if a.commandBar.areaMode == 0 && a.canvasTextCursor {
 				symbol = "i-text_caret"
 			}
 			active = a.commandBar.areaMode == 0
@@ -438,11 +440,12 @@ func (a *app) setHeaderSelection(id int) {
 	}
 	setFocus.Call(a.window)
 	if id == idHeaderPointer {
-		if !a.canvasTextCursor {
+		_, area := a.view.canvasRegionMode()
+		if !area && !a.canvasTextCursor {
 			a.activate(idTextTab)
 			a.textCommand(idTextSelectObject, 0)
-		} else if p := &a.textTool; a.mode == idTextTab && (p.flow.text != "" || a.view.mixed.pick.source != 0) {
-			// The selected text remains available to drag when leaving the text cursor.
+		} else if p := &a.textTool; a.mode == idTextTab && (area || p.flow.text != "" || a.view.mixed.pick.source != 0) {
+			// Keep the selection in the Text panel when switching to the arrow.
 			a.cancelCanvasSelections()
 			a.cancelCanvasSelectionProbes()
 			a.canvasTextCursor = false

@@ -15,6 +15,10 @@ func (v *documentView) beginCanvasContentMove(pick textSelection, start point) b
 	if v.secondary || a.full || a.busy || pick.source == 0 || pick.change != replaceSelection || keyDown(0x20) {
 		return false
 	}
+	// The area and text tools must still accept a new selection over existing content.
+	if _, area := v.canvasRegionMode(); (area || a.canvasTextCursor) && !keyDown(0x12) {
+		return false
+	}
 	move := canvasContentMove{pick: pick, start: start, end: start}
 	var model *textPage
 	var glyphs []layoutGlyph
@@ -29,7 +33,7 @@ func (v *documentView) beginCanvasContentMove(pick textSelection, start point) b
 			}
 			move.tokens = append(move.tokens, item.Token)
 		}
-	} else if p := &a.textTool; a.mode == idTextTab && (!a.canvasTextCursor || keyDown(0x12)) &&
+	} else if p := &a.textTool; a.mode == idTextTab &&
 		pick.sameCanvasPage(p.pick) && p.flow.text != "" && !a.inlineDirty() {
 		model, glyphs, lines, dim = p.model, p.flow.glyphs(), p.flow.highlightBounds(), p.dim
 	}

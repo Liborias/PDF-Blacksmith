@@ -127,7 +127,11 @@ func (a *app) syncTextSelectionModes() {
 	p := &a.textTool
 	for i, h := range p.modes {
 		if h != 0 {
-			a.setChecked(h, i == p.mode || i == textObject && p.mode == textBlock)
+			checked := i == p.mode
+			if i == textObject {
+				checked = a.canvasTextCursor && (p.mode == textObject || p.mode == textBlock)
+			}
+			a.setChecked(h, checked)
 		}
 	}
 	if len(a.commandBar.controls) != 0 {
