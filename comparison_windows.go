@@ -320,7 +320,7 @@ func (a *app) thumbnailView(handle uintptr) *documentView {
 func (a *app) pointer(msg uint32, param uintptr) bool {
 	if a.comparisonVisible() {
 		v := a.comparison.view
-		if a.view.selection.active() || a.view.contentMove.pick.source != 0 || a.objects.pressed || a.view.dragging {
+		if a.view.selection.active() || a.view.contentMove.pick.source != 0 || a.objects.pressed || a.objects.crop.dragging || a.view.dragging {
 			if a.view.pointer(msg, param) {
 				return true
 			}

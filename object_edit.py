@@ -4,7 +4,7 @@ from base64 import b64decode, b64encode
 from contextlib import closing
 from dataclasses import dataclass
 from io import BytesIO
-from math import isfinite
+from math import isclose, isfinite
 
 import pikepdf as pdf
 import pypdfium2 as pdfium
@@ -26,6 +26,7 @@ STATE = {"q", "Q", "cm", "w", "J", "j", "M", "d", "ri", "i", "gs",
 MARKED = {"BMC", "BDC", "EMC", "MP", "DP", "BX", "EX"}
 TEXT = {"BT", "ET", "Tc", "Tw", "Tz", "TL", "Tf", "Tr", "Ts", "Td", "TD", "Tm", "T*", "Tj", "TJ"}
 CLIPBOARD_LIMIT = 16 << 20
+IMAGE_CROP = pdf.Name.PBImageCrop
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class ObjectDraw:
     end: int
     kind: str
     matrix: tuple
+    crop: tuple = ()
 
     @property
     def token(self):
@@ -44,7 +46,10 @@ def draws(page, operators):
     matrix, stack = IDENTITY, []
     in_text, first, simple_path = False, None, False
     xobjects = page.resources.get("/XObject", {})
+    skip = 0
     for index, op in enumerate(operators):
+        if index < skip:
+            continue
         name, args = str(op.operator), op.operands
         if name == "q":
             stack.append(matrix)
@@ -59,6 +64,11 @@ def draws(page, operators):
 
         if in_text:
             continue
+        if first is None and name == "BMC" and list(args) == [IMAGE_CROP]:
+            if cropped := cropped_image_draw(operators, index, matrix, xobjects):
+                skip = cropped.end
+                yield cropped
+                continue
         if name in PATH:
             if first is None:
                 first, simple_path = index, name in {"m", "re"}
@@ -76,6 +86,35 @@ def draws(page, operators):
                 kind = {pdf.Name.Image: "image", pdf.Name.Form: "form"}.get(xobject.get("/Subtype"))
                 if kind:
                     yield ObjectDraw(index, index+1, kind, matrix)
+
+
+def cropped_image_draw(operators, first, matrix, xobjects):
+    # Recognize only our isolated clip and a single raster paint. The full span
+    # becomes the editable object so its clipping path travels with the image.
+    clip = operators[first+1:first+41]
+    if len(clip) < 10 or [str(op.operator) for op in clip[:2]] != ["q", "m"]:
+        return None
+    points = []
+    next_op = 1
+    for op in clip[1:]:
+        if str(op.operator) != ("m" if not points else "l"):
+            break
+        try:
+            x, y = map(float, op.operands)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if not isfinite(x) or not isfinite(y) or len(points) == 32:
+            return None
+        points.append((x, y))
+        next_op += 1
+    tail = clip[next_op:next_op+6]
+    if len(points) < 3 or [str(op.operator) for op in tail] != ["h", "W", "n", "Do", "Q", "EMC"]:
+        return None
+    args = tail[3].operands
+    target = xobjects.get(str(args[0])) if len(args) == 1 else None
+    if not isinstance(target, pdf.Stream) or target.get("/Subtype") != pdf.Name.Image:
+        return None
+    return ObjectDraw(first, first+1+next_op+len(tail), "image", matrix, tuple(points))
 
 
 def marked_draws(page, operators, candidates):
@@ -172,12 +211,12 @@ def describe_objects(page, operators, candidates, *, outlines=True):
             token = integer_marks(item, ("PBObjectDraw",)).get("PBObjectDraw")
             if token not in identified:
                 continue
-            bounds = tuple(map(float, item.get_bounds()))
+            draw = identified[token]
+            bounds = polygon_bounds(transformed_points(draw.matrix, draw.crop)) if draw.crop else tuple(map(float, item.get_bounds()))
             if all(map(isfinite, bounds)) and bounds[0] <= bounds[2] and bounds[1] <= bounds[3]:
                 x0, y0, x1, y1 = bounds
                 if x0 == x1 or y0 == y1:
                     bounds = (x0-.25, y0-.25, x1+.25, y1+.25)
-                draw = identified[token]
                 obj = {"token": token, "kind": draw.kind, "bounds": bounds}
                 if draw.kind == "path" and outline_budget > 0:
                     try:
@@ -214,6 +253,9 @@ def selected_draws(candidates, edit):
 def modify_page(document, page, operators, candidates, edit):
     items = selected_draws(candidates, edit)
     action = edit.get("operation")
+    if action == "crop":
+        page.obj.Contents = document.make_stream(pdf.unparse_content_stream(crop_image(operators, items, edit.get("crop"))))
+        return
     if action not in {"move", "duplicate", "delete"}:
         raise ObjectError("Neznámá úprava objektu.")
     if action == "delete":
@@ -235,6 +277,72 @@ def modify_page(document, page, operators, candidates, edit):
         combined.extend(translated_draw(operators, item, delta))
     combined.extend(operators[cursor:])
     page.obj.Contents = document.make_stream(pdf.unparse_content_stream(combined))
+
+
+def transformed_points(matrix, polygon):
+    a, b, c, d, e, f = matrix
+    return [(a*x+c*y+e, b*x+d*y+f) for x, y in polygon]
+
+
+def polygon_bounds(points):
+    xs, ys = zip(*points)
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def polygon_area(points):
+    if len(points) < 3:
+        return 0.
+    x, y = points[0]
+    return abs(sum((a-x)*(d-y) - (b-y)*(c-x)
+                   for (a, b), (c, d) in zip(points[1:], points[2:]))) / 2
+
+
+def clip_polygon(points, rect):
+    for axis, edge, direction in ((0, rect[0], 1), (0, rect[2], -1), (1, rect[1], 1), (1, rect[3], -1)):
+        if not points:
+            break
+        clipped = []
+        before = points[-1]
+        before_inside = direction*(before[axis]-edge) >= 0
+        for point in points:
+            inside = direction*(point[axis]-edge) >= 0
+            if inside != before_inside:
+                fraction = (edge-before[axis])/(point[axis]-before[axis])
+                other = before[1-axis] + fraction*(point[1-axis]-before[1-axis])
+                clipped.append((edge, other) if axis == 0 else (other, edge))
+            if inside:
+                clipped.append(point)
+            before, before_inside = point, inside
+        points = clipped
+    return points
+
+
+def crop_image(operators, items, rect):
+    if len(items) != 1 or items[0].kind != "image":
+        raise ObjectError("Vyberte jeden rastrový obrázek.")
+    if (not isinstance(rect, list) or len(rect) != 4 or not all(
+            type(value) in (float, int) and isfinite(value) and abs(value) < 2e6 for value in rect)
+            or rect[2] <= rect[0] or rect[3] <= rect[1]):
+        raise ObjectError("Vyznačte platný obdélník ořezu.")
+    item = items[0]
+    source = transformed_points(item.matrix, item.crop or ((0, 0), (1, 0), (1, 1), (0, 1)))
+    points = clip_polygon(source, rect)
+    area = polygon_area(points)
+    if area <= 1e-8:
+        raise ObjectError("Obdélník ořezu musí zasahovat do obrázku.")
+    if isclose(area, polygon_area(source), rel_tol=1e-8, abs_tol=1e-8):
+        raise ObjectError("Vyznačte menší výřez obrázku.")
+    try:
+        local = transformed_points(invert(item.matrix), points)
+    except TextError as exc:
+        raise ObjectError(str(exc)) from exc
+    if len(local) > 32 or not all(isfinite(value) for point in local for value in point):
+        raise ObjectError("Tento obrázek nelze bezpečně oříznout.")
+    path = [instruction("m", *local[0]), *(instruction("l", *point) for point in local[1:]),
+            instruction("h"), instruction("W"), instruction("n")]
+    paint = operators[item.end-3 if item.crop else item.first]
+    return [*operators[:item.first], instruction("BMC", IMAGE_CROP), instruction("q"), *path, paint,
+            instruction("Q"), instruction("EMC"), *operators[item.end:]]
 
 
 def translated_draw(operators, item, delta):

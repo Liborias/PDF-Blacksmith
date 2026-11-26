@@ -157,6 +157,9 @@ func (v *documentView) canvasRegionMode() (int, bool) {
 
 func (v *documentView) canvasPointer(message uint32, x, y int32) bool {
 	a := v.app
+	if !v.secondary && v.imageCropPointer(message, x, y) {
+		return true
+	}
 	if !v.secondary && v.canvasContentMovePointer(message, x, y) {
 		return true
 	}
@@ -468,11 +471,12 @@ func (v *documentView) paintCanvasSelection(dc uintptr) {
 }
 
 func (a *app) setCanvasCursor() bool {
-	if a.mode != idTextTab || a.full || a.busy || keyDown(0x20) {
+	cropping := a.mode == idObjectsTab && a.objects.crop.active
+	if a.mode != idTextTab && !cropping || a.full || a.busy || keyDown(0x20) {
 		return false
 	}
 	cursorID := uintptr(32513) // IDC_IBEAM
-	if a.textTool.mode == textFrame {
+	if cropping || a.textTool.mode == textFrame {
 		cursorID = 32515 // IDC_CROSS
 	} else if !a.canvasTextCursor || a.textTool.mode >= textRectangle {
 		return false
@@ -482,12 +486,15 @@ func (a *app) setCanvasCursor() bool {
 	user32.NewProc("ScreenToClient").Call(a.window, uintptr(unsafe.Pointer(&p)))
 	v := a.view
 	if a.comparisonVisible() && contains(a.comparison.view.viewport, p.x, p.y) {
+		if cropping {
+			return false
+		}
 		v = a.comparison.view
 	}
 	if v.overview || v.dragging || v.selection.active() || !v.ready() || !contains(v.viewport, p.x, p.y) {
 		return false
 	}
-	if _, source := v.textSheetAt(p.x, p.y, 0); source == 0 {
+	if _, source := v.textSheetAt(p.x, p.y, 0); source == 0 || cropping && source != a.objects.source {
 		return false
 	}
 	cursor, _, _ := user32.NewProc("LoadCursorW").Call(0, cursorID)

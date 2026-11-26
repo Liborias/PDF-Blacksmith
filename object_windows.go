@@ -15,16 +15,20 @@ const (
 	idObjectPoint
 	idObjectRectangle
 	idObjectLasso
+	idObjectCrop
+	idObjectApplyCrop
+	idObjectCancelCrop
 )
 
 type objectEditRequest struct {
-	Operation string     `json:"operation,omitempty"`
-	Grouping  string     `json:"grouping,omitempty"`
-	Token     int        `json:"token,omitempty"`
-	Tokens    []int      `json:"tokens,omitempty"`
-	Delta     textPoint  `json:"delta,omitempty"`
-	At        *textPoint `json:"at,omitempty"`
-	Clipboard []byte     `json:"clipboard,omitempty"`
+	Operation string      `json:"operation,omitempty"`
+	Grouping  string      `json:"grouping,omitempty"`
+	Token     int         `json:"token,omitempty"`
+	Tokens    []int       `json:"tokens,omitempty"`
+	Delta     textPoint   `json:"delta,omitempty"`
+	At        *textPoint  `json:"at,omitempty"`
+	Clipboard []byte      `json:"clipboard,omitempty"`
+	Crop      *searchRect `json:"crop,omitempty"`
 }
 
 type pdfObject struct {
@@ -70,6 +74,8 @@ type objectEditor struct {
 	pressed, moving                            bool
 	delta                                      textPoint
 	preview                                    dragPreview
+	crop                                       imageCrop
+	cropTool, cropApply, cropCancel, cropHint  uintptr
 }
 
 func (a *app) buildObjectPanel() {
@@ -87,6 +93,10 @@ func (a *app) buildObjectPanel() {
 	e.duplicate = a.uiButton(uiObjectDuplicateKey, idObjectDuplicate, 16, 206, 145, 0)
 	e.remove = a.uiButton(uiObjectRemoveKey, idObjectDelete, 169, 206, 145, 0)
 	e.undo = a.uiButton(uiObjectUndoKey, idObjectUndo, 16, 247, 298, 0)
+	e.cropTool = a.uiTextIconButton(uiCropImage, idObjectCrop, 16, 288, 34)
+	e.cropHint = a.readout(58, 288, 256, 48)
+	e.cropApply = a.uiButton(uiApply, idObjectApplyCrop, 16, 343, 145, 0)
+	e.cropCancel = a.uiButton(uiCancel, idObjectCancelCrop, 169, 343, 145, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -105,10 +115,15 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.duplicate, selected)
 	setEnabled(e.remove, selected)
 	setEnabled(e.undo, ready && len(a.view.history) > 0)
+	setEnabled(e.cropTool, a.canCropImage())
+	a.setChecked(e.cropTool, e.crop.active)
+	setEnabled(e.cropApply, ready && e.crop.active && e.crop.hasRect && !e.crop.dragging)
+	setEnabled(e.cropCancel, ready && e.crop.active)
 }
 
 func (a *app) clearObjectSelection() {
 	e := &a.objects
+	a.cancelImageCrop()
 	a.cancelObjectGesture()
 	e.page, e.source, e.pick = nil, 0, textSelection{}
 	e.resetSelection()
@@ -127,9 +142,11 @@ func (e *objectEditor) endGesture() {
 
 func (a *app) cancelObjectGesture() {
 	e := &a.objects
-	if e.pressed {
+	if e.pressed || e.crop.dragging {
 		e.endGesture()
+		e.crop.dragging = false
 		user32.NewProc("ReleaseCapture").Call()
+		a.updateObjectActions()
 		a.view.invalidateCanvas()
 	}
 }
@@ -339,6 +356,10 @@ func (a *app) paintObjectSelection(dc uintptr, source int, area rect) {
 	if e.selected.Token == 0 || e.source != source {
 		return
 	}
+	if e.crop.active {
+		a.paintImageCrop(dc, area)
+		return
+	}
 	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), selectionColor.win())
 	old, _, _ := gdiSelect.Call(dc, pen)
 	defer gdiDelete.Call(pen)
@@ -402,7 +423,7 @@ func (a *app) copySelectedObject() {
 }
 
 func (a *app) objectCommand(id, notification int) bool {
-	if id < idObjectCopy || id > idObjectLasso || notification != 0 || a.mode != idObjectsTab {
+	if id < idObjectCopy || id > idObjectCancelCrop || notification != 0 || a.mode != idObjectsTab {
 		return false
 	}
 	e, v := &a.objects, a.view
@@ -410,7 +431,16 @@ func (a *app) objectCommand(id, notification int) bool {
 		return true
 	}
 	setFocus.Call(a.window)
+	if id < idObjectCrop {
+		a.cancelImageCrop()
+	}
 	switch id {
+	case idObjectCrop:
+		a.beginImageCrop()
+	case idObjectApplyCrop:
+		a.applyImageCrop()
+	case idObjectCancelCrop:
+		a.cancelImageCrop()
 	case idObjectPoint, idObjectRectangle, idObjectLasso:
 		a.cancelCanvasSelections()
 		e.mode = id - idObjectPoint
@@ -486,12 +516,20 @@ func (a *app) objectKey(msg *winMessage) bool {
 	}
 	switch msg.wParam {
 	case 0x1b:
+		if a.cancelImageCrop() {
+			return true
+		}
 		a.cancelObjectGesture()
 		a.clearObjectSelection()
 		a.view.invalidateCanvas()
 		return true
 	case 0x2e:
 		return a.objectCommand(idObjectDelete, 0)
+	case 0x0d:
+		if a.objects.crop.active && !keyDown(0x11) && !keyDown(0x12) {
+			a.applyImageCrop()
+			return true
+		}
 	}
 	ctrl, _, _ := user32.NewProc("GetKeyState").Call(0x11)
 	if ctrl&0x8000 != 0 {

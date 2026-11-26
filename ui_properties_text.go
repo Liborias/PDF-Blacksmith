@@ -192,6 +192,8 @@ const (
 	uiSelectPageObject              uiMessage = "win32.properties.SelectPageObject"
 	uiObjectActions                 uiMessage = "win32.properties.ObjectActions"
 	uiObjectActionsHelp             uiMessage = "win32.properties.ObjectActionsHelp"
+	uiCropImage                     uiMessage = "win32.properties.CropImage"
+	uiCropImageHint                 uiMessage = "win32.properties.CropImageHint"
 	uiObjectCopyKey                 uiMessage = "win32.properties.ObjectCopyKey"
 	uiObjectPasteKey                uiMessage = "win32.properties.ObjectPasteKey"
 	uiObjectDuplicateKey            uiMessage = "win32.properties.ObjectDuplicateKey"
@@ -427,6 +429,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiPolygonLassoKey:               {Czech: "Mnohoúhelníkové laso (L)", English: "Polygon lasso (L)"},
 	uiSelectPageObject:              {Czech: "Vyberte objekt na stránce.", English: "Select an object on the page."},
 	uiObjectActions:                 {Czech: "Akce s objekty", English: "Object actions"},
+	uiCropImage:                     {Czech: "Oříznout obrázek", English: "Crop image"},
+	uiCropImageHint:                 {Czech: "Tažením vyznačte výřez. Potvrďte tlačítkem Použít nebo Enterem.", English: "Drag to mark the area to keep. Click Apply or press Enter."},
 	uiObjectActionsHelp:             {Czech: "Akce pracují s aktuálním výběrem. Změny lze vrátit klávesami Ctrl + Z.", English: "Actions apply to the current selection. Press Ctrl + Z to undo changes."},
 	uiObjectCopyKey:                 {Czech: "Kopírovat · Ctrl+C", English: "Copy · Ctrl+C"},
 	uiObjectPasteKey:                {Czech: "Vložit · Ctrl+V", English: "Paste · Ctrl+V"},

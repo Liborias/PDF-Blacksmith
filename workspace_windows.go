@@ -520,6 +520,12 @@ func (a *app) layout() {
 }
 
 func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) {
+	if tab == idObjectsTab {
+		switch item.handle {
+		case a.objects.cropHint, a.objects.cropApply, a.objects.cropCancel:
+			return item, a.objects.crop.active
+		}
+	}
 	if tab == idFileDetails {
 		return a.recentItemLayout(item)
 	}

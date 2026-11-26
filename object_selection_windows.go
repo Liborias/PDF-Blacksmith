@@ -93,6 +93,7 @@ func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection
 	same := e.page == page && e.source == pick.source && slices.EqualFunc(e.items, hits, func(first, second pdfObject) bool { return first.Token == second.Token })
 	e.page, e.source, e.pick = page, pick.source, pick
 	if !same {
+		a.cancelImageCrop()
 		e.resetSelection()
 		e.items = hits
 		if len(hits) > 0 {

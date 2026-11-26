@@ -53,6 +53,7 @@ var selectionIcons = map[int]string{
 	idObjectPoint:         "i-cursor",
 	idObjectRectangle:     "i-rect_select",
 	idObjectLasso:         "i-lasso",
+	idObjectCrop:          "i-image_crop",
 }
 
 func (a *app) drawTextIcon(item *buttonDraw) bool {
