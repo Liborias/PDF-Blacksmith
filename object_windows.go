@@ -24,18 +24,21 @@ const (
 	idObjectCropOval
 	idObjectCropCircle
 	idObjectResetCrop
+	idObjectCropMoveMode
 )
 
 type objectEditRequest struct {
-	Operation string      `json:"operation,omitempty"`
-	Grouping  string      `json:"grouping,omitempty"`
-	Token     int         `json:"token,omitempty"`
-	Tokens    []int       `json:"tokens,omitempty"`
-	Delta     textPoint   `json:"delta,omitempty"`
-	At        *textPoint  `json:"at,omitempty"`
-	Clipboard []byte      `json:"clipboard,omitempty"`
-	Crop      *searchRect `json:"crop,omitempty"`
-	CropShape string      `json:"crop_shape,omitempty"`
+	Operation  string      `json:"operation,omitempty"`
+	Grouping   string      `json:"grouping,omitempty"`
+	Token      int         `json:"token,omitempty"`
+	Tokens     []int       `json:"tokens,omitempty"`
+	Delta      textPoint   `json:"delta,omitempty"`
+	At         *textPoint  `json:"at,omitempty"`
+	Clipboard  []byte      `json:"clipboard,omitempty"`
+	Crop       *searchRect `json:"crop,omitempty"`
+	CropShape  string      `json:"crop_shape,omitempty"`
+	MaskDelta  *textPoint  `json:"mask_delta,omitempty"`
+	ImageDelta *textPoint  `json:"image_delta,omitempty"`
 }
 
 type pdfObject struct {
@@ -47,9 +50,11 @@ type pdfObject struct {
 }
 
 type pdfImageMask struct {
-	Shape        string
-	SourceBounds searchRect `json:"source_bounds"`
-	Outline      []textPoint
+	Shape         string
+	SourceBounds  searchRect `json:"source_bounds"`
+	Outline       []textPoint
+	ClipOutline   []textPoint `json:"clip_outline"`
+	SourceOutline []textPoint `json:"source_outline"`
 }
 
 type objectOutline struct {
@@ -90,7 +95,8 @@ type objectEditor struct {
 	preview                                    dragPreview
 	crop                                       imageCrop
 	cropTool, cropApply, cropCancel, cropHint  uintptr
-	cropReset                                  uintptr
+	cropReset, cropMoveMode                    uintptr
+	cropRevision                               uint64
 	cropRatioLabel, cropRatio                  uintptr
 	cropShapes                                 [4]uintptr
 }
@@ -138,7 +144,7 @@ func (a *app) updateObjectActions() {
 	canCrop := a.canCropImage()
 	setEnabled(e.cropTool, canCrop)
 	a.setChecked(e.cropTool, e.crop.active)
-	_, canApplyCrop := a.imageCropBounds()
+	_, canApplyCrop := a.cropEditRequest()
 	cropOptions := canCrop && !e.crop.dragging
 	if a.hasImageCropTarget() {
 		hint := uiChooseImageCrop
@@ -146,6 +152,9 @@ func (a *app) updateObjectActions() {
 			hint = uiCropImageHint
 			if e.selected.ImageMask != nil {
 				hint = uiEditImageCropHint
+				if a.cropMoveMode() == moveCropImage {
+					hint = uiCropMoveImageHint
+				}
 			}
 		}
 		a.setUIMessage(e.cropHint, hint)
@@ -158,6 +167,7 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.cropApply, canApplyCrop)
 	setEnabled(e.cropCancel, ready && e.crop.active)
 	setEnabled(e.cropReset, cropOptions && e.selected.ImageMask != nil)
+	setEnabled(e.cropMoveMode, cropOptions && e.crop.active && e.selected.ImageMask != nil)
 }
 
 func (a *app) clearObjectSelection() {
@@ -187,7 +197,7 @@ func (a *app) cancelObjectGesture() {
 	e := &a.objects
 	if e.pressed || e.crop.dragging {
 		e.endGesture()
-		e.crop.dragging = false
+		e.crop.endDrag()
 		user32.NewProc("ReleaseCapture").Call()
 		a.updateObjectActions()
 		a.view.invalidateCanvas()
@@ -283,6 +293,16 @@ func (v *documentView) scheduleObjects() bool {
 	if v.secondary || a.mode != idObjectsTab || a.busy || e.pick.source == 0 || e.pick.generation != v.generation {
 		return false
 	}
+	if e.crop.motion.requested != e.cropRevision && e.crop.motion.shifts.changed() {
+		if edit, ok := a.cropEditRequest(); ok {
+			e.crop.motion.requested = e.cropRevision
+			req := v.request("object_crop_motion_preview")
+			req.View.Page, req.View.Rotation = e.source, v.rotations[e.source-1]
+			req.ObjectEdit = &edit
+			v.launch(req, e.source, 0, false, nil)
+			return true
+		}
+	}
 	if e.crop.active && !e.crop.previewRequested {
 		e.crop.previewRequested = true
 		req := v.request("object_crop_preview")
@@ -333,6 +353,14 @@ func (v *documentView) finishObjects(job readerJob) {
 		return
 	}
 	if v.secondary || a.mode != idObjectsTab || job.objectPage != e.pick.source || job.objectSerial != e.serial {
+		return
+	}
+	if job.action == "object_crop_motion_preview" {
+		if e.crop.active && e.cropRevision == job.cropRevision && job.result.Status == "ok" {
+			e.crop.motion.preview, e.crop.motion.coverage = job.frame.image, job.cropCoverage
+			e.crop.motion.rendered = job.cropRevision
+			v.invalidateCanvas()
+		}
 		return
 	}
 	if job.action == "object_crop_preview" {
@@ -481,6 +509,12 @@ func (a *app) copySelectedObject() {
 }
 
 func (a *app) objectCommand(id, notification int) bool {
+	if a.mode == idObjectsTab && id == idObjectCropMoveMode && notification == 1 {
+		setFocus.Call(a.window)
+		a.updateObjectActions()
+		a.view.invalidateCanvas()
+		return true
+	}
 	if a.mode == idObjectsTab && id == idObjectCropRatio && notification == 1 {
 		setFocus.Call(a.window)
 		preset := comboIndex(a.objects.cropRatio)
@@ -489,7 +523,7 @@ func (a *app) objectCommand(id, notification int) bool {
 			chooseCombo(a.objects.cropRatio, preset)
 		}
 		a.updateObjectActions()
-		a.view.invalidateCanvas()
+		a.invalidateCropMotion()
 		return true
 	}
 	if id < idObjectCopy || id > idObjectResetCrop || notification != 0 || a.mode != idObjectsTab {

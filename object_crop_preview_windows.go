@@ -60,6 +60,10 @@ func (a *app) paintCropOverlay(dc uintptr, area rect, box searchRect, angle int,
 	source := e.selected.cropSourceBounds()
 	bounds := rectangleBetween(pdfPointToText(textPoint{source[0], source[1]}, box, angle),
 		pdfPointToText(textPoint{source[2], source[3]}, box, angle))
+	moved := crop.motion.shifts.changed()
+	if moved {
+		bounds = moveCropBounds(bounds, crop.motion.shifts.image)
+	}
 	first := screenTextPoint(area, textPoint{bounds[0], bounds[1]})
 	last := screenTextPoint(area, textPoint{bounds[2], bounds[3]})
 	if first.x >= last.x || first.y >= last.y {
@@ -67,9 +71,9 @@ func (a *app) paintCropOverlay(dc uintptr, area rect, box searchRect, angle int,
 	}
 	var previous, candidate uintptr
 	if mask := e.selected.ImageMask; mask != nil {
-		outline := make([]textPoint, len(mask.Outline))
-		for i, p := range mask.Outline {
-			outline[i] = pdfPointToText(p, box, angle)
+		outline := displayContour(mask.Outline, box, angle)
+		if moved {
+			outline = a.cropMotionOutline(box, angle, crop.motion.shifts.mask)
 		}
 		previous = cropScreenRegion(dc, area, outline)
 		if previous == 0 {
@@ -110,6 +114,14 @@ func (a *app) paintCropOverlay(dc uintptr, area rect, box searchRect, angle int,
 		}
 		alphaBlend.Call(dc, uintptr(first.x), uintptr(first.y), uintptr(last.x-first.x), uintptr(last.y-first.y),
 			source.dc, 0, 0, uintptr(source.width), uintptr(source.height), opacity<<16|1<<24)
+	}
+	if moved {
+		cropRegion := previous
+		if candidate != 0 {
+			cropRegion = candidate
+		}
+		blend(crop.ghost, 77, 0, cropRegion, 0)
+		return
 	}
 	if previous != 0 {
 		blend(crop.ghost, 77, 0, previous, candidate)

@@ -877,7 +877,7 @@ def save_document(src, request):
 
 
 def edit_object_document(src, request):
-    from object_edit import (ObjectError, crop_preview, describe_objects, draws, modify_page, paste_object,
+    from object_edit import (ObjectError, crop_motion_preview, crop_preview, describe_objects, draws, modify_page, paste_object,
                              pikepdf_operators, selected_draws, snapshot_object)
 
     view = request.get("view", {})
@@ -895,7 +895,7 @@ def edit_object_document(src, request):
         return number, rotation, document.pages[number-1]
 
     try:
-        if action in ("object_probe", "object_snapshot", "object_crop_preview"):
+        if action in ("object_probe", "object_snapshot", "object_crop_preview", "object_crop_motion_preview"):
             with open_pdf(src, password) as document:
                 number, rotation, page = select(document)
                 operators = pikepdf_operators(page)
@@ -903,6 +903,8 @@ def edit_object_document(src, request):
                 if action == "object_probe":
                     return {"object_page": describe_objects(page, operators, candidates)}
                 items = selected_draws(candidates, edit)
+                if action == "object_crop_motion_preview":
+                    return crop_motion_preview(page, operators, items, edit, view)
                 if action == "object_crop_preview":
                     return crop_preview(page, operators, items, rotation)
                 return snapshot_object(document, number, page, operators, candidates, items, rotation)
@@ -931,6 +933,8 @@ def edit_object_document(src, request):
         return {**description, "message": "Výběr byl přesunut."}
     if edit.get("operation") in ("crop", "replace_crop"):
         return {**description, "message": "Obrázek byl oříznut v otevřené kartě."}
+    if edit.get("operation") == "translate_crop":
+        return {**description, "message": "Posun ořezu byl potvrzen."}
     if edit.get("operation") == "reset_crop":
         return {**description, "message": "Plný rozsah obrázku byl obnoven."}
     if edit.get("grouping") == "group":
@@ -1302,7 +1306,7 @@ def dispatch(request, *, raster=False):
                  "text_probe": edit_text_document, "text_edit": edit_text_document,
                  "text_background": edit_text_document, "object_probe": edit_object_document,
                  "object_snapshot": edit_object_document, "object_crop_preview": edit_object_document,
-                 "object_edit": edit_object_document}.get(request.get("action"))
+                 "object_crop_motion_preview": edit_object_document, "object_edit": edit_object_document}.get(request.get("action"))
     if operation is None:
         raise UserError("Neznámá akce.")
     if operation is inspect_document:

@@ -75,3 +75,26 @@ func TestResizeImageCropHandles(t *testing.T) {
 		}
 	}
 }
+
+func TestCropMotionRespectsActualRasterEdges(t *testing.T) {
+	quad := []textPoint{{.2, .1}, {.7, .1}, {.9, .9}, {.4, .9}}
+	clip := []textPoint{{.45, .35}, {.65, .35}, {.65, .55}, {.45, .55}}
+	bounds := polygonBounds(clip)
+	for _, tc := range []struct {
+		mode    cropMotionMode
+		request textPoint
+		want    textPoint
+	}{
+		{moveCropPair, textPoint{.8, 0}, textPoint{.35, 0}},
+		{moveCropMask, textPoint{-.6, 0}, textPoint{-.1375, 0}},
+		{moveCropImage, textPoint{.6, 0}, textPoint{.1375, 0}},
+	} {
+		got := constrainCropMotion(quad, clip, cropShifts{}, tc.mode, bounds, tc.request)
+		for i := range got {
+			if math.Abs(got[i]-tc.want[i]) > 1e-9 {
+				t.Errorf("mode %v: got %v, want %v", tc.mode, got, tc.want)
+				break
+			}
+		}
+	}
+}

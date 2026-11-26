@@ -197,6 +197,11 @@ const (
 	uiCancelImageCrop               uiMessage = "win32.properties.CancelImageCrop"
 	uiCropImageHint                 uiMessage = "win32.properties.CropImageHint"
 	uiEditImageCropHint             uiMessage = "win32.properties.EditImageCropHint"
+	uiCropMovePair                  uiMessage = "win32.properties.CropMovePair"
+	uiCropMoveMask                  uiMessage = "win32.properties.CropMoveMask"
+	uiCropMoveImage                 uiMessage = "win32.properties.CropMoveImage"
+	uiCropMoveHelp                  uiMessage = "win32.properties.CropMoveHelp"
+	uiCropMoveImageHint             uiMessage = "win32.properties.CropMoveImageHint"
 	uiResetImageCrop                uiMessage = "win32.properties.ResetImageCrop"
 	uiChooseImageCrop               uiMessage = "win32.properties.ChooseImageCrop"
 	uiCropAspectRatio               uiMessage = "win32.properties.CropAspectRatio"
@@ -446,6 +451,11 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiCancelImageCrop:               {Czech: "Zrušit ořez", English: "Cancel crop"},
 	uiCropImageHint:                 {Czech: "Výřez vyznačte tažením. Potvrďte Enterem nebo tlačítkem.", English: "Drag to mark the area to keep, then confirm or press Enter."},
 	uiEditImageCropHint:             {Czech: "Výřez vyznačte v rámci celého obrázku.", English: "Draw a new crop within the full image."},
+	uiCropMovePair:                  {Czech: "Přesunout masku i obrázek", English: "Move mask and image"},
+	uiCropMoveMask:                  {Czech: "Přesunout jen ořezovou masku", English: "Move crop mask only"},
+	uiCropMoveImage:                 {Czech: "Posun obsahu v masce", English: "Move image inside mask"},
+	uiCropMoveHelp:                  {Czech: "Volba určuje, co se pohne při tažení uvnitř ořezové masky.", English: "Controls what moves when you drag inside the crop mask."},
+	uiCropMoveImageHint:             {Czech: "Táhněte obrázek uvnitř pevné masky.", English: "Drag the image inside the fixed mask."},
 	uiResetImageCrop:                {Czech: "Obnovit ořez", English: "Reset crop"},
 	uiChooseImageCrop:               {Czech: "Zvolte tvar, poměr stran nebo spusťte nástroj ořezu.", English: "Choose a shape or aspect ratio, or click the crop icon to start."},
 	uiCropAspectRatio:               {Czech: "Poměr stran", English: "Aspect ratio"},

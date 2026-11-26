@@ -220,6 +220,76 @@ def check_image_crop(work):
     assert source.read_bytes() == before
 
 
+def check_crop_motion(work):
+    source = work / "crop-motion-source.pdf"
+    pixels = bytes(([255, 0, 0]*10 + [0, 0, 255]*10)*16)
+    with Pdf.new() as doc:
+        page = doc.add_blank_page(page_size=(360, 300))
+        image = doc.make_stream(pixels, Type=Name.XObject, Subtype=Name.Image,
+                                Width=20, Height=16, BitsPerComponent=8, ColorSpace=Name.DeviceRGB)
+        page.Resources = Dictionary(XObject=Dictionary(Pattern=image))
+        page.Contents = doc.make_stream(b"q 100 0 0 80 100 100 cm /Pattern Do Q "
+                                       b"q 70 0 0 50 240 130 cm /Pattern Do Q "
+                                       b"0 1 0 rg 155 150 10 6 re f")
+        doc.save(source)
+
+    def edit(src, output, operation, **fields):
+        request = dict(action="object_edit", input=str(src), output=str(output), view={"page": 1, "rotation": 90},
+                       object_edit=dict(operation=operation, token=probe(src)[0]["token"], **fields))
+        dispatch(request)
+        return request
+
+    def image_state(path):
+        cropped, other, _ = probe(path)
+        assert other["bounds"] == (240, 130, 310, 180)
+        with Pdf.open(path) as doc:
+            assert not doc.check_pdf_syntax()
+            assert doc.pages[0].resources.XObject.Pattern.read_bytes() == pixels
+        return tuple(cropped["bounds"]), tuple(cropped["image_mask"]["source_bounds"])
+
+    def sample(path, x, y):
+        with PdfDocument(path) as pdf:
+            return pdf[0].render().to_pil().getpixel((x, 300-y))
+
+    cut = work / "crop-motion-cut.pdf"
+    edit(source, cut, "replace_crop", crop=[120, 120, 170, 160])
+    before = cut.read_bytes()
+    fixed, placement = image_state(cut)
+    content = work / "crop-motion-content.pdf"
+    request = edit(cut, content, "translate_crop", image_delta=[18, 0])
+    assert image_state(content) == (fixed, (118, 100, 218, 180))
+    assert sample(cut, 157, 135) == (0, 0, 255) and sample(content, 157, 135) == (255, 0, 0)
+    assert sample(content, 160, 153) == (0, 255, 0)  # The foreground stays above the image.
+    preview = dispatch({**request, "action": "object_crop_motion_preview"})
+    with Image.open(BytesIO(b64decode(preview["image"]))) as image:
+        assert image.height == 1200  # Reader rotation is included in the preview.
+        factor = image.height / 360
+        assert image.getpixel((int(factor*135), int(factor*157))) == (255, 0, 0)
+
+    mask = work / "crop-motion-mask.pdf"
+    edit(cut, mask, "translate_crop", mask_delta=[16, 0])
+    assert image_state(mask) == ((136, 120, 186, 160), placement)
+    assert sample(mask, 124, 130) == (255, 255, 255) and sample(mask, 180, 130) == (0, 0, 255)
+
+    together = work / "crop-motion-pair.pdf"
+    edit(cut, together, "translate_crop", mask_delta=[25, 15], image_delta=[25, 15])
+    assert image_state(together) == ((145, 135, 195, 175), (125, 115, 225, 195))
+    assert sample(together, 182, 150) == sample(cut, 157, 135)
+    combined = work / "crop-motion-resize.pdf"
+    edit(cut, combined, "translate_crop", image_delta=[18, 0], mask_delta=[5, 0],
+         crop=[123, 123, 179, 163], crop_shape="ellipse")
+    assert image_state(combined) == ((123, 123, 179, 163), (118, 100, 218, 180))
+    assert probe(combined)[0]["image_mask"]["shape"] == "ellipse"
+    invalid = work / "crop-motion-blank.pdf"
+    try:
+        edit(cut, invalid, "translate_crop", image_delta=[60, 0])
+    except UserError:
+        assert not invalid.exists()
+    else:
+        raise AssertionError("Moving the image beyond the mask opened a gap.")
+    assert cut.read_bytes() == before
+
+
 def check_objects(work):
     source = work / "original.pdf"
     fixture(source)
@@ -346,4 +416,5 @@ if __name__ == "__main__":
     with TemporaryDirectory(prefix="blacksmith-objects-") as directory:
         check_objects(Path(directory))
         check_image_crop(Path(directory))
+        check_crop_motion(Path(directory))
     print("Object edits, image clipping, graphics state, rotated paste and bookmarks passed.")

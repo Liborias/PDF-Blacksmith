@@ -231,6 +231,8 @@ type readerTask struct {
 }
 
 type readerJob struct {
+	cropRevision uint64
+	cropCoverage searchRect
 	textFrame uint64
 	objectPage              int
 	objectSerial            uint64
@@ -1094,11 +1096,17 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 	}
 	var objectPage int
 	var objectSerial uint64
-	if req.Action == "object_probe" || req.Action == "object_snapshot" || req.Action == "object_crop_preview" {
+	if req.Action == "object_probe" || req.Action == "object_snapshot" || req.Action == "object_crop_preview" || req.Action == "object_crop_motion_preview" {
 		objectPage = req.View.Page
 		if req.ObjectEdit != nil {
 			objectSerial = v.app.objects.serial
 		}
+	}
+	var cropRevision uint64
+	var cropCoverage searchRect
+	if req.Action == "object_crop_motion_preview" {
+		cropRevision = v.app.objects.cropRevision
+		cropCoverage = v.app.cropMotionCoverage()
 	}
 	task := readerTask{generation, number, pixels, background, tile}
 	engine := v.engine
@@ -1113,6 +1121,7 @@ func (v *documentView) launch(req request, number, pixels int, background bool, 
 	}
 	go func() {
 		job := readerJob{readerTask: task, action: req.Action, textFrame: textFrame, objectPage: objectPage, objectSerial: objectSerial,
+			cropRevision: cropRevision, cropCoverage: cropCoverage,
 			result: response{Status: "changed", Message: "Vstupní PDF se změnilo. Otevřete je znovu."}}
 		if unchanged(req.Input, original) {
 			result := engine.run(req)
@@ -1161,7 +1170,7 @@ func (v *documentView) finished(job readerJob) {
 		return
 	}
 	v.running = false
-	if job.action == "object_probe" || job.action == "object_snapshot" || job.action == "object_crop_preview" {
+	if job.action == "object_probe" || job.action == "object_snapshot" || job.action == "object_crop_preview" || job.action == "object_crop_motion_preview" {
 		v.finishObjects(job)
 		v.schedule()
 		return

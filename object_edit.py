@@ -36,6 +36,7 @@ class ImageMask:
     content_start: int
     shape: str
     content_matrix: tuple  # Image placement in page coordinates, independent of the clip.
+    clip_outline: tuple    # Mask geometry in page coordinates.
     outline: tuple         # Visible intersection of the mask and the image in page coordinates.
 
     def source_outline(self):
@@ -145,11 +146,13 @@ def cropped_image_draw(operators, first, matrix, xobjects):
     points = transformed_points(placement, IMAGE_QUAD)
     if not all(isfinite(value) for point in points for value in point):
         return None
-    for contour in clips:
-        points = clip_convex(points, contour)
+    clip = clips[0]
+    for contour in clips[1:]:
+        clip = clip_convex(clip, contour)
+    points = clip_convex(points, clip) if clip else ()
     shape = "ellipse" if len(clips) == 1 and curved else "rectangle"
     return ObjectDraw(first, paint+len(tail), "image", matrix,
-                      ImageMask(start, shape, placement, tuple(points)))
+                      ImageMask(start, shape, placement, tuple(clip), tuple(points)))
 
 
 def image_clip_contour(path, matrix):
@@ -277,7 +280,8 @@ def describe_objects(page, operators, candidates, *, outlines=True):
                 obj = {"token": token, "kind": draw.kind, "bounds": bounds}
                 if mask and outlines:
                     obj["image_mask"] = {"source_bounds": polygon_bounds(mask.source_outline()),
-                                         "outline": mask.outline, "shape": mask.shape}
+                                         "outline": mask.outline, "shape": mask.shape,
+                                         "source_outline": mask.source_outline(), "clip_outline": mask.clip_outline}
                 if draw.kind == "path" and outline_budget > 0:
                     try:
                         outline = path_outline(operators, draw, bounds)
@@ -313,7 +317,7 @@ def selected_draws(candidates, edit):
 def modify_page(document, page, operators, candidates, edit):
     items = selected_draws(candidates, edit)
     action = edit.get("operation")
-    if action in {"crop", "replace_crop", "reset_crop"}:
+    if action in {"crop", "replace_crop", "reset_crop", "translate_crop"}:
         item = selected_image(items)
         if action == "reset_crop":
             if item.mask is None:
@@ -321,6 +325,8 @@ def modify_page(document, page, operators, candidates, edit):
             # Keep the local image placement and the surrounding graphics state.
             clipped = [*operators[:item.first], operators[item.first+1],
                        *operators[item.mask.content_start:item.end-1], *operators[item.end:]]
+        elif action == "translate_crop":
+            clipped = translate_image_crop(page, operators, item, edit)
         else:
             clipped = crop_image(operators, item, edit.get("crop"), edit.get("crop_shape", "rectangle"),
                                  replace=action == "replace_crop")
@@ -473,6 +479,71 @@ def crop_image(operators, item, rect, shape, *, replace):
     return [*operators[:item.first], instruction("BMC", IMAGE_CROP), instruction("q"), *previous_clip,
             *local_path, *(instruction(name) for name in CLIP_END), *content,
             instruction("Q"), instruction("EMC"), *operators[item.end:]]
+
+
+def translate_image_crop(page, operators, item, edit):
+    mask = item.mask
+    if not mask or not mask.clip_outline:
+        raise ObjectError("Vyberte obrázek s ořezovou maskou vytvořenou v PDF Blacksmith.")
+    mask_delta = clip_point(edit.get("mask_delta", [0, 0]), "posun masky")
+    image_delta = clip_point(edit.get("image_delta", [0, 0]), "posun obrázku")
+    if not any((*mask_delta, *image_delta)):
+        raise ObjectError("Nejprve posuňte výřez nebo obrázek.")
+    quad = mask.source_outline()
+    orientation = 1 if signed_area(quad) > 0 else -1
+    relative = (mask_delta[0]-image_delta[0], mask_delta[1]-image_delta[1])
+    for (x, y), (u, v) in zip(quad, (*quad[1:], quad[0])):
+        nx, ny = (y-v)*orientation, (u-x)*orientation
+        distance = min(nx*(px-x)+ny*(py-y) for px, py in mask.clip_outline)
+        offset = nx*relative[0]+ny*relative[1]
+        if distance + offset < min(0., distance) - .002 * (abs(nx)+abs(ny)):
+            raise ObjectError("Posun by odkryl prázdné místo uvnitř ořezu.")
+    try:
+        inverse = invert(item.matrix)
+    except TextError as exc:
+        raise ObjectError(str(exc)) from exc
+    clips = operators[item.first+2:mask.content_start]
+    if any(mask_delta):
+        a,b,c,d,_,_ = inverse
+        dx,dy = a*mask_delta[0]+c*mask_delta[1], b*mask_delta[0]+d*mask_delta[1]
+        clips = [instruction(str(operator), *(float(value)+(dx if i%2==0 else dy)
+                                               for i,value in enumerate(args)))
+                 if args else (args, operator) for args, operator in clips]
+    content = operators[mask.content_start:item.end-2]
+    if any(image_delta):
+        *linear, x, y = mask.content_matrix
+        matrix = compose(inverse, (*linear, x+image_delta[0], y+image_delta[1]))
+        if not all(map(isfinite, matrix)):
+            raise ObjectError("Obrázek má neplatnou transformaci.")
+        content = [instruction("cm", *matrix), content[-1]]
+    moved = [*operators[:item.first+2], *clips, *content, *operators[item.end-2:]]
+    if "crop" in edit:
+        end = item.first+2+len(clips)+len(content)
+        for index in range(item.first+2, end):
+            if isinstance(moved[index], tuple):
+                moved[index] = pdf.ContentStreamInstruction(*moved[index])
+        shifted = cropped_image_draw(moved, item.first, item.matrix, page.resources.get("/XObject", {}))
+        if shifted is None:
+            raise ObjectError("Uloženou masku se nepodařilo načíst.")
+        return crop_image(moved, shifted, edit["crop"], edit.get("crop_shape", "rectangle"), replace=True)
+    return moved
+
+
+def crop_motion_preview(page, operators, items, edit, view):
+    updated = translate_image_crop(page, operators, selected_image(items), edit)
+    buffer = BytesIO()
+    with pdf.Pdf.new() as sample:
+        sample.pages.append(page)
+        sample.pages[0].obj.Contents = sample.make_stream(pdf.unparse_content_stream(updated))
+        sample.save(buffer, fix_metadata_version=False)
+        preview = render_screen(sample, buffer.getvalue(), {**view, "page": 1, "pixels": 1200}, "")
+    if preview is None:
+        raise ObjectError("Náhled posunu ořezu se nepodařilo vykreslit.")
+    payload = BytesIO()
+    with Image.frombytes("RGB", (preview["raster_width"], preview["raster_height"]),
+                         bytes(preview["raster"]), "raw", "BGRX") as image:
+        image.save(payload, format="PNG")
+    return {"image": b64encode(payload.getvalue()).decode("ascii")}
 
 
 def translated_draw(operators, item, delta):
