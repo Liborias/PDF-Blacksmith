@@ -197,6 +197,10 @@ const (
 	uiCropAspectRatio               uiMessage = "win32.properties.CropAspectRatio"
 	uiCropFreeRatio                 uiMessage = "win32.properties.CropFreeRatio"
 	uiCropSquareRatio               uiMessage = "win32.properties.CropSquareRatio"
+	uiCropRectangle                 uiMessage = "ui.obdelnik.e80dea7331"
+	uiCropSquare                    uiMessage = "ui.ctverec.410ecb62ac"
+	uiCropOval                      uiMessage = "ui.oval.f6f90ef7db"
+	uiCropCircle                    uiMessage = "ui.kruh.74b14ff22d"
 	uiObjectCopyKey                 uiMessage = "win32.properties.ObjectCopyKey"
 	uiObjectPasteKey                uiMessage = "win32.properties.ObjectPasteKey"
 	uiObjectDuplicateKey            uiMessage = "win32.properties.ObjectDuplicateKey"
@@ -437,6 +441,10 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiCropAspectRatio:               {Czech: "Poměr stran", English: "Aspect ratio"},
 	uiCropFreeRatio:                 {Czech: "Volný", English: "Free"},
 	uiCropSquareRatio:               {Czech: "1 : 1 · Čtverec", English: "1 : 1 · Square"},
+	uiCropRectangle:                 {Czech: "Obdélník", English: "Rectangle"},
+	uiCropSquare:                    {Czech: "Čtverec", English: "Square"},
+	uiCropOval:                      {Czech: "Ovál", English: "Oval"},
+	uiCropCircle:                    {Czech: "Kruh", English: "Circle"},
 	uiObjectActionsHelp:             {Czech: "Akce pracují s aktuálním výběrem. Změny lze vrátit klávesami Ctrl + Z.", English: "Actions apply to the current selection. Press Ctrl + Z to undo changes."},
 	uiObjectCopyKey:                 {Czech: "Kopírovat · Ctrl+C", English: "Copy · Ctrl+C"},
 	uiObjectPasteKey:                {Czech: "Vložit · Ctrl+V", English: "Paste · Ctrl+V"},

@@ -27,6 +27,8 @@ MARKED = {"BMC", "BDC", "EMC", "MP", "DP", "BX", "EX"}
 TEXT = {"BT", "ET", "Tc", "Tw", "Tz", "TL", "Tf", "Tr", "Ts", "Td", "TD", "Tm", "T*", "Tj", "TJ"}
 CLIPBOARD_LIMIT = 16 << 20
 IMAGE_CROP = pdf.Name.PBImageCrop
+IMAGE_QUAD = ((0, 0), (1, 0), (1, 1), (0, 1))
+CLIP_END = ("h", "W", "n")
 
 
 @dataclass(frozen=True)
@@ -35,7 +37,7 @@ class ObjectDraw:
     end: int
     kind: str
     matrix: tuple
-    crop: tuple = ()
+    crop: tuple | None = None  # Effective visible contour in page coordinates.
 
     @property
     def token(self):
@@ -91,30 +93,55 @@ def draws(page, operators):
 def cropped_image_draw(operators, first, matrix, xobjects):
     # Recognize only our isolated clip and a single raster paint. The full span
     # becomes the editable object so its clipping path travels with the image.
-    clip = operators[first+1:first+41]
-    if len(clip) < 10 or [str(op.operator) for op in clip[:2]] != ["q", "m"]:
+    if [str(op.operator) for op in operators[first+1:first+3]] != ["q", "m"]:
         return None
-    points = []
-    next_op = 1
-    for op in clip[1:]:
-        if str(op.operator) != ("m" if not points else "l"):
-            break
+    points = transformed_points(matrix, IMAGE_QUAD)
+    start = first+2
+    while start < len(operators) and str(operators[start].operator) == "m":
+        close = start+1
+        while close < min(start+32, len(operators)) and str(operators[close].operator) in {"l", "c"}:
+            close += 1
+        if tuple(str(op.operator) for op in operators[close:close+3]) != CLIP_END:
+            return None
         try:
-            x, y = map(float, op.operands)
+            contour = image_clip_contour(operators[start:close], matrix)
         except (TypeError, ValueError, OverflowError):
             return None
-        if not isfinite(x) or not isfinite(y) or len(points) == 32:
+        if not contour:
             return None
-        points.append((x, y))
-        next_op += 1
-    tail = clip[next_op:next_op+6]
-    if len(points) < 3 or [str(op.operator) for op in tail] != ["h", "W", "n", "Do", "Q", "EMC"]:
+        points = clip_convex(points, contour)
+        start = close+3
+    tail = operators[start:start+3]
+    if [str(op.operator) for op in tail] != ["Do", "Q", "EMC"]:
         return None
-    args = tail[3].operands
+    args = tail[0].operands
     target = xobjects.get(str(args[0])) if len(args) == 1 else None
     if not isinstance(target, pdf.Stream) or target.get("/Subtype") != pdf.Name.Image:
         return None
-    return ObjectDraw(first, first+1+next_op+len(tail), "image", matrix, tuple(points))
+    return ObjectDraw(first, start+len(tail), "image", matrix, tuple(points))
+
+
+def image_clip_contour(path, matrix):
+    # Use the vector path for painting. Sample curves only for bounds and
+    # overlap checks, keeping all four extremal vertices of an ellipse.
+    commands = tuple(str(op) for _, op in path)
+    operands = [tuple(map(float, args)) for args, _ in path]
+    if len(path) >= 3 and commands == ("m",) + ("l",)*(len(path)-1) and all(len(pair) == 2 for pair in operands):
+        points = transformed_points(matrix, operands)
+    elif (commands == ("m", "c", "c", "c", "c") and len(operands[0]) == 2
+          and all(len(curve) == 6 for curve in operands[1:])):
+        start, = transformed_points(matrix, [operands[0]])
+        pen, points = start, [start]
+        for curve in operands[1:]:
+            first, second, end = transformed_points(matrix, (curve[:2], curve[2:4], curve[4:]))
+            points.extend(cubic_samples(pen, first, second, end, steps=24))
+            pen = end
+        if pen != start:
+            return ()
+        points.pop()
+    else:
+        return ()
+    return points if all(isfinite(value) for point in points for value in point) else ()
 
 
 def marked_draws(page, operators, candidates):
@@ -180,11 +207,7 @@ def path_outline(operators, draw, bounds):
             start, goal = pen, values[-2:]
             first = start if name == "v" else values[:2]
             second = goal if name == "y" else values[-4:-2]
-            for step in range(1, 13):
-                t = step / 12
-                r = 1-t
-                current.append(tuple(r**3*start[i] + 3*r*r*t*first[i] + 3*r*t*t*second[i] + t**3*goal[i]
-                                     for i in range(2)))
+            current.extend(cubic_samples(start, first, second, goal))
             pen = goal
         if len(current) > 320:
             return None
@@ -212,7 +235,9 @@ def describe_objects(page, operators, candidates, *, outlines=True):
             if token not in identified:
                 continue
             draw = identified[token]
-            bounds = polygon_bounds(transformed_points(draw.matrix, draw.crop)) if draw.crop else tuple(map(float, item.get_bounds()))
+            if draw.crop is not None and not polygon_area(draw.crop):
+                continue
+            bounds = polygon_bounds(draw.crop) if draw.crop is not None else tuple(map(float, item.get_bounds()))
             if all(map(isfinite, bounds)) and bounds[0] <= bounds[2] and bounds[1] <= bounds[3]:
                 x0, y0, x1, y1 = bounds
                 if x0 == x1 or y0 == y1:
@@ -254,7 +279,8 @@ def modify_page(document, page, operators, candidates, edit):
     items = selected_draws(candidates, edit)
     action = edit.get("operation")
     if action == "crop":
-        page.obj.Contents = document.make_stream(pdf.unparse_content_stream(crop_image(operators, items, edit.get("crop"))))
+        clipped = crop_image(operators, items, edit.get("crop"), edit.get("crop_shape", "rectangle"))
+        page.obj.Contents = document.make_stream(pdf.unparse_content_stream(clipped))
         return
     if action not in {"move", "duplicate", "delete"}:
         raise ObjectError("Neznámá úprava objektu.")
@@ -289,59 +315,108 @@ def polygon_bounds(points):
     return min(xs), min(ys), max(xs), max(ys)
 
 
-def polygon_area(points):
+def signed_area(points):
     if len(points) < 3:
         return 0.
     x, y = points[0]
-    return abs(sum((a-x)*(d-y) - (b-y)*(c-x)
-                   for (a, b), (c, d) in zip(points[1:], points[2:]))) / 2
+    return sum((a-x)*(d-y) - (b-y)*(c-x)
+               for (a, b), (c, d) in zip(points[1:], points[2:])) / 2
 
 
-def clip_polygon(points, rect):
-    for axis, edge, direction in ((0, rect[0], 1), (0, rect[2], -1), (1, rect[1], 1), (1, rect[3], -1)):
+def polygon_area(points):
+    return abs(signed_area(points))
+
+
+def clip_convex(points, clip):
+    # Intersect the image contour with the inward half-plane of each clip edge.
+    orientation = 1 if signed_area(clip) > 0 else -1
+    for (x, y), (u, v) in zip(clip, (*clip[1:], clip[0])):
         if not points:
             break
+        dx, dy = u-x, v-y
         clipped = []
         before = points[-1]
-        before_inside = direction*(before[axis]-edge) >= 0
+        previous = orientation*(dx*(before[1]-y) - dy*(before[0]-x))
         for point in points:
-            inside = direction*(point[axis]-edge) >= 0
-            if inside != before_inside:
-                fraction = (edge-before[axis])/(point[axis]-before[axis])
-                other = before[1-axis] + fraction*(point[1-axis]-before[1-axis])
-                clipped.append((edge, other) if axis == 0 else (other, edge))
-            if inside:
+            distance = orientation*(dx*(point[1]-y) - dy*(point[0]-x))
+            if distance < 0 < previous or previous < 0 < distance:
+                fraction = previous/(previous-distance)
+                clipped.append((before[0]+fraction*(point[0]-before[0]), before[1]+fraction*(point[1]-before[1])))
+            if distance >= 0:
                 clipped.append(point)
-            before, before_inside = point, inside
+            before, previous = point, distance
         points = clipped
     return points
 
 
-def crop_image(operators, items, rect):
+def cubic_samples(start, first, second, end, *, steps=12):
+    for step in range(1, steps+1):
+        t = step / steps
+        r = 1-t
+        yield tuple(r**3*start[i] + 3*r*r*t*first[i] + 3*r*t*t*second[i] + t**3*end[i] for i in range(2))
+
+
+def ellipse_path(rect):
+    left, bottom, right, top = rect
+    x, y = (left+right)/2, (bottom+top)/2
+    k = 0.5522847498307936  # Tangent control offset for a quarter ellipse.
+    dx, dy = (right-x)*k, (top-y)*k
+    return [
+        instruction("m", right, y),
+        instruction("c", right, y+dy, x+dx, top, x, top),
+        instruction("c", x-dx, top, left, y+dy, left, y),
+        instruction("c", left, y-dy, x-dx, bottom, x, bottom),
+        instruction("c", x+dx, bottom, right, y-dy, right, y),
+    ]
+
+
+def crop_image(operators, items, rect, shape):
     if len(items) != 1 or items[0].kind != "image":
         raise ObjectError("Vyberte jeden rastrový obrázek.")
-    if (not isinstance(rect, list) or len(rect) != 4 or not all(
+    if (shape not in ("rectangle", "ellipse") or not isinstance(rect, list) or len(rect) != 4 or not all(
             type(value) in (float, int) and isfinite(value) and abs(value) < 2e6 for value in rect)
             or rect[2] <= rect[0] or rect[3] <= rect[1]):
-        raise ObjectError("Vyznačte platný obdélník ořezu.")
+        raise ObjectError("Vyznačte platný výřez obrázku.")
     item = items[0]
-    source = transformed_points(item.matrix, item.crop or ((0, 0), (1, 0), (1, 1), (0, 1)))
-    points = clip_polygon(source, rect)
+    source = item.crop if item.crop is not None else transformed_points(item.matrix, IMAGE_QUAD)
+    previous_clip = operators[item.first+2:item.end-3] if item.crop is not None else []
+    left, bottom, right, top = rect
+    if shape == "ellipse":
+        # Build the vector path in page coordinates to keep its proportions
+        # even when the underlying image matrix is skewed or nonuniform.
+        path = ellipse_path(rect)
+        contour = image_clip_contour(path, IDENTITY)
+    else:
+        contour = ((left, bottom), (right, bottom), (right, top), (left, top))
+        path = [instruction("m", *contour[0]), *(instruction("l", *point) for point in contour[1:])]
+    points = clip_convex(source, contour)
     area = polygon_area(points)
     if area <= 1e-8:
-        raise ObjectError("Obdélník ořezu musí zasahovat do obrázku.")
-    if isclose(area, polygon_area(source), rel_tol=1e-8, abs_tol=1e-8):
+        raise ObjectError("Výřez musí zasahovat do viditelné části obrázku.")
+    # PDF stream numbers were rounded when writing any previous mask.
+    if isclose(area, polygon_area(source), rel_tol=1e-5, abs_tol=1e-8):
         raise ObjectError("Vyznačte menší výřez obrázku.")
     try:
-        local = transformed_points(invert(item.matrix), points)
+        inverse = invert(item.matrix)
     except TextError as exc:
         raise ObjectError(str(exc)) from exc
-    if len(local) > 32 or not all(isfinite(value) for point in local for value in point):
+    if shape == "rectangle" and not any(str(op.operator) == "c" for op in previous_clip):
+        # Keep successive polygonal crops compact. Curved paths are retained
+        # verbatim and intersected by PDF clipping instead of flattening them.
+        previous_clip = []
+        path = [instruction("m", *points[0]), *(instruction("l", *point) for point in points[1:])]
+    if len(path) > 32:
         raise ObjectError("Tento obrázek nelze bezpečně oříznout.")
-    path = [instruction("m", *local[0]), *(instruction("l", *point) for point in local[1:]),
-            instruction("h"), instruction("W"), instruction("n")]
-    paint = operators[item.end-3 if item.crop else item.first]
-    return [*operators[:item.first], instruction("BMC", IMAGE_CROP), instruction("q"), *path, paint,
+    local_path = []
+    for operands, operator in path:
+        local = transformed_points(inverse, zip(operands[::2], operands[1::2]))
+        values = [value for point in local for value in point]
+        if not all(map(isfinite, values)):
+            raise ObjectError("Tento obrázek nelze bezpečně oříznout.")
+        local_path.append(instruction(str(operator), *values))
+    paint = operators[item.end-3 if item.crop is not None else item.first]
+    return [*operators[:item.first], instruction("BMC", IMAGE_CROP), instruction("q"), *previous_clip,
+            *local_path, *(instruction(name) for name in CLIP_END), paint,
             instruction("Q"), instruction("EMC"), *operators[item.end:]]
 
 

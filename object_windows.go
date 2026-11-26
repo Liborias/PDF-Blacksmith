@@ -19,6 +19,10 @@ const (
 	idObjectApplyCrop
 	idObjectCancelCrop
 	idObjectCropRatio
+	idObjectCropRectangle
+	idObjectCropSquare
+	idObjectCropOval
+	idObjectCropCircle
 )
 
 type objectEditRequest struct {
@@ -30,6 +34,7 @@ type objectEditRequest struct {
 	At        *textPoint  `json:"at,omitempty"`
 	Clipboard []byte      `json:"clipboard,omitempty"`
 	Crop      *searchRect `json:"crop,omitempty"`
+	CropShape string      `json:"crop_shape,omitempty"`
 }
 
 type pdfObject struct {
@@ -78,6 +83,7 @@ type objectEditor struct {
 	crop                                       imageCrop
 	cropTool, cropApply, cropCancel, cropHint  uintptr
 	cropRatioLabel, cropRatio                  uintptr
+	cropShapes                                 [4]uintptr
 }
 
 func (a *app) buildObjectPanel() {
@@ -97,9 +103,9 @@ func (a *app) buildObjectPanel() {
 	e.undo = a.uiButton(uiObjectUndoKey, idObjectUndo, 16, 247, 298, 0)
 	e.cropTool = a.uiTextIconButton(uiCropImage, idObjectCrop, 16, 288, 34)
 	e.cropHint = a.readout(58, 288, 256, 48)
-	a.buildCropRatio()
-	e.cropApply = a.uiButton(uiApply, idObjectApplyCrop, 16, 379, 145, 0)
-	e.cropCancel = a.uiButton(uiCancel, idObjectCancelCrop, 169, 379, 145, 0)
+	a.buildCropOptions()
+	e.cropApply = a.uiButton(uiApply, idObjectApplyCrop, 16, 454, 145, 0)
+	e.cropCancel = a.uiButton(uiCancel, idObjectCancelCrop, 169, 454, 145, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -121,7 +127,12 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.cropTool, a.canCropImage())
 	a.setChecked(e.cropTool, e.crop.active)
 	_, canApplyCrop := a.imageCropBounds()
-	setEnabled(e.cropRatio, ready && e.crop.active && !e.crop.dragging)
+	cropOptions := ready && e.crop.active && !e.crop.dragging
+	for i, handle := range e.cropShapes {
+		setEnabled(handle, cropOptions)
+		a.setChecked(handle, e.crop.active && e.crop.shape == imageCropShape(i))
+	}
+	setEnabled(e.cropRatio, cropOptions && !e.crop.shape.locksRatio())
 	setEnabled(e.cropApply, canApplyCrop)
 	setEnabled(e.cropCancel, ready && e.crop.active)
 }
@@ -434,7 +445,7 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.view.invalidateCanvas()
 		return true
 	}
-	if id < idObjectCopy || id > idObjectCancelCrop || notification != 0 || a.mode != idObjectsTab {
+	if id < idObjectCopy || id > idObjectCropCircle || notification != 0 || a.mode != idObjectsTab {
 		return false
 	}
 	e, v := &a.objects, a.view
@@ -452,6 +463,8 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.applyImageCrop()
 	case idObjectCancelCrop:
 		a.cancelImageCrop()
+	case idObjectCropRectangle, idObjectCropSquare, idObjectCropOval, idObjectCropCircle:
+		a.chooseImageCropShape(imageCropShape(id - idObjectCropRectangle))
 	case idObjectPoint, idObjectRectangle, idObjectLasso:
 		a.cancelCanvasSelections()
 		e.mode = id - idObjectPoint

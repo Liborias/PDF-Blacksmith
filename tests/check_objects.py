@@ -75,13 +75,18 @@ def check_image_crop(work):
     edit(source, cropped, "crop", first["token"], crop=[115, 150, 145, 177])
     assert [obj["kind"] for obj in probe(cropped)] == ["image", "image"]
     assert all_bounds(cropped) == [(115, 150, 145, 177), second["bounds"]]
-    with Pdf.open(cropped) as document:
-        assert not document.check_pdf_syntax()
-        image = document.pages[0].resources.XObject.Picture
-        assert (image.Width, image.Height, image.Filter) == (20, 16, Name.DCTDecode)
-        assert image.read_raw_bytes() == jpeg.getvalue()
-        assert image.ColorSpace[1].read_bytes() == profile
-        assert image.SMask.read_bytes() == bytes([192])*320
+    def clip_operators(path):
+        with Pdf.open(path) as document:
+            assert not document.check_pdf_syntax()
+            page = document.pages[0]
+            image = page.resources.XObject.Picture
+            assert (image.Width, image.Height, image.Filter) == (20, 16, Name.DCTDecode)
+            assert image.read_raw_bytes() == jpeg.getvalue()
+            assert image.ColorSpace[1].read_bytes() == profile
+            assert image.SMask.read_bytes() == bytes([192])*320
+            return [str(op) for _, op in parse_content_stream(page)]
+
+    assert "W" in clip_operators(cropped)
     original, final = render(source), render(cropped)
     inside, outside, shared = (132, 173), (155, 185), (268, 171)
     assert final.getpixel(inside) == original.getpixel(inside)
@@ -102,6 +107,48 @@ def check_image_crop(work):
     with Pdf.open(BytesIO(b64decode(snapshot["object_clipboard"]))) as clipboard:
         assert any(str(op) == "W" for _, op in parse_content_stream(clipboard.pages[0]))
         assert clipboard.pages[0].resources.XObject.Picture.read_raw_bytes() == jpeg.getvalue()
+
+    oval = work / "oval.pdf"
+    edit(cropped, oval, "crop", probe(cropped)[0]["token"], crop=[115, 150, 145, 177], crop_shape="ellipse")
+    assert clip_operators(oval).count("c") == 4
+    assert all_bounds(oval) == [(115, 150, 145, 177), second["bounds"]]
+    oval_render = render(oval)
+    corner = (117, 188)
+    assert final.getpixel(corner) == original.getpixel(corner)
+    assert oval_render.getpixel(corner) == (255, 255, 255)
+    assert oval_render.getpixel(inside) == original.getpixel(inside)
+    assert oval_render.getpixel(shared) == original.getpixel(shared)
+
+    partial = work / "partial-oval.pdf"
+    edit(oval, partial, "crop", probe(oval)[0]["token"], crop=[115, 151, 133, 176])
+    ops = clip_operators(partial)
+    assert ops.count("c") == 4 and ops.count("W") == 3
+    result = render(partial)
+    assert result.getpixel(corner) == (255, 255, 255)
+    assert result.getpixel(inside) == original.getpixel(inside)
+    assert result.getpixel((139, 173)) == (255, 255, 255)
+
+    circle = work / "circle.pdf"
+    edit(source, circle, "crop", first["token"], crop=[118, 152, 142, 176], crop_shape="ellipse")
+    assert clip_operators(circle).count("W") == 1
+    assert all_bounds(circle) == [(118, 152, 142, 176), second["bounds"]]
+    moved_circle = work / "moved-circle.pdf"
+    edit(circle, moved_circle, "move", probe(circle)[0]["token"], delta=[8, 15])
+    assert clip_operators(moved_circle).count("c") == 4
+    assert all_bounds(moved_circle) == [(126, 167, 150, 191), second["bounds"]]
+    assert render(moved_circle).getpixel((127, 172)) == (255, 255, 255)
+    assert render(moved_circle).getpixel((138, 161)) == original.getpixel(inside)
+
+    for input_path, rect, shape in [(oval, [115, 150, 117, 152], "ellipse"),
+                                    (oval, [115, 150, 145, 177], "ellipse"),
+                                    (source, [115, 150, 145, 177], "unknown")]:
+        output = work / "invalid-oval.pdf"
+        try:
+            edit(input_path, output, "crop", probe(input_path)[0]["token"], crop=rect, crop_shape=shape)
+        except UserError:
+            assert not output.exists()
+        else:
+            raise AssertionError(f"Invalid or unchanged {shape} crop modified the PDF: {rect}")
 
     for invalid in ([130, 150, 110, 170], [0, 0, 100, 100], [85, 135, 180, 209]):
         output = work / "invalid-crop.pdf"

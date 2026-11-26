@@ -95,6 +95,8 @@ V nástroji Objekty umožňuje ikona Oříznout obrázek vyznačit obdélník na
 
 Nabídka Poměr stran začíná u každého ořezu volným poměrem a nabízí čtverec 1 : 1 i ostatní pevné poměry podle specifikace. Poměr odpovídá zobrazené orientaci stránky. Při tažení k hraně obrázku se výřez přizpůsobí dostupné ploše při zachování poměru. Změna poměru přepočítá náhled podle posledního tažení.
 
+V náhledu ořezu jsou čtyři tvary. Čtverec a kruh uzamknou poměr 1 : 1. Obdélník i ovál používají zvolený poměr včetně volného. Oválná a kruhová maska se do PDF ukládá jako Bézierovy křivky. Při dalším ořezu se masky protínají, takže dříve skrytá místa zůstanou skrytá.
+
 **4C. Pravítka a vodítka:** osa X/Y správně, pouze drag z pravítka, Ctrl+klik vs Ctrl+drag, per-page stav, skupiny a zámky, barvy „Použít“, kontext pravým klikem bez „Vybrat“, dočasná aktivace Pomůcek rozvržení. Nahradit pouze dekorativní paralelní prvky, ne PDF data.
 
 **4D. SnapEngine:** zvlášť po prokázané přesné geometrii a výkonu. Nikdy nepřepisovat aktuální výběr, neukládat vodítka do tiskového PDF.

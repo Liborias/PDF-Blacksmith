@@ -291,6 +291,7 @@ func (a *app) drawButton(item *buttonDraw) bool {
 			selectedDetail = a.activeFileOption()
 		}
 		active := (a.detailButtons[id] == item.handle && id == selectedDetail) ||
+			(id >= idObjectCropRectangle && id <= idObjectCropCircle && a.checked(item.handle)) ||
 			a.primaryButtons[item.handle] || (id == idReaderDeletePages && a.view.pageDrag.overDelete)
 		body, edge := uiColors["control"], divider
 		if active && item.state&4 == 0 {
