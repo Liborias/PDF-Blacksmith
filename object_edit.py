@@ -32,12 +32,22 @@ CLIP_END = ("h", "W", "n")
 
 
 @dataclass(frozen=True)
+class ImageMask:
+    content_start: int
+    content_matrix: tuple  # Image placement in page coordinates, independent of the clip.
+    outline: tuple         # Visible intersection of the mask and the image in page coordinates.
+
+    def source_outline(self):
+        return transformed_points(self.content_matrix, IMAGE_QUAD)
+
+
+@dataclass(frozen=True)
 class ObjectDraw:
     first: int
     end: int
     kind: str
     matrix: tuple
-    crop: tuple | None = None  # Effective visible contour in page coordinates.
+    mask: ImageMask | None = None
 
     @property
     def token(self):
@@ -95,7 +105,7 @@ def cropped_image_draw(operators, first, matrix, xobjects):
     # becomes the editable object so its clipping path travels with the image.
     if [str(op.operator) for op in operators[first+1:first+3]] != ["q", "m"]:
         return None
-    points = transformed_points(matrix, IMAGE_QUAD)
+    clips = []
     start = first+2
     while start < len(operators) and str(operators[start].operator) == "m":
         close = start+1
@@ -109,16 +119,32 @@ def cropped_image_draw(operators, first, matrix, xobjects):
             return None
         if not contour:
             return None
-        points = clip_convex(points, contour)
+        clips.append(contour)
         start = close+3
-    tail = operators[start:start+3]
+    paint = start
+    placement = matrix
+    if paint < len(operators) and str(operators[paint].operator) == "cm":
+        try:
+            transform = tuple(map(float, operators[paint].operands))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if len(transform) != 6 or not all(map(isfinite, transform)):
+            return None
+        placement = compose(matrix, transform)
+        paint += 1
+    tail = operators[paint:paint+3]
     if [str(op.operator) for op in tail] != ["Do", "Q", "EMC"]:
         return None
     args = tail[0].operands
     target = xobjects.get(str(args[0])) if len(args) == 1 else None
     if not isinstance(target, pdf.Stream) or target.get("/Subtype") != pdf.Name.Image:
         return None
-    return ObjectDraw(first, start+len(tail), "image", matrix, tuple(points))
+    points = transformed_points(placement, IMAGE_QUAD)
+    if not all(isfinite(value) for point in points for value in point):
+        return None
+    for contour in clips:
+        points = clip_convex(points, contour)
+    return ObjectDraw(first, paint+len(tail), "image", matrix, ImageMask(start, placement, tuple(points)))
 
 
 def image_clip_contour(path, matrix):
@@ -235,14 +261,18 @@ def describe_objects(page, operators, candidates, *, outlines=True):
             if token not in identified:
                 continue
             draw = identified[token]
-            if draw.crop is not None and not polygon_area(draw.crop):
+            mask = draw.mask
+            if mask and not polygon_area(mask.outline):
                 continue
-            bounds = polygon_bounds(draw.crop) if draw.crop is not None else tuple(map(float, item.get_bounds()))
+            bounds = polygon_bounds(mask.outline) if mask else tuple(map(float, item.get_bounds()))
             if all(map(isfinite, bounds)) and bounds[0] <= bounds[2] and bounds[1] <= bounds[3]:
                 x0, y0, x1, y1 = bounds
                 if x0 == x1 or y0 == y1:
                     bounds = (x0-.25, y0-.25, x1+.25, y1+.25)
                 obj = {"token": token, "kind": draw.kind, "bounds": bounds}
+                if mask and outlines:
+                    obj["image_mask"] = {"source_bounds": polygon_bounds(mask.source_outline()),
+                                         "outline": mask.outline}
                 if draw.kind == "path" and outline_budget > 0:
                     try:
                         outline = path_outline(operators, draw, bounds)
@@ -278,8 +308,17 @@ def selected_draws(candidates, edit):
 def modify_page(document, page, operators, candidates, edit):
     items = selected_draws(candidates, edit)
     action = edit.get("operation")
-    if action == "crop":
-        clipped = crop_image(operators, items, edit.get("crop"), edit.get("crop_shape", "rectangle"))
+    if action in {"crop", "replace_crop", "reset_crop"}:
+        item = selected_image(items)
+        if action == "reset_crop":
+            if item.mask is None:
+                raise ObjectError("Vyberte obrázek s ořezovou maskou vytvořenou v PDF Blacksmith.")
+            # Keep the local image placement and the surrounding graphics state.
+            clipped = [*operators[:item.first], operators[item.first+1],
+                       *operators[item.mask.content_start:item.end-1], *operators[item.end:]]
+        else:
+            clipped = crop_image(operators, item, edit.get("crop"), edit.get("crop_shape", "rectangle"),
+                                 replace=action == "replace_crop")
         page.obj.Contents = document.make_stream(pdf.unparse_content_stream(clipped))
         return
     if action not in {"move", "duplicate", "delete"}:
@@ -370,16 +409,23 @@ def ellipse_path(rect):
     ]
 
 
-def crop_image(operators, items, rect, shape):
+def selected_image(items):
     if len(items) != 1 or items[0].kind != "image":
         raise ObjectError("Vyberte jeden rastrový obrázek.")
+    return items[0]
+
+
+def crop_image(operators, item, rect, shape, *, replace):
     if (shape not in ("rectangle", "ellipse") or not isinstance(rect, list) or len(rect) != 4 or not all(
             type(value) in (float, int) and isfinite(value) and abs(value) < 2e6 for value in rect)
             or rect[2] <= rect[0] or rect[3] <= rect[1]):
         raise ObjectError("Vyznačte platný výřez obrázku.")
-    item = items[0]
-    source = item.crop if item.crop is not None else transformed_points(item.matrix, IMAGE_QUAD)
-    previous_clip = operators[item.first+2:item.end-3] if item.crop is not None else []
+    mask = item.mask
+    source = mask.source_outline() if mask else transformed_points(item.matrix, IMAGE_QUAD)
+    previous_clip = []
+    if mask and not replace:
+        source = mask.outline
+        previous_clip = operators[item.first+2:mask.content_start]
     left, bottom, right, top = rect
     if shape == "ellipse":
         # Build the vector path in page coordinates to keep its proportions
@@ -396,11 +442,15 @@ def crop_image(operators, items, rect, shape):
     # PDF stream numbers were rounded when writing any previous mask.
     if isclose(area, polygon_area(source), rel_tol=1e-5, abs_tol=1e-8):
         raise ObjectError("Vyznačte menší výřez obrázku.")
+    if mask and replace and isclose(area, polygon_area(mask.outline), rel_tol=1e-5, abs_tol=1e-8):
+        overlap = polygon_area(clip_convex(points, mask.outline))
+        if isclose(overlap, area, rel_tol=1e-5, abs_tol=1e-8):
+            raise ObjectError("Vyznačte jiný výřez obrázku.")
     try:
         inverse = invert(item.matrix)
     except TextError as exc:
         raise ObjectError(str(exc)) from exc
-    if shape == "rectangle" and not any(str(op.operator) == "c" for op in previous_clip):
+    if not replace and shape == "rectangle" and not any(str(op.operator) == "c" for op in previous_clip):
         # Keep successive polygonal crops compact. Curved paths are retained
         # verbatim and intersected by PDF clipping instead of flattening them.
         previous_clip = []
@@ -414,9 +464,9 @@ def crop_image(operators, items, rect, shape):
         if not all(map(isfinite, values)):
             raise ObjectError("Tento obrázek nelze bezpečně oříznout.")
         local_path.append(instruction(str(operator), *values))
-    paint = operators[item.end-3 if item.crop is not None else item.first]
+    content = operators[mask.content_start:item.end-2] if mask else operators[item.first:item.end]
     return [*operators[:item.first], instruction("BMC", IMAGE_CROP), instruction("q"), *previous_clip,
-            *local_path, *(instruction(name) for name in CLIP_END), paint,
+            *local_path, *(instruction(name) for name in CLIP_END), *content,
             instruction("Q"), instruction("EMC"), *operators[item.end:]]
 
 

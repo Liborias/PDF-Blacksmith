@@ -527,6 +527,8 @@ func (a *app) panelItemLayout(tab, index int, item panelItem) (panelItem, bool) 
 		switch item.handle {
 		case a.objects.cropApply, a.objects.cropCancel:
 			return item, a.objects.crop.active
+		case a.objects.cropReset:
+			return item, a.hasImageCropTarget() && a.objects.selected.ImageMask != nil
 		case a.objects.cropTool, a.objects.cropHint, a.objects.cropRatioLabel, a.objects.cropRatio:
 			return item, a.hasImageCropTarget()
 		}

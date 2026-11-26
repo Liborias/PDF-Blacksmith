@@ -23,6 +23,7 @@ const (
 	idObjectCropSquare
 	idObjectCropOval
 	idObjectCropCircle
+	idObjectResetCrop
 )
 
 type objectEditRequest struct {
@@ -38,10 +39,16 @@ type objectEditRequest struct {
 }
 
 type pdfObject struct {
-	Token   int
-	Kind    string
-	Bounds  searchRect
-	Outline *objectOutline
+	Token     int
+	Kind      string
+	Bounds    searchRect
+	Outline   *objectOutline
+	ImageMask *pdfImageMask `json:"image_mask"`
+}
+
+type pdfImageMask struct {
+	SourceBounds searchRect `json:"source_bounds"`
+	Outline      []textPoint
 }
 
 type objectOutline struct {
@@ -82,6 +89,7 @@ type objectEditor struct {
 	preview                                    dragPreview
 	crop                                       imageCrop
 	cropTool, cropApply, cropCancel, cropHint  uintptr
+	cropReset                                  uintptr
 	cropRatioLabel, cropRatio                  uintptr
 	cropShapes                                 [4]uintptr
 }
@@ -106,6 +114,7 @@ func (a *app) buildObjectPanel() {
 	a.buildCropOptions()
 	e.cropApply = a.uiButton(uiConfirmImageCrop, idObjectApplyCrop, 16, 454, 145, 0)
 	e.cropCancel = a.uiButton(uiCancelImageCrop, idObjectCancelCrop, 169, 454, 145, 0)
+	e.cropReset = a.uiButton(uiResetImageCrop, idObjectResetCrop, 16, 495, 298, 0)
 }
 
 func (a *app) updateObjectActions() {
@@ -133,6 +142,9 @@ func (a *app) updateObjectActions() {
 		hint := uiChooseImageCrop
 		if e.crop.active {
 			hint = uiCropImageHint
+			if e.selected.ImageMask != nil {
+				hint = uiEditImageCropHint
+			}
 		}
 		a.setUIMessage(e.cropHint, hint)
 	}
@@ -143,11 +155,12 @@ func (a *app) updateObjectActions() {
 	setEnabled(e.cropRatio, cropOptions && !e.crop.shape.locksRatio())
 	setEnabled(e.cropApply, canApplyCrop)
 	setEnabled(e.cropCancel, ready && e.crop.active)
+	setEnabled(e.cropReset, cropOptions && e.selected.ImageMask != nil)
 }
 
 func (a *app) clearObjectSelection() {
 	e := &a.objects
-	showedCrop := a.hasImageCropTarget()
+	showedCrop := e.selected.Kind == "image"
 	a.cancelImageCrop()
 	a.cancelObjectGesture()
 	e.page, e.source, e.pick = nil, 0, textSelection{}
@@ -462,7 +475,7 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.view.invalidateCanvas()
 		return true
 	}
-	if id < idObjectCopy || id > idObjectCropCircle || notification != 0 || a.mode != idObjectsTab {
+	if id < idObjectCopy || id > idObjectResetCrop || notification != 0 || a.mode != idObjectsTab {
 		return false
 	}
 	e, v := &a.objects, a.view
@@ -480,6 +493,10 @@ func (a *app) objectCommand(id, notification int) bool {
 		a.applyImageCrop()
 	case idObjectCancelCrop:
 		a.cancelImageCrop()
+	case idObjectResetCrop:
+		if a.canCropImage() && !e.crop.dragging && e.selected.ImageMask != nil {
+			a.runObjectEdit(e.source, objectEditRequest{Operation: "reset_crop", Token: e.selected.Token})
+		}
 	case idObjectCropRectangle, idObjectCropSquare, idObjectCropOval, idObjectCropCircle:
 		a.chooseImageCropShape(imageCropShape(id - idObjectCropRectangle))
 	case idObjectPoint, idObjectRectangle, idObjectLasso:

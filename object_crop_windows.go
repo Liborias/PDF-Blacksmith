@@ -73,8 +73,15 @@ func (a *app) cropEnd(drag imageCropDrag, image, box searchRect, angle int) text
 func (a *app) imageCropLimits() (image, box searchRect, angle int, visible bool) {
 	e, v := &a.objects, a.view
 	box, angle = e.page.Boxes[v.box()], e.rotation(v)
-	image, visible = searchDisplayRect(e.selected.Bounds, box, angle)
+	image, visible = searchDisplayRect(e.selected.cropSourceBounds(), box, angle)
 	return
+}
+
+func (object pdfObject) cropSourceBounds() searchRect {
+	if object.ImageMask != nil {
+		return object.ImageMask.SourceBounds
+	}
+	return object.Bounds
 }
 
 func (a *app) imageCropBounds() (searchRect, bool) {
@@ -89,7 +96,7 @@ func (a *app) imageCropBounds() (searchRect, bool) {
 	drag := *e.crop.selection
 	end := a.cropEnd(drag, image, box, angle)
 	bounds := rectangleBetween(textPointToPDF(drag.start, box, angle), textPointToPDF(end, box, angle))
-	return bounds, (e.crop.shape.round() || bounds != e.selected.Bounds) &&
+	return bounds, (e.crop.shape.round() || bounds != e.selected.cropSourceBounds()) &&
 		bounds[2] > bounds[0] && bounds[3] > bounds[1]
 }
 
@@ -138,7 +145,7 @@ func (a *app) cancelImageCrop() bool {
 func (a *app) applyImageCrop() {
 	e := &a.objects
 	if bounds, ok := a.imageCropBounds(); ok {
-		edit := objectEditRequest{Operation: "crop", Token: e.selected.Token, Crop: &bounds}
+		edit := objectEditRequest{Operation: "replace_crop", Token: e.selected.Token, Crop: &bounds}
 		if e.crop.shape.round() {
 			edit.CropShape = "ellipse"
 		}
@@ -225,11 +232,22 @@ func (a *app) paintImageCrop(dc uintptr, area rect) {
 	if crop.dragging {
 		drag = &crop.drag
 	}
-	if drag == nil {
+	mask := a.objects.selected.ImageMask
+	if drag == nil && mask == nil {
 		return
 	}
 	pen, _, _ := gdiPen.Call(0, uintptr(max(1, a.scale(2))), selectionColor.win())
 	old, _, _ := gdiSelect.Call(dc, pen)
+	defer gdiDelete.Call(pen)
+	defer gdiSelect.Call(dc, old)
+	if drag == nil {
+		outline := make([]textPoint, len(mask.Outline))
+		for i, point := range mask.Outline {
+			outline[i] = pdfPointToText(point, box, angle)
+		}
+		drawTextOutline(dc, area, outline, true)
+		return
+	}
 	finish := a.cropEnd(*drag, image, box, angle)
 	if crop.shape.round() {
 		first, last := screenTextPoint(area, drag.start), screenTextPoint(area, finish)
@@ -241,6 +259,4 @@ func (a *app) paintImageCrop(dc uintptr, area rect) {
 	} else {
 		drawTextOutline(dc, area, rectangleSelection(drag.start, finish), true)
 	}
-	gdiSelect.Call(dc, old)
-	gdiDelete.Call(pen)
 }

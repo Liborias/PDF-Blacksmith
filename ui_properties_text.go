@@ -196,6 +196,8 @@ const (
 	uiConfirmImageCrop              uiMessage = "win32.properties.ConfirmImageCrop"
 	uiCancelImageCrop               uiMessage = "win32.properties.CancelImageCrop"
 	uiCropImageHint                 uiMessage = "win32.properties.CropImageHint"
+	uiEditImageCropHint             uiMessage = "win32.properties.EditImageCropHint"
+	uiResetImageCrop                uiMessage = "win32.properties.ResetImageCrop"
 	uiChooseImageCrop               uiMessage = "win32.properties.ChooseImageCrop"
 	uiCropAspectRatio               uiMessage = "win32.properties.CropAspectRatio"
 	uiCropFreeRatio                 uiMessage = "win32.properties.CropFreeRatio"
@@ -443,6 +445,8 @@ var propertyTranslations = map[uiMessage]uiTranslation{
 	uiConfirmImageCrop:              {Czech: "Potvrdit ořez", English: "Confirm crop"},
 	uiCancelImageCrop:               {Czech: "Zrušit ořez", English: "Cancel crop"},
 	uiCropImageHint:                 {Czech: "Výřez vyznačte tažením. Potvrďte Enterem nebo tlačítkem.", English: "Drag to mark the area to keep, then confirm or press Enter."},
+	uiEditImageCropHint:             {Czech: "Výřez vyznačte v rámci celého obrázku.", English: "Draw a new crop within the full image."},
+	uiResetImageCrop:                {Czech: "Obnovit ořez", English: "Reset crop"},
 	uiChooseImageCrop:               {Czech: "Zvolte tvar, poměr stran nebo spusťte nástroj ořezu.", English: "Choose a shape or aspect ratio, or click the crop icon to start."},
 	uiCropAspectRatio:               {Czech: "Poměr stran", English: "Aspect ratio"},
 	uiCropFreeRatio:                 {Czech: "Volný", English: "Free"},

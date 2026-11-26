@@ -139,6 +139,56 @@ def check_image_crop(work):
     assert render(moved_circle).getpixel((127, 172)) == (255, 255, 255)
     assert render(moved_circle).getpixel((138, 161)) == original.getpixel(inside)
 
+    legacy_mask = probe(partial)[0]
+    assert tuple(legacy_mask["image_mask"]["source_bounds"]) == first["bounds"]
+    assert len(legacy_mask["image_mask"]["outline"]) > 4
+    replaced = work / "replaced-oval.pdf"
+    edit(partial, replaced, "replace_crop", legacy_mask["token"], crop=[114, 147, 151, 180], crop_shape="ellipse")
+    assert all_bounds(replaced) == [(114, 147, 151, 180), second["bounds"]]
+    assert clip_operators(replaced).count("W") == 1
+    recovered = (139, 173)
+    assert result.getpixel(recovered) == (255, 255, 255)
+    assert render(replaced).getpixel(recovered) == original.getpixel(recovered)
+    restored = work / "restored.pdf"
+    edit(replaced, restored, "reset_crop", probe(replaced)[0]["token"])
+    assert all_bounds(restored) == [first["bounds"], second["bounds"]]
+    assert "image_mask" not in probe(restored)[0] and "W" not in clip_operators(restored)
+    assert render(restored).tobytes() == original.tobytes()
+
+    # A separately positioned image retains its placement and any enclosing
+    # graphics clip when replacing or removing its own crop mask.
+    positioned = work / "positioned-mask.pdf"
+    expected = work / "positioned-without-mask.pdf"
+    header = b"q 60 0 0 54 100 135 cm 0 0 .6 1 re W n "
+    placement = b"q .8 0 0 .8 .1 .1 cm /Picture Do Q "
+    with Pdf.open(source) as document:
+        page = document.pages[0]
+        page.Contents = document.make_stream(
+            header + b"/PBImageCrop BMC q .25 .25 m .55 .25 l .55 .55 l .25 .55 l h W n "
+            + placement[2:] + b"EMC Q")
+        document.save(positioned)
+        page.Contents = document.make_stream(header + placement + b"Q")
+        document.save(expected)
+    positioned_mask = probe(positioned)[0]["image_mask"]
+    assert all_bounds(positioned) == [(115, 148.5, 133, 164.7)]
+    assert tuple(round(value, 3) for value in positioned_mask["source_bounds"]) == (106, 140.4, 154, 183.6)
+    expanded = work / "positioned-expanded.pdf"
+    edit(positioned, expanded, "replace_crop", probe(positioned)[0]["token"], crop=[110, 146, 145, 171])
+    assert tuple(probe(expanded)[0]["image_mask"]["source_bounds"]) == tuple(positioned_mask["source_bounds"])
+    assert clip_operators(expanded).count("W") == 2
+    restored_positioned = work / "positioned-reset.pdf"
+    edit(expanded, restored_positioned, "reset_crop", probe(expanded)[0]["token"])
+    assert clip_operators(restored_positioned).count("W") == 1
+    assert render(restored_positioned).tobytes() == render(expected).tobytes()
+
+    unchanged = work / "no-restore.pdf"
+    try:
+        edit(source, unchanged, "reset_crop", first["token"])
+    except UserError:
+        assert not unchanged.exists()
+    else:
+        raise AssertionError("Resetting a bare image unexpectedly edited the PDF.")
+
     for input_path, rect, shape in [(oval, [115, 150, 117, 152], "ellipse"),
                                     (oval, [115, 150, 145, 177], "ellipse"),
                                     (source, [115, 150, 145, 177], "unknown")]:

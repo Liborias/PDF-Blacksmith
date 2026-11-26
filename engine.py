@@ -927,8 +927,10 @@ def edit_object_document(src, request):
         raise UserError(str(exc)) from exc
     if edit.get("operation") == "move_selection":
         return {**description, "message": "Výběr byl přesunut."}
-    if edit.get("operation") == "crop":
+    if edit.get("operation") in ("crop", "replace_crop"):
         return {**description, "message": "Obrázek byl oříznut v otevřené kartě."}
+    if edit.get("operation") == "reset_crop":
+        return {**description, "message": "Plný rozsah obrázku byl obnoven."}
     if edit.get("grouping") == "group":
         return {**description, "message": {
             "move": "Výběr byl přesunut jako skupina.",
