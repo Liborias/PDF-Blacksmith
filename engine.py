@@ -1319,6 +1319,16 @@ def dispatch(request, *, raster=False, reader=None):
     src = Path(request["input"])
     if not src.is_file():
         raise UserError("Vyberte existující soubor PDF.")
+    if request["action"] == "page_inventory":
+        from page_inventory import inspect_page
+        page = request.get("view", {}).get("page", 1)
+        password = request.get("pdf_password", "")
+        opened = (nullcontext(reader.document(src, password, open_pdf)) if reader is not None
+                  else open_pdf(src, password))
+        with opened as document:
+            if type(page) is not int or not 1 <= page <= len(document.pages):
+                raise UserError("Vyberte existující stranu PDF.")
+            return {"inventory": inspect_page(document, document.pages[page-1])}
     operation = {"transform": transform, "sign": sign, "verify": verify,
                  "preview": inspect_document, "scan": inspect_document, "describe": inspect_document,
                  "screen": inspect_document, "thumbnail": inspect_document, "print_page": inspect_document,

@@ -333,6 +333,7 @@ func (a *app) showHeaderMenu(id int) {
 				entries = append(entries, run(tab.id, a.uiText(tab.name), !a.busy && (!tab.needsPDF || ready), tab.id == a.tool))
 			}
 		}
+		entries = append(entries, run(idToggleLayers, a.uiText(uiLayersAndObjects), ready, a.rightAux.panel == auxiliaryLayers))
 	case idHeaderEdit:
 		editing := a.inlineCurrent() != nil
 		for _, action := range []documentCommand{docUndo, docRedo, docCut, docCopy, docPaste, docDelete, docSelectAll} {

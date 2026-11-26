@@ -156,6 +156,10 @@ func (v *documentView) finishNativeText(job readerJob) {
 			v.failCanvasRegion()
 			return
 		}
+		if pick.inventory.text != 0 {
+			v.app.reportStatus(v.app.uiText(uiLayerItemUnavailable))
+			return
+		}
 		if pick.automatic && !pick.region() {
 			pick.insertPoint = false
 			v.requestObjects(pick)
@@ -185,7 +189,13 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 	glyphs, dim, rotation := v.nativeTextGeometry(model, pick)
 	var flow textFlow
 	var stored *storedTextBlock
-	if pick.region() && dim[0] > 0 && dim[1] > 0 {
+	if pick.inventory.text != 0 {
+		flow = layoutText(model.glyphsForInventory(glyphs, pick.inventory.text))
+		if flow.text == "" {
+			a.reportStatus(a.uiText(uiLayerItemUnavailable))
+			return
+		}
+	} else if pick.region() && dim[0] > 0 && dim[1] > 0 {
 		flow = layoutText(glyphsInRegion(glyphs, dim, pick))
 	} else {
 		flow, stored = textAtPoint(model, glyphs, dim, pick)
@@ -232,6 +242,12 @@ func (a *app) matchTextSelection(v *documentView, model *textPage, pick textSele
 		flow, stored = layoutText(glyphs), nil
 	}
 	a.applyTextSelection(v, model, pick, flow, stored, dim, rotation)
+}
+
+func (model *textPage) glyphsForInventory(glyphs []layoutGlyph, token int) []layoutGlyph {
+	return slices.DeleteFunc(glyphs, func(glyph layoutGlyph) bool {
+		return model.Objects[glyph.run].BlockToken != token
+	})
 }
 
 func textAtPoint(model *textPage, glyphs []layoutGlyph, dim textPoint, pick textSelection) (textFlow, *storedTextBlock) {

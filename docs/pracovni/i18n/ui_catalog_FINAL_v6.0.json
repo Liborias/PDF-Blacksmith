@@ -4889,6 +4889,126 @@
       "context": "file.menu",
       "notes": "Added for v3.19 theme and form inspector localization. Semantic key migration recommended.",
       "status": "reviewed-in-html"
+    },
+    "win32.layers.rail": {
+      "cs": "Vrstvy",
+      "en": "Layers",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.heading": {
+      "cs": "Vrstvy a objekty",
+      "en": "Layers and objects",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.tree.help": {
+      "cs": "Kliknutím nebo klávesou Enter vyberete dostupný objekt. Shift přidá, Ctrl přepne a Shift+Ctrl odebere položku. Šipky vlevo a vpravo sbalí a rozbalí větev.",
+      "en": "Click or press Enter to select an available object. Shift adds, Ctrl toggles, and Shift+Ctrl removes an item. Use Left and Right to collapse or expand a branch.",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.loading": {
+      "cs": "Načítám obsah stránky…",
+      "en": "Reading page contents…",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.read_error": {
+      "cs": "Obsah stránky se nepodařilo načíst.",
+      "en": "Could not read page contents.",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.page": {
+      "cs": "Strana %d · pořadí kresby",
+      "en": "Page %d · paint order",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.page_limited": {
+      "cs": "Strana %d · částečný přehled",
+      "en": "Page %d · partial overview",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.pdf_groups": {
+      "cs": "Vrstvy PDF · výchozí stav",
+      "en": "PDF layers · default state",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.state_unspecified": {
+      "cs": "neurčeno",
+      "en": "unspecified",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.state_on": {
+      "cs": "zapnuto",
+      "en": "on",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.state_off": {
+      "cs": "vypnuto",
+      "en": "off",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.locked": {
+      "cs": "uzamčeno",
+      "en": "locked",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.page_contents": {
+      "cs": "Obsah stránky",
+      "en": "Page contents",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.empty_page": {
+      "cs": "Stránka nemá kreslený obsah.",
+      "en": "This page has no painted content.",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.image": {
+      "cs": "Obrázek",
+      "en": "Image",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.transparency_group": {
+      "cs": "Skupina průhlednosti",
+      "en": "Transparency group",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.invisible_text": {
+      "cs": "Neviditelný text",
+      "en": "Invisible text",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.widget": {
+      "cs": "Formulářové pole",
+      "en": "Form field",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.shading": {
+      "cs": "Přechod výplně",
+      "en": "Shading",
+      "context": "layers.tree",
+      "status": "implemented-win32"
+    },
+    "win32.layers.item_unavailable": {
+      "cs": "Položku v tomto zobrazení nelze vybrat.",
+      "en": "This item cannot be selected in the current view.",
+      "context": "layers.tree",
+      "status": "implemented-win32"
     }
   },
   "dynamic_messages": {

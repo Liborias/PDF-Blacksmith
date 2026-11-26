@@ -188,6 +188,7 @@ func (a *app) clearObjectSelection() {
 	e.page, e.source, e.pick = nil, 0, textSelection{}
 	e.resetSelection()
 	e.snapshot, e.snapshotComplete, e.copyWaiting = false, false, false
+	a.syncLayerSelection()
 	if e.info != 0 {
 		a.setUIMessage(e.info, uiSelectPageObject)
 		a.updateObjectActions()
@@ -362,6 +363,8 @@ func (v *documentView) finishObjects(job readerJob) {
 			}
 			if pick.combined {
 				v.failCanvasRegion()
+			} else if pick.inventory.object != 0 {
+				a.reportStatus(a.uiText(uiLayerItemUnavailable))
 			} else if a.mode == idObjectsTab {
 				a.setUIMessage(e.info, uiObjectsUnavailable)
 			}

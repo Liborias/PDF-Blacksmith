@@ -1047,6 +1047,9 @@ func previewPixels(size float64) int {
 }
 
 func (v *documentView) schedule() {
+	if !v.secondary {
+		v.app.syncLayersPage()
+	}
 	if v.app.busy && v.app.pending.ReplaceSource {
 		v.app.startOverwrite()
 		return
@@ -1062,7 +1065,7 @@ func (v *documentView) schedule() {
 		return
 	}
 	if v.overview {
-		if !v.app.busy && v.prefetch.page == 0 && !v.scheduleThumbnails() {
+		if !v.app.busy && v.prefetch.page == 0 && !v.scheduleThumbnails() && !v.scheduleLayers() {
 			v.stopPrefetchEngine()
 		}
 		return
@@ -1099,6 +1102,9 @@ func (v *documentView) schedule() {
 		}
 	}
 	if !v.app.busy && v.contentMove.pick.source == 0 && v.prefetch.page == 0 {
+		if v.scheduleLayers() {
+			return
+		}
 		if !v.scheduleThumbnails() && !proof && !v.secondary {
 			v.schedulePrefetch()
 		}
@@ -1191,6 +1197,7 @@ func (v *documentView) launchReader(req request, number, pixels int, background 
 			}
 		}
 		if job.result.Status == "ok" && number > 0 && job.result.View != nil &&
+			req.Action != "page_inventory" &&
 			(req.Action != "object_snapshot" || len(job.result.View.Image) > 0) {
 			var err error
 			view := job.result.View
@@ -1349,6 +1356,8 @@ func (v *documentView) finishedPrefetch(job readerJob) {
 				v.app.report(job.result.Message)
 				v.app.updateActions()
 			}
+		case job.action == "page_inventory":
+			v.app.finishLayers(job)
 		case job.action == "thumbnail":
 			if job.frame.image == nil {
 				v.thumbnails.failed[job.page] = true

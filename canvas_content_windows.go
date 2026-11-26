@@ -63,6 +63,7 @@ func (v *documentView) clearMixedSelection() bool {
 	}
 	v.mixed = mixedCanvasSelection{}
 	a := v.app
+	a.syncLayerSelection()
 	switch old.tool {
 	case idTextTab:
 		setText(a.textTool.report, "")
@@ -129,16 +130,22 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 	previousGlyphs, previousObjects := v.previousCanvasContent(pick, text, page)
 	glyphs, dim, rotation := v.nativeTextGeometry(text, pick)
 	var selectedGlyphs []layoutGlyph
-	if pick.region() {
+	if pick.inventory.text != 0 {
+		selectedGlyphs = text.glyphsForInventory(glyphs, pick.inventory.text)
+	} else if pick.region() {
 		selectedGlyphs = glyphsInRegion(glyphs, dim, pick)
-	} else {
+	} else if pick.inventory.object == 0 {
 		flow, _ := textAtPoint(text, glyphs, dim, pick)
 		selectedGlyphs = flow.glyphs()
 	}
 	objectRotation := (page.Rotation + v.rotations[pick.source-1] + 360) % 360
 	var selectedObjects []pdfObject
 	if pick.region() || len(selectedGlyphs) == 0 {
-		selectedObjects = objectsAt(page.Objects, page.Boxes[pick.box], objectRotation, pick)
+		selectedObjects = page.objectsForPick(pick, objectRotation)
+	}
+	if pick.inventory != (inventoryTarget{}) && len(selectedGlyphs) == 0 && len(selectedObjects) == 0 {
+		a.reportStatus(a.uiText(uiLayerItemUnavailable))
+		return
 	}
 	glyphs = combineSelection(previousGlyphs, selectedGlyphs, pick.change, glyphKey)
 	items := combineSelection(previousObjects, selectedObjects, pick.change, objectKey)
@@ -221,6 +228,7 @@ func (v *documentView) finishCanvasRegion(page *objectPage, pick textSelection) 
 
 func (v *documentView) reportMixedSelection() {
 	a, selection := v.app, v.mixed
+	a.syncLayerSelection()
 	report := a.objects.info
 	if selection.pick.tool == idTextTab {
 		report = a.textTool.report

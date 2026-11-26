@@ -215,7 +215,7 @@ func (a *app) setInlineFrames(flow textFlow, stored *storedTextBlock, pick textS
 	}
 	for i, frame := range e.frames {
 		if frame.editable {
-			a.focusInlineFrame(i, pick.point, !pick.region() && pick.mode != textBlock && pick.change == replaceSelection)
+			a.focusInlineFrame(i, pick.point, pick.inventory.text == 0 && !pick.region() && pick.mode != textBlock && pick.change == replaceSelection)
 			return
 		}
 	}
@@ -298,7 +298,7 @@ func (a *app) focusInlineFrame(index int, caret textPoint, useCaret bool) {
 	a.layoutInlineEditor()
 	if e.visible {
 		setFocus.Call(e.handle)
-		if frame.newBounds == nil && !useCaret && (p.pick.region() || p.pick.mode == textBlock || p.pick.change != replaceSelection) {
+		if frame.newBounds == nil && !useCaret && (p.pick.region() || p.pick.mode == textBlock || p.pick.inventory.text != 0 || p.pick.change != replaceSelection) {
 			selectInline(e.handle, 0, -1)
 		}
 		if useCaret {

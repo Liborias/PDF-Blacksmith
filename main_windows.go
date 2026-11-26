@@ -129,6 +129,7 @@ type app struct {
 	tabBounds                                                      rect
 	leftDock, rightDock                                            dockVisibility
 	rightAux                                                       rightAuxiliary
+	layers                                                         layersPanel
 	layoutAids                                                     layoutAidsPanel
 	full                                                           bool
 	placement                                                      windowPlacement
@@ -562,6 +563,7 @@ func (a *app) drawControl(param uintptr) bool {
 	var item buttonDraw
 	copyDrawItem.Call(uintptr(unsafe.Pointer(&item)), param, unsafe.Sizeof(item))
 	return a.drawPopup(&item) || a.drawFileMenuButton(&item) || a.drawButton(&item) || a.drawMergeRow(&item) || a.drawRecentRow(&item) ||
+		a.drawLayerRow(&item) ||
 		(a.view != nil && (a.view.drawSearchRow(&item) || a.view.drawListRow(&item))) ||
 		(a.comparison.view != nil && a.comparison.view.drawListRow(&item))
 }

@@ -33,6 +33,7 @@ var textAlignments = []string{"left", "center", "right", "justify"}
 
 type textSelection struct {
 	history                        *canvasSelectionState
+	inventory                      inventoryTarget
 	source, generation, mode, tool int
 	point, tolerance               textPoint
 	polygon                        []textPoint
@@ -161,6 +162,7 @@ func (a *app) clearTextSelection() {
 		a.setChecked(option, false)
 	}
 	a.updateTextActions()
+	a.syncLayerSelection()
 	a.view.invalidateCanvas()
 }
 

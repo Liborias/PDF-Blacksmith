@@ -93,6 +93,7 @@ type plateInfo struct {
 }
 
 type viewResponse struct {
+	Inventory    *pageInventory         `json:"inventory,omitempty"`
 	TextPage     *textPage              `json:"text_page,omitempty"`
 	ObjectPage   *objectPage            `json:"object_page,omitempty"`
 	ObjectClipboard []byte              `json:"object_clipboard,omitempty"`

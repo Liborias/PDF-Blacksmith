@@ -48,8 +48,8 @@ func TestUIPaletteChromeContrast(t *testing.T) {
 		{"text", []string{"base", "top", "panel", "control", "input", "hover", "tabActive", "tabHover",
 			"panelTabIdle", "panelTabHover", "panelTabActive", "popoverBg", "selected", "toolbarActive", "toolbarActiveHover"}, 4.5},
 		{"muted", []string{"base", "panel", "editor", "control", "tabIdle", "hover", "popoverBg", "selected", "top"}, 4.5},
-		{"accent", []string{"base", "panel", "control", "input"}, 4.5},
-		{"accent", []string{"hover", "selected", "toolbarActive", "toolbarActiveHover"}, 3},
+		{"accent", []string{"base", "panel", "control", "input", "selected"}, 4.5},
+		{"accent", []string{"hover", "toolbarActive", "toolbarActiveHover"}, 3},
 		{"focus", []string{"base", "top", "panel", "control", "input", "hover", "tabIdle", "tabActive", "tabHover",
 			"panelTabIdle", "panelTabHover", "panelTabActive", "popoverBg", "selected", "toolbarActive", "toolbarActiveHover"}, 3},
 	}

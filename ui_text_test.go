@@ -9,8 +9,8 @@ import (
 )
 
 func TestUICatalogMessages(t *testing.T) {
-	if len(uiTranslations) != 809 {
-		t.Fatalf("got %d canonical entries, want 809", len(uiTranslations))
+	if len(uiTranslations) != 829 {
+		t.Fatalf("got %d canonical entries, want 829", len(uiTranslations))
 	}
 	for _, sample := range []struct {
 		key            uiMessage
@@ -21,6 +21,7 @@ func TestUICatalogMessages(t *testing.T) {
 		{uiInterfaceLanguage, "Jazyk rozhraní", "Interface language"},
 		{uiOpenFile, "Otevřít soubor", "Open file"},
 		{uiExpandRight, "Rozbalit pravou skupinu panelů", "Expand right panel group"},
+		{uiLayersAndObjects, "Vrstvy a objekty", "Layers and objects"},
 		{uiRecognitionLanguage, "Jazyk rozpoznávání", "Recognition language"},
 		{uiWarnFlattenedText, "Pozor: text ve zploštěném PDF nepůjde označit.", "Text in the flattened PDF cannot be selected."},
 	} {

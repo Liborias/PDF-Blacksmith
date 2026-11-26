@@ -248,17 +248,7 @@ func (v *documentView) drawBookmarkRow(item *buttonDraw) bool {
 	d := v.app.scale
 	bounds.left += int32(v.bookmarkIndent(bookmark, int(bounds.right-bounds.left)))
 	if v.bookmarkHasChildren(index) {
-		x, y := bounds.left+int32(d(6)), (bounds.top+bounds.bottom)/2
-		long, short := int32(max(2, d(4))), int32(max(1, d(2)))
-		chevron := [...]point{{x - long, y - short}, {x, y + short}, {x + long, y - short}}
-		if panel.collapsed[index] {
-			chevron = [...]point{{x - short, y - long}, {x + short, y}, {x - short, y + long}}
-		}
-		pen, _, _ := gdiPen.Call(0, 1, color.win())
-		old, _, _ := gdiSelect.Call(item.dc, pen)
-		gdi32.NewProc("Polyline").Call(item.dc, uintptr(unsafe.Pointer(&chevron[0])), uintptr(len(chevron)))
-		gdiSelect.Call(item.dc, old)
-		gdiDelete.Call(pen)
+		drawTreeChevron(item.dc, bounds.left+int32(d(6)), (bounds.top+bounds.bottom)/2, d(4), d(2), color, panel.collapsed[index])
 	}
 	bounds.left += int32(d(17))
 	bounds.right -= int32(d(6))
@@ -267,6 +257,19 @@ func (v *documentView) drawBookmarkRow(item *buttonDraw) bool {
 		v.app.drawFocus(item.dc, item.bounds)
 	}
 	return true
+}
+
+func drawTreeChevron(dc uintptr, x, y int32, length, halfHeight int, ink paletteColor, collapsed bool) {
+	long, short := int32(max(2, length)), int32(max(1, halfHeight))
+	chevron := [...]point{{x - long, y - short}, {x, y + short}, {x + long, y - short}}
+	if collapsed {
+		chevron = [...]point{{x - short, y - long}, {x + short, y}, {x - short, y + long}}
+	}
+	pen, _, _ := gdiPen.Call(0, 1, ink.win())
+	old, _, _ := gdiSelect.Call(dc, pen)
+	gdi32.NewProc("Polyline").Call(dc, uintptr(unsafe.Pointer(&chevron[0])), uintptr(len(chevron)))
+	gdiSelect.Call(dc, old)
+	gdiDelete.Call(pen)
 }
 
 func (v *documentView) bookmarkIndent(bookmark pdfBookmark, width int) int {

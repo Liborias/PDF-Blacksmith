@@ -68,6 +68,7 @@ func (a *app) setUILanguage(locale uiLocale) {
 	a.localizeCommandBar()
 	a.localizeReaderHelp()
 	a.localizeProperties()
+	a.rebuildLayerRows(true)
 	a.updateObjectActions()
 	a.updateComparisonNavigation()
 	a.measureToolNames()

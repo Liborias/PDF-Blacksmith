@@ -57,7 +57,11 @@ func (v *documentView) matchObjectSelection(page *objectPage, pick textSelection
 		return
 	}
 	rotation := (page.Rotation + v.rotations[pick.source-1] + 360) % 360
-	hits := objectsAt(page.Objects, page.Boxes[pick.box], rotation, pick)
+	hits := page.objectsForPick(pick, rotation)
+	if pick.inventory.object != 0 && len(hits) == 0 {
+		a.reportStatus(a.uiText(uiLayerItemUnavailable))
+		return
+	}
 	if (a.mode != idObjectsTab || v.secondary) && len(hits) == 0 {
 		text := &v.nativeText
 		if pick.insertPoint && text.source == pick.source && text.generation == pick.generation && text.model != nil {
@@ -87,6 +91,25 @@ func (v *documentView) matchObjectSelection(page *objectPage, pick textSelection
 }
 
 func objectKey(item pdfObject) int { return item.Token }
+
+func (page *objectPage) objectsForPick(pick textSelection, rotation int) []pdfObject {
+	box := page.Boxes[pick.box]
+	if token := pick.inventory.object; token != 0 {
+		for _, item := range page.Objects {
+			if item.Token == token {
+				if _, visible := searchDisplayRect(item.Bounds, box, rotation); visible {
+					return []pdfObject{item}
+				}
+				break
+			}
+		}
+		return nil
+	}
+	if pick.inventory.text != 0 {
+		return nil
+	}
+	return objectsAt(page.Objects, box, rotation, pick)
+}
 
 func (v *documentView) applyObjectSelection(page *objectPage, pick textSelection, hits []pdfObject) {
 	a, e := v.app, &v.app.objects

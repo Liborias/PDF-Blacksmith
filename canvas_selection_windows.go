@@ -93,6 +93,10 @@ func (v *documentView) dispatchCanvasSelection(pick textSelection) {
 		if position < 0 || position >= len(view.order) {
 			return
 		}
+		if pick.inventory != (inventoryTarget{}) && (view != v || view.generation != pick.generation || view.order[view.page] != pick.source) {
+			// The key belongs to the page revision shown when its row was clicked.
+			return
+		}
 		pick.source, pick.generation, pick.tool = view.order[position], view.generation, a.mode
 		previous := view.captureCanvasSelection()
 		pick.history = &previous
@@ -100,7 +104,11 @@ func (v *documentView) dispatchCanvasSelection(pick textSelection) {
 		if !pick.combined {
 			view.clearMixedSelection()
 		}
-		view.requestNativeText(pick)
+		if pick.inventory.object != 0 && !pick.combined {
+			view.requestObjects(pick)
+		} else {
+			view.requestNativeText(pick)
+		}
 	}
 	if !a.saveInlineBefore(apply) {
 		apply()

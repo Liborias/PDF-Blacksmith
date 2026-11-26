@@ -135,7 +135,9 @@ func (a *app) setupWorkspace() bool {
 		wsChild|0x06000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
 	a.searchSidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
 		wsChild|0x06000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
-	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 || a.searchSidebar == 0 {
+	a.layers.sidebar, _, _ = createWindow.Call(0x10000, uintptr(unsafe.Pointer(className)), 0,
+		wsChild|0x06000000, 0, 0, 1, 1, a.window, 0, a.instance, 0)
+	if a.sidebar == 0 || a.thumbnailSidebar == 0 || a.bookmarkSidebar == 0 || a.searchSidebar == 0 || a.layers.sidebar == 0 {
 		return false
 	}
 	a.sideScroll = a.addPanelScrollbar(a.sidebar, func(offset int) {
@@ -233,6 +235,7 @@ func (a *app) setupWorkspace() bool {
 	a.view.buildBookmarkPanel()
 	a.controlParent = a.searchSidebar
 	a.view.buildSearchResults()
+	a.buildLayersPanel()
 	a.controlParent = a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
@@ -683,7 +686,7 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		} else {
 			fillColor(dc, bounds, panelColor)
 		}
-		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar || hwnd == a.searchSidebar ||
+		if hwnd == a.thumbnailSidebar || hwnd == a.bookmarkSidebar || hwnd == a.searchSidebar || hwnd == a.layers.sidebar ||
 			(a.comparison.view != nil && hwnd == a.comparison.view.thumbnailSidebar) {
 			fillColor(dc, rect{right: 1, bottom: bounds.bottom}, divider)
 		}
@@ -992,6 +995,8 @@ func (a *app) command(id, notification int) {
 		a.togglePanelSide(id == idToggleLeftPanels)
 	case idToggleBookmarks:
 		a.toggleRightAuxiliary(auxiliaryBookmarks)
+	case idToggleLayers:
+		a.toggleRightAuxiliary(auxiliaryLayers)
 	case idToggleSearchResults, idCloseSearchResults:
 		a.toggleRightAuxiliary(auxiliaryResults)
 		if id == idCloseSearchResults {
@@ -1515,6 +1520,9 @@ func (a *app) handleInput(msg *winMessage) bool {
 	}
 	if msg.message != 0x0100 {
 		return false
+	}
+	if a.layerKey(msg) {
+		return true
 	}
 	if msg.wParam == 0x1b && (msg.window == a.window && a.cancelCanvasSelections() || a.cancelPageDrag()) {
 		return true

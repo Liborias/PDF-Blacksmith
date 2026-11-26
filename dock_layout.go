@@ -23,6 +23,7 @@ const (
 	auxiliaryNone auxiliaryPanel = iota
 	auxiliaryBookmarks
 	auxiliaryResults
+	auxiliaryLayers
 )
 
 type rightAuxiliary struct {

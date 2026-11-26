@@ -152,6 +152,9 @@ var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam
 		}
 	}
 	result, _, _ := defSubclass.Call(hwnd, uintptr(message), wParam, lParam)
+	if hwnd == window.layers.list && message == 0x0202 { // WM_LBUTTONUP
+		window.layerMouseAction(lParam)
+	}
 	if thumbs != nil && message == 0x0202 && wParam&(4|8) == 0 && len(thumbs.pageSelection) == 0 {
 		if row := thumbs.pageAt(int32(int16(lParam >> 16))); row >= 0 && row < len(thumbs.order) {
 			thumbs.readPageSelection()
@@ -314,6 +317,11 @@ func (a *app) wheelSettings(location uintptr, delta int, ctrl bool) bool {
 	}
 	if hood := a.bookmarkSidebar; hover == hood || parent == hood {
 		bar := a.scrollPanes[a.view.bookmarkPanel.list].bar
+		bar.setPosition(bar.position - rows)
+		return true
+	}
+	if hood := a.layers.sidebar; hover == hood || parent == hood {
+		bar := a.scrollPanes[a.layers.list].bar
 		bar.setPosition(bar.position - rows)
 		return true
 	}

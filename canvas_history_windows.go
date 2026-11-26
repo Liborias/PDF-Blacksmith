@@ -67,6 +67,7 @@ func (s canvasSelectionState) sameContent(next canvasSelectionState) bool {
 }
 
 func (v *documentView) rememberCanvasSelection(previous *canvasSelectionState) {
+	v.app.syncLayerSelection()
 	if previous == nil || previous.view != v || previous.generation != v.generation ||
 		previous.sameContent(v.captureCanvasSelection()) {
 		return

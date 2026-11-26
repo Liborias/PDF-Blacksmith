@@ -58,7 +58,13 @@ func (a *app) visibleRightAuxiliary() auxiliaryPanel {
 }
 
 func (a *app) toggleRightAuxiliary(panel auxiliaryPanel) {
-	a.rightAux.togglePanel(panel)
+	collapsed := a.rightDock.collapsed
+	if collapsed {
+		a.rightAux.setGroupCollapsed(&a.rightDock, false)
+	}
+	if !collapsed || a.rightAux.panel != panel {
+		a.rightAux.togglePanel(panel)
+	}
 	a.layout()
 	a.view.invalidateCanvas()
 	a.view.schedule()
@@ -87,6 +93,9 @@ func (a *app) layoutDocumentPanels() {
 	case auxiliaryResults:
 		minimum[dockRightAuxiliary] = d(145)
 		preferred[dockRightAuxiliary] = a.view.preferredSearchWidth()
+	case auxiliaryLayers:
+		minimum[dockRightAuxiliary] = d(145)
+		preferred[dockRightAuxiliary] = max(d(248), a.captionWidth(a.uiText(uiLayersAndObjects), a.labelFont)+d(26))
 	}
 	preferredDocument := d(265)
 	if compare {
@@ -159,7 +168,7 @@ func (a *app) layoutSidebars() {
 	leftRail, rightRail := a.sidebarRails()
 	ready := a.view.ready()
 	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.leftDock, ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft, a.thumbnailsToggle)
-	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.effectiveRightDock(), ready, uiCollapseRight, uiExpandRight, a.resultsToggle, a.bookmarksToggle)
+	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.effectiveRightDock(), ready, uiCollapseRight, uiExpandRight, a.resultsToggle, a.bookmarksToggle, a.layers.toggle)
 
 	x, top := a.width-a.settingsWidth, int(a.viewport.top)
 	gridWidth := max(1, d(145)+(a.settingsWidth-d(panelWidth))/2)
@@ -209,6 +218,8 @@ func (a *app) layoutSidebars() {
 	}
 	a.view.layoutBookmarkPanel()
 	a.view.layoutSearchResults()
+	a.layoutLayers()
+	a.syncLayerSelection()
 	a.layoutPanel()
 }
 
@@ -271,6 +282,8 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 		collapsed = a.rightAux.panel != auxiliaryBookmarks
 	case a.resultsToggle:
 		collapsed = a.rightAux.panel != auxiliaryResults
+	case a.layers.toggle:
+		collapsed = a.rightAux.panel != auxiliaryLayers
 	default:
 		return false
 	}
