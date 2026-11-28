@@ -75,3 +75,13 @@ func TestUIAuxiliaryEarIconsAvailable(t *testing.T) {
 		}
 	}
 }
+
+func TestFileMenuIconsAvailable(t *testing.T) {
+	for _,name:=range []string{"i-open_document","i-history","i-save","i-save_copy","i-export","i-nav_signature","i-print"} {
+		mask:=uiIcons.mask(name,14)
+		if len(mask)!=14*14 { t.Fatalf("missing file menu icon %s",name) }
+		visible:=false
+		for _,alpha:=range mask { if alpha>=128 { visible=true;break } }
+		if !visible { t.Fatalf("empty file menu icon %s",name) }
+	}
+}

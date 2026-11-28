@@ -21,17 +21,18 @@ type fileOption struct {
 	id    int
 	label uiMessage
 	shortcut string
+	symbol string
 }
 
 var fileOptions = []fileOption{
-	{idOpen, uiOpenFile, "Ctrl+O"},
-	{idRecentFiles, uiRecent, ""},
-	{idShowOutput, uiOpenOutput, ""},
-	{idSaveDocument, uiSave, "Ctrl+S"},
-	{idSaveDocumentAs, uiSaveAs, "Ctrl+Shift+S"},
-	{idExportTab, uiExport, ""},
-	{idFileSign, uiSignedCopy, ""},
-	{idPrintDocument, uiPrint, "Ctrl+P"},
+	{idOpen, uiOpenFile, "Ctrl+O", "i-open_document"},
+	{idRecentFiles, uiRecent, "", "i-history"},
+	{idShowOutput, uiOpenOutput, "", "i-open_document"},
+	{idSaveDocument, uiSave, "Ctrl+S", "i-save"},
+	{idSaveDocumentAs, uiSaveAs, "Ctrl+Shift+S", "i-save_copy"},
+	{idExportTab, uiExport, "", "i-export"},
+	{idFileSign, uiSignedCopy, "", "i-nav_signature"},
+	{idPrintDocument, uiPrint, "Ctrl+P", "i-print"},
 }
 
 func (a *app) fileOptionEnabled(option int) bool {
@@ -232,9 +233,18 @@ func (a *app) drawFileMenuButton(item *buttonDraw) bool {
 	}
 	option := fileOptions[index]
 	selected := a.tool==idFileTab && (option.id == a.activeFileOption() || (option.id == idRecentFiles && a.mode == idFileDetails))
-	a.paintPopupEntry(item.dc, item.bounds, popupItem{
-		label: a.uiText(option.label), shortcut:option.shortcut, checked: selected, disabled: !a.fileOptionEnabled(option.id),
-	}, a.navigationHot(item))
+	d:=a.scale
+	bounds:=item.bounds
+	style:=a.paintNavigation(item.dc,bounds,uiColors["popoverBg"],!a.fileOptionEnabled(option.id),selected,a.navigationHot(item))
+	size:=d(14)
+	drawUIIcon(item.dc,option.symbol,int(bounds.left)+d(10),int(bounds.top+bounds.bottom)/2-size/2,size,style.ink,style.fill)
+	bounds.left+=int32(d(30))
+	bounds.right-=int32(d(7))
+	if option.shortcut!="" {
+		drawText(item.dc,option.shortcut,bounds,a.normalFont,mutedColor,2)
+		bounds.right-=int32(d(112))
+	}
+	drawText(item.dc,a.uiText(option.label),bounds,a.normalFont,style.ink,0x8000)
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, item.bounds)
 	}

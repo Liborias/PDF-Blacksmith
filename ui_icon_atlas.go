@@ -31,6 +31,23 @@ var uiGridIcon []byte
 //go:embed assets/ui_nav_bookmarks.png
 var uiBookmarksIcon []byte
 
+// File menu icons from the approved original symbols.
+//go:embed assets/ui_open_document.png
+var uiFileOpenDocumentIcon []byte
+
+//go:embed assets/ui_history.png
+var uiFileHistoryIcon []byte
+
+//go:embed assets/ui_save_copy.png
+var uiFileSaveCopyIcon []byte
+
+//go:embed assets/ui_export.png
+var uiFileExportIcon []byte
+
+//go:embed assets/ui_print.png
+var uiFilePrintIcon []byte
+
+
 type uiIconAtlas struct {
 	pixels image.Image
 	tile   int
@@ -67,6 +84,11 @@ func loadUIIconAtlas() uiIconAtlas {
 		{"i-zoom_1_1", uiActualSizeIcon},
 		{"i-toggle_grid", uiGridIcon},
 		{"i-nav_bookmarks", uiBookmarksIcon},
+		{"i-open_document", uiFileOpenDocumentIcon},
+		{"i-history", uiFileHistoryIcon},
+		{"i-save_copy", uiFileSaveCopyIcon},
+		{"i-export", uiFileExportIcon},
+		{"i-print", uiFilePrintIcon},
 	} {
 		icon, err := png.Decode(bytes.NewReader(extra.data))
 		if err != nil {

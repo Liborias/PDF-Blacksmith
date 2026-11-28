@@ -13,6 +13,11 @@ EXTRA_ICONS = {
     "i-zoom_1_1": ROOT / "assets" / "ui_zoom_1_1.png",
     "i-toggle_grid": ROOT / "assets" / "ui_toggle_grid.png",
     "i-nav_bookmarks": ROOT / "assets" / "ui_nav_bookmarks.png",
+    "i-open_document": ROOT / "assets" / "ui_open_document.png",
+    "i-history": ROOT / "assets" / "ui_history.png",
+    "i-save_copy": ROOT / "assets" / "ui_save_copy.png",
+    "i-export": ROOT / "assets" / "ui_export.png",
+    "i-print": ROOT / "assets" / "ui_print.png",
 }
 TILE_SIZE = 96
 SYMBOLS = (
