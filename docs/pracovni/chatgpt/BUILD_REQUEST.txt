@@ -1,3 +1,1 @@
-Milestone 21 — review build after steps 18–21 (tooltips, tool navigation, property spacing, deferred recent document View activation, recent/thumbnail localization). Source changes through 482d4b10f583edba00672a073407ed1dccf10bb4. Next milestone 25. Download handoff at step 22.
-
-Retry milestone 21: call SetWindowPos directly in tooltip positioning; no step 22 changes.
+Milestone 25 — review build after steps 22–25 (recent file paths, document tabs, File menu hover/shortcuts and approved icons). Source changes through 74c8b738baaf744cc915124f7f55b23f2a890fe8. Next milestone 29. Download handoff at step 26.
