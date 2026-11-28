@@ -150,17 +150,19 @@ func (a *app) layoutSidebars() {
 	d := a.scale
 	toolsVisible := !a.full && a.toolsWidth > 0
 	detailsVisible := !a.full && a.settingsWidth > 0
-	y := int(a.viewport.top) + d(10)
-	step := d(39)
-	if a.documentTools {
-		step = min(step, max(d(27), (int(a.viewport.bottom)-y)/len(workspaceTabs)))
-	}
+	plan, ids := a.toolNavigationLayout()
 	for _, tab := range workspaceTabs {
 		button := a.toolButtons[tab.id]
-		show := toolsVisible && (!tab.needsPDF || a.documentTools)
-		if show {
-			place(button, d(10), y, max(1, a.toolsWidth-d(20)), step-d(5))
-			y += step
+		show := false
+		if toolsVisible {
+			for i, id := range ids {
+				if id == tab.id && plan.rows[i].height > 0 {
+					row := plan.rows[i]
+					place(button, d(10), int(a.viewport.top)+row.top, max(1, a.toolsWidth-d(20)), row.height)
+					show = true
+					break
+				}
+			}
 		}
 		showControl(button, show)
 		invalidate(button)
@@ -263,6 +265,18 @@ func (a *app) paintSidebars(dc uintptr) {
 	leftRail, rightRail := a.sidebarRails()
 	fillColor(dc, rect{0, leftRail.top, leftRail.left, leftRail.bottom}, panelColor)
 	fillColor(dc, rect{rightRail.right, rightRail.top, int32(a.width), rightRail.bottom}, panelColor)
+	if a.toolsWidth > 0 {
+		d := a.scale
+		plan, _ := a.toolNavigationLayout()
+		if plan.heading > 0 {
+			drawText(dc, a.uiText(uiTools), rect{int32(d(12)), leftRail.top+int32(d(5)),
+				int32(max(d(12),a.toolsWidth-d(10))), leftRail.top+int32(plan.heading)}, a.normalFont, mutedColor, 0x8000)
+		}
+		for _, y := range plan.separators {
+			top := leftRail.top+int32(y)
+			fillColor(dc, rect{int32(d(10)), top, int32(max(d(10),a.toolsWidth-d(10))), top+int32(max(1,d(1)))}, divider)
+		}
+	}
 	// Only the individual buttons are painted as tabs. The reserved
 	// document gutter has the same background as the editor, no rail.
 	for _, gutter := range [...]rect{leftRail, rightRail} {
@@ -445,4 +459,28 @@ func (a *app) auxiliaryEarIcon(handle uintptr) string {
 		return "i-nav_objects"
 	}
 	return ""
+}
+
+
+// Preserve existing tool order and availability. Only the groups that
+// actually contain visible tools receive a separator.
+func (a *app) toolNavigationLayout() (toolNavigationPlan, []int) {
+	var ids, groups []int
+	for _, tab := range workspaceTabs {
+		if tab.needsPDF && !a.documentTools {
+			continue
+		}
+		ids = append(ids,tab.id)
+		group := 2
+		switch tab.id {
+		case idFileTab,idBrowseTab:
+			group = 1
+		case idSplitTab,idMergeTab,idPageOrderTool:
+			group = 3
+		}
+		groups = append(groups,group)
+	}
+	d := a.scale
+	plan := planToolNavigation(int(a.viewport.bottom-a.viewport.top), groups, d(10),d(5),d(39),d(27),d(25),d(7))
+	return plan,ids
 }
