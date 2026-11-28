@@ -1,1 +1,1 @@
-Milestone 9 — review build after steps 6–9 (live search, zoom dropdown, right toolbar, responsive layout). Source changes through a71dda9acd63bdb0aa7fdca929815d9ce187944b. Next milestone 13. Download handoff at step 10.
+Milestone 13 — review build after steps 10–13 (page navigation, temporary dock collapse, group separators, footer metadata). Source changes through f192df18dbd52d7ad004d101fd0a537da080ff1b. Next milestone 17. Download handoff at step 14.
