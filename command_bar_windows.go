@@ -153,7 +153,8 @@ func (a *app) buildCommandBar() {
 func (a *app) layoutCommandBar() {
 	d := a.scale
 	x := d(8)
-	menuWidth, iconCount := 0, 0
+	menuWidth := 0
+	var icons []int
 	for _, control := range a.commandBar.controls {
 		if control.id == idHeaderUndo || control.id == idHeaderRedo || control.id == idHeaderZoomPercent {
 			continue
@@ -161,24 +162,18 @@ func (a *app) layoutCommandBar() {
 		if control.menu {
 			menuWidth += a.captionWidth(a.uiText(control.label), a.normalFont) + d(20) + d(1)
 		} else {
-			iconCount++
+			icons = append(icons, control.id)
 		}
 	}
-	iconWidth, iconGap := d(30), d(4)
-	if menuWidth+iconCount*iconWidth+(iconCount-1)*iconGap+d(28)+d(112)+d(76)+2*iconGap > a.width {
-		iconWidth, iconGap = d(27), d(2)
-	}
-	// Reserve the existing search field before adding the optional zoom dropdown.
-	free := a.width - menuWidth - iconCount*iconWidth - (iconCount-1)*iconGap - d(28)
-	editWidth, zoomWidth := headerOptionalWidths(free, iconGap, d(112), d(165), d(76))
-	extra := 0
-	if editWidth > 0 {
-		extra += editWidth + iconGap
-	}
-	if zoomWidth > 0 {
-		extra += zoomWidth + iconGap
-	}
-	iconStart := a.width - d(8) - (iconCount*iconWidth + (iconCount-1)*iconGap + extra)
+	// The HTML's optional order, omitting commands not implemented in the
+	// native bar yet. The emergency order is used only if icons alone overflow.
+	optional := []int{idHeaderHelpIcon, idHeaderSettings, idHeaderFitWidth, idHeaderFitPage, idToggleLayoutGrid}
+	emergency := []int{idCompareOpen, idHeaderOverview, idHeaderActualSize, idHeaderFlow,
+		idHeaderThemeMode, idHeaderLasso, idHeaderRectangle, idReaderZoomOut, idReaderZoomIn,
+		idSearchTab, idHeaderSave, idHeaderPointer}
+	plan := planHeaderToolbar(a.width-menuWidth-d(28), icons, optional, emergency,
+		d(30), d(4), d(27), d(2), d(78), d(112), d(145), d(76))
+	iconStart := a.width - d(8) - plan.used
 	showSearchEdit := false
 	for _, control := range a.commandBar.controls {
 		if control.id == idHeaderUndo || control.id == idHeaderRedo {
@@ -190,18 +185,18 @@ func (a *app) layoutCommandBar() {
 			showControl(control.handle, show)
 			continue
 		}
-		if control.id == idHeaderZoomPercent && zoomWidth == 0 {
+		if plan.hidden[control.id] || control.id == idHeaderZoomPercent && plan.zoom == 0 {
 			showControl(control.handle, false)
 			continue
 		}
-		width, gap := iconWidth, iconGap
+		width, gap := plan.iconWidth, plan.gap
 		if control.id == idHeaderZoomPercent {
-			width = zoomWidth
+			width = plan.zoom
 		}
 		if control.menu {
 			width, gap = a.captionWidth(a.uiText(control.label), a.normalFont)+d(20), d(1)
-		} else if control.id == idHeaderPointer {
-			x = max(x+d(12), iconStart)
+		} else {
+			x = max(x, iconStart)
 		}
 		show := !a.full && x+width+d(8) <= a.width
 		if show {
@@ -210,13 +205,13 @@ func (a *app) layoutCommandBar() {
 		}
 		showControl(control.handle, show)
 		x += width + gap
-		if control.id == idSearchTab && editWidth > 0 {
-			showSearchEdit = show && x+editWidth+d(8) <= a.width
+		if control.id == idSearchTab && plan.search > 0 {
+			showSearchEdit = show && x+plan.search+d(8) <= a.width
 			if showSearchEdit {
-				place(a.commandBar.searchEdit, x, d(headerHeight+5), editWidth, d(28))
+				place(a.commandBar.searchEdit, x, d(headerHeight+5), plan.search, d(28))
 				invalidate(a.commandBar.searchEdit)
 			}
-			x += editWidth + iconGap
+			x += plan.search + plan.gap
 		}
 	}
 	showControl(a.commandBar.searchEdit, showSearchEdit)
@@ -404,6 +399,26 @@ func (a *app) showHeaderMenu(id int) {
 			run(idLayoutAids, a.uiText(uiLayoutAids), ready, a.mode == idLayoutAids),
 			run(idToggleLayoutGrid, a.uiText(uiShowLayoutGrid), ready, a.checked(a.layoutAids.grid)),
 		}
+		// Use direct preset actions when the dropdown is hidden, so the popup
+		// is never anchored to a hidden native control.
+		if !a.headerVisible(idHeaderZoomPercent) {
+			for _, percent := range headerZoomPresets {
+				entries = append(entries, headerMenuItem{
+					popupItem{label: fmt.Sprintf("%d %%", percent), disabled: !ready,
+						checked: ready && !v.overview && fmt.Sprintf("%.0f", v.zoomPercent()) == fmt.Sprint(percent)},
+					func() { v.setZoomPercent(percent) },
+				})
+			}
+		}
+		for _, id := range []int{idReaderZoomOut, idReaderZoomIn} {
+			if !a.headerVisible(id) {
+				key := uiZoomOut
+				if id == idReaderZoomIn {
+					key = uiZoomIn
+				}
+				entries = append(entries, run(id, a.uiText(key), ready, false))
+			}
+		}
 	case idHeaderTools:
 		for _, tab := range workspaceTabs {
 			if tab.id != idFileTab && tab.id != idBrowseTab {
@@ -414,11 +429,15 @@ func (a *app) showHeaderMenu(id int) {
 		// The optional right-hand toolbar commands must remain available when
 		// the window is too narrow to show their buttons.
 		for _, control := range a.commandBar.controls {
-			if control.id != idHeaderThemeMode && control.id != idHeaderSettings {
-				continue
-			}
-			if visible, _, _ := user32.NewProc("IsWindowVisible").Call(control.handle); visible == 0 {
-				entries = append(entries, run(control.id, a.commandBarCaption(control.commandBarButton), true, false))
+			switch control.id {
+			case idHeaderThemeMode, idHeaderSettings:
+				if !a.headerVisible(control.id) {
+					entries = append(entries, run(control.id, a.commandBarCaption(control.commandBarButton), true, false))
+				}
+			case idHeaderPointer, idHeaderRectangle, idHeaderLasso:
+				if !a.headerVisible(control.id) {
+					entries = append(entries, run(control.id, a.commandBarCaption(control.commandBarButton), a.canUseHeaderSelection(), false))
+				}
 			}
 		}
 	case idHeaderEdit:
@@ -444,6 +463,12 @@ func (a *app) showHeaderMenu(id int) {
 	if choice >= 0 {
 		entries[choice].run()
 	}
+}
+
+func (a *app) headerVisible(id int) bool {
+	handle := a.headerControl(id)
+	visible, _, _ := user32.NewProc("IsWindowVisible").Call(handle)
+	return visible != 0
 }
 
 func (a *app) headerControl(id int) uintptr {
