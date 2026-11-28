@@ -72,9 +72,18 @@ func (a *app) layoutHeader() {
 	}
 }
 
+// Use the same bounds for positioning and non-client hit testing.
+func (a *app) headerHistoryBounds(index int) (rect, bool) {
+	buttons, _ := headerHistoryLayout(a.headerBrand, headerHeight)
+	button := buttons[index]
+	bounds := a.area(button.left, button.top, button.right, button.bottom)
+	return bounds, !a.full && int(bounds.right) <= a.windowButtonStart-a.scale(4)
+}
+
 func (a *app) layoutDocumentTabs() {
 	d := a.scale
-	left, right := d(a.headerBrand+14), a.windowButtonStart-d(4)
+	_, tabsLeft := headerHistoryLayout(a.headerBrand, headerHeight)
+	left, right := d(tabsLeft), a.windowButtonStart-d(4)
 	widths := make([]int, len(a.tabs))
 	names := make(map[string]int, len(a.tabs))
 	for _, tab := range a.tabs {
@@ -349,6 +358,11 @@ func (a *app) hitTest(hwnd, param uintptr) uintptr {
 		}
 	}
 	if y < a.scale(headerHeight) && x < a.windowButtonStart && !contains(a.tabBounds, pos.x, pos.y) {
+		for index := range a.historyButtons {
+			if bounds, show := a.headerHistoryBounds(index); show && contains(bounds, pos.x, pos.y) {
+				return 1
+			}
+		}
 		return 2
 	}
 	return 1

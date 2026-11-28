@@ -142,6 +142,9 @@ func (a *app) layoutCommandBar() {
 	x := d(8)
 	menuWidth, iconCount := 0, 0
 	for _, control := range a.commandBar.controls {
+		if control.id == idHeaderUndo || control.id == idHeaderRedo {
+			continue
+		}
 		if control.menu {
 			menuWidth += a.captionWidth(a.uiText(control.label), a.normalFont) + d(20) + d(1)
 		} else {
@@ -154,6 +157,15 @@ func (a *app) layoutCommandBar() {
 	}
 	iconStart := a.width - d(8) - (iconCount*iconWidth + (iconCount-1)*iconGap)
 	for _, control := range a.commandBar.controls {
+		if control.id == idHeaderUndo || control.id == idHeaderRedo {
+			bounds, show := a.headerHistoryBounds(control.id - idHeaderUndo)
+			if show {
+				place(control.handle, int(bounds.left), int(bounds.top), int(bounds.right-bounds.left), int(bounds.bottom-bounds.top))
+				invalidate(control.handle)
+			}
+			showControl(control.handle, show)
+			continue
+		}
 		width, gap := iconWidth, iconGap
 		if control.menu {
 			width, gap = a.captionWidth(a.uiText(control.label), a.normalFont)+d(20), d(1)
