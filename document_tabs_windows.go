@@ -96,7 +96,7 @@ func (a *app) selectDocumentTab(tab *documentTab) {
 		v.syncReadingControls()
 		setText(a.window, filepath.Base(v.path)+" · "+appName)
 		setText(a.password, v.password)
-		setText(v.search.input, tab.query)
+		v.setSearchInputs(tab.query)
 		setText(v.documentInfo, tab.documentInfo)
 		a.reportStatus(tab.status)
 		if v.ready() && !v.sourceUnchanged() {

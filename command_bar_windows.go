@@ -44,6 +44,8 @@ type commandBar struct {
 	fitMode  readingZoomMode
 	overview bool
 	areaMode int
+	searchEdit uintptr
+	searchSync bool
 }
 
 var headerButtons = []commandBarButton{
@@ -109,6 +111,7 @@ func (a *app) updateThemeToggleCaption() {
 }
 
 func (a *app) localizeCommandBar() {
+	a.localizeHeaderSearch()
 	for _, control := range a.commandBar.controls {
 		caption := a.commandBarCaption(control.commandBarButton)
 		setText(control.handle, caption)
@@ -136,6 +139,10 @@ func (a *app) buildCommandBar() {
 			setEnabled(handle, false)
 		}
 	}
+	a.commandBar.searchEdit = a.edit(0, 0, 1, false)
+	sendMessage.Call(a.commandBar.searchEdit, 0x00c5, 256, 0) // EM_LIMITTEXT
+	a.localizeHeaderSearch()
+	setEnabled(a.commandBar.searchEdit, false)
 }
 
 func (a *app) layoutCommandBar() {
@@ -153,10 +160,21 @@ func (a *app) layoutCommandBar() {
 		}
 	}
 	iconWidth, iconGap := d(30), d(4)
-	if menuWidth+iconCount*iconWidth+(iconCount-1)*iconGap+d(28) > a.width {
+	if menuWidth+iconCount*iconWidth+(iconCount-1)*iconGap+d(28)+d(112)+iconGap > a.width {
 		iconWidth, iconGap = d(27), d(2)
 	}
-	iconStart := a.width - d(8) - (iconCount*iconWidth + (iconCount-1)*iconGap)
+	// Preserve the existing search button as a narrow-width fallback.
+	free := a.width - menuWidth - iconCount*iconWidth - (iconCount-1)*iconGap - d(28) - iconGap
+	editWidth := min(d(165), free)
+	if editWidth < d(112) {
+		editWidth = 0
+	}
+	extra := 0
+	if editWidth > 0 {
+		extra = editWidth + iconGap
+	}
+	iconStart := a.width - d(8) - (iconCount*iconWidth + (iconCount-1)*iconGap + extra)
+	showSearchEdit := false
 	for _, control := range a.commandBar.controls {
 		if control.id == idHeaderUndo || control.id == idHeaderRedo {
 			bounds, show := a.headerHistoryBounds(control.id - idHeaderUndo)
@@ -180,7 +198,16 @@ func (a *app) layoutCommandBar() {
 		}
 		showControl(control.handle, show)
 		x += width + gap
+		if control.id == idSearchTab && editWidth > 0 {
+			showSearchEdit = show && x+editWidth+d(8) <= a.width
+			if showSearchEdit {
+				place(a.commandBar.searchEdit, x, d(headerHeight+5), editWidth, d(28))
+				invalidate(a.commandBar.searchEdit)
+			}
+			x += editWidth + iconGap
+		}
 	}
+	showControl(a.commandBar.searchEdit, showSearchEdit)
 }
 
 func (a *app) updateCommandBar() {

@@ -702,6 +702,9 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return a.colorControl(msg, wParam, lParam)
 	case wmCommand:
 		if wParam>>16&0xffff == 0x0300 {
+			if a.searchInputChanged(lParam) {
+				return 0
+			}
 			a.inlineControlChange(lParam)
 		}
 		if v := a.comparison.view; v != nil && hwnd == v.thumbnailSidebar && lParam == v.pageList {
@@ -1572,8 +1575,8 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.wParam == 0x0d {
 		p := &a.view.search
 		switch msg.window {
-		case p.input:
-			a.view.queueSearch(getText(p.input))
+		case p.input, a.commandBar.searchEdit:
+			a.view.queueSearch(getText(msg.window))
 			return true
 		case p.list:
 			a.view.jumpToSearch(p.selected())

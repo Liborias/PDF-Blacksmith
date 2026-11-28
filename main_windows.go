@@ -459,6 +459,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmCommand:
 		if a.view != nil {
 			if wParam>>16&0xffff == 0x0300 { // EN_CHANGE
+				if a.searchInputChanged(lParam) {
+					return 0
+				}
 				a.inlineControlChange(lParam)
 				if scope, field := a.scopeControls(); field != 0 && field == lParam {
 					delete(a.thumbnailScopes, scope)

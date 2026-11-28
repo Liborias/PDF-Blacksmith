@@ -156,6 +156,62 @@ func (v *documentView) setSearchStatus(key uiMessage, args ...any) {
 	}
 }
 
+func (a *app) localizeHeaderSearch() {
+	handle := a.commandBar.searchEdit
+	if handle == 0 {
+		return
+	}
+	cue := a.uiText(uiMessage("ui.najit.v.pdf.b75578bbb9"))
+	sendMessage.Call(handle, 0x1501, 0, uintptr(unsafe.Pointer(wideString(cue)))) // EM_SETCUEBANNER
+	a.setTooltip(handle, a.uiText(uiFind)+" (Ctrl+F)")
+}
+
+// The two fields represent one query. Guard synchronous EN_CHANGE notifications
+// during programmatic changes, including tab restore and document reset.
+func (v *documentView) setSearchInputs(query string) {
+	a := v.app
+	old := a.commandBar.searchSync
+	a.commandBar.searchSync = true
+	defer func() { a.commandBar.searchSync = old }()
+	for _, handle := range []uintptr{v.search.input, a.commandBar.searchEdit} {
+		if handle != 0 && getText(handle) != query {
+			setText(handle, query)
+		}
+	}
+}
+
+func (a *app) searchInputChanged(handle uintptr) bool {
+	if a.view == nil || handle == 0 ||
+		(handle != a.commandBar.searchEdit && handle != a.view.search.input) {
+		return false
+	}
+	if a.commandBar.searchSync || !a.view.ready() || a.busy {
+		return true
+	}
+	query := getText(handle)
+	tab := a.activeTab
+	run := func() {
+		if a.activeTab != tab || !a.view.ready() || a.busy || getText(handle) != query {
+			return
+		}
+		if a.mode != idSearchTab {
+			a.activate(idSearchTab)
+		}
+		if a.mode != idSearchTab {
+			return
+		}
+		a.view.setSearchInputs(query)
+		// Avoid relaunching the worker for whitespace-only formatting changes.
+		if strings.Join(strings.Fields(query), " ") != a.view.search.query {
+			a.view.queueSearch(query)
+		}
+	}
+	if !a.saveInlineBefore(run) {
+		run()
+	}
+	return true
+}
+
 func (a *app) showSearch() {
 	if a.saveInlineBefore(a.showSearch) {
 		return
@@ -172,16 +228,25 @@ func (a *app) showSearch() {
 	}
 	a.activate(idSearchTab)
 	input := a.view.search.input
-	a.revealPropertyControl(input)
+	if visible, _, _ := user32.NewProc("IsWindowVisible").Call(a.commandBar.searchEdit); visible != 0 && !a.busy {
+		input = a.commandBar.searchEdit
+	} else {
+		a.revealPropertyControl(input)
+	}
 	setFocus.Call(input)
 	sendMessage.Call(input, 0x00b1, 0, ^uintptr(0)) // EM_SETSEL
-	a.revealFocusedControl()
+	if input == a.view.search.input {
+		a.revealFocusedControl()
+	}
 }
 
 func (v *documentView) updateSearchActions() {
 	p := &v.search
 	setEnabled(p.start, v.ready() && !v.app.busy)
-	setEnabled(p.input, v.ready())
+	setEnabled(p.input, v.ready() && !v.app.busy)
+	if !v.secondary && v.app.commandBar.searchEdit != 0 {
+		setEnabled(v.app.commandBar.searchEdit, v.ready() && !v.app.busy)
+	}
 	setEnabled(p.previous, len(p.rows) > 0)
 	setEnabled(p.next, len(p.rows) > 0)
 }
@@ -210,7 +275,7 @@ func (v *documentView) resetSearch() {
 	p := &v.search
 	v.cancelSearch()
 	p.query = ""
-	setText(p.input, "")
+	v.setSearchInputs("")
 	v.setSearchStatus("")
 	v.app.setUIMessage(p.term, uiSearchPrompt)
 	v.clearSearchResults()
@@ -221,6 +286,7 @@ func (v *documentView) queueSearch(query string) {
 	if !v.ready() || v.app.busy {
 		return
 	}
+	v.setSearchInputs(query)
 	query = strings.Join(strings.Fields(query), " ")
 	if query == "" {
 		v.resetSearch()
