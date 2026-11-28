@@ -1,1 +1,1 @@
-Milestone 5 — review build after steps 2–5 (1:1, title history, anvil EXE icon, grid). Source changes through ae7a88dabef4141a6262c907854615c0d4f53299. Next milestone 9.
+Milestone 9 — review build after steps 6–9 (live search, zoom dropdown, right toolbar, responsive layout). Source changes through a71dda9acd63bdb0aa7fdca929815d9ce187944b. Next milestone 13. Download handoff at step 10.
