@@ -18,6 +18,6 @@ Aktualizace: 28. 11. 2026. Toto je průběžný stav práce, nikoliv další kon
 ## Stav při založení větve
 - Audit pouze pro čtení: Codex má nové palety 6×2, ikonový atlas, command bar, nastavení, lokalizaci, docky, přehled stran, výběr, typografii, ořez, vrstvy a základ mřížky. Přítomnost kódu není důkaz funkčnosti. Pravítka/vodítka/SnapEngine vyžadují inventuru. Rozsah F1 nelze považovat za hotový.
 - Existující sestavení: `build.sh`, Go 1.26, Python s pip, curl, unzip, 7z, binutils, xz, stažení kontrolovaných runtime závislostí. `SESTAVENI.md`. Složka .github/workflows při auditu nedostupná (404), žádný funkční workflow nebyl potvrzen.
-- Krok 1 schválen: vytvořit samostatnou sestavovací infrastrukturu a předání. Stav: rozpracováno. Pracovní EXE zatím není ověřeno.
-- Dokončené kroky: 0. Po dokončení infrastruktury evidovat krok 1 a požádat o první sestavení, další plánovaný build po kroku 5.
+- Krok 1: sestavovací infrastruktura a předání uloženy. Workflow `.github/workflows/review-build.yml` (commit `b8fb88f61a7d5326ec4fecacd95fbcddd55b00f4`), spouštění prvního buildu otevřením draft PR do `codex/ui-palette-v6`, následné pouze změnou `BUILD_REQUEST.txt`. Artefakt EXE + SHA256SUMS + BUILD_INFO, 30 dní. Go test ./... před sestavením. Workflow dosud neověřen reálným během.
+- Dokončené implementační kroky: 1 (infrastruktura); první build čeká na ověření, následující plánovaný build po kroku 5. Bez úspěšného prvního EXE neoznačovat sestavovací systém za ověřený.
 - Následující návrh kroku 2: audit stávající horní lišty proti HTML v3.26 a jedna nejmenší bezpečná korekce napojení existujícího příkazu nebo jeho vizuálního stavu; přesný rozsah předložit uživateli před implementací. Bez jeho „ok“ neimplementovat.
