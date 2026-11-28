@@ -328,12 +328,9 @@ func (a *app) cancelPendingOpenView() {
 }
 
 func (v *documentView) completePendingOpenView(page int) {
-	if v.secondary || !v.ready() || v.page < 0 || v.page >= len(v.order) || page != v.order[v.page] {
-		return
-	}
 	a := v.app
 	tab := a.activeTab
-	if tab == nil || !tab.openViewPending {
+	if tab == nil || !initialPageImageReady(tab.openViewPending, v.secondary, v.ready(), v.order, v.page, page) {
 		return
 	}
 	tab.openViewPending = false
