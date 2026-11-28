@@ -476,6 +476,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		}
 	case 0x004e: // WM_NOTIFY
+		if a.positionIconTooltip(lParam) {
+			return 1
+		}
 		if lParam != 0 && a.textTool.inline.handle != 0 {
 			notice := (*struct {
 				from, id uintptr

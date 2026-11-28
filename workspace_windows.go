@@ -674,6 +674,9 @@ func (a *app) revealFocusedControl() {
 
 func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	a := window
+	if msg == 0x004e && a.positionIconTooltip(lParam) {
+		return 1
+	}
 	switch msg {
 	case wmPaint:
 		var paint paintInfo
