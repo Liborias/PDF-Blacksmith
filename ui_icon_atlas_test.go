@@ -58,3 +58,12 @@ func TestUIActualSizeIconIsAvailable(t *testing.T) {
 		t.Fatal("invalid 1:1 icon mask")
 	}
 }
+
+func TestUIGridIconIsAvailable(t *testing.T) {
+	if _, ok := uiIcons.slots["i-toggle_grid"]; !ok {
+		t.Fatal("missing original grid toolbar icon")
+	}
+	if len(uiIcons.mask("i-toggle_grid", 18)) != 18*18 {
+		t.Fatal("invalid grid icon mask")
+	}
+}

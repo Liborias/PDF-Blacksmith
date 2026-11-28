@@ -23,6 +23,10 @@ var uiIconIndex []byte
 //go:embed assets/ui_zoom_1_1.png
 var uiActualSizeIcon []byte
 
+// Original v3.26 grid symbol.
+//go:embed assets/ui_toggle_grid.png
+var uiGridIcon []byte
+
 type uiIconAtlas struct {
 	pixels image.Image
 	tile   int
@@ -51,24 +55,31 @@ func loadUIIconAtlas() uiIconAtlas {
 		}
 		atlas.slots[name] = i
 	}
-	// Extend the atlas in memory; the original sprite sheet and its slot order stay intact.
-	actual, err := png.Decode(bytes.NewReader(uiActualSizeIcon))
-	if err != nil {
-		panic(err)
+	// Append separately generated icons without changing the existing slot order.
+	for _, extra := range []struct {
+		name string
+		data []byte
+	}{
+		{"i-zoom_1_1", uiActualSizeIcon},
+		{"i-toggle_grid", uiGridIcon},
+	} {
+		icon, err := png.Decode(bytes.NewReader(extra.data))
+		if err != nil {
+			panic(err)
+		}
+		if icon.Bounds().Dx() != atlas.tile || icon.Bounds().Dy() != atlas.tile {
+			panic("invalid UI icon dimensions: " + extra.name)
+		}
+		if _, ok := atlas.slots[extra.name]; ok {
+			panic("duplicate UI icon: " + extra.name)
+		}
+		width := atlas.pixels.Bounds().Dx()
+		combined := image.NewRGBA(image.Rect(0, 0, width+atlas.tile, atlas.tile))
+		draw.Draw(combined, image.Rect(0, 0, width, atlas.tile), atlas.pixels, atlas.pixels.Bounds().Min, draw.Src)
+		draw.Draw(combined, image.Rect(width, 0, width+atlas.tile, atlas.tile), icon, icon.Bounds().Min, draw.Src)
+		atlas.slots[extra.name] = len(atlas.slots)
+		atlas.pixels = combined
 	}
-	if actual.Bounds().Dx() != atlas.tile || actual.Bounds().Dy() != atlas.tile {
-		panic("invalid actual-size icon dimensions")
-	}
-	const actualName = "i-zoom_1_1"
-	if _, ok := atlas.slots[actualName]; ok {
-		panic("duplicate UI icon: " + actualName)
-	}
-	width := pixels.Bounds().Dx()
-	combined := image.NewRGBA(image.Rect(0, 0, width+atlas.tile, atlas.tile))
-	draw.Draw(combined, image.Rect(0, 0, width, atlas.tile), pixels, pixels.Bounds().Min, draw.Src)
-	draw.Draw(combined, image.Rect(width, 0, width+atlas.tile, atlas.tile), actual, actual.Bounds().Min, draw.Src)
-	atlas.slots[actualName] = len(index.Symbols)
-	atlas.pixels = combined
 	return atlas
 }
 

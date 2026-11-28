@@ -9,7 +9,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "pracovni"
 ATLAS = ROOT / "assets" / "ui_icons"
-ACTUAL_SIZE_ICON = ROOT / "assets" / "ui_zoom_1_1.png"
+EXTRA_ICONS = {
+    "i-zoom_1_1": ROOT / "assets" / "ui_zoom_1_1.png",
+    "i-toggle_grid": ROOT / "assets" / "ui_toggle_grid.png",
+}
 TILE_SIZE = 96
 SYMBOLS = (
     "cursor", "fit_page", "fit_width", "language", "lasso", "nav_file", "nav_merge_pdf", "nav_objects",
@@ -42,8 +45,7 @@ def main():
     ids.extend("i-" + name for name in (
         "crop_mask", "background_mask", "mask_move_content", "mask_aspect_lock", "mask_invert", "crossing_selection",
     ))
-    actual_id = "i-zoom_1_1"
-    for name in [*ids, actual_id]:
+    for name in [*ids, *EXTRA_ICONS]:
         if name == mode_id:
             continue
         if name not in original_tags or name not in approved:
@@ -61,17 +63,18 @@ def main():
         subprocess.run(["inkscape", str(source), "--export-type=png",
                         f"--export-filename={ATLAS.with_suffix('.png')}",
                         f"--export-width={TILE_SIZE * len(ids)}"], check=True)
-        # Use the same SVG/renderer as the existing atlas without changing its slots.
-        actual_svg = (
-            '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
-            'width="24" height="24" viewBox="0 0 24 24"><defs>'
-            + original_tags[actual_id] + '</defs><use x="0" width="24" height="24" '
-            f'xlink:href="#{actual_id}"/></svg>'
-        )
-        source.write_text(actual_svg, encoding="utf-8")
-        subprocess.run(["inkscape", str(source), "--export-type=png",
-                        f"--export-filename={ACTUAL_SIZE_ICON}",
-                        f"--export-width={TILE_SIZE}"], check=True)
+        # Generate the extra masks with the same renderer; preserve the base atlas.
+        for name, output in EXTRA_ICONS.items():
+            extra_svg = (
+                '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+                'width="24" height="24" viewBox="0 0 24 24"><defs>'
+                + original_tags[name] + '</defs><use x="0" width="24" height="24" '
+                f'xlink:href="#{name}"/></svg>'
+            )
+            source.write_text(extra_svg, encoding="utf-8")
+            subprocess.run(["inkscape", str(source), "--export-type=png",
+                            f"--export-filename={output}",
+                            f"--export-width={TILE_SIZE}"], check=True)
     ATLAS.with_suffix(".json").write_text(
         json.dumps({"tile_size": TILE_SIZE, "symbols": ids}, indent=2) + "\n", encoding="utf-8")
 

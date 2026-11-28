@@ -22,6 +22,7 @@ func (a *app) toggleLayoutGrid() {
 	}
 	p := &a.layoutAids
 	a.setChecked(p.grid, !a.checked(p.grid))
+	invalidate(a.headerControl(idToggleLayoutGrid))
 	if a.mode != idLayoutAids {
 		p.temporary = true
 		p.revision++

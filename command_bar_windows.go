@@ -56,6 +56,7 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderPointer, label: uiSwitchToCanvasText, symbol: "i-cursor"},
 	{id: idHeaderRectangle, label: uiCanvasRectangle, symbol: "i-rect_select"},
 	{id: idHeaderLasso, label: uiCanvasLasso, symbol: "i-lasso"},
+	{id: idToggleLayoutGrid, label: uiShowLayoutGrid, symbol: "i-toggle_grid"},
 	{id: idHeaderUndo, label: uiUndo, symbol: "i-undo", shortcut: "Ctrl+Z"},
 	{id: idHeaderRedo, label: uiRedo, symbol: "i-redo", shortcut: "Ctrl+Y"},
 	{id: idHeaderFlow, label: uiSwitchToContinuous, symbol: "i-view_pages"},
@@ -201,7 +202,7 @@ func (a *app) updateCommandBar() {
 			setEnabled(control.handle, a.canDocumentCommand(v, docSave, false))
 		case idCompareOpen:
 			setEnabled(control.handle, !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1))
-		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idHeaderActualSize, idSearchTab:
+		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idHeaderActualSize, idSearchTab, idToggleLayoutGrid:
 			setEnabled(control.handle, ready)
 		case idHeaderEdit:
 			setEnabled(control.handle, ready)
@@ -266,6 +267,8 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			active = !a.view.overview && a.view.fitMode == readingZoomFitWidth
 		case idHeaderActualSize:
 			active = !a.view.overview && a.view.fitMode == readingZoomActual
+		case idToggleLayoutGrid:
+			active = a.checked(a.layoutAids.grid)
 		case idSearchTab:
 			active = a.mode == idSearchTab && a.settingsWidth > 0
 		}
