@@ -198,7 +198,7 @@ func (a *app) searchInputChanged(handle uintptr) bool {
 		if a.activeTab != tab || !a.view.ready() || a.busy || getText(handle) != query {
 			return
 		}
-		if a.mode != idSearchTab {
+		if a.mode != idSearchTab || a.docksTemporarilyCollapsed {
 			a.activate(idSearchTab)
 		}
 		if a.mode != idSearchTab {

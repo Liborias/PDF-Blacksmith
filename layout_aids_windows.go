@@ -24,6 +24,7 @@ func (a *app) toggleLayoutGrid() {
 	a.setChecked(p.grid, !a.checked(p.grid))
 	invalidate(a.headerControl(idToggleLayoutGrid))
 	if a.mode != idLayoutAids {
+		a.endTemporaryDocks()
 		p.temporary = true
 		p.revision++
 		a.layout()
@@ -39,7 +40,7 @@ func (a *app) effectiveRightDock() dockVisibility {
 	if a.layoutAids.temporary {
 		dock.revealPrimary()
 	}
-	return dock
+	return temporaryDockVisibility(dock, a.docksTemporarilyCollapsed)
 }
 
 func (a *app) layoutAidsOutsideClick(msg *winMessage) uint64 {

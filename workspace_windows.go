@@ -456,6 +456,9 @@ func (a *app) activate(id int) {
 		a.comparison.view.clearCanvasContent()
 	}
 	a.layoutAids.temporary = false
+	if id == idSearchTab || id == idExportTab || id == idFileSign || id == idLayoutAids {
+		a.endTemporaryDocks()
+	}
 	a.syncSearchAuxiliary()
 	if id == idExportTab || id == idFileSign || id == idLayoutAids {
 		a.rightDock.revealPrimary()
@@ -981,15 +984,18 @@ func (a *app) command(id, notification int) {
 	case idRecentMore:
 		a.toggleRecentFiles()
 	case idToggleTools:
+		a.endTemporaryDocks()
 		a.leftDock.primaryCollapsed = !a.leftDock.primaryCollapsed
 		a.layout()
 	case idToggleDetails:
+		a.endTemporaryDocks()
 		hidden := !a.effectiveRightDock().primaryCollapsed
 		a.layoutAids.temporary = false
 		a.rightAux.setPropertiesCollapsed(&a.rightDock, hidden)
 		a.layout()
 		a.view.schedule()
 	case idToggleThumbnails:
+		a.endTemporaryDocks()
 		a.leftDock.auxiliaryCollapsed = !a.leftDock.auxiliaryCollapsed
 		a.view.endPageDrag()
 		a.layout()

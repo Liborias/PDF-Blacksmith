@@ -126,3 +126,39 @@ func TestSearchKeepsManualPanelChanges(t *testing.T) {
 		})
 	}
 }
+
+func TestTemporaryDockVisibilityPreservesState(t *testing.T) {
+	for bits := 0; bits < 8; bits++ {
+		original := dockVisibility{
+			collapsed: bits&1 != 0,
+			primaryCollapsed: bits&2 != 0,
+			auxiliaryCollapsed: bits&4 != 0,
+		}
+		hidden := temporaryDockVisibility(original, true)
+		if hidden.showsPrimary() || hidden.showsAuxiliary(true) {
+			t.Fatalf("temporary collapse leaked a panel: %+v", hidden)
+		}
+		if hidden.primaryCollapsed != original.primaryCollapsed || hidden.auxiliaryCollapsed != original.auxiliaryCollapsed {
+			t.Fatalf("individual visibility changed: %+v -> %+v", original, hidden)
+		}
+		if got := temporaryDockVisibility(original, false); got != original {
+			t.Fatalf("restore changed %+v to %+v", original, got)
+		}
+	}
+}
+
+func TestTemporaryDockVisibilityDoesNotMutateSearchSnapshot(t *testing.T) {
+	original := dockVisibility{collapsed: true, auxiliaryCollapsed: true}
+	dock := original
+	aux := rightAuxiliary{panel: auxiliaryBookmarks}
+	aux.syncSearch(true, &dock)
+	searchDock := dock
+	hidden := temporaryDockVisibility(dock, true)
+	if !hidden.collapsed || dock != searchDock || aux.beforeSearch.dock != original {
+		t.Fatal("temporary collapse changed search state")
+	}
+	aux.syncSearch(false, &dock)
+	if dock != original || aux.panel != auxiliaryBookmarks {
+		t.Fatal("search restoration failed after temporary collapse")
+	}
+}

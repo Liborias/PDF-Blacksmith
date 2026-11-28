@@ -115,3 +115,12 @@ func (widths *dockWidths) grow(targets dockWidths, budget int) int {
 	}
 	return used
 }
+
+// The temporary wide-document view is an overlay, not a change to the user's
+// saved group, primary or auxiliary visibility. Search snapshots remain intact.
+func temporaryDockVisibility(dock dockVisibility, collapsed bool) dockVisibility {
+	if collapsed {
+		dock.collapsed = true
+	}
+	return dock
+}

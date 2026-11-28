@@ -125,6 +125,8 @@ const (
 	uiMaximize             uiMessage = "win32.Maximize"
 	uiClose                uiMessage = "win32.Close"
 	uiDocumentList         uiMessage = "win32.DocumentList"
+	uiCollapseBothDocks    uiMessage = "win32.CollapseBothDocks"
+	uiRestoreBothDocks     uiMessage = "win32.RestoreBothDocks"
 	uiCollapseLeft         uiMessage = "win32.CollapseLeft"
 	uiExpandLeft           uiMessage = "win32.ExpandLeft"
 	uiCollapseRight        uiMessage = "win32.CollapseRight"
@@ -145,6 +147,8 @@ type uiTranslation struct {
 
 // Strings specific to the Win32 shell that have no corresponding prototype key.
 var win32Translations = map[uiMessage]uiTranslation{
+	uiCollapseBothDocks:    {Czech: "Dočasně sbalit obě skupiny panelů", English: "Temporarily collapse both panel groups"},
+	uiRestoreBothDocks:     {Czech: "Obnovit původní rozložení panelů", English: "Restore previous panel layout"},
 	uiOCR:                  {Czech: "OCR", English: "OCR"},
 	uiOpenFile:             {Czech: "Otevřít soubor", English: "Open file"},
 	uiRecent:               {Czech: "Nedávné", English: "Recent"},

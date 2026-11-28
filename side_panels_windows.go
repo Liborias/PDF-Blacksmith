@@ -58,7 +58,9 @@ func (a *app) visibleRightAuxiliary() auxiliaryPanel {
 }
 
 func (a *app) toggleRightAuxiliary(panel auxiliaryPanel) {
-	collapsed := a.rightDock.collapsed
+	wasTemporary := a.docksTemporarilyCollapsed
+	a.endTemporaryDocks()
+	collapsed := a.rightDock.collapsed || wasTemporary
 	if collapsed {
 		a.rightAux.setGroupCollapsed(&a.rightDock, false)
 	}
@@ -73,7 +75,7 @@ func (a *app) toggleRightAuxiliary(panel auxiliaryPanel) {
 func (a *app) layoutDocumentPanels() {
 	d := a.scale
 	var minimum, preferred dockWidths
-	if a.leftDock.showsPrimary() {
+	if a.effectiveLeftDock().showsPrimary() {
 		minimum[dockTools] = d(168)
 		preferred[dockTools] = a.preferredToolsWidth
 	}
@@ -82,7 +84,7 @@ func (a *app) layoutDocumentPanels() {
 		preferred[dockProperties] = a.preferredSettingsWidth()
 	}
 	ready, compare := a.view.ready(), a.comparisonVisible()
-	if a.leftDock.showsAuxiliary(ready && !compare) {
+	if a.effectiveLeftDock().showsAuxiliary(ready && !compare) {
 		minimum[dockThumbnails] = d(70)
 		preferred[dockThumbnails] = a.preferredThumbnailsWidth()
 	}
@@ -167,7 +169,7 @@ func (a *app) layoutSidebars() {
 	}
 	leftRail, rightRail := a.sidebarRails()
 	ready := a.view.ready()
-	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.leftDock, ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft, a.thumbnailsToggle)
+	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.effectiveLeftDock(), ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft, a.thumbnailsToggle)
 	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.effectiveRightDock(), ready, uiCollapseRight, uiExpandRight, a.resultsToggle, a.bookmarksToggle, a.layers.toggle)
 
 	x, top := a.width-a.settingsWidth, int(a.viewport.top)
@@ -269,7 +271,7 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	var collapsed, onLeft, group bool
 	switch item.handle {
 	case a.leftPanelsToggle:
-		collapsed, onLeft, group = a.leftDock.collapsed, true, true
+		collapsed, onLeft, group = a.effectiveLeftDock().collapsed, true, true
 	case a.rightPanelsToggle:
 		collapsed, group = a.effectiveRightDock().collapsed, true
 	case a.toolsToggle:
@@ -332,15 +334,64 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 }
 
 func (a *app) togglePanelSide(left bool) {
+	// Manual interaction wins over the temporary overlay. Use the visible
+	// state, so clicking a collapsed group's ear opens that group.
+	hiddenLeft, hiddenRight := !a.effectiveLeftDock().collapsed, !a.effectiveRightDock().collapsed
+	a.endTemporaryDocks()
 	if left {
-		a.leftDock.collapsed = !a.leftDock.collapsed
+		a.leftDock.collapsed = hiddenLeft
 		if !a.comparisonVisible() {
 			a.view.endPageDrag()
 		}
 	} else {
-		hidden := !a.effectiveRightDock().collapsed
 		a.layoutAids.temporary = false
-		a.rightAux.setGroupCollapsed(&a.rightDock, hidden)
+		a.rightAux.setGroupCollapsed(&a.rightDock, hiddenRight)
+	}
+	a.layout()
+	a.view.schedule()
+}
+
+func (a *app) effectiveLeftDock() dockVisibility {
+	return temporaryDockVisibility(a.leftDock, a.docksTemporarilyCollapsed)
+}
+
+func (a *app) dockCollapseCaption() string {
+	if a.docksTemporarilyCollapsed {
+		return a.uiText(uiRestoreBothDocks)
+	}
+	return a.uiText(uiCollapseBothDocks)
+}
+
+func (a *app) refreshTemporaryDocksButton() {
+	if handle := a.headerControl(idHeaderCollapseDocks); handle != 0 {
+		caption := a.dockCollapseCaption()
+		setText(handle, caption)
+		a.setTooltip(handle, caption)
+		invalidate(handle)
+	}
+}
+
+// Caller performs its normal layout after ending the overlay.
+func (a *app) endTemporaryDocks() bool {
+	if !a.docksTemporarilyCollapsed {
+		return false
+	}
+	a.docksTemporarilyCollapsed = false
+	a.refreshTemporaryDocksButton()
+	return true
+}
+
+func (a *app) toggleTemporaryDocks() {
+	if a.busy || a.full {
+		return
+	}
+	if a.saveInlineBefore(a.toggleTemporaryDocks) {
+		return
+	}
+	if !a.endTemporaryDocks() {
+		a.docksTemporarilyCollapsed = true
+		a.view.endPageDrag()
+		a.refreshTemporaryDocksButton()
 	}
 	a.layout()
 	a.view.schedule()

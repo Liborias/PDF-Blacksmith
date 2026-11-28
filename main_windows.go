@@ -128,6 +128,7 @@ type app struct {
 	headerBrand, windowButtonStart                                 int
 	tabBounds                                                      rect
 	leftDock, rightDock                                            dockVisibility
+	docksTemporarilyCollapsed                                      bool
 	rightAux                                                       rightAuxiliary
 	layers                                                         layersPanel
 	layoutAids                                                     layoutAidsPanel

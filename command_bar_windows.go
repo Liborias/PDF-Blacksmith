@@ -30,6 +30,7 @@ const (
 	idHeaderPreviousPage
 	idHeaderPageCount
 	idHeaderNextPage
+	idHeaderCollapseDocks
 )
 
 type commandBarButton struct {
@@ -80,6 +81,7 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderPageCount, label: uiGoToPage},
 	{id: idHeaderNextPage, label: uiNextPage, symbol: "›"},
 	{id: idCompareOpen, label: uiSideBySide, symbol: "i-side_by_side"},
+	{id: idHeaderCollapseDocks, label: uiCollapseBothDocks, symbol: "i-side_by_side"},
 	{id: idHeaderSave, label: uiSave, symbol: "i-save", shortcut: "Ctrl+S"},
 	{id: idHeaderThemeMode, label: uiSwitchToLight, symbol: themeToggleIcon},
 	{id: idHeaderSettings, label: uiSettings, symbol: "i-nav_settings"},
@@ -101,6 +103,9 @@ func (a *app) commandBarCaption(button commandBarButton) string {
 	}
 	if button.id == idHeaderThemeMode && a.uiTheme.Mode == "light" {
 		key = uiSwitchToDark
+	}
+	if button.id == idHeaderCollapseDocks && a.docksTemporarilyCollapsed {
+		key = uiRestoreBothDocks
 	}
 	caption := a.uiText(key)
 	if button.shortcut != "" {
@@ -184,7 +189,7 @@ func (a *app) layoutCommandBar() {
 	}
 	// The HTML's optional order, omitting commands not implemented in the
 	// native bar yet. The emergency order is used only if icons alone overflow.
-	optional := []int{idHeaderHelpIcon, idHeaderSettings, idHeaderFitWidth, idHeaderFitPage, idToggleLayoutGrid}
+	optional := []int{idHeaderHelpIcon, idHeaderSettings, idHeaderCollapseDocks, idHeaderFitWidth, idHeaderFitPage, idToggleLayoutGrid}
 	emergency := []int{idCompareOpen, idHeaderOverview, idHeaderActualSize, idHeaderFlow,
 		idHeaderThemeMode, idHeaderLasso, idHeaderRectangle, idReaderZoomOut, idReaderZoomIn,
 		idSearchTab, idHeaderSave, idHeaderPointer}
@@ -269,6 +274,8 @@ func (a *app) updateCommandBar() {
 	a.syncHeaderPageNavigation()
 	for _, control := range a.commandBar.controls {
 		switch control.id {
+		case idHeaderCollapseDocks:
+			setEnabled(control.handle, !a.busy)
 		case idHeaderSave:
 			setEnabled(control.handle, a.canDocumentCommand(v, docSave, false))
 		case idCompareOpen:
@@ -360,6 +367,8 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			active = a.view.overview
 		case idCompareOpen:
 			active = a.comparisonVisible()
+		case idHeaderCollapseDocks:
+			active = a.docksTemporarilyCollapsed
 		case idHeaderFitPage:
 			active = !a.view.overview && a.view.fitMode == readingZoomFitPage
 		case idHeaderFitWidth:
@@ -440,6 +449,7 @@ func (a *app) showHeaderMenu(id int) {
 			run(idHeaderActualSize, a.uiText(uiActualSize), ready, ready && !v.overview && v.fitMode == readingZoomActual),
 			run(idHeaderOverview, a.uiText(uiPageOverview), ready, v.overview),
 			run(idFullscreen, a.uiText(uiFullscreen), !a.busy, false),
+			run(idHeaderCollapseDocks, a.dockCollapseCaption(), !a.busy, a.docksTemporarilyCollapsed),
 			run(idCompareOpen, getText(a.comparison.button), !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1), a.comparisonVisible()),
 			run(idLayoutAids, a.uiText(uiLayoutAids), ready, a.mode == idLayoutAids),
 			run(idToggleLayoutGrid, a.uiText(uiShowLayoutGrid), ready, a.checked(a.layoutAids.grid)),
@@ -570,6 +580,8 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		a.view.setZoomMode(readingZoomActual)
 	case idHeaderZoomPercent:
 		a.showHeaderZoom()
+	case idHeaderCollapseDocks:
+		a.toggleTemporaryDocks()
 	case idHeaderPreviousPage, idHeaderNextPage:
 		if a.busy || !a.view.ready() {
 			return true
