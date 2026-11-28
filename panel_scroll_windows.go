@@ -55,10 +55,12 @@ func (bar *panelScrollbar) setPosition(position int) bool {
 func (bar *panelScrollbar) geometry(bounds rect) (rect, rect) {
 	d := window.scale
 	height := max(1, int(bounds.bottom-bounds.top)-2*d(2))
-	thumbHeight := min(height, max(d(18), height*bar.visible/max(1, bar.total)))
-	top := d(2) + (height-thumbHeight)*bar.position/max(1, bar.total-bar.visible)
+	offset, thumbHeight := panelScrollThumb(height, d(28), bar.total, bar.visible, bar.position)
+	top := d(2) + offset
 	middle := (bounds.left + bounds.right) / 2
-	track := rect{middle - 1, int32(d(2)), middle + 1, int32(d(2) + height)}
+	trackWidth := int32(max(1, d(2)))
+	trackLeft := middle - trackWidth/2
+	track := rect{trackLeft, int32(d(2)), trackLeft + trackWidth, int32(d(2) + height)}
 	thumb := rect{middle - int32(d(3)), int32(top), middle + int32(d(3)), int32(top + thumbHeight)}
 	return track, thumb
 }
@@ -81,7 +83,7 @@ func scrollTrackProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			if bar.hovered || bar.dragging {
 				thumbColor = uiColors["scrollThumbHover"]
 			}
-			rounded(dc, track, 2, trackColor, trackColor)
+			rounded(dc, track, max(1, window.scale(2)), trackColor, trackColor)
 			rounded(dc, thumb, window.scale(6), thumbColor, thumbColor)
 			user32.NewProc("EndPaint").Call(hwnd, uintptr(unsafe.Pointer(&info)))
 			return 0
