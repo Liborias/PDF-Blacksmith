@@ -139,6 +139,9 @@ type scrollPane struct {
 }
 
 var paneSubclass = syscall.NewCallback(func(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
+	if hwnd==window.recent.list {
+		window.recentPathHover(message,wParam,lParam)
+	}
 	thumbs := window.thumbnailView(hwnd)
 	if thumbs != nil && thumbs.pageListMouse(message, wParam, lParam) {
 		return 0

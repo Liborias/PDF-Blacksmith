@@ -13,7 +13,7 @@ import (
 const (
 	recentFileLimit   = 100
 	recentFilePreview = 10
-	recentRowHeight   = 24
+	recentRowHeight   = 44
 )
 
 type recentPanel struct {
@@ -213,7 +213,12 @@ func (a *app) drawRecentRow(item *buttonDraw) bool {
 	}
 	bounds.left += int32(a.scale(7))
 	bounds.right -= int32(a.scale(6))
-	drawText(item.dc, filepath.Base(p.files[item.itemID]), bounds, a.normalFont, color, 0x8000)
+	path := p.files[item.itemID]
+	nameTop, nameBottom, pathTop, pathBottom := recentRowLines(int(bounds.bottom-bounds.top), a.scale(3), a.scale(2))
+	nameBounds := rect{bounds.left,bounds.top+int32(nameTop),bounds.right,bounds.top+int32(nameBottom)}
+	pathBounds := rect{bounds.left,bounds.top+int32(pathTop),bounds.right,bounds.top+int32(pathBottom)}
+	drawText(item.dc, filepath.Base(path), nameBounds, a.normalFont, color, 0x8000) // DT_END_ELLIPSIS
+	drawText(item.dc, filepath.Dir(path), pathBounds, a.normalFont, mutedColor, 0x4000) // DT_PATH_ELLIPSIS
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, item.bounds)
 	}
@@ -252,6 +257,7 @@ func (a *app) recentContextInput(msg *winMessage) bool {
 		return false
 	}
 	path := p.selectedPath()
+	a.clearRecentPathTooltip()
 	user32.NewProc("ClientToScreen").Call(p.list, uintptr(unsafe.Pointer(&pos)))
 	options := []popupItem{{label: a.uiText(uiRecentOpen)}, {label: a.uiText(uiRecentOpenLocation)}, {label: a.uiText(uiRecentCopyPath)}}
 	switch a.trackPopupAt(pos, max(238, (a.captionWidth(a.uiText(uiRecentOpenLocation), a.normalFont)*96+a.dpi-1)/a.dpi+40), options) {
@@ -268,4 +274,57 @@ func (a *app) recentContextInput(msg *winMessage) bool {
 		a.copyClipboardText(path)
 	}
 	return true
+}
+
+
+// A single native tooltip follows the hovered row, not the selected row.
+// The original path is never shortened or modified for opening or copying.
+func (a *app) recentPathHover(message uint32, wParam,lParam uintptr) {
+	p:=&a.recent
+	switch message {
+	case 0x0200: // WM_MOUSEMOVE
+		if a.busy || a.detailsTab()!=idFileDetails || wParam&3!=0 {
+			a.clearRecentPathTooltip()
+			return
+		}
+		pos:=point{int32(int16(lParam)),int32(int16(lParam>>16))}
+		var client,bounds rect
+		getClientRect.Call(p.list,uintptr(unsafe.Pointer(&client)))
+		row,_,_:=sendMessage.Call(p.list,0x01a9,0,lParam) // LB_ITEMFROMPOINT
+		if !contains(client,pos.x,pos.y) || row>>16!=0 || row>=uintptr(p.visibleCount()) {
+			a.clearRecentPathTooltip()
+			return
+		}
+		ok,_,_:=sendMessage.Call(p.list,0x0198,row,uintptr(unsafe.Pointer(&bounds))) // LB_GETITEMRECT
+		if ok==^uintptr(0) || !contains(bounds,pos.x,pos.y) {
+			a.clearRecentPathTooltip()
+			return
+		}
+		if !trackMouseLeave(p.list) { return }
+		path:=p.files[row]
+		if a.tooltipCaptions[p.list].label!=path {
+			if a.tooltip!=0 { sendMessage.Call(a.tooltip,0x0400+28,0,0) } // TTM_POP
+			a.setTooltip(p.list,path)
+		}
+	case 0x0018,0x000a: // hidden or disabled
+		if wParam==0 { a.clearRecentPathTooltip() }
+	case 0x02a3,0x0201,0x0203,0x0204,0x020a,0x0115,0x0100,0x0197,0x0184,0x0047,0x0082:
+		// Mouse leaves, clicks, scrolling, keyboard navigation, list changes,
+		// repositioning or destruction invalidate the hovered row.
+		a.clearRecentPathTooltip()
+	}
+}
+
+func (a *app) clearRecentPathTooltip() {
+	handle:=a.recent.list
+	if handle==0 || a.tooltip==0 { return }
+	if _,exists:=a.tooltipCaptions[handle]; !exists { return }
+	sendMessage.Call(a.tooltip,0x0400+28,0,0) // TTM_POP
+	parent,_,_:=user32.NewProc("GetParent").Call(handle)
+	info:=nativeTooltip{flags:0x11,owner:parent,id:handle}
+	info.size=uint32(unsafe.Sizeof(info))
+	sendMessage.Call(a.tooltip,0x0400+51,0,uintptr(unsafe.Pointer(&info))) // TTM_DELTOOLW
+	comctl32.NewProc("RemoveWindowSubclass").Call(handle,tooltipFocusSubclass,1)
+	delete(a.tooltipCaptions,handle)
+	if a.focusedHelpTarget==handle { a.setFocusedHelp(0) }
 }
