@@ -49,3 +49,12 @@ func TestUIIconAtlasUsesVisibleApprovedSymbols(t *testing.T) {
 		t.Fatal("unexpected handling of the icon registry")
 	}
 }
+
+func TestUIActualSizeIconIsAvailable(t *testing.T) {
+	if _, ok := uiIcons.slots["i-zoom_1_1"]; !ok {
+		t.Fatal("missing original 1:1 toolbar icon")
+	}
+	if len(uiIcons.mask("i-zoom_1_1", 18)) != 18*18 {
+		t.Fatal("invalid 1:1 icon mask")
+	}
+}

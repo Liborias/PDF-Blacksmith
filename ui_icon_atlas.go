@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"image"
+	"image/draw"
 	"image/png"
 )
 
@@ -17,6 +18,10 @@ var uiIconImage []byte
 
 //go:embed assets/ui_icons.json
 var uiIconIndex []byte
+
+// Original v3.26 1:1 symbol, generated separately to preserve the existing atlas.
+//go:embed assets/ui_zoom_1_1.png
+var uiActualSizeIcon []byte
 
 type uiIconAtlas struct {
 	pixels image.Image
@@ -46,6 +51,24 @@ func loadUIIconAtlas() uiIconAtlas {
 		}
 		atlas.slots[name] = i
 	}
+	// Extend the atlas in memory; the original sprite sheet and its slot order stay intact.
+	actual, err := png.Decode(bytes.NewReader(uiActualSizeIcon))
+	if err != nil {
+		panic(err)
+	}
+	if actual.Bounds().Dx() != atlas.tile || actual.Bounds().Dy() != atlas.tile {
+		panic("invalid actual-size icon dimensions")
+	}
+	const actualName = "i-zoom_1_1"
+	if _, ok := atlas.slots[actualName]; ok {
+		panic("duplicate UI icon: " + actualName)
+	}
+	width := pixels.Bounds().Dx()
+	combined := image.NewRGBA(image.Rect(0, 0, width+atlas.tile, atlas.tile))
+	draw.Draw(combined, image.Rect(0, 0, width, atlas.tile), pixels, pixels.Bounds().Min, draw.Src)
+	draw.Draw(combined, image.Rect(width, 0, width+atlas.tile, atlas.tile), actual, actual.Bounds().Min, draw.Src)
+	atlas.slots[actualName] = len(index.Symbols)
+	atlas.pixels = combined
 	return atlas
 }
 

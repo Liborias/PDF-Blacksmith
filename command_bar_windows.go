@@ -62,6 +62,7 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderOverview, label: uiPageOverview, symbol: "i-nav_thumbnails"},
 	{id: idReaderZoomOut, label: uiZoomOut, symbol: "i-zoom_out"},
 	{id: idReaderZoomIn, label: uiZoomIn, symbol: "i-zoom_in"},
+	{id: idHeaderActualSize, label: uiActualSize, symbol: "i-zoom_1_1"},
 	{id: idHeaderFitPage, label: uiFitPage, symbol: "i-fit_page"},
 	{id: idHeaderFitWidth, label: uiFitWidth, symbol: "i-fit_width"},
 	{id: idSearchTab, label: uiFind, symbol: "i-search", shortcut: "Ctrl+F"},
@@ -188,7 +189,7 @@ func (a *app) updateCommandBar() {
 			setEnabled(control.handle, a.canDocumentCommand(v, docSave, false))
 		case idCompareOpen:
 			setEnabled(control.handle, !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1))
-		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idSearchTab:
+		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idHeaderActualSize, idSearchTab:
 			setEnabled(control.handle, ready)
 		case idHeaderEdit:
 			setEnabled(control.handle, ready)
@@ -198,7 +199,7 @@ func (a *app) updateCommandBar() {
 				invalidate(control.handle)
 			}
 		}
-		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth || control.id == idHeaderOverview || control.id == idHeaderFlow) {
+		if fitChanged && (control.id == idHeaderFitPage || control.id == idHeaderFitWidth || control.id == idHeaderActualSize || control.id == idHeaderOverview || control.id == idHeaderFlow) {
 			invalidate(control.handle)
 		}
 		if control.id == idHeaderFlow || control.id == idHeaderPointer || control.id == idHeaderLasso {
@@ -251,6 +252,8 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 			active = !a.view.overview && a.view.fitMode == readingZoomFitPage
 		case idHeaderFitWidth:
 			active = !a.view.overview && a.view.fitMode == readingZoomFitWidth
+		case idHeaderActualSize:
+			active = !a.view.overview && a.view.fitMode == readingZoomActual
 		case idSearchTab:
 			active = a.mode == idSearchTab && a.settingsWidth > 0
 		}
