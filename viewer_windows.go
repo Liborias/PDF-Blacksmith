@@ -1514,15 +1514,42 @@ func (v *documentView) updateActions() {
 		setText(v.pageInput, "")
 		setText(v.location, "")
 		setText(v.zoomLabel, "")
+		if !v.secondary {
+			v.app.syncHeaderZoomLabel()
+		}
 	}
 }
 
-func (v *documentView) updateZoomLabel() {
-	percent := v.zoomPercent()
+func (v *documentView) displayedZoomPercent() float64 {
 	if v.overview {
-		percent = 100 * v.overviewScale
+		return 100 * v.overviewScale
 	}
-	setText(v.zoomLabel, fmt.Sprintf("%.0f %%", percent))
+	return v.zoomPercent()
+}
+
+func (v *documentView) updateZoomLabel() {
+	setText(v.zoomLabel, fmt.Sprintf("%.0f %%", v.displayedZoomPercent()))
+	if !v.secondary {
+		v.app.syncHeaderZoomLabel()
+	}
+}
+
+// An explicit percentage selects document zoom, not thumbnail overview zoom.
+func (v *documentView) setZoomPercent(percent int) {
+	if !v.ready() || v.app.busy {
+		return
+	}
+	if percent == 100 {
+		v.setZoomMode(readingZoomActual)
+		return
+	}
+	v.finishZoomTimer()
+	v.overview = false
+	v.reference, v.fitMode = v.page, readingZoomManual
+	v.zoom = readingPresetScale(percent, v.app.displayDPI)
+	v.syncZoomChoice()
+	v.rebuild(true)
+	v.changedViewport()
 }
 
 func (v *documentView) rotate(angle int) {

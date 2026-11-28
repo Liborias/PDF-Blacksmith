@@ -157,3 +157,36 @@ func TestPageWheelCountsOnlyAdjacentPartialDeltasAtTheEdge(t *testing.T) {
 		t.Fatal("a Win32 tick counter wrap must keep adjacent events in one gesture")
 	}
 }
+
+func TestReadingPresetScale(t *testing.T) {
+	for _, dpi := range []int{96, 120, 144, 192} {
+		for _, percent := range headerZoomPresets {
+			got := readingPresetScale(percent, dpi) * 100 / pixelsPerPDFPoint(dpi)
+			if math.Abs(got-float64(percent)) > 1e-8 {
+				t.Fatalf("preset %d at DPI %d: %v", percent, dpi, got)
+			}
+		}
+		if readingPresetScale(100, dpi) != pixelsPerPDFPoint(dpi) {
+			t.Fatal("100 percent must match actual size")
+		}
+	}
+}
+
+func TestHeaderOptionalWidths(t *testing.T) {
+	for free := -200; free <= 800; free++ {
+		s, z := headerOptionalWidths(free, 4, 112, 165, 76)
+		used := s + z
+		if s != 0 {
+			used += 4
+		}
+		if z != 0 {
+			used += 4
+		}
+		if used > max(0, free) || (s != 0 && (s < 112 || s > 165)) || (z != 0 && z != 76) {
+			t.Fatalf("invalid optional layout: free=%d search=%d zoom=%d", free, s, z)
+		}
+		if free >= 196 && (s == 0 || z == 0) {
+			t.Fatal("both controls should fit")
+		}
+	}
+}

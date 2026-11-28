@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 const (
 	commandBarHeight = 38
 	workspaceTop     = headerHeight + commandBarHeight
@@ -24,6 +26,7 @@ const (
 	idHeaderPointer
 	idHeaderRectangle
 	idHeaderLasso
+	idHeaderZoomPercent
 )
 
 type commandBarButton struct {
@@ -64,6 +67,7 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderFlow, label: uiSwitchToContinuous, symbol: "i-view_pages"},
 	{id: idHeaderOverview, label: uiPageOverview, symbol: "i-nav_thumbnails"},
 	{id: idReaderZoomOut, label: uiZoomOut, symbol: "i-zoom_out"},
+	{id: idHeaderZoomPercent, label: uiMessage("ui.priblizeni.e4a6a87be9")},
 	{id: idReaderZoomIn, label: uiZoomIn, symbol: "i-zoom_in"},
 	{id: idHeaderActualSize, label: uiActualSize, symbol: "i-zoom_1_1"},
 	{id: idHeaderFitPage, label: uiFitPage, symbol: "i-fit_page"},
@@ -119,6 +123,7 @@ func (a *app) localizeCommandBar() {
 			a.setTooltip(control.handle, caption)
 		}
 	}
+	a.syncHeaderZoomLabel()
 }
 
 func (a *app) buildCommandBar() {
@@ -150,7 +155,7 @@ func (a *app) layoutCommandBar() {
 	x := d(8)
 	menuWidth, iconCount := 0, 0
 	for _, control := range a.commandBar.controls {
-		if control.id == idHeaderUndo || control.id == idHeaderRedo {
+		if control.id == idHeaderUndo || control.id == idHeaderRedo || control.id == idHeaderZoomPercent {
 			continue
 		}
 		if control.menu {
@@ -160,18 +165,18 @@ func (a *app) layoutCommandBar() {
 		}
 	}
 	iconWidth, iconGap := d(30), d(4)
-	if menuWidth+iconCount*iconWidth+(iconCount-1)*iconGap+d(28)+d(112)+iconGap > a.width {
+	if menuWidth+iconCount*iconWidth+(iconCount-1)*iconGap+d(28)+d(112)+d(76)+2*iconGap > a.width {
 		iconWidth, iconGap = d(27), d(2)
 	}
-	// Preserve the existing search button as a narrow-width fallback.
-	free := a.width - menuWidth - iconCount*iconWidth - (iconCount-1)*iconGap - d(28) - iconGap
-	editWidth := min(d(165), free)
-	if editWidth < d(112) {
-		editWidth = 0
-	}
+	// Reserve the existing search field before adding the optional zoom dropdown.
+	free := a.width - menuWidth - iconCount*iconWidth - (iconCount-1)*iconGap - d(28)
+	editWidth, zoomWidth := headerOptionalWidths(free, iconGap, d(112), d(165), d(76))
 	extra := 0
 	if editWidth > 0 {
-		extra = editWidth + iconGap
+		extra += editWidth + iconGap
+	}
+	if zoomWidth > 0 {
+		extra += zoomWidth + iconGap
 	}
 	iconStart := a.width - d(8) - (iconCount*iconWidth + (iconCount-1)*iconGap + extra)
 	showSearchEdit := false
@@ -185,7 +190,14 @@ func (a *app) layoutCommandBar() {
 			showControl(control.handle, show)
 			continue
 		}
+		if control.id == idHeaderZoomPercent && zoomWidth == 0 {
+			showControl(control.handle, false)
+			continue
+		}
 		width, gap := iconWidth, iconGap
+		if control.id == idHeaderZoomPercent {
+			width = zoomWidth
+		}
 		if control.menu {
 			width, gap = a.captionWidth(a.uiText(control.label), a.normalFont)+d(20), d(1)
 		} else if control.id == idHeaderPointer {
@@ -229,7 +241,7 @@ func (a *app) updateCommandBar() {
 			setEnabled(control.handle, a.canDocumentCommand(v, docSave, false))
 		case idCompareOpen:
 			setEnabled(control.handle, !a.busy && (a.comparisonVisible() || ready && len(a.tabs) > 1))
-		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idHeaderActualSize, idSearchTab, idToggleLayoutGrid:
+		case idHeaderFlow, idHeaderOverview, idReaderZoomOut, idReaderZoomIn, idHeaderFitPage, idHeaderFitWidth, idHeaderActualSize, idSearchTab, idToggleLayoutGrid, idHeaderZoomPercent:
 			setEnabled(control.handle, ready)
 		case idHeaderEdit:
 			setEnabled(control.handle, ready)
@@ -263,6 +275,26 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		}
 		body, ink := titleColor, textColor
 		hovered, disabled := a.navigationHot(item), item.state&4 != 0
+		if control.id == idHeaderZoomPercent {
+			fillColor(item.dc, item.bounds, titleColor)
+			body = inputColor
+			if hovered && !disabled {
+				body = uiColors["hover"]
+			}
+			if disabled {
+				ink = disabledColor
+			}
+			rounded(item.dc, item.bounds, a.scale(5), body, divider)
+			bounds := item.bounds
+			a.arrow(item.dc, int(bounds.right)-a.scale(12), int(bounds.top+bounds.bottom)/2, ink)
+			bounds.left += int32(a.scale(6))
+			bounds.right -= int32(a.scale(22))
+			drawText(item.dc, getText(control.handle), bounds, a.normalFont, ink, 0x8000)
+			if item.state&16 != 0 {
+				a.drawFocus(item.dc, item.bounds)
+			}
+			return true
+		}
 		active := control.id == a.commandBar.openMenu ||
 			control.id == idHeaderFile && a.fileMenu.open && a.fileMenu.anchor == control.handle
 		symbol := control.symbol
@@ -456,6 +488,8 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		a.view.setZoomMode(readingZoomFitWidth)
 	case idHeaderActualSize:
 		a.view.setZoomMode(readingZoomActual)
+	case idHeaderZoomPercent:
+		a.showHeaderZoom()
 	case idHeaderSave:
 		a.doDocumentCommand(a.view, docSave, false)
 	default:
@@ -512,4 +546,37 @@ func (a *app) setHeaderSelection(id int) {
 	}
 	a.activate(idObjectsTab)
 	a.objectCommand(idObjectRectangle+id-idHeaderRectangle, 0)
+}
+
+// Use the reader's displayed value, including fit modes and overview scale.
+func (a *app) syncHeaderZoomLabel() {
+	handle := a.headerControl(idHeaderZoomPercent)
+	if handle == 0 || a.view == nil {
+		return
+	}
+	label := "—"
+	if a.view.ready() {
+		label = fmt.Sprintf("%.0f %%", a.view.displayedZoomPercent())
+	}
+	if getText(handle) != label {
+		setText(handle, label)
+		invalidate(handle)
+	}
+}
+
+func (a *app) showHeaderZoom() {
+	if a.busy || !a.view.ready() {
+		return
+	}
+	presets := headerZoomPresets
+	items := make([]popupItem, len(presets))
+	for i, percent := range presets {
+		items[i] = popupItem{label: fmt.Sprintf("%d %%", percent),
+			checked: !a.view.overview && fmt.Sprintf("%.0f", a.view.zoomPercent()) == fmt.Sprint(percent)}
+	}
+	tab := a.activeTab
+	index := a.trackPopup(a.headerControl(idHeaderZoomPercent), 100, items)
+	if index >= 0 && index < len(presets) && a.activeTab == tab {
+		a.view.setZoomPercent(presets[index])
+	}
 }
