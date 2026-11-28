@@ -38,7 +38,7 @@ func readingZoomScale(mode readingZoomMode, current, width, height, margin float
 var headerZoomPresets = [...]int{30, 50, 65, 75, 90, 100, 110, 125, 150, 160}
 
 func readingPresetScale(percent, dpi int) float64 {
-	return pixelsPerPDFPoint(dpi) * float64(min(900, max(30, percent))) / 100
+	return pixelsPerPDFPoint(dpi) * (float64(min(900, max(30, percent))) / 100)
 }
 
 // The available space excludes menus, existing icons, and outer padding.
