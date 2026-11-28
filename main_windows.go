@@ -128,6 +128,7 @@ type app struct {
 	headerBrand, windowButtonStart                                 int
 	tabBounds                                                      rect
 	leftDock, rightDock                                            dockVisibility
+	docksTemporarilyCollapsed                                      bool
 	rightAux                                                       rightAuxiliary
 	layers                                                         layersPanel
 	layoutAids                                                     layoutAidsPanel
@@ -136,7 +137,6 @@ type app struct {
 	savedStyle                                                     uintptr
 	viewport                                                       rect
 	canvasBrush, panelBrush, inputBrush, logo                      uintptr
-	brand                                                          *printBitmap
 	windowButtons                                                  [3]uintptr
 	historyButtons                                                 [2]uintptr
 	commandBar                                                     commandBar
@@ -165,6 +165,7 @@ type app struct {
 	readOnlyFields, primaryButtons                                 map[uintptr]bool
 	view                                                           *documentView
 	toolsToggle, detailsToggle, sidebarTitle, status               uintptr
+	footerInfo                                                     footerInfoControls
 	thumbnailsToggle, bookmarksToggle, railFont                    uintptr
 	resultsToggle                                                  uintptr
 	leftPanelsToggle, rightPanelsToggle                            uintptr
@@ -460,6 +461,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	case wmCommand:
 		if a.view != nil {
 			if wParam>>16&0xffff == 0x0300 { // EN_CHANGE
+				if a.searchInputChanged(lParam) {
+					return 0
+				}
 				a.inlineControlChange(lParam)
 				if scope, field := a.scopeControls(); field != 0 && field == lParam {
 					delete(a.thumbnailScopes, scope)
@@ -472,6 +476,9 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			return 0
 		}
 	case 0x004e: // WM_NOTIFY
+		if a.positionIconTooltip(lParam) {
+			return 1
+		}
 		if lParam != 0 && a.textTool.inline.handle != 0 {
 			notice := (*struct {
 				from, id uintptr
@@ -516,6 +523,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		v.schedule()
 		return 0
 	case 0x0113: // WM_TIMER
+		if wParam == fileMenuHoverTimer {
+			a.tickFileMenuHover()
+			return 0
+		}
 		if wParam == readerZoomTimer && a.view != nil {
 			a.view.finishZoom()
 			return 0

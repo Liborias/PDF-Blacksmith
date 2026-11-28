@@ -178,6 +178,7 @@ func (v *documentView) finishDetail(job readerJob) {
 	tile := *job.tile
 	if slices.Contains(v.visibleDetails, tile) {
 		if job.result.Status == "changed" {
+			if !v.secondary { v.app.cancelPendingOpenView() }
 			v.invalidSource = true
 			if v.secondary {
 				v.showComparisonReaderError(job.result.Message)
@@ -189,6 +190,7 @@ func (v *documentView) finishDetail(job readerJob) {
 			v.detailFrames[tile] = detailFrame{job.frame.image, v.detailClock}
 			v.detailBytes += int64(len(job.frame.image.pixels))
 			v.trimCaches()
+			v.completePendingOpenView(tile.page)
 		} else {
 			v.failedDetails[tile] = true
 			if !v.secondary {

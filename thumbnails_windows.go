@@ -23,19 +23,25 @@ type thumbnailDrag struct {
 
 func (v *documentView) buildThumbnails() {
 	a := v.app
-	v.thumbnailHeading = a.label("Náhledy stránek", 16, 4, 160, true)
+	v.thumbnailHeading = a.uiLabel(uiPageThumbnails, 16, 4, 160, true)
 	a.panelLabels[v.thumbnailHeading] = true
-	v.thumbnailHint = a.label("Ctrl + kolečko", 196, 4, 123, false)
+	v.thumbnailHint = a.uiLabel(uiThumbnailWheelHint, 196, 4, 123, false)
 	a.panelLabels[v.thumbnailHint] = true
 	const listStyle = 0x0001 | 0x0010 | 0x0100 | 0x0800 | 0x2000 // LBS_NODATA, LBS_OWNERDRAWFIXED, LBS_EXTENDEDSEL
-	v.pageList = a.add("LISTBOX", "Náhledy stránek", idReaderPageList, 16, 31, 298, 1, wsTabstop|listStyle, 0, a.normalFont)
+	v.pageList = a.add("LISTBOX", "", idReaderPageList, 16, 31, 298, 1, wsTabstop|listStyle, 0, a.normalFont)
+	a.bindUILabel(v.pageList, uiPageThumbnails)
 	rowHeight := a.scale(112)
 	sendMessage.Call(v.pageList, 0x01a0, 0, uintptr(rowHeight))
 	a.addScrollPane(v.pageList, rowHeight, true)
 }
 
 func (v *documentView) thumbnailWidth() int {
-	return v.thumbnailPanelPixels * v.thumbnailScale / 100
+	// Comparison has its own existing thumbnail layout and zoom behavior.
+	if v.secondary || v.app.comparisonVisible() {
+		return v.thumbnailPanelPixels * v.thumbnailScale / 100
+	}
+	margin := min(v.app.scale(12), v.thumbnailPanelPixels/10)
+	return compactThumbnailImageWidth(v.thumbnailPanelPixels, margin, v.app.scale(14), v.thumbnailScale)
 }
 
 func (v *documentView) layoutThumbnails(width, height int) {
@@ -43,13 +49,15 @@ func (v *documentView) layoutThumbnails(width, height int) {
 	v.thumbnailPanelPixels = width
 	margin := min(d(12), width/10)
 	top := d(31)
-	heading := "Náhledy stránek"
-	if width < d(137) {
-		heading = "Náhledy"
+	a := v.app
+	contentWidth := max(1, width-2*margin)
+	heading := a.uiText(uiPageThumbnails)
+	if width < d(137) || a.captionWidth(heading,a.labelFont) > contentWidth {
+		heading = a.uiText(uiThumbnails)
 	}
 	setText(v.thumbnailHeading, heading)
-	place(v.thumbnailHeading, margin, d(5), width-2*margin, d(22))
-	showHint := width >= d(130)
+	place(v.thumbnailHeading, margin, d(5), contentWidth, d(22))
+	showHint := width >= d(130) && a.captionWidth(a.uiText(uiThumbnailWheelHint),a.normalFont) <= contentWidth
 	if showHint {
 		place(v.thumbnailHint, margin, d(27), width-2*margin, d(19))
 		top = d(50)
@@ -221,6 +229,9 @@ func (v *documentView) drawPageThumbnail(item *buttonDraw, index int, color pale
 	}
 	labelTop := int32(y + height + gap)
 	labelWidth := max(width, d(45))
+	if !v.secondary && !v.app.comparisonVisible() {
+		labelWidth = min(labelWidth, max(1,int(bounds.right-bounds.left)))
+	}
 	labelLeft := (int(bounds.left+bounds.right) - labelWidth) / 2
 	label := rect{int32(labelLeft), labelTop, int32(labelLeft + labelWidth), labelTop + int32(labelHeight)}
 	drawText(item.dc, strconv.Itoa(index+1), label, v.app.normalFont, color, 1)

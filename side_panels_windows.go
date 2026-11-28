@@ -43,11 +43,13 @@ func (a *app) detailsTab() int {
 }
 
 func (a *app) sidebarRails() (rect, rect) {
+	// The viewport remains the whole document area even when comparison
+	// divides it into two readers and assigns their own thumbnail panes.
 	width := int32(min(a.scale(sidebarRailWidth), a.width/2))
-	left, right := int32(a.toolsWidth), int32(a.width-a.settingsWidth)
+	left, right := a.viewport.left, a.viewport.right
 	top, bottom := a.viewport.top, a.viewport.bottom
-	return rect{left, top, left + width, bottom},
-		rect{right - width, top, right, bottom}
+	return rect{left - width, top, left, bottom},
+		rect{right, top, right + width, bottom}
 }
 
 func (a *app) visibleRightAuxiliary() auxiliaryPanel {
@@ -58,7 +60,9 @@ func (a *app) visibleRightAuxiliary() auxiliaryPanel {
 }
 
 func (a *app) toggleRightAuxiliary(panel auxiliaryPanel) {
-	collapsed := a.rightDock.collapsed
+	wasTemporary := a.docksTemporarilyCollapsed
+	a.endTemporaryDocks()
+	collapsed := a.rightDock.collapsed || wasTemporary
 	if collapsed {
 		a.rightAux.setGroupCollapsed(&a.rightDock, false)
 	}
@@ -73,7 +77,7 @@ func (a *app) toggleRightAuxiliary(panel auxiliaryPanel) {
 func (a *app) layoutDocumentPanels() {
 	d := a.scale
 	var minimum, preferred dockWidths
-	if a.leftDock.showsPrimary() {
+	if a.effectiveLeftDock().showsPrimary() {
 		minimum[dockTools] = d(168)
 		preferred[dockTools] = a.preferredToolsWidth
 	}
@@ -82,7 +86,7 @@ func (a *app) layoutDocumentPanels() {
 		preferred[dockProperties] = a.preferredSettingsWidth()
 	}
 	ready, compare := a.view.ready(), a.comparisonVisible()
-	if a.leftDock.showsAuxiliary(ready && !compare) {
+	if a.effectiveLeftDock().showsAuxiliary(ready && !compare) {
 		minimum[dockThumbnails] = d(70)
 		preferred[dockThumbnails] = a.preferredThumbnailsWidth()
 	}
@@ -105,20 +109,16 @@ func (a *app) layoutDocumentPanels() {
 	widths := fitDockWidths(a.width-2*rail, d(minimumDocumentWidth), preferredDocument, minimum, preferred)
 	a.toolsWidth, a.settingsWidth = widths[dockTools], widths[dockProperties]
 	top, bottom := int32(d(workspaceTop)), int32(max(d(workspaceTop+1), a.height-d(footerHeight)))
-	left, right := a.toolsWidth+rail, a.width-a.settingsWidth-rail
-	docLeft, docRight := left+widths[dockThumbnails], right-widths[dockRightAuxiliary]
-	a.thumbnailArea = rect{int32(left), top, int32(docLeft), bottom}
-	a.rightAuxArea = rect{int32(docRight), top, int32(right), bottom}
-	a.viewport = rect{int32(docLeft), top, int32(docRight), bottom}
+	edges := dockDocumentEdges(a.width, rail, widths)
+	a.thumbnailArea = rect{int32(edges.leftAuxStart), top, int32(edges.leftAuxEnd), bottom}
+	a.rightAuxArea = rect{int32(edges.rightAuxStart), top, int32(edges.rightAuxEnd), bottom}
+	a.viewport = rect{int32(edges.documentStart), top, int32(edges.documentEnd), bottom}
 }
 
 func (a *app) preferredThumbnailsWidth() int {
-	for _, sizes := range a.view.sizes[:min(16, len(a.view.sizes))] {
-		if size := sizes["crop"]; size[0] > size[1] {
-			return a.scale(220)
-		}
-	}
-	return a.scale(182)
+	// The panel follows the client width instead of switching to a fixed
+	// wider rail for landscape pages; the thumbnails already fit page aspect.
+	return preferredThumbnailDockWidth(a.width, a.scale(98))
 }
 
 func (a *app) preferredSettingsWidth() int {
@@ -150,24 +150,26 @@ func (a *app) layoutSidebars() {
 	d := a.scale
 	toolsVisible := !a.full && a.toolsWidth > 0
 	detailsVisible := !a.full && a.settingsWidth > 0
-	y := int(a.viewport.top) + d(10)
-	step := d(39)
-	if a.documentTools {
-		step = min(step, max(d(27), (int(a.viewport.bottom)-y)/len(workspaceTabs)))
-	}
+	plan, ids := a.toolNavigationLayout()
 	for _, tab := range workspaceTabs {
 		button := a.toolButtons[tab.id]
-		show := toolsVisible && (!tab.needsPDF || a.documentTools)
-		if show {
-			place(button, d(10), y, max(1, a.toolsWidth-d(20)), step-d(5))
-			y += step
+		show := false
+		if toolsVisible {
+			for i, id := range ids {
+				if id == tab.id && plan.rows[i].height > 0 {
+					row := plan.rows[i]
+					place(button, d(10), int(a.viewport.top)+row.top, max(1, a.toolsWidth-d(20)), row.height)
+					show = true
+					break
+				}
+			}
 		}
 		showControl(button, show)
 		invalidate(button)
 	}
 	leftRail, rightRail := a.sidebarRails()
 	ready := a.view.ready()
-	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.leftDock, ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft, a.thumbnailsToggle)
+	a.layoutRail(leftRail, a.leftPanelsToggle, a.toolsToggle, a.effectiveLeftDock(), ready && !a.comparisonVisible(), uiCollapseLeft, uiExpandLeft, a.thumbnailsToggle)
 	a.layoutRail(rightRail, a.rightPanelsToggle, a.detailsToggle, a.effectiveRightDock(), ready, uiCollapseRight, uiExpandRight, a.resultsToggle, a.bookmarksToggle, a.layers.toggle)
 
 	x, top := a.width-a.settingsWidth, int(a.viewport.top)
@@ -246,6 +248,11 @@ func (a *app) layoutRail(rail rect, group, primary uintptr, dock dockVisibility,
 		show := panels && (handle == primary || auxiliaryAvailable)
 		if show {
 			height := max(d(88), a.captionWidth(getText(handle), a.labelFont)+d(28))
+			if handle == a.thumbnailsToggle {
+				height = d(32)
+			} else if a.auxiliaryEarIcon(handle) != "" {
+				height = max(d(71), a.captionWidth(getText(handle), a.labelFont)+d(32))
+			}
 			place(handle, x, y, width, height)
 			y += height + d(6)
 		}
@@ -258,18 +265,30 @@ func (a *app) paintSidebars(dc uintptr) {
 	leftRail, rightRail := a.sidebarRails()
 	fillColor(dc, rect{0, leftRail.top, leftRail.left, leftRail.bottom}, panelColor)
 	fillColor(dc, rect{rightRail.right, rightRail.top, int32(a.width), rightRail.bottom}, panelColor)
-	for _, rail := range [...]rect{leftRail, rightRail} {
-		fillColor(dc, rail, sidebarRailColor)
+	if a.toolsWidth > 0 {
+		d := a.scale
+		plan, _ := a.toolNavigationLayout()
+		if plan.heading > 0 {
+			drawText(dc, a.uiText(uiTools), rect{int32(d(12)), leftRail.top+int32(d(5)),
+				int32(max(d(12),a.toolsWidth-d(10))), leftRail.top+int32(plan.heading)}, a.normalFont, mutedColor, 0x8000)
+		}
+		for _, y := range plan.separators {
+			top := leftRail.top+int32(y)
+			fillColor(dc, rect{int32(d(10)), top, int32(max(d(10),a.toolsWidth-d(10))), top+int32(max(1,d(1)))}, divider)
+		}
 	}
-	fillColor(dc, rect{leftRail.right - 1, leftRail.top, leftRail.right, leftRail.bottom}, divider)
-	fillColor(dc, rect{rightRail.left, rightRail.top, rightRail.left + 1, rightRail.bottom}, divider)
+	// Only the individual buttons are painted as tabs. The reserved
+	// document gutter has the same background as the editor, no rail.
+	for _, gutter := range [...]rect{leftRail, rightRail} {
+		fillColor(dc, gutter, canvasColor)
+	}
 }
 
 func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	var collapsed, onLeft, group bool
 	switch item.handle {
 	case a.leftPanelsToggle:
-		collapsed, onLeft, group = a.leftDock.collapsed, true, true
+		collapsed, onLeft, group = a.effectiveLeftDock().collapsed, true, true
 	case a.rightPanelsToggle:
 		collapsed, group = a.effectiveRightDock().collapsed, true
 	case a.toolsToggle:
@@ -291,19 +310,33 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	if onLeft != collapsed {
 		arrow = "‹"
 	}
-	fillColor(item.dc, item.bounds, sidebarRailColor)
+	fillColor(item.dc, item.bounds, canvasColor)
 	bounds := item.bounds
 	d := a.scale
-	bounds.left += int32(d(2))
-	bounds.right -= int32(d(2))
+	// Keep the panel-facing side flush with the dock, with clearance
+	// only on the document-facing side.
+	if onLeft {
+		bounds.right -= int32(d(3))
+	} else {
+		bounds.left += int32(d(3))
+	}
 	buttonColor, foreground := uiColors["panelTabActive"], textColor
 	if collapsed {
 		buttonColor = uiColors["panelTabIdle"]
 	}
-	if item.state&(1|64) != 0 {
+	auxIcon := a.auxiliaryEarIcon(item.handle)
+	hover := item.state&(1|64) != 0
+	if auxIcon != "" {
+		hover = a.navigationHot(item)
+	}
+	if hover {
 		buttonColor = uiColors["panelTabHover"]
 	}
-	rounded(item.dc, bounds, d(5), buttonColor, divider)
+	border := divider
+	if auxIcon != "" && (!collapsed || hover) {
+		border = uiColors["accentStrong"]
+	}
+	rounded(item.dc, bounds, d(5), buttonColor, border)
 	if group {
 		drawText(item.dc, arrow+arrow, bounds, a.normalFont, foreground, 1)
 		if item.state&16 != 0 {
@@ -312,7 +345,24 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 		return true
 	}
 	arrowBounds := rect{bounds.left, bounds.top + int32(d(1)), bounds.right, bounds.top + int32(d(18))}
-	drawText(item.dc, arrow, arrowBounds, a.normalFont, foreground, 1)
+	if auxIcon != "" {
+		size := d(16)
+		x := int(bounds.left+bounds.right)/2-size/2
+		y := int(bounds.top)+d(4)
+		if onLeft {
+			y = int(bounds.top+bounds.bottom)/2-size/2
+		}
+		drawUIIcon(item.dc, auxIcon, x, y, size, foreground, buttonColor)
+		if onLeft {
+			if item.state&16 != 0 {
+				a.drawFocus(item.dc, bounds)
+			}
+			return true
+		}
+		arrowBounds.bottom = int32(y+size+d(4))
+	} else {
+		drawText(item.dc, arrow, arrowBounds, a.normalFont, foreground, 1)
+	}
 	caption := wideString(getText(item.handle))
 	length, _, _ := getTextLen.Call(item.handle)
 	font, _, _ := gdiSelect.Call(item.dc, a.railFont)
@@ -332,16 +382,105 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 }
 
 func (a *app) togglePanelSide(left bool) {
+	// Manual interaction wins over the temporary overlay. Use the visible
+	// state, so clicking a collapsed group's ear opens that group.
+	hiddenLeft, hiddenRight := !a.effectiveLeftDock().collapsed, !a.effectiveRightDock().collapsed
+	a.endTemporaryDocks()
 	if left {
-		a.leftDock.collapsed = !a.leftDock.collapsed
+		a.leftDock.collapsed = hiddenLeft
 		if !a.comparisonVisible() {
 			a.view.endPageDrag()
 		}
 	} else {
-		hidden := !a.effectiveRightDock().collapsed
 		a.layoutAids.temporary = false
-		a.rightAux.setGroupCollapsed(&a.rightDock, hidden)
+		a.rightAux.setGroupCollapsed(&a.rightDock, hiddenRight)
 	}
 	a.layout()
 	a.view.schedule()
+}
+
+func (a *app) effectiveLeftDock() dockVisibility {
+	return temporaryDockVisibility(a.leftDock, a.docksTemporarilyCollapsed)
+}
+
+func (a *app) dockCollapseCaption() string {
+	if a.docksTemporarilyCollapsed {
+		return a.uiText(uiRestoreBothDocks)
+	}
+	return a.uiText(uiCollapseBothDocks)
+}
+
+func (a *app) refreshTemporaryDocksButton() {
+	if handle := a.headerControl(idHeaderCollapseDocks); handle != 0 {
+		caption := a.dockCollapseCaption()
+		setText(handle, caption)
+		a.setTooltip(handle, caption)
+		invalidate(handle)
+	}
+}
+
+// Caller performs its normal layout after ending the overlay.
+func (a *app) endTemporaryDocks() bool {
+	if !a.docksTemporarilyCollapsed {
+		return false
+	}
+	a.docksTemporarilyCollapsed = false
+	a.refreshTemporaryDocksButton()
+	return true
+}
+
+func (a *app) toggleTemporaryDocks() {
+	if a.busy || a.full {
+		return
+	}
+	if a.saveInlineBefore(a.toggleTemporaryDocks) {
+		return
+	}
+	if !a.endTemporaryDocks() {
+		a.docksTemporarilyCollapsed = true
+		a.view.endPageDrag()
+		a.refreshTemporaryDocksButton()
+	}
+	a.layout()
+	a.view.schedule()
+}
+
+// The native panels stay on their existing sides. Layers has no dedicated
+// approved symbol yet, so use the existing Objects icon with its own caption.
+func (a *app) auxiliaryEarIcon(handle uintptr) string {
+	switch handle {
+	case a.thumbnailsToggle:
+		return "i-nav_thumbnails"
+	case a.resultsToggle:
+		return "i-nav_search_pdf"
+	case a.bookmarksToggle:
+		return "i-nav_bookmarks"
+	case a.layers.toggle:
+		return "i-nav_objects"
+	}
+	return ""
+}
+
+
+// Preserve existing tool order and availability. Only the groups that
+// actually contain visible tools receive a separator.
+func (a *app) toolNavigationLayout() (toolNavigationPlan, []int) {
+	var ids, groups []int
+	for _, tab := range workspaceTabs {
+		if tab.needsPDF && !a.documentTools {
+			continue
+		}
+		ids = append(ids,tab.id)
+		group := 2
+		switch tab.id {
+		case idFileTab,idBrowseTab:
+			group = 1
+		case idSplitTab,idMergeTab,idPageOrderTool:
+			group = 3
+		}
+		groups = append(groups,group)
+	}
+	d := a.scale
+	plan := planToolNavigation(int(a.viewport.bottom-a.viewport.top), groups, d(10),d(5),d(39),d(27),d(25),d(7))
+	return plan,ids
 }

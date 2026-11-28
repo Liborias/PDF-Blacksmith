@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"image"
+	"image/draw"
 	"image/png"
 )
 
@@ -17,6 +18,35 @@ var uiIconImage []byte
 
 //go:embed assets/ui_icons.json
 var uiIconIndex []byte
+
+// Original v3.26 1:1 symbol, generated separately to preserve the existing atlas.
+//go:embed assets/ui_zoom_1_1.png
+var uiActualSizeIcon []byte
+
+// Original v3.26 grid symbol.
+//go:embed assets/ui_toggle_grid.png
+var uiGridIcon []byte
+
+// Original v3.26 bookmarks symbol.
+//go:embed assets/ui_nav_bookmarks.png
+var uiBookmarksIcon []byte
+
+// File menu icons from the approved original symbols.
+//go:embed assets/ui_open_document.png
+var uiFileOpenDocumentIcon []byte
+
+//go:embed assets/ui_history.png
+var uiFileHistoryIcon []byte
+
+//go:embed assets/ui_save_copy.png
+var uiFileSaveCopyIcon []byte
+
+//go:embed assets/ui_export.png
+var uiFileExportIcon []byte
+
+//go:embed assets/ui_print.png
+var uiFilePrintIcon []byte
+
 
 type uiIconAtlas struct {
 	pixels image.Image
@@ -45,6 +75,37 @@ func loadUIIconAtlas() uiIconAtlas {
 			panic("duplicate UI icon: " + name)
 		}
 		atlas.slots[name] = i
+	}
+	// Append separately generated icons without changing the existing slot order.
+	for _, extra := range []struct {
+		name string
+		data []byte
+	}{
+		{"i-zoom_1_1", uiActualSizeIcon},
+		{"i-toggle_grid", uiGridIcon},
+		{"i-nav_bookmarks", uiBookmarksIcon},
+		{"i-open_document", uiFileOpenDocumentIcon},
+		{"i-history", uiFileHistoryIcon},
+		{"i-save_copy", uiFileSaveCopyIcon},
+		{"i-export", uiFileExportIcon},
+		{"i-print", uiFilePrintIcon},
+	} {
+		icon, err := png.Decode(bytes.NewReader(extra.data))
+		if err != nil {
+			panic(err)
+		}
+		if icon.Bounds().Dx() != atlas.tile || icon.Bounds().Dy() != atlas.tile {
+			panic("invalid UI icon dimensions: " + extra.name)
+		}
+		if _, ok := atlas.slots[extra.name]; ok {
+			panic("duplicate UI icon: " + extra.name)
+		}
+		width := atlas.pixels.Bounds().Dx()
+		combined := image.NewRGBA(image.Rect(0, 0, width+atlas.tile, atlas.tile))
+		draw.Draw(combined, image.Rect(0, 0, width, atlas.tile), atlas.pixels, atlas.pixels.Bounds().Min, draw.Src)
+		draw.Draw(combined, image.Rect(width, 0, width+atlas.tile, atlas.tile), icon, icon.Bounds().Min, draw.Src)
+		atlas.slots[extra.name] = len(atlas.slots)
+		atlas.pixels = combined
 	}
 	return atlas
 }

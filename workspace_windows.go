@@ -164,8 +164,11 @@ func (a *app) setupWorkspace() bool {
 	a.toolsToggle = a.shellButton(uiTools, idToggleTools, sidebarRailWidth, 0)
 	a.detailsToggle = a.shellButton(uiProperties, idToggleDetails, sidebarRailWidth, 0)
 	a.thumbnailsToggle = a.shellButton(uiThumbnails, idToggleThumbnails, sidebarRailWidth, 0)
+	watchNavigationHover(a.thumbnailsToggle)
 	a.bookmarksToggle = a.shellButton(uiBookmarks, idToggleBookmarks, sidebarRailWidth, 0)
+	watchNavigationHover(a.bookmarksToggle)
 	a.resultsToggle = a.shellButton(uiResults, idToggleSearchResults, sidebarRailWidth, 0)
+	watchNavigationHover(a.resultsToggle)
 	a.leftPanelsToggle = a.button("", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
 	a.rightPanelsToggle = a.button("", idToggleRightPanels, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.shellButton(uiMinimize, idMinimize, 36, 0)
@@ -174,6 +177,7 @@ func (a *app) setupWorkspace() bool {
 	a.tabList = a.shellButton(uiDocumentList, idListDocumentTabs, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
 	a.focusHelp = a.add("STATIC", "", 0, 0, 0, 1, 22, 0x400c, 0, a.normalFont)
+	a.buildFooterInfo()
 	for _, tab := range workspaceTabs {
 		handle := a.shellButton(tab.name, tab.id, 1, 0x04000000) // WS_CLIPSIBLINGS
 		watchNavigationHover(handle)
@@ -236,6 +240,7 @@ func (a *app) setupWorkspace() bool {
 	a.controlParent = a.searchSidebar
 	a.view.buildSearchResults()
 	a.buildLayersPanel()
+	watchNavigationHover(a.layers.toggle)
 	a.controlParent = a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
@@ -414,6 +419,7 @@ func (a *app) activate(id int) {
 	if a.mode == idTextTab && id != idTextTab && a.saveInlineBefore(func() { a.activate(id) }) {
 		return
 	}
+	a.cancelPendingOpenView()
 	old := a.mode
 	switch id {
 	case idFileTab:
@@ -456,6 +462,9 @@ func (a *app) activate(id int) {
 		a.comparison.view.clearCanvasContent()
 	}
 	a.layoutAids.temporary = false
+	if id == idSearchTab || id == idExportTab || id == idFileSign || id == idLayoutAids {
+		a.endTemporaryDocks()
+	}
 	a.syncSearchAuxiliary()
 	if id == idExportTab || id == idFileSign || id == idLayoutAids {
 		a.rightDock.revealPrimary()
@@ -496,23 +505,19 @@ func (a *app) layout() {
 	if a.width == 0 || a.height == 0 {
 		return
 	}
-	d := a.scale
 	a.thumbnailArea, a.rightAuxArea = rect{}, rect{}
 	if a.full {
 		a.viewport = size
 	} else {
 		a.layoutDocumentPanels()
 		a.layoutHeader()
-		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
-		place(a.focusHelp, d(628), a.height-d(33), a.width-d(874), d(22))
 		a.view.layoutToolbar()
 	}
 	chrome := uintptr(5)
 	if a.full {
 		chrome = 0
 	}
-	showWindow.Call(a.status, chrome)
-	showWindow.Call(a.focusHelp, chrome)
+	a.layoutFooterInfo()
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}
@@ -670,6 +675,9 @@ func (a *app) revealFocusedControl() {
 
 func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 	a := window
+	if msg == 0x004e && a.positionIconTooltip(lParam) {
+		return 1
+	}
 	switch msg {
 	case wmPaint:
 		var paint paintInfo
@@ -683,6 +691,8 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			outline.top -= int32(a.scale(9))
 			rounded(dc, outline, a.scale(9), uiColors["popoverBg"], divider)
 			fillColor(dc, rect{right: bounds.right, bottom: 1}, divider)
+			d:=a.scale
+			drawText(dc,a.uiText(uiFileCommands),rect{int32(d(10)),int32(d(2)),bounds.right-int32(d(10)),int32(d(24))},a.normalFont,mutedColor,0x8000)
 		} else {
 			fillColor(dc, bounds, panelColor)
 		}
@@ -702,6 +712,9 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		return a.colorControl(msg, wParam, lParam)
 	case wmCommand:
 		if wParam>>16&0xffff == 0x0300 {
+			if a.searchInputChanged(lParam) {
+				return 0
+			}
 			a.inlineControlChange(lParam)
 		}
 		if v := a.comparison.view; v != nil && hwnd == v.thumbnailSidebar && lParam == v.pageList {
@@ -844,8 +857,9 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 
 func (a *app) command(id, notification int) {
 	if index := id - idFileMenuFirst; index >= 0 && index < len(fileOptions) && notification == 0 {
-		a.hideFileMenu(true)
-		a.runFileOption(fileOptions[index].id)
+		preview := a.fileMenu.hoverOnly
+		a.hideFileMenu(!preview)
+		a.chooseFileMenuOption(fileOptions[index].id)
 		return
 	}
 	if choice := a.choiceCommands[id]; choice != nil && notification == 0 {
@@ -978,15 +992,18 @@ func (a *app) command(id, notification int) {
 	case idRecentMore:
 		a.toggleRecentFiles()
 	case idToggleTools:
+		a.endTemporaryDocks()
 		a.leftDock.primaryCollapsed = !a.leftDock.primaryCollapsed
 		a.layout()
 	case idToggleDetails:
+		a.endTemporaryDocks()
 		hidden := !a.effectiveRightDock().primaryCollapsed
 		a.layoutAids.temporary = false
 		a.rightAux.setPropertiesCollapsed(&a.rightDock, hidden)
 		a.layout()
 		a.view.schedule()
 	case idToggleThumbnails:
+		a.endTemporaryDocks()
 		a.leftDock.auxiliaryCollapsed = !a.leftDock.auxiliaryCollapsed
 		a.view.endPageDrag()
 		a.layout()
@@ -1572,8 +1589,8 @@ func (a *app) handleInput(msg *winMessage) bool {
 	if msg.wParam == 0x0d {
 		p := &a.view.search
 		switch msg.window {
-		case p.input:
-			a.view.queueSearch(getText(p.input))
+		case p.input, a.commandBar.searchEdit:
+			a.view.queueSearch(getText(msg.window))
 			return true
 		case p.list:
 			a.view.jumpToSearch(p.selected())

@@ -210,7 +210,11 @@ func (a *app) visiblePropertyItems(tab int) []panelItem {
 		visible = append(visible, item)
 	}
 	if tab != idFileDetails {
-		compactPropertyRows(visible)
+		headers := make(map[uintptr]bool,2*len(a.propertySections))
+		for _, section := range a.propertySections {
+			headers[section.header], headers[section.help] = true,true
+		}
+		compactPropertyRowsWithHeaders(visible,headers)
 	}
 	return visible
 }

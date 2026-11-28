@@ -51,6 +51,13 @@ func (a *app) setNavigationHover(handle uintptr) {
 	if handle != 0 {
 		invalidate(handle)
 	}
+	// The title and close button are two windows but one visual tab.
+	for _, tab := range a.tabs {
+		if previous == tab.button || previous == tab.close || handle == tab.button || handle == tab.close {
+			invalidate(tab.button)
+			invalidate(tab.close)
+		}
+	}
 }
 
 func (a *app) navigationHot(item *buttonDraw) bool {

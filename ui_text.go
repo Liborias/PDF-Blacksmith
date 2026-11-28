@@ -44,6 +44,7 @@ const (
 
 const (
 	uiFile                 uiMessage = "ui.soubor.5ee136c77a"
+	uiFileCommands         uiMessage = "ui.prikazy.souboru.34fc0f4784"
 	uiView                 uiMessage = "ui.zobrazeni.77f1559aa4"
 	uiTools                uiMessage = "ui.nastroje.a096f53723"
 	uiEdit                 uiMessage = "ui.upravy.07ca5172db"
@@ -74,10 +75,18 @@ const (
 	uiSaveAs               uiMessage = "ui.ulozit.jako.540ff00830"
 	uiProperties           uiMessage = "ui.vlastnosti.43d8ff25d4"
 	uiThumbnails           uiMessage = "ui.nahledy.36a951f2d3"
+	uiPageThumbnails       uiMessage = "ui.nahledy.stranek.b556f7214a"
+	uiRecentOpen           uiMessage = "ui.otevrit.a651bed120"
+	uiRecentOpenLocation   uiMessage = "win32.RecentOpenLocation"
+	uiRecentCopyPath       uiMessage = "win32.RecentCopyPath"
+	uiRecentLocationFailed uiMessage = "win32.RecentLocationFailed"
+	uiThumbnailWheelHint   uiMessage = "win32.ThumbnailWheelHint"
 	uiBookmarks            uiMessage = "ui.zalozky.d5988f16cb"
 	uiPreview              uiMessage = "ui.nahled.68c447bc27"
 	uiPages                uiMessage = "ui.stranky.abf779a41b"
 	uiPageByPage           uiMessage = "ui.po.strankach.ae9475b722"
+	uiFooterNoChanges      uiMessage = "ui.bez.zmen.249bf45ea6"
+	uiFooterUnsaved        uiMessage = "win32.FooterUnsaved"
 	uiFullscreen           uiMessage = "ui.cela.obrazovka.c44c09e551"
 	uiFitPage              uiMessage = "ui.prizpusobit.strance.1656c87fd6"
 	uiFitWidth             uiMessage = "ui.prizpusobit.sirce.8bca0aacbe"
@@ -125,6 +134,8 @@ const (
 	uiMaximize             uiMessage = "win32.Maximize"
 	uiClose                uiMessage = "win32.Close"
 	uiDocumentList         uiMessage = "win32.DocumentList"
+	uiCollapseBothDocks    uiMessage = "win32.CollapseBothDocks"
+	uiRestoreBothDocks     uiMessage = "win32.RestoreBothDocks"
 	uiCollapseLeft         uiMessage = "win32.CollapseLeft"
 	uiExpandLeft           uiMessage = "win32.ExpandLeft"
 	uiCollapseRight        uiMessage = "win32.CollapseRight"
@@ -145,6 +156,13 @@ type uiTranslation struct {
 
 // Strings specific to the Win32 shell that have no corresponding prototype key.
 var win32Translations = map[uiMessage]uiTranslation{
+	uiRecentOpenLocation:   {Czech: "Otevřít umístění souboru", English: "Open file location"},
+	uiRecentCopyPath:       {Czech: "Kopírovat cestu", English: "Copy path"},
+	uiRecentLocationFailed: {Czech: "Umístění souboru se nepodařilo otevřít.", English: "Could not open the file location."},
+	uiThumbnailWheelHint:   {Czech: "Ctrl + kolečko", English: "Ctrl + mouse wheel"},
+	uiFooterUnsaved:        {Czech: "Neuložené změny", English: "Unsaved changes"},
+	uiCollapseBothDocks:    {Czech: "Dočasně sbalit obě skupiny panelů", English: "Temporarily collapse both panel groups"},
+	uiRestoreBothDocks:     {Czech: "Obnovit původní rozložení panelů", English: "Restore previous panel layout"},
 	uiOCR:                  {Czech: "OCR", English: "OCR"},
 	uiOpenFile:             {Czech: "Otevřít soubor", English: "Open file"},
 	uiRecent:               {Czech: "Nedávné", English: "Recent"},

@@ -29,3 +29,21 @@ func TestCompactPropertyRows(t *testing.T) {
 		t.Errorf("compact rows = %+v, want %+v", items, want)
 	}
 }
+
+
+func TestCompactPropertyHeadersKeepControlsAndReports(t *testing.T) {
+	items := []panelItem{
+		{handle:1,x:16,y:16,height:22},
+		{handle:2,x:290,y:16,height:22},
+		{handle:3,x:16,y:110,height:30,section:1},
+		{handle:4,x:16,y:210,height:22},
+		{handle:5,x:290,y:210,height:22},
+		{handle:6,x:16,y:350,height:59},
+	}
+	compactPropertyRowsWithHeaders(items,map[uintptr]bool{1:true,2:true,4:true,5:true})
+	want:=[]int{16,16,48,88,88,120}
+	for i,item:=range items {
+		if item.y!=want[i] || item.handle!=uintptr(i+1) { t.Fatalf("item %d: %+v",i,item) }
+	}
+	if items[2].section!=1 || items[2].height!=30 || items[5].height!=59 { t.Fatal("control or report changed") }
+}

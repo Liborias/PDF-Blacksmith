@@ -44,7 +44,8 @@ ar p "$font_bundle" data.tar.xz | tar -xJ -C "$build_dir"
 cp "$build_dir"/usr/share/fonts/truetype/liberation/*.ttf "$runtime_dir/text-fonts/"
 cp "$build_dir/usr/share/doc/fonts-liberation/copyright" "$runtime_dir/text-fonts/LICENSE.txt"
 python3 package_runtime.py "$runtime_dir"
-go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -manifest app.manifest -ico assets/blaksmith.ico \
+python3 tools/generate_brand_icon.py "$build_dir/blacksmith.ico"
+go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -manifest app.manifest -ico "$build_dir/blacksmith.ico" \
   -o rsrc_windows_amd64.syso
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath \
   -ldflags '-H=windowsgui -s -w' -o "$output_path" .

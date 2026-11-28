@@ -1,9 +1,6 @@
 package main
 
 import (
-	"bytes"
-	_ "embed"
-	"image/png"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -16,55 +13,24 @@ const (
 	idCloseWindow
 )
 
-//go:embed assets/blacksmith.png
-var wordmark []byte
-
-var brandBackground = paletteColor{102, 102, 102}
-
-func (a *app) loadBrand() {
-	img, err := png.Decode(bytes.NewReader(wordmark))
-	if err != nil {
-		return
-	}
-	area := img.Bounds()
-	picture := &printBitmap{width: area.Dx(), height: area.Dy(), pixels: make([]byte, area.Dx()*area.Dy()*4)}
-	for y := 0; y < picture.height; y++ {
-		for x := 0; x < picture.width; x++ {
-			r, g, b, alpha := img.At(area.Min.X+x, area.Min.Y+y).RGBA()
-			remaining := 65535 - alpha
-			offset := (y*picture.width + x) * 4
-			picture.pixels[offset] = byte((b + remaining*uint32(brandBackground.blue)/255) >> 8)
-			picture.pixels[offset+1] = byte((g + remaining*uint32(brandBackground.green)/255) >> 8)
-			picture.pixels[offset+2] = byte((r + remaining*uint32(brandBackground.red)/255) >> 8)
-		}
-	}
-	a.brand = picture
-}
-
+// The header and the Windows shell use the same embedded transparent ICO.
 func (a *app) paintBrand(dc uintptr, block rect) {
-	fillColor(dc, block, brandBackground)
-	padding := (block.bottom - block.top) / 5
-	size := int(block.bottom - block.top - 2*padding)
-	left := int(block.left + padding)
-	top := int(block.top + padding)
-	if a.logo != 0 {
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(left), uintptr(top), a.logo, uintptr(size), uintptr(size), 0, 0, 3)
-		left += size + int(padding*7/8)
-	}
-	if a.brand == nil {
-		drawText(dc, "Blacksmith", rect{int32(left), block.top, block.right - padding, block.bottom}, a.titleFont, textColor, 0)
+	if a.logo == 0 {
 		return
 	}
-	width := int(block.right-padding) - left
-	height := width * a.brand.height / a.brand.width
-	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
-	drawBitmap(dc, a.brand, left, (int(block.top+block.bottom)-height)/2, width, height)
+	size := min(a.scale(36), int(min(block.right-block.left, block.bottom-block.top)))
+	if size <= 0 {
+		return
+	}
+	left := int(block.left+block.right)/2 - size/2
+	top := int(block.top+block.bottom)/2 - size/2
+	user32.NewProc("DrawIconEx").Call(dc, uintptr(left), uintptr(top), a.logo, uintptr(size), uintptr(size), 0, 0, 3)
 }
 
 func (a *app) layoutHeader() {
 	const windowButtonsWidth = 108
 	d := a.scale
-	a.headerBrand = 200
+	a.headerBrand = 76
 	a.windowButtonStart = a.width - d(windowButtonsWidth)
 	for i, handle := range a.windowButtons {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))
@@ -72,9 +38,18 @@ func (a *app) layoutHeader() {
 	}
 }
 
+// Use the same bounds for positioning and non-client hit testing.
+func (a *app) headerHistoryBounds(index int) (rect, bool) {
+	buttons, _ := headerHistoryLayout(a.headerBrand, headerHeight)
+	button := buttons[index]
+	bounds := a.area(button.left, button.top, button.right, button.bottom)
+	return bounds, !a.full && int(bounds.right) <= a.windowButtonStart-a.scale(4)
+}
+
 func (a *app) layoutDocumentTabs() {
 	d := a.scale
-	left, right := d(a.headerBrand+14), a.windowButtonStart-d(4)
+	_, tabsLeft := headerHistoryLayout(a.headerBrand, headerHeight)
+	left, right := d(tabsLeft), a.windowButtonStart-d(4)
 	widths := make([]int, len(a.tabs))
 	names := make(map[string]int, len(a.tabs))
 	for _, tab := range a.tabs {
@@ -92,7 +67,9 @@ func (a *app) layoutDocumentTabs() {
 		if getText(tab.button) != caption {
 			setText(tab.button, caption)
 		}
-		widths[index] = min(d(225), max(d(112), a.captionWidth(caption, a.normalFont)+d(54)))
+		a.setTooltip(tab.button, path)
+		a.setTooltip(tab.close, a.uiText(uiClose)+" · "+filepath.Base(path))
+		widths[index] = min(d(225), max(d(112), a.captionWidth(caption, a.normalFont)+d(76)))
 		total += widths[index] + d(3)
 	}
 	showList := !a.full && (total > right-left || duplicates) && len(a.tabs) > 1
@@ -150,23 +127,37 @@ func (a *app) drawDocumentTab(item *buttonDraw) bool {
 			if tab == a.activeTab {
 				body, foreground = uiColors["tabActive"], textColor
 			}
-			if item.state&1 != 0 {
+			if a.navigationHot(item) || a.hoveredNavigation == tab.button || a.hoveredNavigation == tab.close {
 				body, foreground = uiColors["tabHover"], textColor
 			}
 			r := item.bounds
 			fillColor(item.dc, r, body)
 			if tab == a.activeTab {
-				fillColor(item.dc, rect{r.left, r.top, r.right, r.top + 1}, selectionColor)
+				fillColor(item.dc, rect{r.left, r.top, r.right, r.top + int32(max(1,a.scale(2)))}, uiColors["accentStrong"])
 			}
-			label, align := "×", uintptr(1)
 			if item.handle == tab.button {
-				label, align = getText(tab.button), 0x8000
-				r.left += int32(a.scale(9))
-				if a.contentOf(tab).changed() {
-					label = "● " + label
+				d:=a.scale
+				dirty:=a.documentTabDirty(tab)
+				p:=documentTabLabelLayout(int(r.right-r.left),d(7),d(16),d(5),d(7),d(24),dirty)
+				if p.icon {
+					drawUIIcon(item.dc,"i-nav_file",int(r.left)+d(7),int(r.top+r.bottom)/2-d(16)/2,d(16),foreground,body)
 				}
+				if dirty && p.dot>=0 {
+					y:=int(r.top+r.bottom)/2-d(7)/2
+					x:=int(r.left)+p.dot
+					dot:=rect{int32(x),int32(y),int32(x+d(7)),int32(y+d(7))}
+					ink:=uiColors["accentStrong"]
+					rounded(item.dc,dot,d(7),ink,ink)
+				}
+				labelBounds:=r
+				labelBounds.right=r.left+int32(p.end)
+				labelBounds.left=r.left+int32(p.start)
+				drawText(item.dc,getText(tab.button),labelBounds,a.normalFont,foreground,0x8000)
+			} else {
+				closeInk:=mutedColor
+				if a.navigationHot(item) { closeInk=foreground }
+				drawText(item.dc,"×",r,a.normalFont,closeInk,1)
 			}
-			drawText(item.dc, label, r, a.normalFont, foreground, align)
 			break
 		}
 	} else {
@@ -349,6 +340,11 @@ func (a *app) hitTest(hwnd, param uintptr) uintptr {
 		}
 	}
 	if y < a.scale(headerHeight) && x < a.windowButtonStart && !contains(a.tabBounds, pos.x, pos.y) {
+		for index := range a.historyButtons {
+			if bounds, show := a.headerHistoryBounds(index); show && contains(bounds, pos.x, pos.y) {
+				return 1
+			}
+		}
 		return 2
 	}
 	return 1

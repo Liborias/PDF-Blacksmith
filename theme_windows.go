@@ -142,7 +142,6 @@ func (a *app) area(left, top, right, bottom int) rect {
 func (a *app) applyTheme() {
 	a.applyPalette()
 	a.logo, _, _ = user32.NewProc("LoadImageW").Call(a.instance, appIconID, 1, 128, 128, 0)
-	a.loadBrand()
 }
 
 func (a *app) applyPalette() {
@@ -211,10 +210,13 @@ func (a *app) paint(hwnd uintptr) {
 		fillColor(dc, rect{0, int32(a.scale(headerHeight)) - 1, int32(a.width), int32(a.scale(headerHeight))}, divider)
 		barTop, barBottom := int32(a.scale(headerHeight)), int32(a.scale(workspaceTop))
 		fillColor(dc, rect{0, barTop, int32(a.width), barBottom}, titleColor)
+		for _, separator := range a.commandBar.separators {
+			fillColor(dc, separator, divider)
+		}
 		fillColor(dc, rect{0, barBottom - 1, int32(a.width), barBottom}, divider)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), int32(a.height)}, canvasColor)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
-		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
+		a.paintBrand(dc, a.area(8, 4, 56, headerHeight-4))
 		a.paintSidebars(dc)
 	}
 	if a.comparisonVisible() {
@@ -231,6 +233,8 @@ func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 	gdiTextColor.Call(dc, textColor.win())
 	if handle == a.focusHelp {
 		gdiTextColor.Call(dc, uiColors["helpText"].win())
+	} else if handle == a.footerInfo.dirty && a.footerInfo.unsaved {
+		gdiTextColor.Call(dc, textColor.win())
 	}
 	if a.scrollPanes[handle] != nil {
 		gdiBkColor.Call(dc, panelColor.win())

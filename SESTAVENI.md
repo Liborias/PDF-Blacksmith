@@ -1,6 +1,8 @@
 # Sestavení PDF Blacksmith
 
-Na Linuxu nainstalujte Go 1.26 nebo novější, Python 3 s pipem, curl, unzip, 7-Zip s podporou NSIS a sha256sum. Spuštěním `./build.sh` vznikne `PDFBlaksmith.exe` pro Windows x64. Výstupní cestu můžete předat jako první argument.
+Na Linuxu nainstalujte Go 1.26 nebo novější, Python 3 s pipem, curl, unzip, 7-Zip s podporou NSIS, sha256sum a Inkscape (pro generování ikony aplikace). Spuštěním `./build.sh` vznikne `PDFBlaksmith.exe` pro Windows x64. Výstupní cestu můžete předat jako první argument.
+
+Ikona EXE i logo v první liště používají společný prostředek Windows. `tools/generate_brand_icon.py` při sestavení vytvoří průhledné ICO (16–256 px) přímo z originálního SVG v HTML v3.26 v odstínu `#AD5B80` ze schválené vínové palety. Staré `assets/blaksmith.ico` a `assets/blacksmith.png` již nejsou použity tímto sestavením; ponechány jsou kvůli historii. Samostatnou ikonu lze vytvořit příkazem `python3 tools/generate_brand_icon.py /tmp/blacksmith.ico`.
 
 Skript ověřuje distribuci Ghostscriptu 10.08.0 a Python 3.14.10 kontrolním součtem. Do EXE balí konzolový Ghostscript s potřebnými prostředky, Python a závislosti z `requirements-win.txt`. Podmínky třetích stran a odkaz na odpovídající zdroj Ghostscriptu jsou v `OSS.txt`.
 

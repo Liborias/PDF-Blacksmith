@@ -91,3 +91,27 @@ func TestDecodeUILanguage(t *testing.T) {
 		}
 	}
 }
+
+
+func TestRecentAndThumbnailLocalization(t *testing.T) {
+	for _, sample := range []struct {
+		key uiMessage
+		cs,en string
+	}{
+		{uiRecentOpen,"Otevřít","Open"},
+		{uiRecentOpenLocation,"Otevřít umístění souboru","Open file location"},
+		{uiRecentCopyPath,"Kopírovat cestu","Copy path"},
+		{uiRecentLocationFailed,"Umístění souboru se nepodařilo otevřít.","Could not open the file location."},
+		{uiPageThumbnails,"Náhledy stránek","Page thumbnails"},
+		{uiThumbnails,"Náhledy","Thumbnails"},
+		{uiThumbnailWheelHint,"Ctrl + kolečko","Ctrl + mouse wheel"},
+	} {
+		if cs,en:=uiCzech.text(sample.key),uiEnglish.text(sample.key); cs!=sample.cs || en!=sample.en {
+			t.Errorf("%s = (%q,%q), want (%q,%q)",sample.key,cs,en,sample.cs,sample.en)
+		}
+	}
+}
+
+func TestFileCommandsHeadingLocalization(t *testing.T) {
+	if uiCzech.text(uiFileCommands)!="Příkazy souboru" || uiEnglish.text(uiFileCommands)!="File commands" { t.Fatal("missing file menu heading translation") }
+}

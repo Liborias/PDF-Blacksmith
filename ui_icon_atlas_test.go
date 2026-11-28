@@ -49,3 +49,39 @@ func TestUIIconAtlasUsesVisibleApprovedSymbols(t *testing.T) {
 		t.Fatal("unexpected handling of the icon registry")
 	}
 }
+
+func TestUIActualSizeIconIsAvailable(t *testing.T) {
+	if _, ok := uiIcons.slots["i-zoom_1_1"]; !ok {
+		t.Fatal("missing original 1:1 toolbar icon")
+	}
+	if len(uiIcons.mask("i-zoom_1_1", 18)) != 18*18 {
+		t.Fatal("invalid 1:1 icon mask")
+	}
+}
+
+func TestUIGridIconIsAvailable(t *testing.T) {
+	if _, ok := uiIcons.slots["i-toggle_grid"]; !ok {
+		t.Fatal("missing original grid toolbar icon")
+	}
+	if len(uiIcons.mask("i-toggle_grid", 18)) != 18*18 {
+		t.Fatal("invalid grid icon mask")
+	}
+}
+
+func TestUIAuxiliaryEarIconsAvailable(t *testing.T) {
+	for _, name := range []string{"i-nav_thumbnails", "i-nav_search_pdf", "i-nav_bookmarks", "i-nav_objects"} {
+		if len(uiIcons.mask(name, 16)) != 16*16 {
+			t.Fatalf("missing auxiliary panel icon %s", name)
+		}
+	}
+}
+
+func TestFileMenuIconsAvailable(t *testing.T) {
+	for _,name:=range []string{"i-open_document","i-history","i-save","i-save_copy","i-export","i-nav_signature","i-print"} {
+		mask:=uiIcons.mask(name,14)
+		if len(mask)!=14*14 { t.Fatalf("missing file menu icon %s",name) }
+		visible:=false
+		for _,alpha:=range mask { if alpha>=128 { visible=true;break } }
+		if !visible { t.Fatalf("empty file menu icon %s",name) }
+	}
+}

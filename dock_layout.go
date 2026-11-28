@@ -115,3 +115,44 @@ func (widths *dockWidths) grow(targets dockWidths, budget int) int {
 	}
 	return used
 }
+
+// The temporary wide-document view is an overlay, not a change to the user's
+// saved group, primary or auxiliary visibility. Search snapshots remain intact.
+func temporaryDockVisibility(dock dockVisibility, collapsed bool) dockVisibility {
+	if collapsed {
+		dock.collapsed = true
+	}
+	return dock
+}
+
+
+// Keep ears outside the document rectangle, after all visible dock panels.
+// The two gutters belong to the editor background, not to the panels.
+type dockEdges struct {
+	leftAuxStart, leftAuxEnd int
+	documentStart, documentEnd int
+	rightAuxStart, rightAuxEnd int
+}
+
+func dockDocumentEdges(width, gutter int, sizes dockWidths) dockEdges {
+	left := sizes[dockTools]
+	leftEnd := left + sizes[dockThumbnails]
+	right := width - sizes[dockProperties]
+	rightStart := right - sizes[dockRightAuxiliary]
+	return dockEdges{left, leftEnd, leftEnd + gutter, rightStart - gutter, rightStart, right}
+}
+
+
+// Aim for six percent of the client width, with a readable preferred floor.
+// fitDockWidths can still reduce this to the existing compact minimum.
+func preferredThumbnailDockWidth(clientWidth, readableMinimum int) int {
+	return max(readableMinimum, (clientWidth*6+50)/100)
+}
+
+// A narrow single-document panel uses its available content width, not the
+// old wide panel's percentage. Preserve the existing 10–60 zoom scale and
+// reserve the scrollbar even when it is hidden to avoid size oscillation.
+func compactThumbnailImageWidth(panel, margin, scrollbar, scale int) int {
+	usable := max(1, panel-2*margin-scrollbar)
+	return max(1, usable*(min(60,max(10,scale))+20)/80)
+}

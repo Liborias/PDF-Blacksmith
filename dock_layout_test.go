@@ -126,3 +126,123 @@ func TestSearchKeepsManualPanelChanges(t *testing.T) {
 		})
 	}
 }
+
+func TestTemporaryDockVisibilityPreservesState(t *testing.T) {
+	for bits := 0; bits < 8; bits++ {
+		original := dockVisibility{
+			collapsed: bits&1 != 0,
+			primaryCollapsed: bits&2 != 0,
+			auxiliaryCollapsed: bits&4 != 0,
+		}
+		hidden := temporaryDockVisibility(original, true)
+		if hidden.showsPrimary() || hidden.showsAuxiliary(true) {
+			t.Fatalf("temporary collapse leaked a panel: %+v", hidden)
+		}
+		if hidden.primaryCollapsed != original.primaryCollapsed || hidden.auxiliaryCollapsed != original.auxiliaryCollapsed {
+			t.Fatalf("individual visibility changed: %+v -> %+v", original, hidden)
+		}
+		if got := temporaryDockVisibility(original, false); got != original {
+			t.Fatalf("restore changed %+v to %+v", original, got)
+		}
+	}
+}
+
+func TestTemporaryDockVisibilityDoesNotMutateSearchSnapshot(t *testing.T) {
+	original := dockVisibility{collapsed: true, auxiliaryCollapsed: true}
+	dock := original
+	aux := rightAuxiliary{panel: auxiliaryBookmarks}
+	aux.syncSearch(true, &dock)
+	searchDock := dock
+	hidden := temporaryDockVisibility(dock, true)
+	if !hidden.collapsed || dock != searchDock || aux.beforeSearch.dock != original {
+		t.Fatal("temporary collapse changed search state")
+	}
+	aux.syncSearch(false, &dock)
+	if dock != original || aux.panel != auxiliaryBookmarks {
+		t.Fatal("search restoration failed after temporary collapse")
+	}
+}
+
+
+func TestDockDocumentEdgesProtectDocumentAndAttachEars(t *testing.T) {
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for _, compare := range []bool{false,true} {
+			for mask := 0; mask < 16; mask++ {
+				var minimum, preferred dockWidths
+				for i, w := range []int{168,350,70,145} {
+					if mask&(1<<i) != 0 && !(compare && i == dockThumbnails) {
+						minimum[i], preferred[i] = d(w), d(w+60)
+					}
+				}
+				for width := 980; width <= 2200; width += 10 {
+					gutter := d(28)
+					prefDoc := d(265)
+					if compare { prefDoc = d(420) }
+					sizes := fitDockWidths(d(width)-2*gutter,d(176),prefDoc,minimum,preferred)
+					e := dockDocumentEdges(d(width),gutter,sizes)
+					if e.leftAuxStart != sizes[dockTools] ||
+						e.leftAuxEnd-e.leftAuxStart != sizes[dockThumbnails] ||
+						e.rightAuxEnd-e.rightAuxStart != sizes[dockRightAuxiliary] ||
+						d(width)-e.rightAuxEnd != sizes[dockProperties] ||
+						e.documentStart-e.leftAuxEnd != gutter ||
+						e.rightAuxStart-e.documentEnd != gutter ||
+						e.documentEnd-e.documentStart < d(176) {
+						t.Fatalf("invalid geometry: width %d DPI %d mask %d comparison %v: %+v",width,dpi,mask,compare,e)
+					}
+				}
+			}
+		}
+	}
+}
+
+
+func TestPreferredThumbnailDockWidth(t *testing.T) {
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for width := 980; width <= 3840; width += 10 {
+			want := max(d(98),(d(width)*6+50)/100)
+			if got := preferredThumbnailDockWidth(d(width),d(98)); got != want {
+				t.Fatalf("width=%d DPI=%d: got %d want %d",width,dpi,got,want)
+			}
+			for mask := 0; mask < 8; mask++ {
+				minimum := dockWidths{dockThumbnails:d(70)}
+				preferred := dockWidths{dockThumbnails:want}
+				for bit, panel := range []int{dockTools,dockProperties,dockRightAuxiliary} {
+					if mask&(1<<bit) != 0 {
+						minimum[panel] = d(145)
+						if panel == dockTools { minimum[panel] = d(168) }
+						if panel == dockProperties { minimum[panel] = d(350) }
+						preferred[panel] = minimum[panel]+d(60)
+					}
+				}
+				space := d(width)-2*d(28)
+				sizes := fitDockWidths(space,d(176),d(265),minimum,preferred)
+				remaining := space
+				for _, size := range sizes { remaining -= size }
+				if remaining < d(176) || sizes[dockThumbnails] > want || sizes[dockThumbnails] < d(70) {
+					t.Fatalf("invalid thumbnail dock: %v, doc=%d",sizes,remaining)
+				}
+			}
+		}
+	}
+}
+
+func TestCompactThumbnailImageWidth(t *testing.T) {
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for panel := d(70); panel <= d(240); panel++ {
+			margin := min(d(12),panel/10)
+			usable := panel-2*margin-d(14)
+			last := 0
+			for scale:=10; scale<=60; scale++ {
+				got := compactThumbnailImageWidth(panel,margin,d(14),scale)
+				if got < last || got < 1 || got > usable {
+					t.Fatalf("panel=%d DPI=%d scale=%d: %d",panel,dpi,scale,got)
+				}
+				last=got
+			}
+			if last != usable { t.Fatal("maximum zoom should fit the available width") }
+		}
+	}
+}

@@ -34,6 +34,27 @@ func readingZoomScale(mode readingZoomMode, current, width, height, margin float
 	return min(fitWidth, max(0.02, (height-2*margin)/page.height))
 }
 
+// Preset values are from the approved HTML v3.26 zoom dropdown.
+var headerZoomPresets = [...]int{30, 50, 65, 75, 90, 100, 110, 125, 150, 160}
+
+func readingPresetScale(percent, dpi int) float64 {
+	return pixelsPerPDFPoint(dpi) * (float64(min(900, max(30, percent))) / 100)
+}
+
+// The available space excludes menus, existing icons, and outer padding.
+func headerOptionalWidths(free, gap, searchMin, searchMax, zoomSize int) (search, zoom int) {
+	if free >= searchMin+gap+zoomSize+gap {
+		return min(searchMax, free-zoomSize-2*gap), zoomSize
+	}
+	if free >= searchMin+gap {
+		return min(searchMax, free-gap), 0
+	}
+	if free >= zoomSize+gap {
+		return 0, zoomSize
+	}
+	return 0, 0
+}
+
 func stepReadingZoom(current, steps float64, dpi int) float64 {
 	actual := pixelsPerPDFPoint(dpi)
 	// Fit modes may need to go beyond the manual range to show an entire page.
