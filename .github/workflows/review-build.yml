@@ -32,7 +32,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y p7zip-full unzip curl binutils xz-utils
+          sudo apt-get install -y p7zip-full unzip curl binutils xz-utils inkscape
       - name: Go unit tests
         run: go test ./...
       - name: Compile Windows x64 review executable

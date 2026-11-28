@@ -1,9 +1,6 @@
 package main
 
 import (
-	"bytes"
-	_ "embed"
-	"image/png"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -16,55 +13,24 @@ const (
 	idCloseWindow
 )
 
-//go:embed assets/blacksmith.png
-var wordmark []byte
-
-var brandBackground = paletteColor{102, 102, 102}
-
-func (a *app) loadBrand() {
-	img, err := png.Decode(bytes.NewReader(wordmark))
-	if err != nil {
-		return
-	}
-	area := img.Bounds()
-	picture := &printBitmap{width: area.Dx(), height: area.Dy(), pixels: make([]byte, area.Dx()*area.Dy()*4)}
-	for y := 0; y < picture.height; y++ {
-		for x := 0; x < picture.width; x++ {
-			r, g, b, alpha := img.At(area.Min.X+x, area.Min.Y+y).RGBA()
-			remaining := 65535 - alpha
-			offset := (y*picture.width + x) * 4
-			picture.pixels[offset] = byte((b + remaining*uint32(brandBackground.blue)/255) >> 8)
-			picture.pixels[offset+1] = byte((g + remaining*uint32(brandBackground.green)/255) >> 8)
-			picture.pixels[offset+2] = byte((r + remaining*uint32(brandBackground.red)/255) >> 8)
-		}
-	}
-	a.brand = picture
-}
-
+// The header and the Windows shell use the same embedded transparent ICO.
 func (a *app) paintBrand(dc uintptr, block rect) {
-	fillColor(dc, block, brandBackground)
-	padding := (block.bottom - block.top) / 5
-	size := int(block.bottom - block.top - 2*padding)
-	left := int(block.left + padding)
-	top := int(block.top + padding)
-	if a.logo != 0 {
-		user32.NewProc("DrawIconEx").Call(dc, uintptr(left), uintptr(top), a.logo, uintptr(size), uintptr(size), 0, 0, 3)
-		left += size + int(padding*7/8)
-	}
-	if a.brand == nil {
-		drawText(dc, "Blacksmith", rect{int32(left), block.top, block.right - padding, block.bottom}, a.titleFont, textColor, 0)
+	if a.logo == 0 {
 		return
 	}
-	width := int(block.right-padding) - left
-	height := width * a.brand.height / a.brand.width
-	gdi32.NewProc("SetStretchBltMode").Call(dc, 4)
-	drawBitmap(dc, a.brand, left, (int(block.top+block.bottom)-height)/2, width, height)
+	size := min(a.scale(36), int(min(block.right-block.left, block.bottom-block.top)))
+	if size <= 0 {
+		return
+	}
+	left := int(block.left+block.right)/2 - size/2
+	top := int(block.top+block.bottom)/2 - size/2
+	user32.NewProc("DrawIconEx").Call(dc, uintptr(left), uintptr(top), a.logo, uintptr(size), uintptr(size), 0, 0, 3)
 }
 
 func (a *app) layoutHeader() {
 	const windowButtonsWidth = 108
 	d := a.scale
-	a.headerBrand = 200
+	a.headerBrand = 76
 	a.windowButtonStart = a.width - d(windowButtonsWidth)
 	for i, handle := range a.windowButtons {
 		place(handle, a.width-d(windowButtonsWidth-i*36), 0, d(36), d(headerHeight-1))

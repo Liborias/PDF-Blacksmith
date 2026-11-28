@@ -142,7 +142,6 @@ func (a *app) area(left, top, right, bottom int) rect {
 func (a *app) applyTheme() {
 	a.applyPalette()
 	a.logo, _, _ = user32.NewProc("LoadImageW").Call(a.instance, appIconID, 1, 128, 128, 0)
-	a.loadBrand()
 }
 
 func (a *app) applyPalette() {
@@ -214,7 +213,7 @@ func (a *app) paint(hwnd uintptr) {
 		fillColor(dc, rect{0, barBottom - 1, int32(a.width), barBottom}, divider)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), int32(a.height)}, canvasColor)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)
-		a.paintBrand(dc, a.area(8, 4, a.headerBrand-22, headerHeight-4))
+		a.paintBrand(dc, a.area(8, 4, 56, headerHeight-4))
 		a.paintSidebars(dc)
 	}
 	if a.comparisonVisible() {

@@ -136,7 +136,6 @@ type app struct {
 	savedStyle                                                     uintptr
 	viewport                                                       rect
 	canvasBrush, panelBrush, inputBrush, logo                      uintptr
-	brand                                                          *printBitmap
 	windowButtons                                                  [3]uintptr
 	historyButtons                                                 [2]uintptr
 	commandBar                                                     commandBar
