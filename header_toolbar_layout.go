@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type headerToolbarPlan struct {
 	iconWidth, gap, search, zoom, used int
 	hidden map[int]bool
@@ -57,4 +59,23 @@ func planHeaderToolbar(available int, icons, optional, emergency []int,
 		p.used += p.zoom + p.gap
 	}
 	return p
+}
+
+// The page group is supplementary. Keep all existing visible commands and
+// the search/zoom fallback policy before accepting a narrower toolbar plan.
+func headerPageNavigationFits(base, candidate headerToolbarPlan, searchMin int) bool {
+	for id := range candidate.hidden {
+		if !base.hidden[id] {
+			return false
+		}
+	}
+	return (base.search == 0 || candidate.search >= searchMin) &&
+		(base.zoom == 0 || candidate.zoom > 0)
+}
+
+func headerPageNavigationState(ready, busy bool, page, total int) (string, bool, bool) {
+	if !ready || total <= 0 || page < 0 || page >= total {
+		return "— / —", false, false
+	}
+	return fmt.Sprintf("%d / %d", page+1, total), !busy && page > 0, !busy && page+1 < total
 }

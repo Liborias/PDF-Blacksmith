@@ -27,6 +27,9 @@ const (
 	idHeaderRectangle
 	idHeaderLasso
 	idHeaderZoomPercent
+	idHeaderPreviousPage
+	idHeaderPageCount
+	idHeaderNextPage
 )
 
 type commandBarButton struct {
@@ -73,6 +76,9 @@ var headerButtons = []commandBarButton{
 	{id: idHeaderFitPage, label: uiFitPage, symbol: "i-fit_page"},
 	{id: idHeaderFitWidth, label: uiFitWidth, symbol: "i-fit_width"},
 	{id: idSearchTab, label: uiFind, symbol: "i-search", shortcut: "Ctrl+F"},
+	{id: idHeaderPreviousPage, label: uiPreviousPage, symbol: "‹"},
+	{id: idHeaderPageCount, label: uiGoToPage},
+	{id: idHeaderNextPage, label: uiNextPage, symbol: "›"},
 	{id: idCompareOpen, label: uiSideBySide, symbol: "i-side_by_side"},
 	{id: idHeaderSave, label: uiSave, symbol: "i-save", shortcut: "Ctrl+S"},
 	{id: idHeaderThemeMode, label: uiSwitchToLight, symbol: themeToggleIcon},
@@ -117,6 +123,9 @@ func (a *app) updateThemeToggleCaption() {
 func (a *app) localizeCommandBar() {
 	a.localizeHeaderSearch()
 	for _, control := range a.commandBar.controls {
+		if control.id == idHeaderPageCount {
+			continue
+		}
 		caption := a.commandBarCaption(control.commandBarButton)
 		setText(control.handle, caption)
 		if !control.menu {
@@ -124,14 +133,22 @@ func (a *app) localizeCommandBar() {
 		}
 	}
 	a.syncHeaderZoomLabel()
+	a.syncHeaderPageNavigation()
 }
 
 func (a *app) buildCommandBar() {
 	for _, button := range headerButtons {
 		caption := a.commandBarCaption(button)
-		handle := a.button(caption, button.id, 0, 0, 1, 0x04000000)
-		watchNavigationHover(handle)
-		if !button.menu {
+		var handle uintptr
+		if button.id == idHeaderPageCount {
+			// Read-only count, not a keyboard tab stop or a new navigation action.
+			handle = a.add("BUTTON", "— / —", button.id, 0, 0, 1, 30, bsOwnerDraw, 0, a.normalFont)
+			setEnabled(handle, false)
+		} else {
+			handle = a.button(caption, button.id, 0, 0, 1, 0x04000000)
+			watchNavigationHover(handle)
+		}
+		if !button.menu && button.id != idHeaderPageCount {
 			a.setTooltip(handle, caption)
 		}
 		a.commandBar.controls = append(a.commandBar.controls, commandBarControl{button, handle})
@@ -156,7 +173,7 @@ func (a *app) layoutCommandBar() {
 	menuWidth := 0
 	var icons []int
 	for _, control := range a.commandBar.controls {
-		if control.id == idHeaderUndo || control.id == idHeaderRedo || control.id == idHeaderZoomPercent {
+		if control.id == idHeaderUndo || control.id == idHeaderRedo || control.id == idHeaderZoomPercent || isHeaderPageNavigation(control.id) {
 			continue
 		}
 		if control.menu {
@@ -171,8 +188,23 @@ func (a *app) layoutCommandBar() {
 	emergency := []int{idCompareOpen, idHeaderOverview, idHeaderActualSize, idHeaderFlow,
 		idHeaderThemeMode, idHeaderLasso, idHeaderRectangle, idReaderZoomOut, idReaderZoomIn,
 		idSearchTab, idHeaderSave, idHeaderPointer}
-	plan := planHeaderToolbar(a.width-menuWidth-d(28), icons, optional, emergency,
-		d(30), d(4), d(27), d(2), d(78), d(112), d(145), d(76))
+	available := a.width-menuWidth-d(28)
+	makePlan := func(space int) headerToolbarPlan {
+		return planHeaderToolbar(space, icons, optional, emergency,
+			d(30), d(4), d(27), d(2), d(78), d(112), d(145), d(76))
+	}
+	plan := makePlan(available)
+	// Keep the navigation together, without evicting any existing icon.
+	pageArrow, pageCount := d(27), d(90)
+	pageCost := 2*pageArrow + pageCount + 3*d(4)
+	showPages := false
+	if available >= pageCost {
+		candidate := makePlan(available-pageCost)
+		if headerPageNavigationFits(plan, candidate, d(78)) {
+			plan, showPages = candidate, true
+			plan.used += 2*pageArrow + pageCount + 3*plan.gap
+		}
+	}
 	iconStart := a.width - d(8) - plan.used
 	showSearchEdit := false
 	for _, control := range a.commandBar.controls {
@@ -185,13 +217,17 @@ func (a *app) layoutCommandBar() {
 			showControl(control.handle, show)
 			continue
 		}
-		if plan.hidden[control.id] || control.id == idHeaderZoomPercent && plan.zoom == 0 {
+		if plan.hidden[control.id] || control.id == idHeaderZoomPercent && plan.zoom == 0 || isHeaderPageNavigation(control.id) && !showPages {
 			showControl(control.handle, false)
 			continue
 		}
 		width, gap := plan.iconWidth, plan.gap
 		if control.id == idHeaderZoomPercent {
 			width = plan.zoom
+		} else if control.id == idHeaderPageCount {
+			width = pageCount
+		} else if isHeaderPageNavigation(control.id) {
+			width = pageArrow
 		}
 		if control.menu {
 			width, gap = a.captionWidth(a.uiText(control.label), a.normalFont)+d(20), d(1)
@@ -230,6 +266,7 @@ func (a *app) updateCommandBar() {
 	selectionChanged := a.commandBar.areaMode != areaMode
 	a.commandBar.areaMode = areaMode
 	canSelect := a.canUseHeaderSelection()
+	a.syncHeaderPageNavigation()
 	for _, control := range a.commandBar.controls {
 		switch control.id {
 		case idHeaderSave:
@@ -270,6 +307,14 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		}
 		body, ink := titleColor, textColor
 		hovered, disabled := a.navigationHot(item), item.state&4 != 0
+		if control.id == idHeaderPageCount {
+			fillColor(item.dc, item.bounds, titleColor)
+			if !a.view.ready() {
+				ink = mutedColor
+			}
+			drawText(item.dc, getText(control.handle), item.bounds, a.normalFont, ink, 1|0x8000)
+			return true
+		}
 		if control.id == idHeaderZoomPercent {
 			fillColor(item.dc, item.bounds, titleColor)
 			body = inputColor
@@ -348,10 +393,10 @@ func (a *app) drawCommandBarButton(item *buttonDraw) bool {
 		} else {
 			fillColor(item.dc, item.bounds, body)
 		}
-		if control.menu || symbol == "?" {
+		if control.menu || symbol == "?" || isHeaderPageNavigation(control.id) {
 			caption, font := a.uiText(control.label), a.normalFont
-			if symbol == "?" {
-				caption, font = "?", a.titleFont
+			if symbol == "?" || isHeaderPageNavigation(control.id) {
+				caption, font = symbol, a.titleFont
 			}
 			drawText(item.dc, caption, item.bounds, font, ink, 1)
 		} else {
@@ -525,6 +570,17 @@ func (a *app) commandBarCommand(id, notification int) bool {
 		a.view.setZoomMode(readingZoomActual)
 	case idHeaderZoomPercent:
 		a.showHeaderZoom()
+	case idHeaderPreviousPage, idHeaderNextPage:
+		if a.busy || !a.view.ready() {
+			return true
+		}
+		if id == idHeaderPreviousPage {
+			a.command(idReaderPrevious, 0)
+		} else {
+			a.command(idReaderNext, 0)
+		}
+	case idHeaderPageCount:
+		return true
 	case idHeaderSave:
 		a.doDocumentCommand(a.view, docSave, false)
 	default:
@@ -613,5 +669,27 @@ func (a *app) showHeaderZoom() {
 	index := a.trackPopup(a.headerControl(idHeaderZoomPercent), 100, items)
 	if index >= 0 && index < len(presets) && a.activeTab == tab {
 		a.view.setZoomPercent(presets[index])
+	}
+}
+
+func isHeaderPageNavigation(id int) bool {
+	return id == idHeaderPreviousPage || id == idHeaderPageCount || id == idHeaderNextPage
+}
+
+func (a *app) syncHeaderPageNavigation() {
+	if a.view == nil {
+		return
+	}
+	v := a.view
+	count, previous, next := headerPageNavigationState(v.ready(), a.busy, v.page, len(v.order))
+	if handle := a.headerControl(idHeaderPageCount); handle != 0 && getText(handle) != count {
+		setText(handle, count)
+		invalidate(handle)
+	}
+	if handle := a.headerControl(idHeaderPreviousPage); handle != 0 {
+		setEnabled(handle, previous)
+	}
+	if handle := a.headerControl(idHeaderNextPage); handle != 0 {
+		setEnabled(handle, next)
 	}
 }

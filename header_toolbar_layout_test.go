@@ -34,3 +34,42 @@ func TestHeaderToolbarPriorities(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderPageNavigationState(t *testing.T) {
+	for _, tc := range []struct {
+		ready, busy bool
+		page, total int
+		want string
+		previous, next bool
+	}{
+		{false, false, 0, 0, "— / —", false, false},
+		{true, false, 0, 1, "1 / 1", false, false},
+		{true, false, 0, 12, "1 / 12", false, true},
+		{true, false, 5, 12, "6 / 12", true, true},
+		{true, false, 11, 12, "12 / 12", true, false},
+		{true, true, 5, 12, "6 / 12", false, false},
+		{true, false, 12, 12, "— / —", false, false},
+	} {
+		s, p, n := headerPageNavigationState(tc.ready, tc.busy, tc.page, tc.total)
+		if s != tc.want || p != tc.previous || n != tc.next {
+			t.Fatalf("unexpected page state for %+v: %q %v %v",tc,s,p,n)
+		}
+	}
+}
+
+func TestHeaderPageNavigationFits(t *testing.T) {
+	base := headerToolbarPlan{search:145,zoom:76,hidden:map[int]bool{1:true}}
+	for _, tc := range []struct {
+		candidate headerToolbarPlan
+		want bool
+	}{
+		{headerToolbarPlan{search:112,zoom:76,hidden:map[int]bool{1:true}},true},
+		{headerToolbarPlan{search:0,zoom:76,hidden:map[int]bool{1:true}},false},
+		{headerToolbarPlan{search:145,zoom:0,hidden:map[int]bool{1:true}},false},
+		{headerToolbarPlan{search:145,zoom:76,hidden:map[int]bool{1:true,2:true}},false},
+	} {
+		if got:=headerPageNavigationFits(base,tc.candidate,78); got!=tc.want {
+			t.Fatalf("unexpected navigation fit for %+v: %v",tc,got)
+		}
+	}
+}
