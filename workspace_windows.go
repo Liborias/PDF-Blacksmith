@@ -500,7 +500,6 @@ func (a *app) layout() {
 	if a.width == 0 || a.height == 0 {
 		return
 	}
-	d := a.scale
 	a.thumbnailArea, a.rightAuxArea = rect{}, rect{}
 	if a.full {
 		a.viewport = size
