@@ -75,8 +75,8 @@ var headerButtons = []commandBarButton{
 	{id: idSearchTab, label: uiFind, symbol: "i-search", shortcut: "Ctrl+F"},
 	{id: idCompareOpen, label: uiSideBySide, symbol: "i-side_by_side"},
 	{id: idHeaderSave, label: uiSave, symbol: "i-save", shortcut: "Ctrl+S"},
-	{id: idHeaderSettings, label: uiSettings, symbol: "i-nav_settings"},
 	{id: idHeaderThemeMode, label: uiSwitchToLight, symbol: themeToggleIcon},
+	{id: idHeaderSettings, label: uiSettings, symbol: "i-nav_settings"},
 	{id: idHeaderHelpIcon, label: uiHelp, symbol: "?"},
 }
 
@@ -411,6 +411,16 @@ func (a *app) showHeaderMenu(id int) {
 			}
 		}
 		entries = append(entries, run(idToggleLayers, a.uiText(uiLayersAndObjects), ready, a.rightAux.panel == auxiliaryLayers))
+		// The optional right-hand toolbar commands must remain available when
+		// the window is too narrow to show their buttons.
+		for _, control := range a.commandBar.controls {
+			if control.id != idHeaderThemeMode && control.id != idHeaderSettings {
+				continue
+			}
+			if visible, _, _ := user32.NewProc("IsWindowVisible").Call(control.handle); visible == 0 {
+				entries = append(entries, run(control.id, a.commandBarCaption(control.commandBarButton), true, false))
+			}
+		}
 	case idHeaderEdit:
 		editing := a.inlineCurrent() != nil
 		for _, action := range []documentCommand{docUndo, docRedo, docCut, docCopy, docPaste, docDelete, docSelectAll} {
