@@ -210,7 +210,8 @@ func TestPreferredThumbnailDockWidth(t *testing.T) {
 				preferred := dockWidths{dockThumbnails:want}
 				for bit, panel := range []int{dockTools,dockProperties,dockRightAuxiliary} {
 					if mask&(1<<bit) != 0 {
-						minimum[panel] = d(180)
+						minimum[panel] = d(145)
+						if panel == dockTools { minimum[panel] = d(168) }
 						if panel == dockProperties { minimum[panel] = d(350) }
 						preferred[panel] = minimum[panel]+d(60)
 					}
