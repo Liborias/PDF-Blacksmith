@@ -73,3 +73,56 @@ func TestHeaderPageNavigationFits(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderGroupTransitions(t *testing.T) {
+	for mask := 0; mask < 64; mask++ {
+		var groups []int
+		visible := 0
+		for i := 1; i <= 6; i++ {
+			if mask&(1<<(i-1)) != 0 {
+				groups = append(groups, i, i)
+				visible++
+			}
+			groups = append(groups, 0)
+		}
+		if got := headerGroupTransitions(groups); got != max(0,visible-1) {
+			t.Fatalf("mask %d: got %d boundaries for %d groups",mask,got,visible)
+		}
+	}
+}
+
+func TestReserveHeaderSeparators(t *testing.T) {
+	icons := []int{1,2,3,4,5,6}
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for space := 0; space <= 800; space++ {
+			available := d(space)
+			base := func(budget int) headerToolbarPlan {
+				return planHeaderToolbar(budget, icons, []int{2,3}, []int{6,4,5,1},
+					d(30),d(4),d(27),d(2),d(78),d(112),d(145),d(76))
+			}
+			boundaries := func(p headerToolbarPlan) int {
+				var groups []int
+				for _, id := range icons {
+					if !p.hidden[id] {
+						groups = append(groups,id)
+					}
+				}
+				return headerGroupTransitions(groups)
+			}
+			p := reserveHeaderSeparators(available,d(5),5,base,boundaries)
+			if p.used > available {
+				t.Fatalf("separator overflow at %d px/%d DPI: %+v",space,dpi,p)
+			}
+			want := boundaries(p)*d(5)
+			for _, id := range icons {
+				if !p.hidden[id] { want += p.iconWidth+p.gap }
+			}
+			if p.search > 0 { want += p.search+p.gap }
+			if p.zoom > 0 { want += p.zoom+p.gap }
+			if p.used != want {
+				t.Fatalf("incorrect used width: got %d want %d",p.used,want)
+			}
+		}
+	}
+}

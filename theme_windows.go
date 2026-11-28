@@ -210,6 +210,9 @@ func (a *app) paint(hwnd uintptr) {
 		fillColor(dc, rect{0, int32(a.scale(headerHeight)) - 1, int32(a.width), int32(a.scale(headerHeight))}, divider)
 		barTop, barBottom := int32(a.scale(headerHeight)), int32(a.scale(workspaceTop))
 		fillColor(dc, rect{0, barTop, int32(a.width), barBottom}, titleColor)
+		for _, separator := range a.commandBar.separators {
+			fillColor(dc, separator, divider)
+		}
 		fillColor(dc, rect{0, barBottom - 1, int32(a.width), barBottom}, divider)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), int32(a.height)}, canvasColor)
 		fillColor(dc, rect{0, a.viewport.bottom, int32(a.width), a.viewport.bottom + 1}, divider)

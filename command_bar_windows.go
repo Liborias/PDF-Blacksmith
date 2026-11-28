@@ -53,6 +53,7 @@ type commandBar struct {
 	areaMode   int
 	searchEdit uintptr
 	searchSync bool
+	separators []rect
 }
 
 var headerButtons = []commandBarButton{
@@ -174,6 +175,7 @@ func (a *app) buildCommandBar() {
 
 func (a *app) layoutCommandBar() {
 	d := a.scale
+	a.commandBar.separators = a.commandBar.separators[:0]
 	x := d(8)
 	menuWidth := 0
 	var icons []int
@@ -194,17 +196,32 @@ func (a *app) layoutCommandBar() {
 		idHeaderThemeMode, idHeaderLasso, idHeaderRectangle, idReaderZoomOut, idReaderZoomIn,
 		idSearchTab, idHeaderSave, idHeaderPointer}
 	available := a.width-menuWidth-d(28)
-	makePlan := func(space int) headerToolbarPlan {
-		return planHeaderToolbar(space, icons, optional, emergency,
-			d(30), d(4), d(27), d(2), d(78), d(112), d(145), d(76))
+	separatorWidth := d(5)
+	makePlan := func(space int, pages bool) headerToolbarPlan {
+		return reserveHeaderSeparators(space, separatorWidth, 5, func(budget int) headerToolbarPlan {
+			return planHeaderToolbar(budget, icons, optional, emergency,
+				d(30), d(4), d(27), d(2), d(78), d(112), d(145), d(76))
+		}, func(plan headerToolbarPlan) int {
+			var groups []int
+			for _, control := range a.commandBar.controls {
+				group := headerToolbarGroup(control.id)
+				if group == 0 || plan.hidden[control.id] ||
+					control.id == idHeaderZoomPercent && plan.zoom == 0 ||
+					isHeaderPageNavigation(control.id) && !pages {
+					continue
+				}
+				groups = append(groups, group)
+			}
+			return headerGroupTransitions(groups)
+		})
 	}
-	plan := makePlan(available)
+	plan := makePlan(available, false)
 	// Keep the navigation together, without evicting any existing icon.
 	pageArrow, pageCount := d(27), d(90)
 	pageCost := 2*pageArrow + pageCount + 3*d(4)
 	showPages := false
 	if available >= pageCost {
-		candidate := makePlan(available-pageCost)
+		candidate := makePlan(available-pageCost, true)
 		if headerPageNavigationFits(plan, candidate, d(78)) {
 			plan, showPages = candidate, true
 			plan.used += 2*pageArrow + pageCount + 3*plan.gap
@@ -212,6 +229,7 @@ func (a *app) layoutCommandBar() {
 	}
 	iconStart := a.width - d(8) - plan.used
 	showSearchEdit := false
+	lastGroup := 0
 	for _, control := range a.commandBar.controls {
 		if control.id == idHeaderUndo || control.id == idHeaderRedo {
 			bounds, show := a.headerHistoryBounds(control.id - idHeaderUndo)
@@ -239,8 +257,24 @@ func (a *app) layoutCommandBar() {
 		} else {
 			x = max(x, iconStart)
 		}
+		group := headerToolbarGroup(control.id)
+		separate := group != 0 && lastGroup != 0 && group != lastGroup
+		if separate {
+			x += separatorWidth
+		}
 		show := !a.full && x+width+d(8) <= a.width
 		if show {
+			if separate {
+				// Center a thin line in the reserved slot, leaving both controls untouched.
+				line := max(1, d(1))
+				left := x-separatorWidth+(separatorWidth-line)/2
+				top := d(headerHeight+8)
+				a.commandBar.separators = append(a.commandBar.separators,
+					rect{int32(left), int32(top), int32(left+line), int32(top+d(22))})
+			}
+			if group != 0 {
+				lastGroup = group
+			}
 			place(control.handle, x, d(headerHeight+4), width, d(30))
 			invalidate(control.handle)
 		}
@@ -704,4 +738,26 @@ func (a *app) syncHeaderPageNavigation() {
 	if handle := a.headerControl(idHeaderNextPage); handle != 0 {
 		setEnabled(handle, next)
 	}
+}
+
+// Group boundaries follow the final HTML v3.26 toolbar. History and text
+// menus belong to different bands and do not receive these separators.
+func headerToolbarGroup(id int) int {
+	switch id {
+	case idHeaderPointer, idHeaderRectangle, idHeaderLasso:
+		return 1
+	case idToggleLayoutGrid:
+		return 2
+	case idHeaderFlow:
+		return 3
+	case idHeaderOverview, idReaderZoomOut, idHeaderZoomPercent, idReaderZoomIn,
+		idHeaderActualSize, idHeaderFitPage, idHeaderFitWidth:
+		return 4
+	case idSearchTab:
+		return 5
+	case idHeaderPreviousPage, idHeaderPageCount, idHeaderNextPage, idCompareOpen,
+		idHeaderCollapseDocks, idHeaderSave, idHeaderThemeMode, idHeaderSettings, idHeaderHelpIcon:
+		return 6
+	}
+	return 0
 }

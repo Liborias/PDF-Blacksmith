@@ -79,3 +79,37 @@ func headerPageNavigationState(ready, busy bool, page, total int) (string, bool,
 	}
 	return fmt.Sprintf("%d / %d", page+1, total), !busy && page > 0, !busy && page+1 < total
 }
+
+// Only visible consecutive groups produce a boundary. A missing middle
+// group produces one boundary, not a pair of orphan separators.
+func headerGroupTransitions(groups []int) int {
+	last, count := 0, 0
+	for _, group := range groups {
+		if group == 0 {
+			continue
+		}
+		if last != 0 && last != group {
+			count++
+		}
+		last = group
+	}
+	return count
+}
+
+// Try the smallest sufficient reservation. The number of visible boundaries
+// is recomputed for each plan because a hidden icon may remove a group.
+func reserveHeaderSeparators(available, width, maxBoundaries int,
+	plan func(int) headerToolbarPlan, boundaries func(headerToolbarPlan) int) headerToolbarPlan {
+	for n := 0; n <= maxBoundaries; n++ {
+		p := plan(available-n*width)
+		cost := boundaries(p)*width
+		if cost <= n*width {
+			p.used += cost
+			return p
+		}
+	}
+	// The production group map has at most maxBoundaries transitions.
+	p := plan(available-maxBoundaries*width)
+	p.used += boundaries(p)*width
+	return p
+}
