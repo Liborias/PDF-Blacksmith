@@ -195,3 +195,53 @@ func TestDockDocumentEdgesProtectDocumentAndAttachEars(t *testing.T) {
 		}
 	}
 }
+
+
+func TestPreferredThumbnailDockWidth(t *testing.T) {
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for width := 980; width <= 3840; width += 10 {
+			want := max(d(98),(d(width)*6+50)/100)
+			if got := preferredThumbnailDockWidth(d(width),d(98)); got != want {
+				t.Fatalf("width=%d DPI=%d: got %d want %d",width,dpi,got,want)
+			}
+			for mask := 0; mask < 8; mask++ {
+				minimum := dockWidths{dockThumbnails:d(70)}
+				preferred := dockWidths{dockThumbnails:want}
+				for bit, panel := range []int{dockTools,dockProperties,dockRightAuxiliary} {
+					if mask&(1<<bit) != 0 {
+						minimum[panel] = d(180)
+						if panel == dockProperties { minimum[panel] = d(350) }
+						preferred[panel] = minimum[panel]+d(60)
+					}
+				}
+				space := d(width)-2*d(28)
+				sizes := fitDockWidths(space,d(176),d(265),minimum,preferred)
+				remaining := space
+				for _, size := range sizes { remaining -= size }
+				if remaining < d(176) || sizes[dockThumbnails] > want || sizes[dockThumbnails] < d(70) {
+					t.Fatalf("invalid thumbnail dock: %v, doc=%d",sizes,remaining)
+				}
+			}
+		}
+	}
+}
+
+func TestCompactThumbnailImageWidth(t *testing.T) {
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for panel := d(70); panel <= d(240); panel++ {
+			margin := min(d(12),panel/10)
+			usable := panel-2*margin-d(14)
+			last := 0
+			for scale:=10; scale<=60; scale++ {
+				got := compactThumbnailImageWidth(panel,margin,d(14),scale)
+				if got < last || got < 1 || got > usable {
+					t.Fatalf("panel=%d DPI=%d scale=%d: %d",panel,dpi,scale,got)
+				}
+				last=got
+			}
+			if last != usable { t.Fatal("maximum zoom should fit the available width") }
+		}
+	}
+}

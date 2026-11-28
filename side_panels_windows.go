@@ -116,12 +116,9 @@ func (a *app) layoutDocumentPanels() {
 }
 
 func (a *app) preferredThumbnailsWidth() int {
-	for _, sizes := range a.view.sizes[:min(16, len(a.view.sizes))] {
-		if size := sizes["crop"]; size[0] > size[1] {
-			return a.scale(220)
-		}
-	}
-	return a.scale(182)
+	// The panel follows the client width instead of switching to a fixed
+	// wider rail for landscape pages; the thumbnails already fit page aspect.
+	return preferredThumbnailDockWidth(a.width, a.scale(98))
 }
 
 func (a *app) preferredSettingsWidth() int {

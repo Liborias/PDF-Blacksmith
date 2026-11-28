@@ -141,3 +141,18 @@ func dockDocumentEdges(width, gutter int, sizes dockWidths) dockEdges {
 	rightStart := right - sizes[dockRightAuxiliary]
 	return dockEdges{left, leftEnd, leftEnd + gutter, rightStart - gutter, rightStart, right}
 }
+
+
+// Aim for six percent of the client width, with a readable preferred floor.
+// fitDockWidths can still reduce this to the existing compact minimum.
+func preferredThumbnailDockWidth(clientWidth, readableMinimum int) int {
+	return max(readableMinimum, (clientWidth*6+50)/100)
+}
+
+// A narrow single-document panel uses its available content width, not the
+// old wide panel's percentage. Preserve the existing 10–60 zoom scale and
+// reserve the scrollbar even when it is hidden to avoid size oscillation.
+func compactThumbnailImageWidth(panel, margin, scrollbar, scale int) int {
+	usable := max(1, panel-2*margin-scrollbar)
+	return max(1, usable*(min(60,max(10,scale))+20)/80)
+}
