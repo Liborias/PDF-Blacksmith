@@ -6,28 +6,32 @@ import (
 )
 
 const idFileMenuFirst = 410
+const fileMenuHoverTimer = 0x4f21
 
 type fileMenu struct {
 	handle  uintptr
 	anchor  uintptr
 	buttons []uintptr
 	open    bool
+	hoverOnly bool
+	outsideTicks int
 }
 
 type fileOption struct {
 	id    int
 	label uiMessage
+	shortcut string
 }
 
 var fileOptions = []fileOption{
-	{idOpen, uiOpenFile},
-	{idRecentFiles, uiRecent},
-	{idShowOutput, uiOpenOutput},
-	{idSaveDocument, uiSave},
-	{idSaveDocumentAs, uiSaveAs},
-	{idExportTab, uiExport},
-	{idFileSign, uiSignedCopy},
-	{idPrintDocument, uiPrint},
+	{idOpen, uiOpenFile, "Ctrl+O"},
+	{idRecentFiles, uiRecent, ""},
+	{idShowOutput, uiOpenOutput, ""},
+	{idSaveDocument, uiSave, "Ctrl+S"},
+	{idSaveDocumentAs, uiSaveAs, "Ctrl+Shift+S"},
+	{idExportTab, uiExport, ""},
+	{idFileSign, uiSignedCopy, ""},
+	{idPrintDocument, uiPrint, "Ctrl+P"},
 }
 
 func (a *app) fileOptionEnabled(option int) bool {
@@ -40,7 +44,7 @@ func (a *app) fileOptionEnabled(option int) bool {
 	case idShowOutput:
 		return a.lastOutput != ""
 	case idSaveDocument:
-		return a.view.ready() && a.view.changed()
+		return a.view.ready() && (a.view.changed() || a.inlineDirty())
 	default:
 		return a.view.ready()
 	}
@@ -81,25 +85,43 @@ func (a *app) showFileMenuAt(anchor uintptr) {
 	}
 	m := &a.fileMenu
 	if m.open {
-		same := anchor == m.anchor
-		a.hideFileMenu(same)
-		if same {
+		same, preview := anchor == m.anchor, m.hoverOnly
+		a.hideFileMenu(same && !preview)
+		if same && !preview {
 			return
 		}
 	}
 	a.activate(idFileTab)
-	if a.full || a.toolsWidth == 0 && anchor == a.toolButtons[idFileTab] {
+	a.openFileMenuAt(anchor,false)
+}
+
+// Hover only reveals commands. It must not activate another tool, commit
+// an inline edit, change focus, or cancel the pending opening of a PDF.
+func (a *app) previewFileMenu(anchor uintptr) {
+	if anchor==0 || a.busy || a.full || a.fileMenu.open {
+		return
+	}
+	a.openFileMenuAt(anchor,true)
+}
+
+func (a *app) openFileMenuAt(anchor uintptr, hover bool) {
+	m:=&a.fileMenu
+	if m.handle==0 || a.busy || a.full || (a.toolsWidth==0 && anchor==a.toolButtons[idFileTab]) {
 		return
 	}
 	d := a.scale
-	width, height := max(a.toolsWidth, d(168)), d(len(m.buttons)*31+8)
+	height := d(24+len(m.buttons)*31+8)
+	width := max(a.toolsWidth,d(168))
 	for index, option := range fileOptions {
-		width = max(width, a.captionWidth(a.uiText(option.label), a.normalFont)+d(42))
+		reserve:=d(42)
+		if option.shortcut!="" { reserve+=d(112) }
+		width = max(width, a.captionWidth(a.uiText(option.label), a.normalFont)+reserve)
 		setEnabled(m.buttons[index], a.fileOptionEnabled(option.id))
 	}
+	width=max(width,a.captionWidth(a.uiText(uiFileCommands),a.normalFont)+d(20))
 	width = min(width, a.width)
 	for index, button := range m.buttons {
-		place(button, 1, d(index*31)+1, width-2, d((index+1)*31)-d(index*31))
+		place(button, 1, d(24+index*31)+1, width-2, d((index+1)*31)-d(index*31))
 	}
 	radius := max(2, d(9))
 	region, _, _ := gdi32.NewProc("CreateRoundRectRgn").Call(0, uintptr(-radius), uintptr(width+1), uintptr(height+1), uintptr(radius), uintptr(radius))
@@ -116,10 +138,14 @@ func (a *app) showFileMenuAt(anchor uintptr) {
 	if anchor != a.toolButtons[idFileTab] {
 		left = max(0, min(int(pos.x), a.width-width))
 	}
-	m.open, m.anchor = true, anchor
-	user32.NewProc("SetWindowPos").Call(m.handle, 0, uintptr(left), uintptr(pos.y), uintptr(width), uintptr(height), 0x0040) // SWP_SHOWWINDOW
+	m.open, m.anchor, m.hoverOnly, m.outsideTicks = true, anchor, hover, 0
+	user32.NewProc("SetWindowPos").Call(m.handle, 0, uintptr(left), uintptr(pos.y), uintptr(width), uintptr(height), 0x0050) // SWP_SHOWWINDOW | SWP_NOACTIVATE
 	invalidate(anchor)
-	a.focusFileMenu(-1, 1)
+	if hover {
+		user32.NewProc("SetTimer").Call(a.window,fileMenuHoverTimer,100,0)
+	} else {
+		a.focusFileMenu(-1, 1)
+	}
 	user32.NewProc("RedrawWindow").Call(m.handle, 0, 0, 0x0085) // RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
 }
 
@@ -128,7 +154,8 @@ func (a *app) hideFileMenu(restoreFocus bool) {
 	if !m.open {
 		return
 	}
-	m.open = false
+	m.open, m.hoverOnly, m.outsideTicks = false,false,0
+	user32.NewProc("KillTimer").Call(a.window,fileMenuHoverTimer)
 	showControl(m.handle, false)
 	invalidate(m.anchor)
 	if restoreFocus {
@@ -150,7 +177,17 @@ func (a *app) focusFileMenu(from, step int) {
 
 func (a *app) fileMenuInput(msg *winMessage) bool {
 	m := &a.fileMenu
+	if msg.message==0x0200 && msg.wParam&3==0 && !m.open &&
+		msg.window==a.headerControl(idHeaderFile) && a.hoveredNavigation!=msg.window {
+		a.previewFileMenu(msg.window)
+	}
 	if !m.open {
+		return false
+	}
+	// A mouse preview does not take keyboard focus. Let the original
+	// target receive keys normally (including global shortcuts).
+	if m.hoverOnly && msg.message==0x0100 {
+		a.hideFileMenu(false)
 		return false
 	}
 	switch msg.message {
@@ -194,9 +231,9 @@ func (a *app) drawFileMenuButton(item *buttonDraw) bool {
 		return false
 	}
 	option := fileOptions[index]
-	selected := option.id == a.activeFileOption() || (option.id == idRecentFiles && a.mode == idFileDetails)
+	selected := a.tool==idFileTab && (option.id == a.activeFileOption() || (option.id == idRecentFiles && a.mode == idFileDetails))
 	a.paintPopupEntry(item.dc, item.bounds, popupItem{
-		label: a.uiText(option.label), checked: selected, disabled: !a.fileOptionEnabled(option.id),
+		label: a.uiText(option.label), shortcut:option.shortcut, checked: selected, disabled: !a.fileOptionEnabled(option.id),
 	}, a.navigationHot(item))
 	if item.state&16 != 0 {
 		a.drawFocus(item.dc, item.bounds)
@@ -290,4 +327,30 @@ func (a *app) reopenSaved(req request) bool {
 	v.continuous, v.fitMode, v.zoom = continuous, fit, zoom
 	v.syncReadingControls()
 	return true
+}
+
+
+// Short leave grace permits moving diagonally from the title into the popup.
+func (a *app) tickFileMenuHover() {
+	m:=&a.fileMenu
+	if !m.open || !m.hoverOnly {
+		user32.NewProc("KillTimer").Call(a.window,fileMenuHoverTimer)
+		return
+	}
+	if a.busy || a.full { a.hideFileMenu(false); return }
+	var p point
+	var anchor,popup rect
+	if ok,_,_:=user32.NewProc("GetCursorPos").Call(uintptr(unsafe.Pointer(&p))); ok==0 { a.hideFileMenu(false); return }
+	getRect:=user32.NewProc("GetWindowRect")
+	getRect.Call(m.anchor,uintptr(unsafe.Pointer(&anchor)))
+	getRect.Call(m.handle,uintptr(unsafe.Pointer(&popup)))
+	m.outsideTicks=fileMenuOutsideTicks(m.outsideTicks,contains(anchor,p.x,p.y)||contains(popup,p.x,p.y))
+	if m.outsideTicks>=2 { a.hideFileMenu(false) }
+}
+
+func (a *app) chooseFileMenuOption(option int) {
+	if !a.fileOptionEnabled(option) { return }
+	if a.saveInlineBefore(func(){ a.chooseFileMenuOption(option) }) { return }
+	if a.tool!=idFileTab { a.activate(idFileTab) }
+	a.runFileOption(option)
 }

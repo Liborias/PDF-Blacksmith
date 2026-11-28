@@ -691,6 +691,8 @@ func sidebarProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			outline.top -= int32(a.scale(9))
 			rounded(dc, outline, a.scale(9), uiColors["popoverBg"], divider)
 			fillColor(dc, rect{right: bounds.right, bottom: 1}, divider)
+			d:=a.scale
+			drawText(dc,a.uiText(uiFileCommands),rect{int32(d(10)),int32(d(2)),bounds.right-int32(d(10)),int32(d(24))},a.normalFont,mutedColor,0x8000)
 		} else {
 			fillColor(dc, bounds, panelColor)
 		}
@@ -855,8 +857,9 @@ func (a *app) loadDocument(path, password string, info os.FileInfo) {
 
 func (a *app) command(id, notification int) {
 	if index := id - idFileMenuFirst; index >= 0 && index < len(fileOptions) && notification == 0 {
-		a.hideFileMenu(true)
-		a.runFileOption(fileOptions[index].id)
+		preview := a.fileMenu.hoverOnly
+		a.hideFileMenu(!preview)
+		a.chooseFileMenuOption(fileOptions[index].id)
 		return
 	}
 	if choice := a.choiceCommands[id]; choice != nil && notification == 0 {

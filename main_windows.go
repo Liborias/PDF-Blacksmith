@@ -523,6 +523,10 @@ func wndProc(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		v.schedule()
 		return 0
 	case 0x0113: // WM_TIMER
+		if wParam == fileMenuHoverTimer {
+			a.tickFileMenuHover()
+			return 0
+		}
 		if wParam == readerZoomTimer && a.view != nil {
 			a.view.finishZoom()
 			return 0

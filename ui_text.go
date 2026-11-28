@@ -44,6 +44,7 @@ const (
 
 const (
 	uiFile                 uiMessage = "ui.soubor.5ee136c77a"
+	uiFileCommands         uiMessage = "ui.prikazy.souboru.34fc0f4784"
 	uiView                 uiMessage = "ui.zobrazeni.77f1559aa4"
 	uiTools                uiMessage = "ui.nastroje.a096f53723"
 	uiEdit                 uiMessage = "ui.upravy.07ca5172db"

@@ -111,3 +111,7 @@ func TestRecentAndThumbnailLocalization(t *testing.T) {
 		}
 	}
 }
+
+func TestFileCommandsHeadingLocalization(t *testing.T) {
+	if uiCzech.text(uiFileCommands)!="Příkazy souboru" || uiEnglish.text(uiFileCommands)!="File commands" { t.Fatal("missing file menu heading translation") }
+}
