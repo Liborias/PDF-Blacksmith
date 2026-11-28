@@ -12,6 +12,7 @@ ATLAS = ROOT / "assets" / "ui_icons"
 EXTRA_ICONS = {
     "i-zoom_1_1": ROOT / "assets" / "ui_zoom_1_1.png",
     "i-toggle_grid": ROOT / "assets" / "ui_toggle_grid.png",
+    "i-nav_bookmarks": ROOT / "assets" / "ui_nav_bookmarks.png",
 }
 TILE_SIZE = 96
 SYMBOLS = (

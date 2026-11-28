@@ -27,6 +27,10 @@ var uiActualSizeIcon []byte
 //go:embed assets/ui_toggle_grid.png
 var uiGridIcon []byte
 
+// Original v3.26 bookmarks symbol.
+//go:embed assets/ui_nav_bookmarks.png
+var uiBookmarksIcon []byte
+
 type uiIconAtlas struct {
 	pixels image.Image
 	tile   int
@@ -62,6 +66,7 @@ func loadUIIconAtlas() uiIconAtlas {
 	}{
 		{"i-zoom_1_1", uiActualSizeIcon},
 		{"i-toggle_grid", uiGridIcon},
+		{"i-nav_bookmarks", uiBookmarksIcon},
 	} {
 		icon, err := png.Decode(bytes.NewReader(extra.data))
 		if err != nil {

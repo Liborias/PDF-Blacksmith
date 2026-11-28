@@ -248,6 +248,11 @@ func (a *app) layoutRail(rail rect, group, primary uintptr, dock dockVisibility,
 		show := panels && (handle == primary || auxiliaryAvailable)
 		if show {
 			height := max(d(88), a.captionWidth(getText(handle), a.labelFont)+d(28))
+			if handle == a.thumbnailsToggle {
+				height = d(32)
+			} else if a.auxiliaryEarIcon(handle) != "" {
+				height = max(d(71), a.captionWidth(getText(handle), a.labelFont)+d(32))
+			}
 			place(handle, x, y, width, height)
 			y += height + d(6)
 		}
@@ -302,10 +307,19 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	if collapsed {
 		buttonColor = uiColors["panelTabIdle"]
 	}
-	if item.state&(1|64) != 0 {
+	auxIcon := a.auxiliaryEarIcon(item.handle)
+	hover := item.state&(1|64) != 0
+	if auxIcon != "" {
+		hover = a.navigationHot(item)
+	}
+	if hover {
 		buttonColor = uiColors["panelTabHover"]
 	}
-	rounded(item.dc, bounds, d(5), buttonColor, divider)
+	border := divider
+	if auxIcon != "" && (!collapsed || hover) {
+		border = uiColors["accentStrong"]
+	}
+	rounded(item.dc, bounds, d(5), buttonColor, border)
 	if group {
 		drawText(item.dc, arrow+arrow, bounds, a.normalFont, foreground, 1)
 		if item.state&16 != 0 {
@@ -314,7 +328,24 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 		return true
 	}
 	arrowBounds := rect{bounds.left, bounds.top + int32(d(1)), bounds.right, bounds.top + int32(d(18))}
-	drawText(item.dc, arrow, arrowBounds, a.normalFont, foreground, 1)
+	if auxIcon != "" {
+		size := d(16)
+		x := int(bounds.left+bounds.right)/2-size/2
+		y := int(bounds.top)+d(4)
+		if onLeft {
+			y = int(bounds.top+bounds.bottom)/2-size/2
+		}
+		drawUIIcon(item.dc, auxIcon, x, y, size, foreground, buttonColor)
+		if onLeft {
+			if item.state&16 != 0 {
+				a.drawFocus(item.dc, bounds)
+			}
+			return true
+		}
+		arrowBounds.bottom = int32(y+size+d(4))
+	} else {
+		drawText(item.dc, arrow, arrowBounds, a.normalFont, foreground, 1)
+	}
 	caption := wideString(getText(item.handle))
 	length, _, _ := getTextLen.Call(item.handle)
 	font, _, _ := gdiSelect.Call(item.dc, a.railFont)
@@ -395,4 +426,20 @@ func (a *app) toggleTemporaryDocks() {
 	}
 	a.layout()
 	a.view.schedule()
+}
+
+// The native panels stay on their existing sides. Layers has no dedicated
+// approved symbol yet, so use the existing Objects icon with its own caption.
+func (a *app) auxiliaryEarIcon(handle uintptr) string {
+	switch handle {
+	case a.thumbnailsToggle:
+		return "i-nav_thumbnails"
+	case a.resultsToggle:
+		return "i-nav_search_pdf"
+	case a.bookmarksToggle:
+		return "i-nav_bookmarks"
+	case a.layers.toggle:
+		return "i-nav_objects"
+	}
+	return ""
 }

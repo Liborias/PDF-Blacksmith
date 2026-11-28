@@ -67,3 +67,11 @@ func TestUIGridIconIsAvailable(t *testing.T) {
 		t.Fatal("invalid grid icon mask")
 	}
 }
+
+func TestUIAuxiliaryEarIconsAvailable(t *testing.T) {
+	for _, name := range []string{"i-nav_thumbnails", "i-nav_search_pdf", "i-nav_bookmarks", "i-nav_objects"} {
+		if len(uiIcons.mask(name, 16)) != 16*16 {
+			t.Fatalf("missing auxiliary panel icon %s", name)
+		}
+	}
+}

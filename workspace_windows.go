@@ -164,8 +164,11 @@ func (a *app) setupWorkspace() bool {
 	a.toolsToggle = a.shellButton(uiTools, idToggleTools, sidebarRailWidth, 0)
 	a.detailsToggle = a.shellButton(uiProperties, idToggleDetails, sidebarRailWidth, 0)
 	a.thumbnailsToggle = a.shellButton(uiThumbnails, idToggleThumbnails, sidebarRailWidth, 0)
+	watchNavigationHover(a.thumbnailsToggle)
 	a.bookmarksToggle = a.shellButton(uiBookmarks, idToggleBookmarks, sidebarRailWidth, 0)
+	watchNavigationHover(a.bookmarksToggle)
 	a.resultsToggle = a.shellButton(uiResults, idToggleSearchResults, sidebarRailWidth, 0)
+	watchNavigationHover(a.resultsToggle)
 	a.leftPanelsToggle = a.button("", idToggleLeftPanels, 0, 0, sidebarRailWidth, 0)
 	a.rightPanelsToggle = a.button("", idToggleRightPanels, 0, 0, sidebarRailWidth, 0)
 	a.windowButtons[0] = a.shellButton(uiMinimize, idMinimize, 36, 0)
@@ -237,6 +240,7 @@ func (a *app) setupWorkspace() bool {
 	a.controlParent = a.searchSidebar
 	a.view.buildSearchResults()
 	a.buildLayersPanel()
+	watchNavigationHover(a.layers.toggle)
 	a.controlParent = a.thumbnailSidebar
 	a.view.buildThumbnails()
 	a.controlParent = 0
