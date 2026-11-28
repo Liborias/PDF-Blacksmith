@@ -233,6 +233,8 @@ func (a *app) colorControl(msg uint32, dc, handle uintptr) uintptr {
 	gdiTextColor.Call(dc, textColor.win())
 	if handle == a.focusHelp {
 		gdiTextColor.Call(dc, uiColors["helpText"].win())
+	} else if handle == a.footerInfo.dirty && a.footerInfo.unsaved {
+		gdiTextColor.Call(dc, textColor.win())
 	}
 	if a.scrollPanes[handle] != nil {
 		gdiBkColor.Call(dc, panelColor.win())

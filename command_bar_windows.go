@@ -306,6 +306,7 @@ func (a *app) updateCommandBar() {
 	a.commandBar.areaMode = areaMode
 	canSelect := a.canUseHeaderSelection()
 	a.syncHeaderPageNavigation()
+	a.refreshFooterInfo()
 	for _, control := range a.commandBar.controls {
 		switch control.id {
 		case idHeaderCollapseDocks:

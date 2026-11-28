@@ -174,6 +174,7 @@ func (a *app) setupWorkspace() bool {
 	a.tabList = a.shellButton(uiDocumentList, idListDocumentTabs, 26, 0)
 	a.status = a.add("STATIC", "", 0, 0, 0, 160, 22, 0x4000, 0, a.normalFont)
 	a.focusHelp = a.add("STATIC", "", 0, 0, 0, 1, 22, 0x400c, 0, a.normalFont)
+	a.buildFooterInfo()
 	for _, tab := range workspaceTabs {
 		handle := a.shellButton(tab.name, tab.id, 1, 0x04000000) // WS_CLIPSIBLINGS
 		watchNavigationHover(handle)
@@ -506,16 +507,13 @@ func (a *app) layout() {
 	} else {
 		a.layoutDocumentPanels()
 		a.layoutHeader()
-		place(a.status, a.width-d(231), a.height-d(33), d(218), d(22))
-		place(a.focusHelp, d(628), a.height-d(33), a.width-d(874), d(22))
 		a.view.layoutToolbar()
 	}
 	chrome := uintptr(5)
 	if a.full {
 		chrome = 0
 	}
-	showWindow.Call(a.status, chrome)
-	showWindow.Call(a.focusHelp, chrome)
+	a.layoutFooterInfo()
 	for _, handle := range a.windowButtons {
 		showWindow.Call(handle, chrome)
 	}

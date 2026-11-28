@@ -54,6 +54,7 @@ func (a *app) doInlineHistory(command documentCommand) {
 }
 
 func (a *app) updateHistoryButtons() {
+	a.refreshFooterInfo()
 	if a.historyButtons[0] != 0 {
 		setEnabled(a.historyButtons[0], a.canDocumentCommand(a.view, docUndo, false))
 		setEnabled(a.historyButtons[1], a.canDocumentCommand(a.view, docRedo, false))

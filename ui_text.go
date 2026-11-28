@@ -78,6 +78,8 @@ const (
 	uiPreview              uiMessage = "ui.nahled.68c447bc27"
 	uiPages                uiMessage = "ui.stranky.abf779a41b"
 	uiPageByPage           uiMessage = "ui.po.strankach.ae9475b722"
+	uiFooterNoChanges      uiMessage = "ui.bez.zmen.249bf45ea6"
+	uiFooterUnsaved        uiMessage = "win32.FooterUnsaved"
 	uiFullscreen           uiMessage = "ui.cela.obrazovka.c44c09e551"
 	uiFitPage              uiMessage = "ui.prizpusobit.strance.1656c87fd6"
 	uiFitWidth             uiMessage = "ui.prizpusobit.sirce.8bca0aacbe"
@@ -147,6 +149,7 @@ type uiTranslation struct {
 
 // Strings specific to the Win32 shell that have no corresponding prototype key.
 var win32Translations = map[uiMessage]uiTranslation{
+	uiFooterUnsaved:        {Czech: "Neuložené změny", English: "Unsaved changes"},
 	uiCollapseBothDocks:    {Czech: "Dočasně sbalit obě skupiny panelů", English: "Temporarily collapse both panel groups"},
 	uiRestoreBothDocks:     {Czech: "Obnovit původní rozložení panelů", English: "Restore previous panel layout"},
 	uiOCR:                  {Czech: "OCR", English: "OCR"},

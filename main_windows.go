@@ -165,6 +165,7 @@ type app struct {
 	readOnlyFields, primaryButtons                                 map[uintptr]bool
 	view                                                           *documentView
 	toolsToggle, detailsToggle, sidebarTitle, status               uintptr
+	footerInfo                                                     footerInfoControls
 	thumbnailsToggle, bookmarksToggle, railFont                    uintptr
 	resultsToggle                                                  uintptr
 	leftPanelsToggle, rightPanelsToggle                            uintptr
