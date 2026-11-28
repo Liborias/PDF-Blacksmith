@@ -253,8 +253,8 @@ func (a *app) recentContextInput(msg *winMessage) bool {
 	}
 	path := p.selectedPath()
 	user32.NewProc("ClientToScreen").Call(p.list, uintptr(unsafe.Pointer(&pos)))
-	options := []popupItem{{label: "Otevřít"}, {label: "Otevřít umístění souboru"}, {label: "Kopírovat cestu"}}
-	switch a.trackPopupAt(pos, 238, options) {
+	options := []popupItem{{label: a.uiText(uiRecentOpen)}, {label: a.uiText(uiRecentOpenLocation)}, {label: a.uiText(uiRecentCopyPath)}}
+	switch a.trackPopupAt(pos, max(238, (a.captionWidth(a.uiText(uiRecentOpenLocation), a.normalFont)*96+a.dpi-1)/a.dpi+40), options) {
 	case 0:
 		a.openDocument(path, "")
 	case 1:
@@ -262,7 +262,7 @@ func (a *app) recentContextInput(msg *winMessage) bool {
 		result, _, _ := shell32.NewProc("ShellExecuteW").Call(a.window, uintptr(unsafe.Pointer(wideString("open"))),
 			uintptr(unsafe.Pointer(wideString(directory))), 0, 0, 1)
 		if result <= 32 {
-			a.reportStatus("Umístění souboru se nepodařilo otevřít.")
+			a.reportStatus(a.uiText(uiRecentLocationFailed))
 		}
 	case 2:
 		a.copyClipboardText(path)
