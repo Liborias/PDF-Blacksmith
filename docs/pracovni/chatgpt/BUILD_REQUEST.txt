@@ -1,1 +1,1 @@
-Milestone 17 — review build after steps 14–17 (auxiliary ear icons, standalone dock ears, proportional thumbnail sizing, scrollbar geometry). Source changes through d8aa0021e9e3cbf9a58e9fe713f0991d84f20556. Next milestone 21. Download handoff at step 18.
+Milestone 21 — review build after steps 18–21 (tooltips, tool navigation, property spacing, deferred recent document View activation, recent/thumbnail localization). Source changes through 482d4b10f583edba00672a073407ed1dccf10bb4. Next milestone 25. Download handoff at step 22.
