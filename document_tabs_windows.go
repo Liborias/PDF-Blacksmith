@@ -22,6 +22,7 @@ type documentTab struct {
 	branches                                 map[int]bool
 	selection, thumbnailTop                  int
 	query, status, documentInfo              string
+	openViewPending                          bool
 }
 
 type documentClose struct {
@@ -137,7 +138,7 @@ func (a *app) addDocumentTab(path, password string, info os.FileInfo) {
 	}
 	content := emptyDocument()
 	content.path, content.password, content.original, content.describing = path, password, info, true
-	tab := &documentTab{content: content, tool: idBrowseTab, mode: idBrowseTab, selection: -1, status: "Načítám dokument…"}
+	tab := &documentTab{content: content, tool: idFileTab, mode: idFileDetails, selection: -1, status: "Načítám dokument…", openViewPending: true}
 	tab.button = a.button(filepath.Base(path), idSelectDocumentTab, 0, 0, 1, 0x04000000)
 	tab.close = a.button("Zavřít PDF", idClosePDF, 0, 0, 1, 0x04000000)
 	a.tabs = append(a.tabs, tab)
@@ -312,4 +313,34 @@ func (a *app) removeDocumentTab(tab *documentTab) {
 		a.layout()
 	}
 	a.pruneDrafts()
+}
+
+
+// A new tab keeps the recent-files panel until a real page image is ready.
+// The flag belongs to the tab, so a different tab's reader cannot consume it.
+func (a *app) cancelPendingOpenView() {
+	if tab := a.activeTab; tab != nil && tab.openViewPending {
+		tab.openViewPending = false
+		if a.view.ready() && getText(a.status) == "Načítám dokument…" {
+			a.reportStatus("")
+		}
+	}
+}
+
+func (v *documentView) completePendingOpenView(page int) {
+	if v.secondary || !v.ready() || v.page < 0 || v.page >= len(v.order) || page != v.order[v.page] {
+		return
+	}
+	a := v.app
+	tab := a.activeTab
+	if tab == nil || !tab.openViewPending {
+		return
+	}
+	tab.openViewPending = false
+	if getText(a.status) == "Načítám dokument…" {
+		a.reportStatus("")
+	}
+	if !a.busy && a.tool == idFileTab && a.mode == idFileDetails {
+		a.activate(idBrowseTab)
+	}
 }

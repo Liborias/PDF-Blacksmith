@@ -419,6 +419,7 @@ func (a *app) activate(id int) {
 	if a.mode == idTextTab && id != idTextTab && a.saveInlineBefore(func() { a.activate(id) }) {
 		return
 	}
+	a.cancelPendingOpenView()
 	old := a.mode
 	switch id {
 	case idFileTab:

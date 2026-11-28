@@ -218,6 +218,7 @@ func (a *app) runFileOption(option int) {
 	case idPrintDocument:
 		a.printDocument()
 	case idRecentFiles:
+		a.cancelPendingOpenView()
 		a.mode = idFileDetails
 		a.rightDock.revealPrimary()
 		a.layout()

@@ -1271,6 +1271,9 @@ func (v *documentView) finished(job readerJob) {
 		return
 	}
 	if job.result.Status != "ok" {
+		if !v.secondary {
+			v.app.cancelPendingOpenView()
+		}
 		v.describing = false
 		v.invalidSource = job.result.Status == "changed"
 		if v.invalidSource {
@@ -1299,6 +1302,7 @@ func (v *documentView) finished(job readerJob) {
 			if v.secondary {
 				v.showComparisonReaderError("Rozměry stránek nelze načíst.")
 			} else {
+				v.app.cancelPendingOpenView()
 				v.app.report("Rozměry stránek nelze načíst.")
 			}
 			return
@@ -1307,12 +1311,15 @@ func (v *documentView) finished(job readerJob) {
 		v.app.rememberRecentFile(v.path)
 		if v.secondary {
 			v.app.layoutComparisonThumbnails(v.app.comparison.thumbnailArea)
-		} else {
+		} else if v.app.activeTab == nil || !v.app.activeTab.openViewPending {
 			v.app.report("")
 		}
 	} else if job.frame.image != nil {
 		v.activeCache().store(job.page, job.frame)
 		v.trimCaches()
+		if job.action == "screen" {
+			v.completePendingOpenView(job.page)
+		}
 		if job.action == "screen" && job.page == v.draggedPage() && v.thumbnails.frames[job.page].image == nil {
 			v.showPageDragPreview()
 		}
