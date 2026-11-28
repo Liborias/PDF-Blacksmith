@@ -152,6 +152,6 @@ func (a *app) positionIconTooltip(param uintptr) bool {
 	if !okPlacement {
 		return false
 	}
-	ok, _, _ = position.Call(a.tooltip,0,uintptr(x),uintptr(y),0,0,0x15) // NOSIZE | NOZORDER | NOACTIVATE
+	ok, _, _ = user32.NewProc("SetWindowPos").Call(a.tooltip,0,uintptr(x),uintptr(y),0,0,0x15) // NOSIZE | NOZORDER | NOACTIVATE
 	return ok != 0
 }
