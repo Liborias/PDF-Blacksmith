@@ -124,3 +124,20 @@ func temporaryDockVisibility(dock dockVisibility, collapsed bool) dockVisibility
 	}
 	return dock
 }
+
+
+// Keep ears outside the document rectangle, after all visible dock panels.
+// The two gutters belong to the editor background, not to the panels.
+type dockEdges struct {
+	leftAuxStart, leftAuxEnd int
+	documentStart, documentEnd int
+	rightAuxStart, rightAuxEnd int
+}
+
+func dockDocumentEdges(width, gutter int, sizes dockWidths) dockEdges {
+	left := sizes[dockTools]
+	leftEnd := left + sizes[dockThumbnails]
+	right := width - sizes[dockProperties]
+	rightStart := right - sizes[dockRightAuxiliary]
+	return dockEdges{left, leftEnd, leftEnd + gutter, rightStart - gutter, rightStart, right}
+}

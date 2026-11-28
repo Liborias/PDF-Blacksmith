@@ -162,3 +162,36 @@ func TestTemporaryDockVisibilityDoesNotMutateSearchSnapshot(t *testing.T) {
 		t.Fatal("search restoration failed after temporary collapse")
 	}
 }
+
+
+func TestDockDocumentEdgesProtectDocumentAndAttachEars(t *testing.T) {
+	for _, dpi := range []int{96,120,144,192} {
+		d := func(n int) int { return n*dpi/96 }
+		for _, compare := range []bool{false,true} {
+			for mask := 0; mask < 16; mask++ {
+				var minimum, preferred dockWidths
+				for i, w := range []int{168,350,70,145} {
+					if mask&(1<<i) != 0 && !(compare && i == dockThumbnails) {
+						minimum[i], preferred[i] = d(w), d(w+60)
+					}
+				}
+				for width := 980; width <= 2200; width += 10 {
+					gutter := d(28)
+					prefDoc := d(265)
+					if compare { prefDoc = d(420) }
+					sizes := fitDockWidths(d(width)-2*gutter,d(176),prefDoc,minimum,preferred)
+					e := dockDocumentEdges(d(width),gutter,sizes)
+					if e.leftAuxStart != sizes[dockTools] ||
+						e.leftAuxEnd-e.leftAuxStart != sizes[dockThumbnails] ||
+						e.rightAuxEnd-e.rightAuxStart != sizes[dockRightAuxiliary] ||
+						d(width)-e.rightAuxEnd != sizes[dockProperties] ||
+						e.documentStart-e.leftAuxEnd != gutter ||
+						e.rightAuxStart-e.documentEnd != gutter ||
+						e.documentEnd-e.documentStart < d(176) {
+						t.Fatalf("invalid geometry: width %d DPI %d mask %d comparison %v: %+v",width,dpi,mask,compare,e)
+					}
+				}
+			}
+		}
+	}
+}

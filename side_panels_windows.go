@@ -43,11 +43,13 @@ func (a *app) detailsTab() int {
 }
 
 func (a *app) sidebarRails() (rect, rect) {
+	// The viewport remains the whole document area even when comparison
+	// divides it into two readers and assigns their own thumbnail panes.
 	width := int32(min(a.scale(sidebarRailWidth), a.width/2))
-	left, right := int32(a.toolsWidth), int32(a.width-a.settingsWidth)
+	left, right := a.viewport.left, a.viewport.right
 	top, bottom := a.viewport.top, a.viewport.bottom
-	return rect{left, top, left + width, bottom},
-		rect{right - width, top, right, bottom}
+	return rect{left - width, top, left, bottom},
+		rect{right, top, right + width, bottom}
 }
 
 func (a *app) visibleRightAuxiliary() auxiliaryPanel {
@@ -107,11 +109,10 @@ func (a *app) layoutDocumentPanels() {
 	widths := fitDockWidths(a.width-2*rail, d(minimumDocumentWidth), preferredDocument, minimum, preferred)
 	a.toolsWidth, a.settingsWidth = widths[dockTools], widths[dockProperties]
 	top, bottom := int32(d(workspaceTop)), int32(max(d(workspaceTop+1), a.height-d(footerHeight)))
-	left, right := a.toolsWidth+rail, a.width-a.settingsWidth-rail
-	docLeft, docRight := left+widths[dockThumbnails], right-widths[dockRightAuxiliary]
-	a.thumbnailArea = rect{int32(left), top, int32(docLeft), bottom}
-	a.rightAuxArea = rect{int32(docRight), top, int32(right), bottom}
-	a.viewport = rect{int32(docLeft), top, int32(docRight), bottom}
+	edges := dockDocumentEdges(a.width, rail, widths)
+	a.thumbnailArea = rect{int32(edges.leftAuxStart), top, int32(edges.leftAuxEnd), bottom}
+	a.rightAuxArea = rect{int32(edges.rightAuxStart), top, int32(edges.rightAuxEnd), bottom}
+	a.viewport = rect{int32(edges.documentStart), top, int32(edges.documentEnd), bottom}
 }
 
 func (a *app) preferredThumbnailsWidth() int {
@@ -265,11 +266,11 @@ func (a *app) paintSidebars(dc uintptr) {
 	leftRail, rightRail := a.sidebarRails()
 	fillColor(dc, rect{0, leftRail.top, leftRail.left, leftRail.bottom}, panelColor)
 	fillColor(dc, rect{rightRail.right, rightRail.top, int32(a.width), rightRail.bottom}, panelColor)
-	for _, rail := range [...]rect{leftRail, rightRail} {
-		fillColor(dc, rail, sidebarRailColor)
+	// Only the individual buttons are painted as tabs. The reserved
+	// document gutter has the same background as the editor, no rail.
+	for _, gutter := range [...]rect{leftRail, rightRail} {
+		fillColor(dc, gutter, canvasColor)
 	}
-	fillColor(dc, rect{leftRail.right - 1, leftRail.top, leftRail.right, leftRail.bottom}, divider)
-	fillColor(dc, rect{rightRail.left, rightRail.top, rightRail.left + 1, rightRail.bottom}, divider)
 }
 
 func (a *app) drawPanelToggle(item *buttonDraw) bool {
@@ -298,11 +299,16 @@ func (a *app) drawPanelToggle(item *buttonDraw) bool {
 	if onLeft != collapsed {
 		arrow = "‹"
 	}
-	fillColor(item.dc, item.bounds, sidebarRailColor)
+	fillColor(item.dc, item.bounds, canvasColor)
 	bounds := item.bounds
 	d := a.scale
-	bounds.left += int32(d(2))
-	bounds.right -= int32(d(2))
+	// Keep the panel-facing side flush with the dock, with clearance
+	// only on the document-facing side.
+	if onLeft {
+		bounds.right -= int32(d(3))
+	} else {
+		bounds.left += int32(d(3))
+	}
 	buttonColor, foreground := uiColors["panelTabActive"], textColor
 	if collapsed {
 		buttonColor = uiColors["panelTabIdle"]
