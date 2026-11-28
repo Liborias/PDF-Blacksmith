@@ -1,3 +1,1 @@
-Milestone 13 — review build after steps 10–13 (page navigation, temporary dock collapse, group separators, footer metadata). Source changes through f192df18dbd52d7ad004d101fd0a537da080ff1b. Next milestone 17. Download handoff at step 14.
-
-Retry milestone 13: remove unused local d in Windows layout; no step 14 code.
+Milestone 17 — review build after steps 14–17 (auxiliary ear icons, standalone dock ears, proportional thumbnail sizing, scrollbar geometry). Source changes through d8aa0021e9e3cbf9a58e9fe713f0991d84f20556. Next milestone 21. Download handoff at step 18.
