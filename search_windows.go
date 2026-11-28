@@ -173,7 +173,11 @@ func (v *documentView) setSearchInputs(query string) {
 	old := a.commandBar.searchSync
 	a.commandBar.searchSync = true
 	defer func() { a.commandBar.searchSync = old }()
-	for _, handle := range []uintptr{v.search.input, a.commandBar.searchEdit} {
+	handles := []uintptr{v.search.input}
+	if !v.secondary {
+		handles = append(handles, a.commandBar.searchEdit)
+	}
+	for _, handle := range handles {
 		if handle != 0 && getText(handle) != query {
 			setText(handle, query)
 		}

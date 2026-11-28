@@ -39,11 +39,11 @@ type commandBarControl struct {
 }
 
 type commandBar struct {
-	controls []commandBarControl
-	openMenu int
-	fitMode  readingZoomMode
-	overview bool
-	areaMode int
+	controls   []commandBarControl
+	openMenu   int
+	fitMode    readingZoomMode
+	overview   bool
+	areaMode   int
 	searchEdit uintptr
 	searchSync bool
 }
