@@ -523,6 +523,8 @@ func (a *app) inlineControlChange(handle uintptr) {
 	}
 	switch handle {
 	case e.handle, p.size, p.leading, p.tracking, p.width:
+		if a.activeTab != nil { invalidate(a.activeTab.button) }
+		a.refreshFooterInfo()
 		if handle == p.width {
 			e.fixedWidth = getText(handle) != ""
 		}

@@ -67,7 +67,9 @@ func (a *app) layoutDocumentTabs() {
 		if getText(tab.button) != caption {
 			setText(tab.button, caption)
 		}
-		widths[index] = min(d(225), max(d(112), a.captionWidth(caption, a.normalFont)+d(54)))
+		a.setTooltip(tab.button, path)
+		a.setTooltip(tab.close, a.uiText(uiClose)+" · "+filepath.Base(path))
+		widths[index] = min(d(225), max(d(112), a.captionWidth(caption, a.normalFont)+d(76)))
 		total += widths[index] + d(3)
 	}
 	showList := !a.full && (total > right-left || duplicates) && len(a.tabs) > 1
@@ -125,23 +127,37 @@ func (a *app) drawDocumentTab(item *buttonDraw) bool {
 			if tab == a.activeTab {
 				body, foreground = uiColors["tabActive"], textColor
 			}
-			if item.state&1 != 0 {
+			if a.navigationHot(item) || a.hoveredNavigation == tab.button || a.hoveredNavigation == tab.close {
 				body, foreground = uiColors["tabHover"], textColor
 			}
 			r := item.bounds
 			fillColor(item.dc, r, body)
 			if tab == a.activeTab {
-				fillColor(item.dc, rect{r.left, r.top, r.right, r.top + 1}, selectionColor)
+				fillColor(item.dc, rect{r.left, r.top, r.right, r.top + int32(max(1,a.scale(2)))}, uiColors["accentStrong"])
 			}
-			label, align := "×", uintptr(1)
 			if item.handle == tab.button {
-				label, align = getText(tab.button), 0x8000
-				r.left += int32(a.scale(9))
-				if a.contentOf(tab).changed() {
-					label = "● " + label
+				d:=a.scale
+				dirty:=a.documentTabDirty(tab)
+				p:=documentTabLabelLayout(int(r.right-r.left),d(7),d(16),d(5),d(7),d(24),dirty)
+				if p.icon {
+					drawUIIcon(item.dc,"i-nav_file",int(r.left)+d(7),int(r.top+r.bottom)/2-d(16)/2,d(16),foreground,body)
 				}
+				if dirty && p.dot>=0 {
+					y:=int(r.top+r.bottom)/2-d(7)/2
+					x:=int(r.left)+p.dot
+					dot:=rect{int32(x),int32(y),int32(x+d(7)),int32(y+d(7))}
+					ink:=uiColors["accentStrong"]
+					rounded(item.dc,dot,d(7),ink,ink)
+				}
+				labelBounds:=r
+				labelBounds.right=r.left+int32(p.end)
+				labelBounds.left=r.left+int32(p.start)
+				drawText(item.dc,getText(tab.button),labelBounds,a.normalFont,foreground,0x8000)
+			} else {
+				closeInk:=mutedColor
+				if a.navigationHot(item) { closeInk=foreground }
+				drawText(item.dc,"×",r,a.normalFont,closeInk,1)
 			}
-			drawText(item.dc, label, r, a.normalFont, foreground, align)
 			break
 		}
 	} else {

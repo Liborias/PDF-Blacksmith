@@ -140,7 +140,9 @@ func (a *app) addDocumentTab(path, password string, info os.FileInfo) {
 	content.path, content.password, content.original, content.describing = path, password, info, true
 	tab := &documentTab{content: content, tool: idFileTab, mode: idFileDetails, selection: -1, status: "Načítám dokument…", openViewPending: true}
 	tab.button = a.button(filepath.Base(path), idSelectDocumentTab, 0, 0, 1, 0x04000000)
-	tab.close = a.button("Zavřít PDF", idClosePDF, 0, 0, 1, 0x04000000)
+	tab.close = a.button(a.uiText(uiClose), idClosePDF, 0, 0, 1, 0x04000000)
+	watchNavigationHover(tab.button)
+	watchNavigationHover(tab.close)
 	a.tabs = append(a.tabs, tab)
 	a.selectDocumentTab(tab)
 }
@@ -157,7 +159,9 @@ func (a *app) showDocumentList() {
 	}
 	items := make([]popupItem, len(a.tabs))
 	for index, tab := range a.tabs {
-		items[index] = popupItem{label: a.contentOf(tab).path, checked: a.activeTab == tab}
+		label:=a.contentOf(tab).path
+		if a.documentTabDirty(tab) { label="● "+label }
+		items[index] = popupItem{label: label, checked: a.activeTab == tab}
 	}
 	if index := a.trackPopup(a.tabList, 480, items); index >= 0 {
 		a.selectDocumentTab(a.tabs[index])
@@ -340,4 +344,8 @@ func (v *documentView) completePendingOpenView(page int) {
 	if !a.busy && a.tool == idFileTab && a.mode == idFileDetails {
 		a.activate(idBrowseTab)
 	}
+}
+
+func (a *app) documentTabDirty(tab *documentTab) bool {
+	return a.contentOf(tab).changed() || (tab==a.activeTab && a.inlineDirty())
 }
